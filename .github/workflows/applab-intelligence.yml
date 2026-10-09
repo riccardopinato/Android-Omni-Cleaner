@@ -1,0 +1,22 @@
+name: AppLab Intelligence
+
+on:
+  push:
+    branches:
+      - "recovery/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: applab-intelligence-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  intelligence:
+    uses: riccardopinato/AppLab/.github/workflows/app-intelligence.yml@d3681e4d2b92631ce96fcfc80349a079cbed40bb
+    with:
+      target_repository: ${{ github.repository }}
+      target_ref: ${{ github.sha }}
+      max_files: "3500"
