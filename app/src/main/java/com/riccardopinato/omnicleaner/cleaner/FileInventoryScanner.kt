@@ -173,6 +173,7 @@ object FileInventoryScanner {
                 }
             }
         }
+        false
     }
 
     private suspend fun digest(indexed: IndexedFile, full: Boolean): String? = withContext(Dispatchers.IO) {

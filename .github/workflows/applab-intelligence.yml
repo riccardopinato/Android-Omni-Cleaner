@@ -17,7 +17,6 @@ jobs:
   intelligence:
     name: Product · UX · Architecture audit
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout target
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -35,17 +34,11 @@ jobs:
 
       - name: Run AppLab App Intelligence
         shell: bash
-        run: |
-          set -Eeuo pipefail
-          python .applab/scripts/app_intelligence.py \\
-            --repo-root "$GITHUB_WORKSPACE/target" \\
-            --output-dir "$GITHUB_WORKSPACE/applab-intelligence" \\
-            --max-files 3500
+        run: python .applab/scripts/app_intelligence.py --repo-root "$GITHUB_WORKSPACE/target" --output-dir "$GITHUB_WORKSPACE/applab-intelligence" --max-files 3500
 
       - name: Publish AppLab report
         shell: bash
         run: |
-          set -Eeuo pipefail
           echo "===== APPLAB_REPORT_BEGIN ====="
           cat "$GITHUB_WORKSPACE/applab-intelligence/app-intelligence.md"
           echo "===== APPLAB_REPORT_END ====="
@@ -61,12 +54,4 @@ jobs:
 
       - name: Validate machine-readable report
         shell: bash
-        run: |
-          set -Eeuo pipefail
-          python - <<'PY'
-          import json
-          with open("applab-intelligence/app-intelligence.json", "r", encoding="utf-8") as handle:
-              report = json.load(handle)
-          assert isinstance(report, dict)
-          print("AppLab JSON report valid")
-          PY
+        run: python -c 'import json; report=json.load(open("applab-intelligence/app-intelligence.json", encoding="utf-8")); assert isinstance(report, dict); print("AppLab JSON report valid")'
