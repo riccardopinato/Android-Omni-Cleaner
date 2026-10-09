@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Android Omni Cleaner</string>
+    <string name="recovery_title">Baseline di recupero</string>
+    <string name="recovery_body">Il progetto Android nativo è operativo. I moduli del cleaner verranno ripristinati uno alla volta e verificati prima di essere attivati.</string>
+    <string name="recovery_pending">Recupero in attesa — funzione non ancora attiva</string>
+
+    <string name="module_storage_overview">Panoramica spazio</string>
+    <string name="module_large_files">File grandi</string>
+    <string name="module_duplicates">Duplicati</string>
+    <string name="module_safe_trash">Cestino sicuro</string>
+    <string name="module_gallery_cleaner">Pulizia galleria</string>
+    <string name="module_exif_privacy">Privacy EXIF</string>
+</resources>
