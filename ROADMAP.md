@@ -3,42 +3,52 @@
 Factory baseline: App-Factory-Core a4a97ca79e85d2faebcdcc9a3ae4a9644f5caf03
 
 ## MAXI STEP 0 — Project Recovery & Forensic Reconstruction
-Status: IN PROGRESS
+Status: COMPLETE
 
-Goals:
-- establish repository governance;
-- freeze forensic findings from supplied APK;
-- define Product Bible;
-- define project baseline;
-- preserve native Kotlin/Compose decision;
-- identify release blockers;
-- avoid feature changes.
+Completed:
+- repository governance established;
+- supplied APK forensic findings frozen;
+- Product Bible and machine-readable baseline created;
+- native Kotlin/Compose stack preserved;
+- release blockers documented;
+- no unsupported claim of full source recovery.
 
-Exit:
-- docs committed on recovery branch;
-- PR open against main;
-- no false claim that source has already been reconstructed.
+Checkpoint:
+- merged to main via PR #1.
 
 ## MAXI STEP 1 — Native Project Bootstrap
-Status: NEXT
+Status: COMPLETE
 
-Goals:
-- create reproducible Android/Kotlin/Compose project;
-- choose final applicationId;
-- establish versioning;
-- set release/debug build types correctly;
-- add production-intent icon/branding placeholder only after product name decision;
-- centralize dependencies;
-- create CI analyze/test/build gate;
-- define persistent INTERNAL signing plan without committing key material.
+Completed:
+- reproducible Android/Kotlin/Compose project created;
+- canonical applicationId selected: `com.riccardopinato.omnicleaner`;
+- debug and release build lanes separated;
+- release build is non-debuggable;
+- R8/resource shrinking enabled for release;
+- JDK 17 / Gradle 9.6 / AGP 9.4 baseline established;
+- Gradle Wrapper committed;
+- Android CI added;
+- bootstrap unit tests added;
+- minSdk 24 preserved;
+- dangerous storage permissions intentionally NOT added during bootstrap;
+- INTERNAL signing policy documented without committing key material.
 
-Exit:
-- clean project builds in debug and release;
-- release is not debuggable;
-- CI green;
-- exact source SHA recorded.
+Evidence:
+- application source checkpoint: `be6ff12559b3039b25f21481fdebc948b21e8aab`
+- GitHub Actions run: `37959830963`
+- result: SUCCESS
+- verified command:
+  `./gradlew lintDebug testDebugUnitTest assembleDebug assembleRelease --stacktrace`
+
+Certification boundary:
+- build/test/CI evidence exists;
+- no physical-device validation yet;
+- no distribution validation yet;
+- no recovered cleaner capability is claimed active yet.
 
 ## MAXI STEP 2 — Core Storage Domain Recovery
+Status: NEXT
+
 Goals:
 - reconstruct scanner contracts and models;
 - storage overview;
