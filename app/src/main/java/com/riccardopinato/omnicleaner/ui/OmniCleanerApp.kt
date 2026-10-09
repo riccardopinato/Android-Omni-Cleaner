@@ -35,10 +35,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.riccardopinato.omnicleaner.cleaner.StorageCapabilityHealth
+import com.riccardopinato.omnicleaner.cleaner.exif.ExifGroup
 import com.riccardopinato.omnicleaner.model.BigFileSizeFilter
 import com.riccardopinato.omnicleaner.model.FolderSubTab
 import com.riccardopinato.omnicleaner.model.GalleryMediaFilter
@@ -70,6 +74,34 @@ fun OmniCleanerApp(viewModel: OmniCleanerViewModel = viewModel()) {
         ActivityResultContracts.StartIntentSenderForResult(),
     ) { result ->
         viewModel.onMediaStoreTrashCompleted(result.resultCode == Activity.RESULT_OK)
+    }
+
+    val exifSourceLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            }
+            viewModel.addExifRoot(uri)
+        }
+    }
+
+    val exifDestinationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                )
+            }
+            viewModel.exportExifCleanCopies(uri)
+        }
     }
 
     val requestDeepAccess = {
@@ -130,20 +162,25 @@ fun OmniCleanerApp(viewModel: OmniCleanerViewModel = viewModel()) {
 
                     if (section == 1) Button(onClick = { section = 1 }) { Text("Galleria") }
                     else OutlinedButton(onClick = { section = 1 }) { Text("Galleria") }
+
+                    if (section == 2) Button(onClick = { section = 2 }) { Text("Privacy") }
+                    else OutlinedButton(onClick = { section = 2 }) { Text("Privacy") }
                 }
             }
 
-            if (section == 0) {
-                item { CapabilityCard(state, requestDeepAccess) }
-                item { CleanTabBar(state, viewModel) }
-                when (state.currentTab) {
-                    CleanTab.EMPTY_FOLDERS -> folderContent(state, viewModel)
-                    CleanTab.DUPLICATES -> duplicateContent(state, viewModel)
-                    CleanTab.BIG_FILES -> bigFileContent(state, viewModel)
-                    CleanTab.UNLOCK_PRO -> proContent(state)
+            when (section) {
+                0 -> {
+                    item { CapabilityCard(state, requestDeepAccess) }
+                    item { CleanTabBar(state, viewModel) }
+                    when (state.currentTab) {
+                        CleanTab.EMPTY_FOLDERS -> folderContent(state, viewModel)
+                        CleanTab.DUPLICATES -> duplicateContent(state, viewModel)
+                        CleanTab.BIG_FILES -> bigFileContent(state, viewModel)
+                        CleanTab.UNLOCK_PRO -> proContent(state)
+                    }
                 }
-            } else {
-                galleryContent(
+
+                1 -> galleryContent(
                     state = state,
                     viewModel = viewModel,
                     requestPermission = requestGalleryAccess,
@@ -153,6 +190,13 @@ fun OmniCleanerApp(viewModel: OmniCleanerViewModel = viewModel()) {
                             trashLauncher.launch(IntentSenderRequest.Builder(pending.intentSender).build())
                         }
                     },
+                )
+
+                else -> exifPrivacyContent(
+                    state = state,
+                    viewModel = viewModel,
+                    chooseSource = { exifSourceLauncher.launch(null) },
+                    chooseDestination = { exifDestinationLauncher.launch(null) },
                 )
             }
         }
@@ -180,7 +224,11 @@ private fun StorageHeader(state: OmniUiState, viewModel: OmniCleanerViewModel) {
                 OutlinedButton(onClick = viewModel::refreshStorageInfo) { Text("Aggiorna") }
                 OutlinedButton(onClick = viewModel::scanSpaceOverview) { Text("Analizza") }
                 if (state.safeTrashBytes > 0) {
-                    OutlinedButton(onClick = viewModel::emptySafeTrash) { Text("Svuota cestino") }
+                    ConfirmingActionButton(
+                        label = "Svuota cestino",
+                        message = "Eliminare definitivamente gli elementi già presenti nel cestino sicuro?",
+                        onConfirmed = viewModel::emptySafeTrash,
+                    )
                 }
             }
             state.spaceOverview?.let { overview ->
@@ -294,10 +342,12 @@ private fun androidx.compose.foundation.lazy.LazyListScope.folderContent(
             }
             if (state.folders.any { it.isSelected }) {
                 item {
-                    Button(
+                    ConfirmingActionButton(
+                        label = "Sposta selezionate nel cestino sicuro",
+                        message = "Spostare le cartelle selezionate nel cestino sicuro?",
                         enabled = !state.isDeleting,
-                        onClick = viewModel::cleanSelectedFolders,
-                    ) { Text("Sposta selezionate nel cestino sicuro") }
+                        onConfirmed = viewModel::cleanSelectedFolders,
+                    )
                 }
             }
         }
@@ -341,10 +391,12 @@ private fun androidx.compose.foundation.lazy.LazyListScope.folderContent(
             }
             if (state.thumbnailCaches.any { it.isSelected }) {
                 item {
-                    Button(
+                    ConfirmingActionButton(
+                        label = "Elimina miniature verificate",
+                        message = "Eliminare le miniature selezionate? Verranno ricontrollate prima della rimozione.",
                         enabled = !state.isDeleting,
-                        onClick = viewModel::cleanSelectedThumbnails,
-                    ) { Text("Elimina miniature verificate") }
+                        onConfirmed = viewModel::cleanSelectedThumbnails,
+                    )
                 }
             }
         }
@@ -400,10 +452,12 @@ private fun androidx.compose.foundation.lazy.LazyListScope.duplicateContent(
 
     if (state.duplicateGroups.any { group -> group.files.any { it.isSelected } }) {
         item {
-            Button(
+            ConfirmingActionButton(
+                label = "Sposta duplicati selezionati nel cestino",
+                message = "Spostare i duplicati selezionati nel cestino sicuro? Almeno una copia viene preservata.",
                 enabled = !state.isDeleting,
-                onClick = viewModel::cleanSelectedDuplicates,
-            ) { Text("Sposta duplicati selezionati nel cestino") }
+                onConfirmed = viewModel::cleanSelectedDuplicates,
+            )
         }
     }
 }
@@ -450,10 +504,12 @@ private fun androidx.compose.foundation.lazy.LazyListScope.bigFileContent(
 
     if (state.bigFiles.any { it.isSelected }) {
         item {
-            Button(
+            ConfirmingActionButton(
+                label = "Sposta file selezionati nel cestino",
+                message = "Spostare i file selezionati nel cestino sicuro?",
                 enabled = !state.isDeleting,
-                onClick = viewModel::cleanSelectedBigFiles,
-            ) { Text("Sposta file selezionati nel cestino") }
+                onConfirmed = viewModel::cleanSelectedBigFiles,
+            )
         }
     }
 }
@@ -567,7 +623,14 @@ private fun SelectionCard(
     subtitle: String,
     onToggle: () -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics {
+                contentDescription = title + ". " + subtitle
+                stateDescription = if (checked) "Selezionato" else "Non selezionato"
+            },
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -587,6 +650,126 @@ private fun InfoCard(title: String, subtitle: String) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall)
             Text(subtitle, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+
+private fun androidx.compose.foundation.lazy.LazyListScope.exifPrivacyContent(
+    state: OmniUiState,
+    viewModel: OmniCleanerViewModel,
+    chooseSource: () -> Unit,
+    chooseDestination: () -> Unit,
+) {
+    item {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text("EXIF Privacy", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "Crea copie pulite: gli originali non vengono modificati. " +
+                        "Prima dell'export viene verificato che il contenuto JPEG resti invariato.",
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = chooseSource) { Text("Aggiungi cartella") }
+                    OutlinedButton(
+                        enabled = state.exifRoots.isNotEmpty() &&
+                            state.exifGroups.isNotEmpty() &&
+                            !state.exifIsScanning,
+                        onClick = viewModel::startExifScan,
+                    ) { Text("Analizza EXIF") }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Checkbox(
+                        checked = state.exifRecursive,
+                        onCheckedChange = viewModel::setExifRecursive,
+                    )
+                    Text("Includi sottocartelle")
+                }
+                if (state.exifIsScanning) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+            }
+        }
+    }
+
+    item {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Metadati da rimuovere", style = MaterialTheme.typography.titleMedium)
+            ExifGroup.entries.forEach { group ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Checkbox(
+                        checked = group in state.exifGroups,
+                        onCheckedChange = { viewModel.toggleExifGroup(group) },
+                    )
+                    Text(group.title)
+                }
+            }
+        }
+    }
+
+    if (state.exifRoots.isNotEmpty()) {
+        item {
+            Text("Cartelle selezionate", style = MaterialTheme.typography.titleMedium)
+        }
+        items(state.exifRoots, key = { it.toString() }) { uri ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(uri.toString())
+                    OutlinedButton(onClick = { viewModel.removeExifRoot(uri) }) {
+                        Text("Rimuovi")
+                    }
+                }
+            }
+        }
+    }
+
+    state.exifScan?.let { scan ->
+        item {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text("Risultato privacy", style = MaterialTheme.typography.titleMedium)
+                    Text("Immagini con metadati: " + scan.candidates.size)
+                    Text("Saltate: " + scan.skipped + " · Errori lettura: " + scan.failures)
+                    if (scan.candidates.isNotEmpty()) {
+                        Button(
+                            enabled = !state.exifIsExporting,
+                            onClick = chooseDestination,
+                        ) {
+                            Text("Esporta copie pulite")
+                        }
+                    }
+                    if (state.exifIsExporting) {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    }
+                }
+            }
+        }
+
+        items(scan.candidates.take(100), key = { it.uri.toString() }) { candidate ->
+            InfoCard(
+                candidate.name,
+                candidate.tagsFound.toString() + " tag selezionati presenti",
+            )
+        }
+    }
+
+    state.exifLastExport?.let { export ->
+        item {
+            InfoCard(
+                "Ultimo export",
+                "Create " + export.created +
+                    " · fallite " + export.failed +
+                    " · non verificate " + export.incompleteCopies.size,
+            )
         }
     }
 }

@@ -1,7 +1,11 @@
 package com.riccardopinato.omnicleaner.viewmodel
 
+import android.net.Uri
 import com.riccardopinato.omnicleaner.cleaner.SpaceOverview
 import com.riccardopinato.omnicleaner.cleaner.StorageCapabilityHealth
+import com.riccardopinato.omnicleaner.cleaner.exif.ExifExport
+import com.riccardopinato.omnicleaner.cleaner.exif.ExifGroup
+import com.riccardopinato.omnicleaner.cleaner.exif.ExifScan
 import com.riccardopinato.omnicleaner.model.AppResidueItem
 import com.riccardopinato.omnicleaner.model.BigFileItem
 import com.riccardopinato.omnicleaner.model.BigFileSizeFilter
@@ -86,6 +90,15 @@ data class OmniUiState(
     val isDeleting: Boolean = false,
     val safeTrashBytes: Long = 0L,
     val lastMessage: String? = null,
+
+    val exifRoots: List<Uri> = emptyList(),
+    val exifGroups: Set<ExifGroup> = ExifGroup.entries.toSet(),
+    val exifRecursive: Boolean = true,
+    val exifIsScanning: Boolean = false,
+    val exifIsExporting: Boolean = false,
+    val exifScan: ExifScan? = null,
+    val exifLastExport: ExifExport? = null,
+
     val isPremium: Boolean = false,
     val proScanSelection: ProScanSelection = ProScanSelection(),
 ) {

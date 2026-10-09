@@ -13,6 +13,8 @@ import com.riccardopinato.omnicleaner.cleaner.SafeTrashManager
 import com.riccardopinato.omnicleaner.cleaner.SpaceOverviewScanner
 import com.riccardopinato.omnicleaner.cleaner.StorageCapabilityHealth
 import com.riccardopinato.omnicleaner.cleaner.ThumbnailFileCleanup
+import com.riccardopinato.omnicleaner.cleaner.exif.ExifGroup
+import com.riccardopinato.omnicleaner.cleaner.exif.FolderExifCleaner
 import com.riccardopinato.omnicleaner.model.BigFileSizeFilter
 import com.riccardopinato.omnicleaner.model.DuplicateFile
 import com.riccardopinato.omnicleaner.model.FolderSubTab
@@ -37,6 +39,7 @@ class OmniCleanerViewModel(application: Application) : AndroidViewModel(applicat
     private val safeTrashManager = SafeTrashManager(context)
     private val galleryPrefs = GalleryPreferencesManager(context)
     private val proPrefs = ProPreferencesManager(context)
+    private val folderExifCleaner = FolderExifCleaner(context)
 
     private val _uiState = MutableStateFlow(OmniUiState())
     val uiState: StateFlow<OmniUiState> = _uiState.asStateFlow()
@@ -536,6 +539,97 @@ class OmniCleanerViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             galleryPrefs.saveFilterAndSort(_uiState.value.galleryFilter, order)
             loadGalleryMedia(force = true)
+        }
+    }
+
+    fun addExifRoot(uri: android.net.Uri) {
+        _uiState.update { state ->
+            state.copy(
+                exifRoots = (state.exifRoots + uri).distinct(),
+                exifScan = null,
+                exifLastExport = null,
+            )
+        }
+    }
+
+    fun removeExifRoot(uri: android.net.Uri) {
+        _uiState.update { state ->
+            state.copy(
+                exifRoots = state.exifRoots.filterNot { it == uri },
+                exifScan = null,
+                exifLastExport = null,
+            )
+        }
+    }
+
+    fun toggleExifGroup(group: ExifGroup) {
+        _uiState.update { state ->
+            val groups = state.exifGroups.toMutableSet().apply {
+                if (!add(group)) remove(group)
+            }
+            state.copy(exifGroups = groups, exifScan = null, exifLastExport = null)
+        }
+    }
+
+    fun setExifRecursive(enabled: Boolean) {
+        _uiState.update { it.copy(exifRecursive = enabled, exifScan = null) }
+    }
+
+    fun startExifScan() {
+        val state = _uiState.value
+        if (state.exifRoots.isEmpty() || state.exifGroups.isEmpty() || state.exifIsScanning) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(exifIsScanning = true, exifLastExport = null, lastMessage = null) }
+            runCatching {
+                folderExifCleaner.scan(
+                    trees = _uiState.value.exifRoots,
+                    recursive = _uiState.value.exifRecursive,
+                    groups = _uiState.value.exifGroups,
+                )
+            }.onSuccess { scan ->
+                _uiState.update {
+                    it.copy(
+                        exifIsScanning = false,
+                        exifScan = scan,
+                        lastMessage = "Privacy: " + scan.candidates.size + " immagini con metadati selezionati.",
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        exifIsScanning = false,
+                        lastMessage = "Privacy EXIF: " + (error.message ?: "errore di scansione"),
+                    )
+                }
+            }
+        }
+    }
+
+    fun exportExifCleanCopies(destination: android.net.Uri) {
+        val scan = _uiState.value.exifScan ?: return
+        if (_uiState.value.exifIsExporting || scan.candidates.isEmpty()) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(exifIsExporting = true, lastMessage = null) }
+            runCatching {
+                folderExifCleaner.export(scan, destination)
+            }.onSuccess { result ->
+                _uiState.update {
+                    it.copy(
+                        exifIsExporting = false,
+                        exifLastExport = result,
+                        lastMessage = "Copie EXIF create: " + result.created +
+                            ". Fallite: " + result.failed +
+                            ". Contenuto non verificato: " + result.incompleteCopies.size + ".",
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        exifIsExporting = false,
+                        lastMessage = "Export EXIF: " + (error.message ?: "errore"),
+                    )
+                }
+            }
         }
     }
 
