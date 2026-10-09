@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Android Omni Cleaner</string>
+    <string name="recovery_title">Recovery baseline</string>
+    <string name="recovery_body">The native project is healthy. Recovered cleaner modules will be restored one at a time and verified before they become active.</string>
+    <string name="recovery_pending">Recovery pending — not active yet</string>
+
+    <string name="module_storage_overview">Storage overview</string>
+    <string name="module_large_files">Large files</string>
+    <string name="module_duplicates">Duplicates</string>
+    <string name="module_safe_trash">Safe Trash</string>
+    <string name="module_gallery_cleaner">Gallery cleaner</string>
+    <string name="module_exif_privacy">EXIF privacy</string>
+</resources>
