@@ -1,0 +1,57 @@
+project:
+  repository: riccardopinato/Android-Omni-Cleaner
+  status: RECOVERY
+  recovery_started_at: 2026-10-09
+
+factory:
+  repository: riccardopinato/App-Factory-Core
+  commit_sha: a4a97ca79e85d2faebcdcc9a3ae4a9644f5caf03
+  master_version: "25.1"
+  golden_index_version: 10
+  golden_registry_version: 2
+
+product:
+  working_name: Android Omni Cleaner
+  final_name: null
+  platform: android
+  stack:
+    language: Kotlin
+    ui: Jetpack Compose
+    design: Material 3
+  local_first: true
+  web_preview:
+    enabled: false
+    reason: native filesystem/media capability cannot be truthfully certified on web
+
+identity:
+  final_application_id: null
+  legacy_application_id: com.aistudio.foldercleaner.zjijip
+  legacy_version_name: "1.0"
+  legacy_version_code: 1
+  signing_lane: null
+
+recovery:
+  source_of_behavior: supplied APK
+  strategy: clean-room reconstruction from forensic evidence
+  preserve_native_stack: true
+  rewrite_to_flutter: false
+
+capabilities:
+  storage_scan: recovered
+  large_files: recovered
+  duplicate_scan: recovered
+  thumbnail_cleanup: recovered
+  safe_trash: recovered
+  gallery_cleaner: recovered
+  exif_cleaner: recovered
+  billing: rebuild_required
+  ads: rebuild_required
+  google_sign_in: verify_or_rebuild
+  all_files_access: policy_and_runtime_review_required
+
+release:
+  ci: not_configured
+  signing: not_configured
+  tests: not_reconstructed
+  physical_validation: not_started
+  store_ready: false
