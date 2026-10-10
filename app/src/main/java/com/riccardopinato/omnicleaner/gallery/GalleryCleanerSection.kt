@@ -251,7 +251,7 @@ fun GalleryCleanerSection() {
 
 
 private fun GalleryMediaFilter.isAvailableFor(health: GalleryAccessHealth): Boolean = when (this) {
-    GalleryMediaFilter.ALL -> health.hasAccess
+    GalleryMediaFilter.ALL -> health.canReadImages && health.canReadVideos
     GalleryMediaFilter.IMAGES -> health.canReadImages
     GalleryMediaFilter.VIDEOS -> health.canReadVideos
 }
