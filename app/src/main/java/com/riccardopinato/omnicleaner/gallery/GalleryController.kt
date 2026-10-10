@@ -67,7 +67,7 @@ class GalleryController(
         return { observers -= observer }
     }
 
-    fun refreshAccess() {
+    fun refreshAccess(clearLoadedMedia: Boolean = false) {
         val health = GalleryAccess.health(context)
         val compatibleFilter = when {
             health.level == GalleryAccessLevel.NONE -> state.filter
@@ -79,6 +79,12 @@ class GalleryController(
             state.copy(
                 accessHealth = health,
                 filter = compatibleFilter,
+                items = if (clearLoadedMedia) emptyList() else state.items,
+                currentIndex = if (clearLoadedMedia) 0 else state.currentIndex,
+                history = if (clearLoadedMedia) emptyList() else state.history,
+                hasMore = if (clearLoadedMedia) false else state.hasMore,
+                loading = if (clearLoadedMedia) false else state.loading,
+                loadingNextPage = if (clearLoadedMedia) false else state.loadingNextPage,
                 error = null,
             ),
         )
