@@ -83,7 +83,7 @@
     <string name="redesign_clean_subtitle">Scan, review and clean with reversible or system-mediated actions whenever possible.</string>
     <string name="redesign_deep_locked_title">Deep Cleaning is optional</string>
     <string name="redesign_deep_locked_body">Enable it only when you want full-device scans for folders, large files and duplicates.</string>
-    <string name="redesign_filters_title">Filters & thresholds</string>
+    <string name="redesign_filters_title">Filters &amp; thresholds</string>
     <string name="redesign_search_large">Search large files</string>
     <string name="redesign_search_duplicates">Search duplicates</string>
     <string name="redesign_large_threshold">Large-file threshold</string>
