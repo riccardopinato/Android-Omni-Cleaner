@@ -6,11 +6,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.util.Properties
+import kotlin.io.path.createTempDirectory
 
 class SafeTrashManagerTest {
     @Test
     fun moveToTrashPreservesPayloadAndMetadata() {
-        val root = createTempDir(prefix = "omni-trash-")
+        val root = createTempDirectory("omni-trash-").toFile()
         val trash = File(root, "trash")
         val source = File(root, "notes.txt").apply {
             writeText("important")
@@ -42,7 +43,7 @@ class SafeTrashManagerTest {
 
     @Test
     fun mediaIsNotMovedIntoPrivateTrash() {
-        val root = createTempDir(prefix = "omni-media-trash-")
+        val root = createTempDirectory("omni-media-trash-").toFile()
         val source = File(root, "photo.jpg").apply { writeBytes(byteArrayOf(1, 2, 3)) }
 
         try {

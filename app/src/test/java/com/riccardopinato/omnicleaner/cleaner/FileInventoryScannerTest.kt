@@ -5,11 +5,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import kotlin.io.path.createTempDirectory
 
 class FileInventoryScannerTest {
     @Test
     fun detectsByteIdenticalDuplicates() = runBlocking {
-        val root = createTempDir(prefix = "omni-duplicates-")
+        val root = createTempDirectory("omni-duplicates-").toFile()
         try {
             File(root, "a.bin").writeBytes(byteArrayOf(1, 2, 3, 4))
             File(root, "b.bin").writeBytes(byteArrayOf(1, 2, 3, 4))
@@ -27,7 +28,7 @@ class FileInventoryScannerTest {
 
     @Test
     fun inventoryCollectsFiles() = runBlocking {
-        val root = createTempDir(prefix = "omni-inventory-")
+        val root = createTempDirectory("omni-inventory-").toFile()
         try {
             File(root, "hello.txt").writeText("hello")
             val inventory = FileInventoryScanner().collect(root)

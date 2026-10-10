@@ -5,11 +5,12 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import kotlin.io.path.createTempDirectory
 
 class CleanupSelectionTest {
     @Test
     fun duplicateProtectionKeepsOldestDeterministically() {
-        val root = createTempDir(prefix = "omni-keeper-")
+        val root = createTempDirectory("omni-keeper-").toFile()
         try {
             val oldest = File(root, "oldest.bin").apply {
                 writeText("same")
@@ -38,7 +39,7 @@ class CleanupSelectionTest {
 
     @Test
     fun containsKeeperUnderDirectory() {
-        val root = createTempDir(prefix = "omni-directory-")
+        val root = createTempDirectory("omni-directory-").toFile()
         try {
             val directory = File(root, "Pictures").apply { mkdirs() }
             val keeper = File(directory, "keep.jpg").apply { writeText("x") }
@@ -52,7 +53,7 @@ class CleanupSelectionTest {
 
     @Test
     fun uniqueEntriesUsesCanonicalPaths() {
-        val root = createTempDir(prefix = "omni-unique-")
+        val root = createTempDirectory("omni-unique-").toFile()
         try {
             val file = File(root, "file.txt").apply { writeText("x") }
             val alias = File(root, "./file.txt")

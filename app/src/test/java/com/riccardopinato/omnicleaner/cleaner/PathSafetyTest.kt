@@ -4,6 +4,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import kotlin.io.path.createTempDirectory
 
 class PathSafetyTest {
     @Test
@@ -15,7 +16,7 @@ class PathSafetyTest {
 
     @Test
     fun allowsOrdinaryChildFolderInsideRoot() {
-        val root = createTempDir(prefix = "omni-root-")
+        val root = createTempDirectory("omni-root-").toFile()
         val child = File(root, "DownloadsToReview").apply { mkdirs() }
         try {
             assertTrue(PathSafety.isSafeFolderToDelete(child, root))
