@@ -64,7 +64,7 @@ class SafeTrashManager private constructor(
             .orEmpty()
             .sumOf { entry ->
                 File(entry, PAYLOAD_NAME)
-                    .takeIf { it.isFile }
+                    .takeIf { it.isFile && !PathSafety.isSymlink(it) }
                     ?.length()
                     ?.coerceAtLeast(0L)
                     ?: 0L
@@ -372,10 +372,19 @@ class SafeTrashManager private constructor(
         val storedHash = properties.getProperty(KEY_SHA256)
         val hash = when {
             storedHash == null -> {
-                // Recovery 0.4 entries predate the stored digest. Their payload
-                // is app-private, so establish a migration baseline from the
-                // current private copy instead of making the entry inaccessible.
-                runCatching { sha256(payload) }.getOrNull() ?: return null
+                // Recovery 0.4 entries predate the stored digest. Establish and
+                // persist a one-time baseline from the app-private payload.
+                val migratedHash = runCatching { sha256(payload) }.getOrNull() ?: return null
+                val persisted = runCatching {
+                    properties.setProperty(KEY_SHA256, migratedHash)
+                    FileOutputStream(metadata).use { output ->
+                        properties.store(output, METADATA_COMMENT)
+                        output.fd.sync()
+                    }
+                    true
+                }.getOrDefault(false)
+                if (!persisted) return null
+                migratedHash
             }
             storedHash.length == 64 &&
                 storedHash.all { char -> char in '0'..'9' || char in 'a'..'f' } -> storedHash
