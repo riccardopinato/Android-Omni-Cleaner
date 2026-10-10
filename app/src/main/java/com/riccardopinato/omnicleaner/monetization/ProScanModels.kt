@@ -11,7 +11,7 @@ enum class ProScanType(val label: String, val description: String) {
     DUPLICATES("File duplicati", "Sposta i cloni nel cestino salvaguardando gli originali"),
     LARGE_FILES("Grandi file", "Isola file voluminosi che saturano la memoria"),
     THUMBNAIL_CACHE("Cache e miniature", "Pulisce cache temporanee e miniature obsolete"),
-    APP_RESIDUES("Residui accessibili", "Elimina cartelle orfane in Android/media di app disinstallate"),
+    APP_RESIDUES("Residui accessibili", "Individua cartelle candidate in Android/media da verificare manualmente"),
 }
 
 data class ProScanSelection(
