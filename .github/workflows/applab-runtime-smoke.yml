@@ -149,8 +149,8 @@ jobs:
           {
             echo "# Android Omni Cleaner — Step 3 parity APK"
             echo
-            echo "- Source SHA: `$GITHUB_SHA`"
-            echo "- APK SHA-256: `$APK_SHA256`"
+            printf '%s\n' "- Source SHA: \`$GITHUB_SHA\`"
+            printf '%s\n' "- APK SHA-256: \`$APK_SHA256\`"
             echo "- Runtime lane: AppLab v4.5 NON_TRUSTED_SMOKE PASS in this workflow"
             echo "- Purpose: physical/manual parity testing"
             echo "- Not a store release and not physical-device certified"

@@ -1,36 +1,50 @@
 # MAXI STEP 3 — APK Parity Audit
 
-Status: **IN PROGRESS**
+Status: **COMPLETE — PHYSICAL/PLAY GATES EXPLICITLY BLOCKED**
 
 ## Authority
 
 Donor APK SHA-256:
 `c77f48bbbac1d8e5e16ee44dab67346f3caa0f846bd117e5b05d2cb3b2a88310`
 
-The reconstructed source is checked against the explicit contracts in
-`parity/DONOR_CONTRACT.json`. Missing donor behavior is not inferred from
-generic cleaner-app conventions.
+The reconstructed source was checked against the explicit donor contracts in
+`parity/DONOR_CONTRACT.json`. Unknown behavior was not inferred.
 
-## Evidence layers
+## Evidence completed
 
-1. Forensic donor evidence.
-2. Deterministic JVM fixture.
-3. Controlled Android emulator fixture.
-4. AppLab v4.5 static/runtime evidence.
-5. Physical-device evidence for storage/file-picker/billing.
+- forensic donor contract: complete;
+- deterministic JVM cross-feature fixture: PASS;
+- controlled Android storage fixture: PASS;
+- duplicate parity fixture: PASS;
+- large-file parity fixture: PASS;
+- thumbnail parity fixture: PASS;
+- Gallery/EXIF surface journey: PASS;
+- Android CI: PASS;
+- AppLab Intelligence v4.5: PASS;
+- AppLab Runtime Smoke: PASS;
+- Smart Visual QA: PASS;
+- System UI Lab: PASS;
+- prerelease test APK with SHA-256 sidecar: published.
 
-## Runtime fixture
+AppLab reported Persistence and Storage labs as WARN with zero errors. These are
+kept as advisory evidence and are not promoted to physical PASS.
 
-The emulator creates a known empty directory, two identical duplicates, one
-same-size non-duplicate, a 12 MiB large-file candidate and a thumbnail fixture.
+## Evidence deliberately not claimed
 
-The parity journey verifies storage overview, duplicates, large-file filtering,
-thumbnail discovery and reachability of Gallery Cleaner / EXIF Privacy.
+- physical broad-storage cleanup;
+- real MediaStore trash confirmation;
+- real Gallery permission/media behavior;
+- real SAF EXIF source/destination export;
+- Google Play Billing purchase/restore;
+- production Ads/UMP;
+- trusted artifact-bound AppLab certification while Actions artifact quota is saturated.
 
-No destructive confirmation is automatically accepted.
+These are recorded as `BLOCKED`, not `MISSING`.
 
-## Verdict vocabulary
+## Final Step 3 result
 
-`RECOVERED / IMPROVED / INTENTIONALLY_CHANGED / MISSING / BLOCKED`
+Critical donor `MISSING`: **0**.
 
-Emulator PASS is never physical-device PASS.
+Verdict: **PARITY AUDIT COMPLETE WITH PHYSICAL/PLAY BLOCKERS DECLARED**.
+
+Next: **MAXI STEP 4 — Safety & Storage Hardening**.

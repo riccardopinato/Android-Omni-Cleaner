@@ -1,8 +1,8 @@
 project:
   repository: riccardopinato/Android-Omni-Cleaner
-  status: PARITY_AUDIT_IN_PROGRESS
+  status: PARITY_AUDIT_COMPLETE_PHYSICAL_BLOCKED
   recovery_started_at: 2026-10-09
-  current_maxi_step: 3
+  current_maxi_step: 4
 
 factory:
   repository: riccardopinato/App-Factory-Core
@@ -15,8 +15,11 @@ applab:
   repository: riccardopinato/AppLab
   version: "4.5"
   commit_sha: dc826264c31dd79fc7617ab7a4a8aee61f9b5aba
-  static_intelligence: configured
-  bounded_runtime_parity: configured
+  static_intelligence: pass
+  bounded_runtime_parity: pass
+  final_step3_runtime_run: 38076397823
+  persistence_lab: warn_zero_errors
+  storage_lab: warn_zero_errors
   physical_evidence_hub: required_later
   trusted_artifact_path: blocked_by_github_artifact_quota
 
@@ -38,11 +41,16 @@ identity:
   signing_lane: internal_pending
 
 parity:
+  status: complete_with_physical_play_blockers
+  critical_missing_count: 0
   donor_contract: parity/DONOR_CONTRACT.json
-  deterministic_jvm_fixture: configured
-  emulator_fixture: configured
-  maestro_journey: .maestro/parity-storage.yaml
-  test_apk_distribution: github_prerelease_after_runtime_pass
+  matrix: DONOR_PARITY_MATRIX.md
+  deterministic_jvm_fixture: pass
+  emulator_fixture: pass
+  maestro_journey: pass
+  app_lab_static: pass
+  app_lab_runtime: pass
+  test_apk_distribution: github_prerelease
   physical_plan: parity/PHYSICAL_DEVICE_PLAN.md
   visual_parity_required: false
 
@@ -55,10 +63,10 @@ physical_validation:
   status: blocked_until_real_device_execution
 
 release:
-  ci: configured
+  ci: pass
   signing: policy_defined_identity_not_provisioned
-  physical_validation: not_started
+  physical_validation: blocked
   distribution_validation: parity_prerelease_only
-  billing_play_test: not_started
+  billing_play_test: blocked
   production_ads_configured: false
   store_ready: false

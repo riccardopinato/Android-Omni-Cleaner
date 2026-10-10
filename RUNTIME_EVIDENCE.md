@@ -1,20 +1,34 @@
 # Runtime evidence lanes
 
-## Step 3 bounded emulator parity
+## Step 3 bounded emulator parity — PASS
 
-AppLab pin:
-`dc826264c31dd79fc7617ab7a4a8aee61f9b5aba` — v4.5 Physical Evidence Hub.
+Final audited runtime evidence:
 
-The runtime job:
-- builds the debug APK;
-- prepares a deterministic storage fixture;
-- grants the emulator all-files app-op;
-- runs `.maestro/parity-storage.yaml`;
-- enables bounded AppLab system, persistence and storage labs;
-- retries only a known PID-loss crawler flake when there is no FATAL/ANR/OOM/fatal-signal evidence;
-- publishes the exact passing APK as a GitHub pre-release with SHA-256.
+- source head before closure: `99d6938f689771f64bc28a0547afb7c76e9f5a24`;
+- AppLab Runtime Smoke run: `38076397823`;
+- AppLab v4.5 pin: `dc826264c31dd79fc7617ab7a4a8aee61f9b5aba`;
+- package: `com.riccardopinato.omnicleaner.debug`;
+- Maestro: PASS;
+- Smart Visual QA: PASS;
+- Multi-Screen Visual Journey: PASS;
+- System UI Lab: PASS;
+- Persistence & Restart: WARN, 0 errors;
+- Storage & Data Integrity: WARN, 0 errors.
+
+The controlled journey verified storage overview, duplicate discovery, large-file
+discovery, thumbnail discovery and reachability of Gallery Cleaner / EXIF Privacy.
 
 Authority: `NON_TRUSTED_SMOKE`.
+
+## Test APK distribution
+
+A GitHub prerelease is generated only after the runtime job succeeds. It contains:
+- the exact debug APK exercised by the parity lane;
+- a `.sha256` sidecar;
+- source SHA and APK SHA-256 in the release notes.
+
+This bypasses GitHub Actions artifact quota for manual/physical testing, but does
+not create trusted AppLab artifact-bound certification.
 
 ## Physical authority
 
@@ -25,7 +39,4 @@ Authority: `NON_TRUSTED_SMOKE`.
 
 See `parity/PHYSICAL_DEVICE_PLAN.md`.
 
-Physical PASS requires the AppLab v4.5 Physical Evidence Hub and exact APK
-binding. GitHub Actions artifact quota currently blocks the trusted
-artifact-bound certification path; this does not block the non-trusted emulator
-parity lane or GitHub Release delivery of the test APK.
+Emulator PASS is never physical-device PASS.
