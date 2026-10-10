@@ -114,6 +114,13 @@ object PathSafety {
         return target != root && target.path.startsWith(prefix)
     }
 
+    internal fun isWithinOrEqualRoot(candidate: File, allowedRoot: File): Boolean {
+        val root = runCatching { allowedRoot.canonicalFile }.getOrNull() ?: return false
+        val target = runCatching { candidate.canonicalFile }.getOrNull() ?: return false
+        val prefix = root.path.trimEnd(File.separatorChar) + File.separator
+        return target == root || target.path.startsWith(prefix)
+    }
+
     private fun canonicalPath(file: File): String = runCatching {
         file.canonicalPath
     }.getOrElse { file.absolutePath }
