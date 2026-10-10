@@ -64,8 +64,8 @@ PY
 }
 
 status=0
-if ! run_verifier; then
-  status=$?
+run_verifier || status=$?
+if [[ "$status" -ne 0 ]]; then
   if is_transient_pid_flake; then
     echo "[Omni/AppLab] transient crawler PID loss without crash evidence; retrying once..."
     sleep 3
