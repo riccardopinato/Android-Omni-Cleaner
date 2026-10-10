@@ -42,6 +42,10 @@
     <string name="pro_free">Modalità Free · pubblicità solo dopo consenso privacy</string>
     <string name="pro_buy">Sblocca Premium · %1$s</string>
     <string name="pro_price_unavailable">prezzo da Google Play</string>
+    <string name="pro_model">Sblocco a vita una tantum · la pulizia base resta Free · Premium aggiunge gli strumenti Pro combinati e rimuove ogni richiesta pubblicitaria</string>
+    <string name="pro_checking_purchase">Verifica proprietà Premium con Google Play…</string>
+    <string name="pro_purchase_pending">Acquisto in attesa · Premium si attiva solo quando Google Play restituisce PURCHASED</string>
+    <string name="pro_restore">Ripristina acquisto</string>
     <string name="pro_product_unavailable">Premium non è ancora disponibile da Google Play per questa build/account.</string>
     <string name="pro_purchase_context_error">Il flusso di acquisto non è disponibile in questo contesto.</string>
     <string name="pro_batch_title">Analisi Pro combinata</string>

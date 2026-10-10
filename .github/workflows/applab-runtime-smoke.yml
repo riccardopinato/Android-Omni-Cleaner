@@ -6,6 +6,7 @@ on:
       - "recovery/**"
       - "audit/**"
       - "hardening/**"
+      - "monetization/**"
   pull_request:
     branches:
       - main
@@ -205,3 +206,4 @@ jobs:
 
           echo "Step 4 APK SHA-256: $APK_SHA256" >> "$GITHUB_STEP_SUMMARY"
           echo "Release tag: $TAG" >> "$GITHUB_STEP_SUMMARY"
+
