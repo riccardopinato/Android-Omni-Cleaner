@@ -154,15 +154,10 @@ fun MonetizationSection() {
                         Text(stringResource(R.string.pro_batch_scan))
                     }
                 }
-                batchState.results.forEach { result ->
-                    Text(
-                        "${result.type.label}: ${result.candidates} · ${formatBytes(result.candidateBytes)}",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                batchState.error?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                }
+                ProBatchReview(
+                    controller = batch,
+                    state = batchState,
+                )
             }
 
             if (!premium && consentState.privacyOptionsRequired && activity != null) {
@@ -181,14 +176,3 @@ fun MonetizationSection() {
     }
 }
 
-private fun formatBytes(bytes: Long): String {
-    if (bytes < 1024L) return "$bytes B"
-    val units = arrayOf("KB", "MB", "GB", "TB")
-    var value = bytes.toDouble()
-    var unit = -1
-    while (value >= 1024.0 && unit < units.lastIndex) {
-        value /= 1024.0
-        unit++
-    }
-    return String.format(Locale.getDefault(), "%.1f %s", value, units[unit])
-}
