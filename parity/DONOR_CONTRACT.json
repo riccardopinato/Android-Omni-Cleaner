@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "donor": {
+    "apk_sha256": "c77f48bbbac1d8e5e16ee44dab67346f3caa0f846bd117e5b05d2cb3b2a88310",
+    "legacy_application_id": "com.aistudio.foldercleaner.zjijip",
+    "version_name": "1.0",
+    "version_code": 1,
+    "stack": "Kotlin + Jetpack Compose",
+    "evidence_source": "supplied donor APK forensic analysis"
+  },
+  "parity_policy": {
+    "visual_parity_required": false,
+    "functional_parity_required": true,
+    "safety_hardening_may_intentionally_diverge": true,
+    "unknown_donor_behavior_must_not_be_invented": true
+  },
+  "contracts": {
+    "storage_overview": {"status": "donor_proven", "symbols": ["SpaceOverviewScanner.scan", "FileInventoryScanner.collect"]},
+    "folders": {"status": "donor_proven", "symbols": ["FileScanner.scanFolders", "FileScanner.computeFolderStats"]},
+    "large_files": {"status": "donor_proven", "symbols": ["FileScanner.findBigFiles"]},
+    "duplicates": {"status": "donor_proven", "digest": "SHA-256", "requires_byte_verification": true, "requires_unchanged_recheck": true, "symbols": ["FileInventoryScanner.duplicates", "FileInventoryScanner.duplicatesProgressive", "FileInventoryScanner.digest", "FileInventoryScanner.identical", "FileInventoryScanner.unchanged"]},
+    "duplicate_keeper_rules": {"status": "donor_proven", "symbols": ["select all", "keep oldest", "keep newest"]},
+    "safe_trash": {"status": "donor_proven", "symbols": ["SafeTrashManager.moveToTrash", "SafeTrashManager.emptyTrash", "SafeTrashManager.permanentlyDelete"]},
+    "media_system_trash": {"status": "donor_proven", "symbols": ["MediaStoreHelper.trashMediaFiles"]},
+    "thumbnail_cleanup": {"status": "donor_proven", "symbols": ["ThumbnailFileCleanup.inventory", "ThumbnailFileCleanup.clean"]},
+    "gallery_cleaner": {"status": "donor_proven", "symbols": ["GalleryCursorSource.readPage", "GalleryCursorSource.nextPage", "swipeKeepCurrent", "swipeTrashCurrent", "undoLastGalleryAction"]},
+    "exif_privacy": {"status": "donor_proven", "symbols": ["FolderExifCleaner.scan", "FolderExifCleaner.export", "JpegExifEditor.cleanTemporaryCopy"]},
+    "premium": {"status": "donor_proven", "product_id": "premium_unlock", "product_type": "inapp_one_time"},
+    "ads": {"status": "donor_proven", "interstitial_cleanup_actions": 3, "interstitial_min_interval_ms": 180000, "premium_blocks_ad_requests": true},
+    "google_sign_in": {"status": "unproven", "note": "Play Services sign-in resources/classes existed in the donor APK, but a functional account flow was not proven."}
+  },
+  "intentional_differences": [
+    "app residues remain review-only when uninstall state is ambiguous",
+    "large non-media files are not permanently deleted as a Safe Trash fallback",
+    "stale donor MD5 wording is not preserved because the recovered donor duplicate digest is SHA-256",
+    "visual design is not a parity gate because a later redesign is planned"
+  ]
+}

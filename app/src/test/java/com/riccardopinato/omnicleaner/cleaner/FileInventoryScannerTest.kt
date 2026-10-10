@@ -2,6 +2,7 @@ package com.riccardopinato.omnicleaner.cleaner
 
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -34,6 +35,70 @@ class FileInventoryScannerTest {
             val inventory = FileInventoryScanner().collect(root)
             assertEquals(1, inventory.files.size)
             assertTrue(inventory.files.single().size > 0)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun byteVerificationRejectsSameSizeDifferentContents() = runBlocking {
+        val root = createTempDirectory("omni-identical-").toFile()
+        try {
+            val first = File(root, "first.bin").apply {
+                writeBytes(byteArrayOf(1, 2, 3, 4))
+            }
+            val identical = File(root, "identical.bin").apply {
+                writeBytes(byteArrayOf(1, 2, 3, 4))
+            }
+            val different = File(root, "different.bin").apply {
+                writeBytes(byteArrayOf(4, 3, 2, 1))
+            }
+
+            val scanner = FileInventoryScanner()
+            assertTrue(scanner.identical(first, identical))
+            assertFalse(scanner.identical(first, different))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun unchangedRejectsFileMutatedAfterInventorySnapshot() = runBlocking {
+        val root = createTempDirectory("omni-unchanged-").toFile()
+        try {
+            val file = File(root, "candidate.bin").apply {
+                writeBytes(byteArrayOf(1, 2, 3, 4))
+            }
+            val scanner = FileInventoryScanner()
+            val snapshot = scanner.collect(root).files.single()
+
+            assertTrue(scanner.unchanged(snapshot))
+
+            file.writeBytes(byteArrayOf(9, 9, 9, 9, 9))
+            assertFalse(scanner.unchanged(snapshot))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun progressiveDuplicateScanReportsCandidateProgress() = runBlocking {
+        val root = createTempDirectory("omni-progressive-").toFile()
+        try {
+            File(root, "a.bin").writeBytes(byteArrayOf(1, 2, 3, 4))
+            File(root, "b.bin").writeBytes(byteArrayOf(1, 2, 3, 4))
+            File(root, "c.bin").writeBytes(byteArrayOf(4, 3, 2, 1))
+            File(root, "unique.bin").writeBytes(byteArrayOf(1, 2, 3))
+
+            val progress = mutableListOf<Pair<Int, Int>>()
+            val groups = FileInventoryScanner().duplicatesProgressive(root) { processed, total ->
+                progress += processed to total
+            }
+
+            assertEquals(1, groups.size)
+            assertTrue(progress.isNotEmpty())
+            assertEquals(progress.last().second, progress.last().first)
+            assertEquals(3, progress.last().second)
         } finally {
             root.deleteRecursively()
         }

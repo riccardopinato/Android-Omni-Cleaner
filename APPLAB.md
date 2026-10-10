@@ -1,42 +1,21 @@
 # AppLab integration
 
-Pinned AppLab baseline:
+Pinned Step 3 baseline:
 
 - repository: `riccardopinato/AppLab`
-- version family: v4.2 Evidence Graph
-- SHA: `d3681e4d2b92631ce96fcfc80349a079cbed40bb`
+- version family: **v4.5 Physical Evidence Hub**
+- SHA: `dc826264c31dd79fc7617ab7a4a8aee61f9b5aba`
 
-## Lanes
+Static Intelligence runs on `main`, `recovery/**`, `audit/**` and PRs.
 
-### AppLab Intelligence
-Runs on `main`, `recovery/**`, pull requests and manual dispatch.
+The parity runtime lane uses a controlled storage fixture and
+`.maestro/parity-storage.yaml`.
 
-It executes the pinned AppLab analyzer directly and prints the complete Markdown report to the workflow log and job summary.
+Authority remains `NON_TRUSTED_SMOKE`; a bounded emulator PASS is not physical
+validation.
 
-Purpose:
-- Product Analysis;
-- UX/Product static review;
-- Architecture & Data Intelligence;
-- Feature Truth and source evidence.
+`applab.project.json` declares real-device validation required for storage,
+file picker/SAF and Billing. A target-authored adapter is intent, not evidence.
 
-This lane intentionally does not upload a GitHub Actions artifact because the account artifact quota is currently saturated. The analysis itself remains deterministic and the JSON/Markdown evidence is validated inside the job before completion.
-
-### AppLab Autonomous Review
-Kept as a manual workflow while GitHub artifact storage is saturated.
-
-Purpose:
-- immutable target resolution;
-- native project build;
-- trusted APK verification;
-- runtime evidence;
-- Product Contract reconciliation;
-- State/Edge review;
-- Evidence Graph / Analyst / experiment planning.
-
-The trusted runtime pipeline depends on GitHub Actions artifacts as part of its evidence boundary. It must not be represented as successful while artifact upload is blocked.
-
-## Recovery-specific rule
-
-The lost-source APK is the donor/evidence source for reconstruction, while AppLab evaluates the newly reconstructed repository/artifact.
-
-A green AppLab static result does not prove parity with the donor APK. APK parity remains a separate explicit audit.
+Trusted AppLab artifact-bound verification and Physical Evidence Hub remain
+blocked while the GitHub Actions artifact quota is saturated.

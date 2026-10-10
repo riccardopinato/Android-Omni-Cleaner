@@ -1,28 +1,42 @@
 # Runtime evidence lanes
 
-## Trusted AppLab runtime
+## Step 3 bounded emulator parity — PASS
 
-Status: **BLOCKED by GitHub Actions artifact quota**.
+Final audited runtime evidence:
 
-This is the authoritative AppLab runtime/certification boundary because build and runtime evidence are bound through immutable artifact identity.
+- source head before closure: `99d6938f689771f64bc28a0547afb7c76e9f5a24`;
+- AppLab Runtime Smoke run: `38076397823`;
+- AppLab v4.5 pin: `dc826264c31dd79fc7617ab7a4a8aee61f9b5aba`;
+- package: `com.riccardopinato.omnicleaner.debug`;
+- Maestro: PASS;
+- Smart Visual QA: PASS;
+- Multi-Screen Visual Journey: PASS;
+- System UI Lab: PASS;
+- Persistence & Restart: WARN, 0 errors;
+- Storage & Data Integrity: WARN, 0 errors.
 
-Do not replace it with a weaker lane.
-
-## AppLab Runtime Smoke
-
-Status: **available without artifact upload**.
-
-The repository builds the debug APK and executes the pinned AppLab verifier in one GitHub Actions job on an Android emulator.
-
-Coverage includes:
-- APK installation and launch;
-- target-process fatal/ANR checks;
-- bounded Maestro flow;
-- safe interaction crawling;
-- AppLab visual runtime checks;
-- System UI/permission checks;
-- controlled storage fixture.
+The controlled journey verified storage overview, duplicate discovery, large-file
+discovery, thumbnail discovery and reachability of Gallery Cleaner / EXIF Privacy.
 
 Authority: `NON_TRUSTED_SMOKE`.
 
-This lane is valid evidence that the reconstructed app launches and survives bounded runtime interaction. It does **not** establish byte-bound trusted runtime identity, donor equivalence, physical-device behavior or store certification.
+## Test APK distribution
+
+A GitHub prerelease is generated only after the runtime job succeeds. It contains:
+- the exact debug APK exercised by the parity lane;
+- a `.sha256` sidecar;
+- source SHA and APK SHA-256 in the release notes.
+
+This bypasses GitHub Actions artifact quota for manual/physical testing, but does
+not create trusted AppLab artifact-bound certification.
+
+## Physical authority
+
+`applab.project.json` requires physical validation for:
+- storage;
+- file picker / SAF;
+- Billing.
+
+See `parity/PHYSICAL_DEVICE_PLAN.md`.
+
+Emulator PASS is never physical-device PASS.

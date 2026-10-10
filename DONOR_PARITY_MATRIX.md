@@ -3,59 +3,78 @@
 Donor APK SHA-256:
 `c77f48bbbac1d8e5e16ee44dab67346f3caa0f846bd117e5b05d2cb3b2a88310`
 
-Recovery branch:
-`recovery/maxi-step-2-full-apk-reconstruction`
+Step 3 audit branch:
+`audit/maxi-step-3-apk-parity`
 
-## Status vocabulary
+## Final Step 3 vocabulary
 
-- **SOURCE_RECOVERED** — donor behavior has corresponding reconstructed source and automated build/test evidence.
-- **RECOVERED_SAFER** — donor behavior is reconstructed with an intentional safety hardening.
-- **PARTIAL** — meaningful donor behavior exists but parity is not complete.
-- **RUNTIME_PENDING** — source exists but trusted runtime/physical-device parity has not yet been established.
-- **EXTERNAL_CONFIG_PENDING** — implementation exists but provider/store configuration is still required.
+- **RECOVERED** — donor behavior is reconstructed and supported by source/test/runtime evidence appropriate to the capability.
+- **IMPROVED** — donor behavior is present with an intentional safety/truth hardening.
+- **INTENTIONALLY_CHANGED** — donor behavior was deliberately not reproduced because the safer/product-truth contract is stronger.
+- **BLOCKED** — parity cannot be established without a real device, Play/provider configuration or trusted artifact-bound evidence.
+- **MISSING** — donor-proven behavior is absent from the reconstructed product.
 
 ## Matrix
 
-| Donor capability | Recovery status | Notes |
+| Donor capability | Step 3 verdict | Evidence / boundary |
 |---|---|---|
-| Storage overview | SOURCE_RECOVERED / RUNTIME_PENDING | Real storage and logical inventory scan restored. |
-| Folder scan | SOURCE_RECOVERED / RUNTIME_PENDING | Empty/below-threshold model, configurable threshold and search restored. |
-| Large files | SOURCE_RECOVERED / RUNTIME_PENDING | Size filters, search, review and guarded cleanup restored. |
-| Duplicate scan | SOURCE_RECOVERED / RUNTIME_PENDING | SHA-256 grouping restored. Stale donor UI wording mentioning MD5 is not preserved. |
-| Duplicate keep-oldest / keep-newest | SOURCE_RECOVERED / RUNTIME_PENDING | Guardian logic guarantees at least one keeper when all copies are selected. |
-| Safe Trash | RECOVERED_SAFER / RUNTIME_PENDING | Small non-media files use reversible Safe Trash. Large non-media files are blocked instead of falling back to permanent delete. |
-| Media cleanup | SOURCE_RECOVERED / RUNTIME_PENDING | Android MediaStore trash confirmation restored. |
-| Empty-folder cleanup | SOURCE_RECOVERED / RUNTIME_PENDING | Revalidated immediately before deletion and constrained by PathSafety. |
-| Thumbnail/cache scan | SOURCE_RECOVERED / RUNTIME_PENDING | Donor paths/inventory concept restored. |
-| Thumbnail cleanup | RECOVERED_SAFER / RUNTIME_PENDING | Size, timestamp and SHA-256 are revalidated before each delete. |
-| App residue scan | SOURCE_RECOVERED / RUNTIME_PENDING | Accessible Android/media candidates restored. |
-| App residue automatic cleanup | PARTIAL / INTENTIONAL_SAFETY_CHANGE | Candidates remain review-only when package visibility cannot reliably prove uninstall state. |
-| Manual maintenance | SOURCE_RECOVERED / RUNTIME_PENDING | Clipboard and app-management helpers restored. |
-| Gallery Cleaner | SOURCE_RECOVERED / RUNTIME_PENDING | MediaStore paging, filters/sort, visual preview, swipe Keep/Trash, prefetch and persisted progress restored. |
-| Gallery Undo | SOURCE_RECOVERED / RUNTIME_PENDING | Last review action can be undone before system trash execution. |
-| Gallery system trash | SOURCE_RECOVERED / RUNTIME_PENDING | Explicit app confirmation plus Android system confirmation. |
-| EXIF privacy scan | SOURCE_RECOVERED / RUNTIME_PENDING | JPEG metadata inspection/grouping restored. |
-| EXIF safe-copy cleaning | SOURCE_RECOVERED / RUNTIME_PENDING | Original preservation is the default recovery rule. |
-| Pro scan categories | SOURCE_RECOVERED / RUNTIME_PENDING | Exact five donor category contracts restored. |
-| Pro DataStore preferences | SOURCE_RECOVERED | `pro_batch_prefs` / `selected_pro_scan_types` restored. |
-| Pro batch review | SOURCE_RECOVERED / RUNTIME_PENDING | Real candidates, keeper controls and per-item review restored. |
-| Pro batch resolve | RECOVERED_SAFER / RUNTIME_PENDING | Safe categories execute; media go through Android trash; app residues remain review-only. |
-| Billing | SOURCE_RECOVERED / EXTERNAL_CONFIG_PENDING | Donor one-time SKU `premium_unlock` restored on current Billing Library adapter. Play Console product/runtime test still required. |
-| Premium entitlement | SOURCE_RECOVERED / RUNTIME_PENDING | Central entitlement state now controls feature access and ad eligibility. |
-| UMP privacy consent | SOURCE_RECOVERED / RUNTIME_PENDING | Ads are not eligible before consent. |
-| Banner ads | SOURCE_RECOVERED / EXTERNAL_CONFIG_PENDING | Debug uses official Google test unit; release ad requests remain disabled until production IDs are supplied. |
-| Interstitial ads | SOURCE_RECOVERED / EXTERNAL_CONFIG_PENDING | Donor cadence restored: 3 completed cleanup actions + minimum 180 seconds. |
-| Premium = no ads | SOURCE_RECOVERED / RUNTIME_PENDING | Premium blocks ad eligibility/request path, not merely visual display. |
-| Functional Google Sign-In | UNPROVEN_DONOR | Play Services sign-in resources existed in APK, but a functional account flow was not proven by forensic evidence. Not invented during recovery. |
-| Original visual design | NOT_A_PARITY_GATE | User explicitly plans a later redesign. Functional structure is recovered first. |
+| Storage overview | **RECOVERED** | Deterministic inventory tests + controlled emulator parity journey. |
+| Folder scan | **RECOVERED** | Deterministic fixture verifies empty/below-threshold classification and ignore policy. Real-device broad-storage parity remains physical evidence. |
+| Large files | **RECOVERED** | Controlled 12 MiB emulator fixture found with the 10 MiB filter. |
+| Duplicate scan | **RECOVERED** | SHA-256 grouping, same-size prefilter and byte-identical verification recovered; controlled duplicate fixture found in runtime. |
+| Duplicate keep-oldest / keep-newest | **RECOVERED** | Automated keeper/guardian contracts prevent deleting every copy. |
+| Safe Trash | **IMPROVED / BLOCKED physical cleanup** | Reversible private trash is tested deterministically; large non-media permanent-delete fallback is intentionally blocked. |
+| Media cleanup | **RECOVERED / BLOCKED physical confirmation** | MediaStore system-trash path is implemented; real system confirmation is reserved for physical testing. |
+| Empty-folder cleanup | **RECOVERED / BLOCKED physical cleanup** | PathSafety and immediate revalidation are tested; destructive device behavior is not inferred from emulator scan evidence. |
+| Thumbnail/cache scan | **RECOVERED** | Controlled `DCIM/.thumbnails` fixture is surfaced by Maestro. |
+| Thumbnail cleanup | **IMPROVED / BLOCKED physical cleanup** | Size/timestamp/SHA-256 revalidation is tested before delete; destructive physical scenario remains pending. |
+| App residue scan | **RECOVERED** | Accessible `Android/media` candidate scanner restored. |
+| App residue automatic cleanup | **INTENTIONALLY_CHANGED** | Candidates remain review-only when package visibility cannot reliably prove uninstall state. |
+| Manual maintenance | **RECOVERED** | Clipboard/app-management helper contracts restored. |
+| Gallery Cleaner | **RECOVERED / BLOCKED physical media parity** | Paging/filter/sort/review model and UI are recovered; parity journey proves reachability. Real media permission/MediaStore behavior remains physical. |
+| Gallery Undo | **RECOVERED / BLOCKED physical media parity** | Pre-trash history/undo contract is implemented and unit-tested; real media flow remains physical. |
+| Gallery system trash | **RECOVERED / BLOCKED physical confirmation** | Explicit app confirmation + Android system trash request restored; not auto-confirmed in CI. |
+| EXIF privacy scan | **RECOVERED / BLOCKED SAF physical parity** | EXIF groups, JPEG validation and content-digest contracts are tested; real SAF tree selection remains physical. |
+| EXIF safe-copy cleaning | **IMPROVED / BLOCKED SAF physical parity** | Original-preserving export, digest verification, orientation/color/XMP protection restored. |
+| Pro scan categories | **RECOVERED** | Exact five donor category contracts restored. |
+| Pro DataStore preferences | **RECOVERED** | `pro_batch_prefs` / `selected_pro_scan_types` restored. |
+| Pro batch review | **RECOVERED** | Candidate review, keeper controls and per-item selection restored. |
+| Pro batch resolve | **IMPROVED / BLOCKED physical cleanup** | Safe categories execute; media use Android trash; app residues remain review-only. |
+| Billing | **RECOVERED / BLOCKED Play test** | Donor one-time INAPP SKU `premium_unlock` restored on current Billing adapter; Internal Testing purchase/restore/acknowledge still required. |
+| Premium entitlement | **RECOVERED** | Central resolved entitlement controls feature access and ad eligibility; fail-closed tests cover unresolved state. |
+| UMP privacy consent | **RECOVERED / BLOCKED production validation** | Consent gate exists; production/provider validation belongs to monetization productization. |
+| Banner ads | **RECOVERED / BLOCKED production config** | Debug uses Google test IDs; release requests remain disabled until production IDs are supplied. |
+| Interstitial ads | **RECOVERED / BLOCKED production config** | Donor cadence restored: 3 completed cleanups + minimum 180 seconds. |
+| Premium = no ads | **RECOVERED** | Premium blocks the request path, not only visual display. |
+| Functional Google Sign-In | **BLOCKED — donor unproven** | Sign-in resources/classes existed in the APK, but no functional donor account flow was proven; recovery does not invent one. |
+| Original visual design | **INTENTIONALLY_CHANGED / NOT A PARITY GATE** | A later redesign is explicitly planned. |
 
-## Remaining parity gates
+## Step 3 evidence
 
-1. Trusted runtime execution of the reconstructed APK.
-2. Side-by-side donor vs reconstructed behavior on representative storage/media fixtures.
-3. Physical-device validation of permissions, MediaStore trash, Gallery and EXIF.
-4. Google Play Billing test for `premium_unlock`.
-5. Production AdMob IDs + UMP verification.
-6. Decide whether app-residue deletion can be safely re-enabled without relying on ambiguous package visibility.
+Final green audit head before closure:
+`99d6938f689771f64bc28a0547afb7c76e9f5a24`
 
-Build green or AppLab static green does not satisfy these runtime gates.
+- Android CI: **PASS** — run `38076397786`.
+- AppLab Intelligence v4.5: **PASS** — run `38076397838`.
+- AppLab Runtime Smoke: **PASS** — run `38076397823`.
+- Maestro parity journey: **PASS**.
+- Smart Visual QA: **PASS**.
+- Multi-Screen Visual Journey: **PASS**.
+- System UI Lab: **PASS**.
+- Persistence & Restart Lab: **WARN, 0 errors**.
+- Storage & Data Integrity Lab: **WARN, 0 errors**.
+
+The AppLab warnings are advisory and do not establish physical parity. They are retained as evidence rather than rewritten as PASS.
+
+## Step 3 conclusion
+
+Critical `MISSING` donor capabilities: **0**.
+
+The remaining `BLOCKED` items require one of:
+- physical-device execution;
+- Android system UI / SAF behavior on a real phone;
+- Google Play Internal Testing;
+- production AdMob/UMP configuration;
+- trusted artifact-bound AppLab evidence after GitHub artifact quota is available.
+
+Step 3 is therefore complete within its declared evidence boundary. It does not claim store readiness or physical-device certification.
