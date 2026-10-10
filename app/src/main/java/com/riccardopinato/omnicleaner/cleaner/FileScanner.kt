@@ -9,6 +9,8 @@ import kotlin.coroutines.coroutineContext
 
 class FileScanner(
     private val inventoryScanner: FileInventoryScanner = FileInventoryScanner(),
+    private val thumbnailCleanup: ThumbnailFileCleanup = ThumbnailFileCleanup(),
+    private val residueScanner: AppResidueScanner = AppResidueScanner(),
 ) {
     suspend fun collectFileInventory(root: File): FileInventory = inventoryScanner.collect(root)
 
