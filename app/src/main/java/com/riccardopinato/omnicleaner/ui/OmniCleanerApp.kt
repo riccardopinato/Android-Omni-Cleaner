@@ -183,6 +183,18 @@ fun OmniCleanerApp() {
             }
 
             item {
+                StorageCleanupSection(
+                    folders = state.folders,
+                    bigFiles = state.bigFiles,
+                    duplicateGroups = state.duplicates,
+                    onCleanupFinished = {
+                        controller.refreshAccessAndStorage()
+                        controller.scanOverview()
+                    },
+                )
+            }
+
+            item {
                 GalleryCleanerSection()
             }
 
