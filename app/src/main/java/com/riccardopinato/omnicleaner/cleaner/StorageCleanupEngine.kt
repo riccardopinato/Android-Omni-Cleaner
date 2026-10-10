@@ -179,7 +179,12 @@ class StorageCleanupEngine(
             }
 
             if (file.length() <= SafeTrashManager.MAX_SMALL_FILE_TRASH_BYTES) {
-                safeTrash += snapshot
+                val digestBound = CleanupSnapshotValidator.withCurrentDigest(snapshot)
+                if (digestBound != null) {
+                    safeTrash += digestBound
+                } else {
+                    stale += file
+                }
             } else {
                 // No irreversible fallback: large non-media files stay untouched.
                 blocked += file
