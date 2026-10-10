@@ -29,6 +29,7 @@ import com.riccardopinato.omnicleaner.cleaner.FileScanner
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.ThumbnailCacheItem
 import com.riccardopinato.omnicleaner.cleaner.ThumbnailFileCleanup
+import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
