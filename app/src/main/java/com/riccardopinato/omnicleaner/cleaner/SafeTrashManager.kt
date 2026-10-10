@@ -60,7 +60,15 @@ class SafeTrashManager private constructor(
             .toList()
 
     fun getTrashSize(): Long =
-        listEntries().sumOf { it.sizeBytes.coerceAtLeast(0L) }
+        trashDirectory.listFiles()
+            .orEmpty()
+            .sumOf { entry ->
+                File(entry, PAYLOAD_NAME)
+                    .takeIf { it.isFile }
+                    ?.length()
+                    ?.coerceAtLeast(0L)
+                    ?: 0L
+            }
 
     fun moveToTrash(snapshot: CleanupFileSnapshot): File? {
         if (!CleanupSnapshotValidator.validate(snapshot).valid) return null
@@ -262,18 +270,29 @@ class SafeTrashManager private constructor(
     }
 
     fun permanentlyDelete(file: File): Boolean {
-        val target = runCatching { file.canonicalFile }.getOrNull() ?: return false
         val root = runCatching { trashDirectory.canonicalFile }.getOrNull() ?: return false
         val rootPrefix = root.path.trimEnd(File.separatorChar) + File.separator
-        val targetPath = target.path
+        val absolute = file.absoluteFile
 
-        if (target == root || !targetPath.startsWith(rootPrefix)) return false
-        return if (target.isDirectory) target.deleteRecursively() else target.delete()
+        if (!absolute.path.startsWith(rootPrefix)) return false
+        if (PathSafety.isSymlink(file)) {
+            // File.delete() removes the link itself and does not recurse into
+            // the link target.
+            return file.delete()
+        }
+
+        val target = runCatching { file.canonicalFile }.getOrNull() ?: return false
+        if (target == root || !target.path.startsWith(rootPrefix)) return false
+        return deleteTreeWithoutFollowingSymlinks(target, root)
     }
 
     fun emptyTrash(): Boolean {
         val entries = trashDirectory.listFiles() ?: return true
-        return entries.all { it.deleteRecursively() }
+        var allDeleted = true
+        for (entry in entries) {
+            if (!permanentlyDelete(entry)) allDeleted = false
+        }
+        return allDeleted
     }
 
     fun sameContents(first: File, second: File, expectedBytes: Long): Boolean {
@@ -301,6 +320,29 @@ class SafeTrashManager private constructor(
                 return compared == expectedBytes
             }
         }
+    }
+
+    private fun deleteTreeWithoutFollowingSymlinks(node: File, root: File): Boolean {
+        val rootPrefix = root.path.trimEnd(File.separatorChar) + File.separator
+        val absolute = node.absoluteFile
+        if (!absolute.path.startsWith(rootPrefix)) return false
+
+        if (PathSafety.isSymlink(node)) {
+            return node.delete()
+        }
+
+        val canonical = runCatching { node.canonicalFile }.getOrNull() ?: return false
+        if (canonical != node.absoluteFile || !canonical.path.startsWith(rootPrefix)) return false
+
+        if (canonical.isDirectory) {
+            var childrenDeleted = true
+            for (child in canonical.listFiles().orEmpty()) {
+                if (!deleteTreeWithoutFollowingSymlinks(child, root)) childrenDeleted = false
+            }
+            if (!childrenDeleted) return false
+        }
+
+        return canonical.delete()
     }
 
     private fun readEntry(directory: File): SafeTrashEntry? {
