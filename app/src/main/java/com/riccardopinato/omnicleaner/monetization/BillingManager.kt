@@ -27,7 +27,7 @@ data class BillingState(
 
 class BillingManager(
     context: Context,
-    private val onPremiumChanged: (Boolean) -> Unit,
+    private val onPremiumChanged: (Boolean) -> Unit = {},
 ) : PurchasesUpdatedListener {
     private val _state = MutableStateFlow(BillingState())
     val state: StateFlow<BillingState> = _state.asStateFlow()
@@ -79,7 +79,7 @@ class BillingManager(
                     PREMIUM_PRODUCT_ID in it.products
             }
             _state.value = _state.value.copy(premiumOwned = premium, error = null)
-            onPremiumChanged(premium)
+            publishPremium(premium)
             purchases.filter {
                 it.purchaseState == Purchase.PurchaseState.PURCHASED &&
                     PREMIUM_PRODUCT_ID in it.products &&
@@ -148,9 +148,14 @@ class BillingManager(
         }
         if (owned.isNotEmpty()) {
             _state.value = _state.value.copy(premiumOwned = true, error = null)
-            onPremiumChanged(true)
+            publishPremium(true)
             owned.filterNot { it.isAcknowledged }.forEach(::acknowledgePurchase)
         }
+    }
+
+    private fun publishPremium(owned: Boolean) {
+        PremiumEntitlementStore.update(owned)
+        onPremiumChanged(owned)
     }
 
     fun endConnection() {
