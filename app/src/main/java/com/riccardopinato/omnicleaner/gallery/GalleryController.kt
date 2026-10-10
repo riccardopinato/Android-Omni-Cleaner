@@ -71,10 +71,8 @@ class GalleryController(
         val health = GalleryAccess.health(context)
         val compatibleFilter = when {
             health.level == GalleryAccessLevel.NONE -> state.filter
-            state.filter == GalleryMediaFilter.IMAGES && !health.canReadImages && health.canReadVideos ->
-                GalleryMediaFilter.VIDEOS
-            state.filter == GalleryMediaFilter.VIDEOS && !health.canReadVideos && health.canReadImages ->
-                GalleryMediaFilter.IMAGES
+            health.canReadImages && !health.canReadVideos -> GalleryMediaFilter.IMAGES
+            health.canReadVideos && !health.canReadImages -> GalleryMediaFilter.VIDEOS
             else -> state.filter
         }
         update(
@@ -88,7 +86,8 @@ class GalleryController(
 
     fun setFilter(filter: GalleryMediaFilter) {
         val allowed = when (filter) {
-            GalleryMediaFilter.ALL -> state.hasAccess
+            GalleryMediaFilter.ALL ->
+                state.accessHealth.canReadImages && state.accessHealth.canReadVideos
             GalleryMediaFilter.IMAGES -> state.accessHealth.canReadImages
             GalleryMediaFilter.VIDEOS -> state.accessHealth.canReadVideos
         }
