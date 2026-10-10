@@ -232,7 +232,6 @@ fun OmniCleanerApp() {
 }
 
 @Composable
-@Composable
 private fun SearchAndFilterCard(
     state: CleanerUiState,
     onFolderQuery: (String) -> Unit,
