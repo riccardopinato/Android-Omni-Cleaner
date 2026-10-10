@@ -48,7 +48,7 @@ fun GalleryCleanerSection() {
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
     ) {
-        controller.refreshAccess()
+        controller.refreshAccess(clearLoadedMedia = true)
     }
 
     val trashLauncher = rememberLauncherForActivityResult(
@@ -83,14 +83,34 @@ fun GalleryCleanerSection() {
                     Text("Allow photos and videos")
                 }
             } else {
+                if (state.accessHealth.level == GalleryAccessLevel.PARTIAL) {
+                    Text(
+                        "Accesso limitato: Gallery Cleaner vede solo i contenuti autorizzati da Android.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedButton(
+                        onClick = { permissionLauncher.launch(GalleryAccess.requiredPermissions()) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Modifica selezione foto e video")
+                    }
+                }
+
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     GalleryMediaFilter.entries.forEach { filter ->
                         if (state.filter == filter) {
-                            Button(onClick = { controller.setFilter(filter) }) {
+                            Button(
+                                onClick = { controller.setFilter(filter) },
+                                enabled = filter.isAvailableFor(state.accessHealth),
+                            ) {
                                 Text(filter.label)
                             }
                         } else {
-                            OutlinedButton(onClick = { controller.setFilter(filter) }) {
+                            OutlinedButton(
+                                onClick = { controller.setFilter(filter) },
+                                enabled = filter.isAvailableFor(state.accessHealth),
+                            ) {
                                 Text(filter.label)
                             }
                         }
@@ -226,4 +246,10 @@ fun GalleryCleanerSection() {
             },
         )
     }
+}
+
+private fun GalleryMediaFilter.isAvailableFor(health: GalleryAccessHealth): Boolean = when (this) {
+    GalleryMediaFilter.ALL -> health.canReadImages && health.canReadVideos
+    GalleryMediaFilter.IMAGES -> health.canReadImages
+    GalleryMediaFilter.VIDEOS -> health.canReadVideos
 }

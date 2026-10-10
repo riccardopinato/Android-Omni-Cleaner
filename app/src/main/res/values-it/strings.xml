@@ -6,6 +6,16 @@
     <string name="access_ready">Accesso alla memoria pronto</string>
     <string name="access_required">Serve l’accesso alla memoria per analizzare tutto il dispositivo</string>
     <string name="grant_access">Concedi accesso</string>
+    <string name="grant_deep_access">Attiva Pulizia Profonda</string>
+    <string name="standard_cleaning_ready">Pulizia Standard pronta · Galleria ed EXIF usano le API Android con accesso limitato</string>
+    <string name="standard_cleaning_unavailable">Pulizia Standard non disponibile finché la memoria condivisa non è montata</string>
+    <string name="deep_access_dialog_title">Attivare Pulizia Profonda?</string>
+    <string name="deep_access_dialog_body">Pulizia Profonda analizza localmente nomi, percorsi, dimensioni e contenuti duplicati nella memoria condivisa. Sulle versioni Android supportate richiede l’Accesso a tutti i file, opzionale, per l’analisi completa del dispositivo. I dati di questa scansione non vengono caricati online e Pulizia Standard resta disponibile senza questo accesso.</string>
+    <string name="deep_access_dialog_confirm">Continua alle impostazioni</string>
+    <string name="deep_access_dialog_cancel">Non ora</string>
+    <string name="deep_access_optional">Pulizia Profonda opzionale · richiede Accesso a tutti i file per analizzare l’intero dispositivo</string>
+    <string name="deep_access_android10">Su Android 10 la scansione completa non è disponibile con scoped storage; la Pulizia Standard resta disponibile</string>
+    <string name="deep_access_unavailable">La memoria condivisa non è disponibile al momento</string>
     <string name="refresh">Aggiorna</string>
     <string name="scan_tools">Strumenti di analisi</string>
     <string name="cancel">Annulla</string>

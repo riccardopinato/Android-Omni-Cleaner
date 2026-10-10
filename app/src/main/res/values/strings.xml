@@ -6,6 +6,16 @@
     <string name="access_ready">Storage access ready</string>
     <string name="access_required">Storage access is required for full-device scans</string>
     <string name="grant_access">Grant access</string>
+    <string name="grant_deep_access">Enable Deep Cleaning</string>
+    <string name="standard_cleaning_ready">Standard Cleaning ready · Gallery and EXIF use scoped Android APIs</string>
+    <string name="standard_cleaning_unavailable">Standard Cleaning is unavailable until shared storage is mounted</string>
+    <string name="deep_access_dialog_title">Enable Deep Cleaning?</string>
+    <string name="deep_access_dialog_body">Deep Cleaning scans file names, paths, sizes and duplicate content locally across shared storage. On supported Android versions it needs optional All files access for full-device analysis. Data is not uploaded for this scan, and Standard Cleaning remains available without this access.</string>
+    <string name="deep_access_dialog_confirm">Continue to access settings</string>
+    <string name="deep_access_dialog_cancel">Not now</string>
+    <string name="deep_access_optional">Deep Cleaning is optional and needs All files access for full-device scans</string>
+    <string name="deep_access_android10">Deep Cleaning full-device scans are unavailable on Android 10 under scoped storage; Standard Cleaning remains available</string>
+    <string name="deep_access_unavailable">Shared storage is currently unavailable</string>
     <string name="refresh">Refresh</string>
     <string name="scan_tools">Scan tools</string>
     <string name="cancel">Cancel</string>

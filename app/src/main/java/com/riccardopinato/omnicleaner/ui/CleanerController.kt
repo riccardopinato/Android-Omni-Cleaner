@@ -7,11 +7,13 @@ import androidx.compose.runtime.setValue
 import com.riccardopinato.omnicleaner.cleaner.BigFileItem
 import com.riccardopinato.omnicleaner.cleaner.BigFileSizeFilter
 import com.riccardopinato.omnicleaner.cleaner.DuplicateGroup
+import com.riccardopinato.omnicleaner.cleaner.DeepStorageAccessStatus
 import com.riccardopinato.omnicleaner.cleaner.FileScanner
 import com.riccardopinato.omnicleaner.cleaner.FolderItem
 import com.riccardopinato.omnicleaner.cleaner.SpaceOverview
 import com.riccardopinato.omnicleaner.cleaner.SpaceOverviewScanner
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
+import com.riccardopinato.omnicleaner.cleaner.StorageCapabilityHealth
 import com.riccardopinato.omnicleaner.cleaner.StorageInfo
 import com.riccardopinato.omnicleaner.cleaner.ThresholdUnit
 import kotlinx.coroutines.CoroutineScope
@@ -20,6 +22,12 @@ import kotlinx.coroutines.launch
 
 internal data class CleanerUiState(
     val hasBroadAccess: Boolean = false,
+    val storageCapability: StorageCapabilityHealth = StorageCapabilityHealth(
+        status = DeepStorageAccessStatus.STORAGE_UNAVAILABLE,
+        standardCleaningAvailable = false,
+        deepScanAvailable = false,
+        canRequestDeepAccess = false,
+    ),
     val storageInfo: StorageInfo? = null,
     val scanning: Boolean = false,
     val currentOperation: String? = null,
@@ -92,8 +100,10 @@ internal class CleanerController(
     }
 
     fun refreshAccessAndStorage() {
+        val capability = StorageAccess.capabilityHealth(context)
         state = state.copy(
-            hasBroadAccess = StorageAccess.hasBroadAccess(context),
+            hasBroadAccess = capability.deepScanAvailable,
+            storageCapability = capability,
             storageInfo = runCatching { StorageAccess.storageInfo() }.getOrNull(),
             error = null,
         )
@@ -158,7 +168,7 @@ internal class CleanerController(
 
     private fun runScan(label: String, block: suspend () -> Unit) {
         if (!state.hasBroadAccess) {
-            state = state.copy(error = "Storage access is required before scanning.")
+            state = state.copy(error = "Deep Cleaning access is required before a full-device scan.")
             return
         }
         scanJob?.cancel()

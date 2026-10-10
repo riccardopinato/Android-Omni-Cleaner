@@ -1,9 +1,9 @@
 package com.riccardopinato.omnicleaner.ui
 
 import android.Manifest
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,16 +25,21 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.BigFileSizeFilter
+import com.riccardopinato.omnicleaner.cleaner.DeepStorageAccessStatus
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.ThresholdUnit
 import com.riccardopinato.omnicleaner.exif.ExifCleanerSection
@@ -54,6 +59,7 @@ fun OmniCleanerApp() {
     }
     val state = controller.state
     val activity = remember(context) { context.findActivity() }
+    var showDeepAccessDisclosure by remember { mutableStateOf(false) }
 
     LaunchedEffect(activity) {
         if (activity != null) {
@@ -71,17 +77,26 @@ fun OmniCleanerApp() {
     ) {
         controller.refreshAccessAndStorage()
     }
-    val legacyReadLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
+    val legacyStorageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
     ) {
         controller.refreshAccessAndStorage()
     }
 
     fun requestStorageAccess() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            storageSettingsLauncher.launch(StorageAccess.settingsIntent(context))
-        } else {
-            legacyReadLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+        when (state.storageCapability.status) {
+            DeepStorageAccessStatus.NEEDS_ALL_FILES_ACCESS ->
+                storageSettingsLauncher.launch(StorageAccess.settingsIntent(context))
+
+            DeepStorageAccessStatus.NEEDS_LEGACY_PERMISSION ->
+                legacyStorageLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.READ_EXTERNAL_STORAGE,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    ),
+                )
+
+            else -> Unit
         }
     }
 
@@ -112,7 +127,7 @@ fun OmniCleanerApp() {
             item {
                 StorageCard(
                     state = state,
-                    onGrantAccess = ::requestStorageAccess,
+                    onGrantAccess = { showDeepAccessDisclosure = true },
                     onRefresh = controller::refreshAccessAndStorage,
                 )
             }
@@ -231,6 +246,10 @@ fun OmniCleanerApp() {
             }
 
             item {
+                SafeTrashSection()
+            }
+
+            item {
                 GalleryCleanerSection()
             }
 
@@ -248,6 +267,29 @@ fun OmniCleanerApp() {
 
             item { Spacer(Modifier.height(20.dp)) }
         }
+    }
+
+    if (showDeepAccessDisclosure) {
+        AlertDialog(
+            onDismissRequest = { showDeepAccessDisclosure = false },
+            title = { Text(stringResource(R.string.deep_access_dialog_title)) },
+            text = { Text(stringResource(R.string.deep_access_dialog_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeepAccessDisclosure = false
+                        requestStorageAccess()
+                    },
+                ) {
+                    Text(stringResource(R.string.deep_access_dialog_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeepAccessDisclosure = false }) {
+                    Text(stringResource(R.string.deep_access_dialog_cancel))
+                }
+            },
+        )
     }
 }
 
@@ -362,15 +404,39 @@ private fun StorageCard(
                 )
             }
             Text(
-                if (state.hasBroadAccess) stringResource(R.string.access_ready)
-                else stringResource(R.string.access_required),
-                color = if (state.hasBroadAccess) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.error,
+                if (state.storageCapability.standardCleaningAvailable) {
+                    stringResource(R.string.standard_cleaning_ready)
+                } else {
+                    stringResource(R.string.standard_cleaning_unavailable)
+                },
+                color = if (state.storageCapability.standardCleaningAvailable) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.error
+                },
             )
+            Text(
+                when (state.storageCapability.status) {
+                    DeepStorageAccessStatus.READY -> stringResource(R.string.access_ready)
+                    DeepStorageAccessStatus.NEEDS_ALL_FILES_ACCESS -> stringResource(R.string.deep_access_optional)
+                    DeepStorageAccessStatus.NEEDS_LEGACY_PERMISSION -> stringResource(R.string.deep_access_optional)
+                    DeepStorageAccessStatus.SCOPED_ONLY_ANDROID_10 -> stringResource(R.string.deep_access_android10)
+                    DeepStorageAccessStatus.STORAGE_UNAVAILABLE -> stringResource(R.string.deep_access_unavailable)
+                },
+                color = if (state.hasBroadAccess) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (!state.hasBroadAccess) {
+                Text(
+                    stringResource(R.string.access_required),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (!state.hasBroadAccess) {
+                if (state.storageCapability.canRequestDeepAccess) {
                     Button(onClick = onGrantAccess) {
-                        Text(stringResource(R.string.grant_access))
+                        Text(stringResource(R.string.grant_deep_access))
                     }
                 }
                 OutlinedButton(onClick = onRefresh) {

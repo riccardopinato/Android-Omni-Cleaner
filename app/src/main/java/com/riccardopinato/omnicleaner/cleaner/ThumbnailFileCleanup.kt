@@ -61,10 +61,11 @@ class ThumbnailFileCleanup {
         onProgress: (ThumbnailFileStamp) -> Unit = {},
     ): ThumbnailCleanupResult = withContext(Dispatchers.IO) {
         val root = runCatching { snapshot.directory.canonicalFile }.getOrNull()
-            ?: return@withContext ThumbnailCleanupResult(0, snapshot.files.size)
+            ?: return@withContext ThumbnailCleanupResult(0, snapshot.files.size, 0L)
         val rootPrefix = root.path.trimEnd(File.separatorChar) + File.separator
         var removed = 0
         var rejected = 0
+        var removedBytes = 0L
 
         for (expected in snapshot.files) {
             coroutineContext.ensureActive()
@@ -72,7 +73,8 @@ class ThumbnailFileCleanup {
             onProgress(expected)
 
             val current = runCatching { expected.file.canonicalFile }.getOrNull()
-            if (current == null ||
+            if (
+                current == null ||
                 !current.path.startsWith(rootPrefix) ||
                 !regular(current) ||
                 current.length() != expected.bytes ||
@@ -88,18 +90,31 @@ class ThumbnailFileCleanup {
                 continue
             }
 
-            if (current.delete()) removed++ else rejected++
+            if (
+                current.length() != expected.bytes ||
+                current.lastModified() != expected.modified
+            ) {
+                rejected++
+                continue
+            }
+
+            if (current.delete()) {
+                removed++
+                removedBytes += expected.bytes.coerceAtLeast(0L)
+            } else {
+                rejected++
+            }
         }
 
         root.walkBottomUp()
-            .filter { it != root && it.isDirectory }
+            .filter { it != root && it.isDirectory && !PathSafety.isSymlink(it) }
             .forEach { dir ->
                 runCatching {
                     if (dir.listFiles()?.isEmpty() == true) dir.delete()
                 }
             }
 
-        ThumbnailCleanupResult(removed, rejected)
+        ThumbnailCleanupResult(removed, rejected, removedBytes)
     }
 
     private fun regular(file: File): Boolean = runCatching {

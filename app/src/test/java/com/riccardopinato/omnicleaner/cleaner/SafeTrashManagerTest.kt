@@ -1,11 +1,13 @@
 package com.riccardopinato.omnicleaner.cleaner
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.util.Properties
+import java.util.UUID
 import kotlin.io.path.createTempDirectory
 
 class SafeTrashManagerTest {
@@ -30,12 +32,117 @@ class SafeTrashManagerTest {
             assertTrue(metadata.isFile)
 
             val properties = Properties().apply {
-                metadata.inputStream().use(::load)
+                metadata.inputStream().use { input -> load(input) }
             }
             assertTrue(properties.getProperty("originalPath").endsWith("notes.txt"))
-            assertTrue(manager.getTrashSize() >= payload.length())
+            assertEquals(64, properties.getProperty("sha256").length)
+            assertEquals(payload.length(), manager.getTrashSize())
             assertTrue(manager.emptyTrash())
             assertFalse(payload.exists())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun restoresVerifiedEntryToOriginalPath() {
+        val root = createTempDirectory("omni-restore-").toFile()
+        val trash = File(root, "trash")
+        val source = File(root, "notes.txt").apply {
+            writeText("restore-me")
+            setLastModified(234567L)
+        }
+
+        try {
+            val manager = SafeTrashManager.forTests(trash)
+            assertNotNull(manager.moveToTrash(source))
+            val entry = manager.listEntries().single()
+
+            val result = manager.restore(entry.id)
+
+            assertEquals(SafeTrashRestoreStatus.RESTORED, result.status)
+            assertTrue(source.isFile)
+            assertEquals("restore-me", source.readText())
+            assertTrue(manager.listEntries().isEmpty())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun restoreNeverOverwritesExistingDestination() {
+        val root = createTempDirectory("omni-restore-collision-").toFile()
+        val trash = File(root, "trash")
+        val source = File(root, "notes.txt").apply { writeText("original") }
+
+        try {
+            val manager = SafeTrashManager.forTests(trash)
+            assertNotNull(manager.moveToTrash(source))
+            val entry = manager.listEntries().single()
+
+            source.writeText("new-file")
+
+            val result = manager.restore(entry.id)
+
+            assertEquals(SafeTrashRestoreStatus.DESTINATION_EXISTS, result.status)
+            assertEquals("new-file", source.readText())
+            assertEquals(1, manager.listEntries().size)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun restoreRejectsTamperedPrivatePayload() {
+        val root = createTempDirectory("omni-restore-tamper-").toFile()
+        val trash = File(root, "trash")
+        val source = File(root, "notes.txt").apply { writeText("123456789") }
+
+        try {
+            val manager = SafeTrashManager.forTests(trash)
+            assertNotNull(manager.moveToTrash(source))
+            val entry = manager.listEntries().single()
+            val payload = File(File(trash, entry.id), "payload")
+            payload.writeText("987654321")
+
+            val result = manager.restore(entry.id)
+
+            assertEquals(SafeTrashRestoreStatus.PAYLOAD_INVALID, result.status)
+            assertFalse(source.exists())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun legacyEntryWithoutStoredDigestRemainsRestorable() {
+        val root = createTempDirectory("omni-restore-legacy-").toFile()
+        val trash = File(root, "trash")
+        val destination = File(root, "legacy.txt")
+        val entryDir = File(trash, UUID.randomUUID().toString()).apply { mkdirs() }
+        val payload = File(entryDir, "payload").apply { writeText("legacy") }
+        val metadata = File(entryDir, "original.properties")
+        Properties().apply {
+            setProperty("originalPath", destination.canonicalPath)
+            setProperty("originalName", destination.name)
+            setProperty("sizeBytes", payload.length().toString())
+            setProperty("lastModified", "0")
+        }.also { properties ->
+            metadata.outputStream().use { output -> properties.store(output, "legacy") }
+        }
+
+        try {
+            val manager = SafeTrashManager.forTests(trash)
+            val entry = manager.listEntries().single()
+            val migratedProperties = Properties().apply {
+                metadata.inputStream().use { input -> load(input) }
+            }
+            assertEquals(64, migratedProperties.getProperty("sha256").length)
+
+            val result = manager.restore(entry.id)
+
+            assertEquals(SafeTrashRestoreStatus.RESTORED, result.status)
+            assertEquals("legacy", destination.readText())
         } finally {
             root.deleteRecursively()
         }
