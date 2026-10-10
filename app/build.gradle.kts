@@ -29,8 +29,7 @@ android {
         releaseInterstitialUnitId,
     ).all { !it.isNullOrBlank() }
 
-    fun quoted(value: String): String =
-        """ + value.replace("\\", "\\\\").replace(""", "\\"") + """
+    fun quoted(value: String): String = "\"$value\""
 
     buildTypes {
         debug {
