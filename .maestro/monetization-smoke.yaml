@@ -1,0 +1,19 @@
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+- assertVisible: "Android Omni Cleaner"
+- scrollUntilVisible:
+    element:
+      text: "Omni Cleaner Pro"
+    direction: DOWN
+    timeout: 120000
+    speed: 60
+- assertVisible: "Omni Cleaner Pro"
+- scrollUntilVisible:
+    element:
+      text: "Restore purchase"
+    direction: DOWN
+    timeout: 30000
+    speed: 50
+- assertVisible: "Restore purchase"
