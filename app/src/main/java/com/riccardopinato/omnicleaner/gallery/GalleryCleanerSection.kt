@@ -115,6 +115,11 @@ fun GalleryCleanerSection() {
             }
 
             state.currentItem?.let { current ->
+                GalleryMediaPreview(
+                    item = current,
+                    onKeep = controller::keepCurrent,
+                    onTrash = controller::trashCurrent,
+                )
                 Text(current.name, style = MaterialTheme.typography.titleMedium)
                 Text(
                     buildString {
