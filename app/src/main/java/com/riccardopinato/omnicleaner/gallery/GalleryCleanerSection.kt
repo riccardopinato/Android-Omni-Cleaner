@@ -148,8 +148,22 @@ fun GalleryCleanerSection() {
                 }
             }
 
-            if (state.items.isNotEmpty() && state.currentItem == null) {
-                Text("Revisione completata per gli elementi caricati.")
+            if (state.loadingNextPage) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                Text("Caricamento pagina successiva…", style = MaterialTheme.typography.bodySmall)
+            }
+
+            if (state.hasMore && !state.loadingNextPage) {
+                OutlinedButton(
+                    onClick = controller::loadNextPage,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Carica altri elementi")
+                }
+            }
+
+            if (state.items.isNotEmpty() && state.currentItem == null && !state.hasMore) {
+                Text("Revisione completata per tutti gli elementi caricati.")
             }
 
             if (state.selectedForTrash.isNotEmpty()) {

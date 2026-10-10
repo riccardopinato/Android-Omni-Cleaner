@@ -69,6 +69,7 @@ object MediaStoreHelper {
         filter: GalleryMediaFilter = GalleryMediaFilter.ALL,
         sortOrder: GallerySortOrder = GallerySortOrder.DATE_DESC,
         limit: Int = 300,
+        offset: Int = 0,
         cancellationSignal: CancellationSignal = CancellationSignal(),
     ): List<GalleryMediaItem> {
         cancellationSignal.throwIfCanceled()
@@ -139,6 +140,7 @@ object MediaStoreHelper {
                 putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs)
                 putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, order)
                 putInt(ContentResolver.QUERY_ARG_LIMIT, limit.coerceAtLeast(1))
+                putInt(ContentResolver.QUERY_ARG_OFFSET, offset.coerceAtLeast(0))
             }
             resolver.query(collection, projection, queryArgs, cancellationSignal)
         } else {
@@ -147,7 +149,7 @@ object MediaStoreHelper {
                 projection,
                 selection,
                 selectionArgs,
-                "$order LIMIT ${limit.coerceAtLeast(1)}",
+                "$order LIMIT ${limit.coerceAtLeast(1)} OFFSET ${offset.coerceAtLeast(0)}",
                 cancellationSignal,
             )
         } ?: throw IOException("MediaStore non disponibile")
@@ -239,12 +241,14 @@ object MediaStoreHelper {
         filter: GalleryMediaFilter = GalleryMediaFilter.ALL,
         sortOrder: GallerySortOrder = GallerySortOrder.DATE_DESC,
         limit: Int = 300,
+        offset: Int = 0,
     ): List<GalleryMediaItem> = withContext(Dispatchers.IO) {
         loadGalleryMedia(
             context = context,
             filter = filter,
             sortOrder = sortOrder,
             limit = limit,
+            offset = offset,
             cancellationSignal = CancellationSignal(),
         )
     }

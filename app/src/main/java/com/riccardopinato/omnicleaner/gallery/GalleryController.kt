@@ -12,6 +12,8 @@ import kotlinx.coroutines.launch
 data class GalleryUiState(
     val hasAccess: Boolean = false,
     val loading: Boolean = false,
+    val loadingNextPage: Boolean = false,
+    val hasMore: Boolean = false,
     val items: List<GalleryMediaItem> = emptyList(),
     val currentIndex: Int = 0,
     val history: List<GallerySwipeHistoryItem> = emptyList(),
@@ -74,33 +76,71 @@ class GalleryController(
         scope.launch { preferences.saveFilterAndSort(state.filter, next) }
     }
 
-    fun load(limit: Int = 300) {
+    fun load(pageSize: Int = DEFAULT_PAGE_SIZE) {
         if (!state.hasAccess) {
             update(state.copy(error = "Gallery permission is required."))
             return
         }
         loadJob?.cancel()
         loadJob = scope.launch {
-            update(state.copy(loading = true, error = null))
+            update(state.copy(loading = true, loadingNextPage = false, error = null))
             runCatching {
                 MediaStoreHelper.loadGalleryMediaCancellable(
                     context = context,
                     filter = state.filter,
                     sortOrder = state.sortOrder,
-                    limit = limit,
+                    limit = pageSize + 1,
+                    offset = 0,
                 )
-            }.onSuccess { items ->
+            }.onSuccess { loaded ->
+                val hasMore = loaded.size > pageSize
+                val page = loaded.take(pageSize)
                 update(
                     state.copy(
                         loading = false,
-                        items = items,
+                        loadingNextPage = false,
+                        hasMore = hasMore,
+                        items = page,
                         currentIndex = 0,
                         history = emptyList(),
                     ),
                 )
             }.onFailure { error ->
                 if (error !is CancellationException) {
-                    update(state.copy(loading = false, error = error.message ?: error.javaClass.simpleName))
+                    update(state.copy(loading = false, loadingNextPage = false, error = error.message ?: error.javaClass.simpleName))
+                }
+            }
+        }
+    }
+
+    fun loadNextPage(pageSize: Int = DEFAULT_PAGE_SIZE) {
+        if (!state.hasAccess || !state.hasMore || state.loading || state.loadingNextPage) return
+
+        loadJob = scope.launch {
+            val offset = state.items.size
+            update(state.copy(loadingNextPage = true, error = null))
+            runCatching {
+                MediaStoreHelper.loadGalleryMediaCancellable(
+                    context = context,
+                    filter = state.filter,
+                    sortOrder = state.sortOrder,
+                    limit = pageSize + 1,
+                    offset = offset,
+                )
+            }.onSuccess { loaded ->
+                val hasMore = loaded.size > pageSize
+                val existingIds = state.items.mapTo(HashSet()) { it.id }
+                val page = loaded.take(pageSize).filterNot { it.id in existingIds }
+                update(
+                    state.copy(
+                        loadingNextPage = false,
+                        hasMore = hasMore,
+                        items = state.items + page,
+                    ),
+                )
+            }.onFailure { error ->
+                if (error !is CancellationException) {
+                    update(state.copy(loadingNextPage = false, error = error.message ?: error.javaClass.simpleName))
                 }
             }
         }
@@ -182,6 +222,13 @@ class GalleryController(
             ),
         )
         persistProgress()
+        if (
+            state.hasMore &&
+            !state.loadingNextPage &&
+            state.currentIndex >= (state.items.size - PREFETCH_DISTANCE).coerceAtLeast(0)
+        ) {
+            loadNextPage()
+        }
     }
 
     private fun persistProgress() {
@@ -198,5 +245,10 @@ class GalleryController(
     private fun update(newState: GalleryUiState) {
         state = newState
         observers.toList().forEach { it(newState) }
+    }
+
+    private companion object {
+        const val DEFAULT_PAGE_SIZE = 120
+        const val PREFETCH_DISTANCE = 12
     }
 }
