@@ -11,11 +11,7 @@ data class StorageInfo(
     val usedPercent: Float get() = if (totalBytes <= 0L) 0f else usedBytes.toFloat() / totalBytes.toFloat()
 }
 
-data class IndexedFile(
-    val file: File,
-    val size: Long,
-    val modified: Long,
-)
+data class IndexedFile(val file: File, val size: Long, val modified: Long)
 
 data class FileInventory(
     val files: List<IndexedFile>,
@@ -23,21 +19,10 @@ data class FileInventory(
     val excludedDirectories: Int,
 )
 
-enum class FolderStatus {
-    COMPLETELY_EMPTY,
-    BELOW_THRESHOLD,
-}
+enum class FolderStatus { COMPLETELY_EMPTY, BELOW_THRESHOLD }
+enum class FolderSubTab { EMPTY_FOLDERS, APP_RESIDUES, THUMBNAIL_CACHE }
 
-enum class FolderSubTab {
-    EMPTY_FOLDERS,
-    APP_RESIDUES,
-    THUMBNAIL_CACHE,
-}
-
-enum class ThresholdUnit(
-    val label: String,
-    val multiplier: Long,
-) {
+enum class ThresholdUnit(val label: String, val multiplier: Long) {
     BYTES("Bytes", 1L),
     KB("KB", 1024L),
     MB("MB", 1024L * 1024L),
@@ -69,14 +54,22 @@ data class AppResidueItem(
     fun formattedSize(): String = formatModelBytes(sizeBytes)
 }
 
+data class ThumbnailFileStamp(
+    val file: File,
+    val bytes: Long,
+    val modified: Long,
+    val sha256: String,
+)
+
 data class ThumbnailSnapshot(
     val directory: File,
-    val files: List<File>,
+    val files: List<ThumbnailFileStamp>,
     val subfolders: Int,
 ) {
-    val bytes: Long
-        get() = files.sumOf { it.length().coerceAtLeast(0L) }
+    val bytes: Long get() = files.sumOf { it.bytes }
 }
+
+data class ThumbnailCleanupResult(val removed: Int, val rejected: Int)
 
 data class ThumbnailCacheItem(
     val file: File,

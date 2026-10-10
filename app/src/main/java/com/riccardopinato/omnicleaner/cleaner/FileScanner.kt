@@ -56,51 +56,37 @@ class FileScanner(
         )
     }
 
+    suspend fun scanAppResidues(context: Context, root: File): AppResidueScan =
+        residueScanner.scan(context, root)
+
     suspend fun scanThumbnailCache(root: File): List<ThumbnailCacheItem> = withContext(Dispatchers.IO) {
-        val stack = ArrayDeque<File>()
         val matches = ArrayList<ThumbnailCacheItem>()
-        val visited = HashSet<String>()
-        stack.add(root)
 
-        while (stack.isNotEmpty()) {
+        suspend fun inspect(directory: File) {
+            if (!directory.exists() || !isSafeThumbnailDirectory(directory)) return
+            val inventory = thumbnailCleanup.inventory(directory)
+            val path = directory.absolutePath
+            matches += ThumbnailCacheItem(
+                file = directory,
+                name = directory.name.ifBlank { ".thumbnails" },
+                path = path,
+                displayPath = path,
+                sizeBytes = inventory.bytes,
+                fileCount = inventory.files.size,
+                warning = "",
+                inventory = inventory,
+            )
+        }
+
+        inspect(File(root, "DCIM/.thumbnails"))
+        inspect(File(root, "Pictures/.thumbnails"))
+
+        val androidMedia = File(root, "Android/media")
+        val appFolders = runCatching { androidMedia.listFiles() }.getOrNull().orEmpty()
+        for (appFolder in appFolders) {
             coroutineContext.ensureActive()
-            val current = stack.removeLast()
-            val canonical = runCatching { current.canonicalPath }.getOrNull() ?: continue
-            if (!visited.add(canonical)) continue
-
-            val children = runCatching { current.listFiles() }.getOrNull() ?: continue
-            for (child in children) {
-                if (!child.isDirectory) continue
-
-                if (isSafeThumbnailDirectory(child)) {
-                    val inventory = thumbnailInventory(child)
-                    val path = child.absolutePath
-                    matches += ThumbnailCacheItem(
-                        file = child,
-                        name = child.name.ifBlank { ".thumbnails" },
-                        path = path,
-                        displayPath = path,
-                        sizeBytes = inventory.bytes,
-                        fileCount = inventory.files.size,
-                        warning = "",
-                        inventory = inventory,
-                    )
-                    continue
-                }
-
-                val normalized = child.absolutePath.replace('\\', '/').lowercase(Locale.ROOT)
-                val shouldDescend = child == root ||
-                    child.parentFile == root ||
-                    normalized.endsWith("/dcim") ||
-                    normalized.endsWith("/pictures") ||
-                    normalized.endsWith("/android") ||
-                    normalized.endsWith("/android/media") ||
-                    normalized.contains("/android/media/")
-
-                if (shouldDescend && !FileInventoryPolicy.shouldIgnore(root, child)) {
-                    stack.add(child)
-                }
-            }
+            if (!appFolder.isDirectory) continue
+            inspect(File(appFolder, ".thumbnails"))
         }
 
         matches.sortedByDescending { it.sizeBytes }
@@ -142,37 +128,6 @@ class FileScanner(
             status = status,
             fileCount = inventory.files.size,
             subfolderCount = subfolders,
-        )
-    }
-
-    private fun thumbnailInventory(directory: File): ThumbnailSnapshot {
-        val files = ArrayList<File>()
-        var subfolders = 0
-        val stack = ArrayDeque<File>()
-        val visited = HashSet<String>()
-        stack.add(directory)
-
-        while (stack.isNotEmpty()) {
-            val current = stack.removeLast()
-            val canonical = runCatching { current.canonicalPath }.getOrNull() ?: continue
-            if (!visited.add(canonical)) continue
-
-            val children = runCatching { current.listFiles() }.getOrNull() ?: continue
-            for (child in children) {
-                when {
-                    child.isDirectory && !PathSafety.isSymlink(child) -> {
-                        subfolders++
-                        stack.add(child)
-                    }
-                    child.isFile -> files += child
-                }
-            }
-        }
-
-        return ThumbnailSnapshot(
-            directory = directory,
-            files = files,
-            subfolders = subfolders,
         )
     }
 
