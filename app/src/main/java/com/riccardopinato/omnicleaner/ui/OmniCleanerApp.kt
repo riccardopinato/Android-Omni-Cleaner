@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
+import com.riccardopinato.omnicleaner.gallery.GalleryCleanerSection
 import java.util.Locale
 
 @Composable
@@ -178,6 +179,10 @@ fun OmniCleanerApp() {
                         value = "${group.files.size} × ${formatBytes(group.sizeBytes)}",
                     )
                 }
+            }
+
+            item {
+                GalleryCleanerSection()
             }
 
             item { Spacer(Modifier.height(20.dp)) }
