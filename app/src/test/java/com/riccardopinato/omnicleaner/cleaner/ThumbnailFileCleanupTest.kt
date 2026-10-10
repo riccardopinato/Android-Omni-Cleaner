@@ -22,6 +22,7 @@ class ThumbnailFileCleanupTest {
 
             assertEquals(1, result.removed)
             assertEquals(1, result.rejected)
+            assertEquals(3L, result.removedBytes)
             assertTrue(!stable.exists())
             assertTrue(changed.exists())
         } finally {

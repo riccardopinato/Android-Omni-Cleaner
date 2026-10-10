@@ -15,6 +15,19 @@ class PathSafetyTest {
     }
 
     @Test
+    fun protectsWellKnownTopLevelUserFolders() {
+        val root = createTempDirectory("omni-user-root-").toFile()
+        val dcim = File(root, "DCIM").apply { mkdirs() }
+        val nested = File(dcim, "Trip").apply { mkdirs() }
+        try {
+            assertFalse(PathSafety.isSafeFolderToDelete(dcim, root))
+            assertTrue(PathSafety.isSafeFolderToDelete(nested, root))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun allowsOrdinaryChildFolderInsideRoot() {
         val root = createTempDirectory("omni-root-").toFile()
         val child = File(root, "DownloadsToReview").apply { mkdirs() }
