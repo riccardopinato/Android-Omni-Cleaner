@@ -12,11 +12,12 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import kotlin.io.path.createTempDirectory
 
 class DonorParityFixtureTest {
     @Test
     fun deterministicStorageFixture_matchesRecoveredDonorContracts() = runBlocking {
-        val root = createTempDir(prefix = "omni-parity-")
+        val root = createTempDirectory("omni-parity-").toFile()
         try {
             File(root, "empty").mkdirs()
 
@@ -104,7 +105,7 @@ class DonorParityFixtureTest {
 
     @Test
     fun safeTrashFixture_isReversibleAndConfined() {
-        val root = createTempDir(prefix = "omni-parity-trash-")
+        val root = createTempDirectory("omni-parity-trash-").toFile()
         val source = File(root, "source.bin").apply {
             writeBytes("donor-parity".toByteArray())
         }
