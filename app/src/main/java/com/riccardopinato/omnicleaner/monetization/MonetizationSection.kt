@@ -40,6 +40,8 @@ fun MonetizationSection() {
     val scope = rememberCoroutineScope()
     var premium by remember { mutableStateOf(false) }
     var purchaseMessage by remember { mutableStateOf<String?>(null) }
+    val purchaseContextError = stringResource(R.string.pro_purchase_context_error)
+    val productUnavailable = stringResource(R.string.pro_product_unavailable)
 
     val billing = remember(appContext) { BillingManager(appContext) { premium = it } }
     val consent = remember(appContext) { ConsentManager(appContext) }
@@ -90,10 +92,10 @@ fun MonetizationSection() {
                 Button(
                     onClick = {
                         if (activity == null) {
-                            purchaseMessage = context.getString(R.string.pro_purchase_context_error)
+                            purchaseMessage = purchaseContextError
                         } else {
                             billing.launchBillingFlow(activity) {
-                                purchaseMessage = context.getString(R.string.pro_product_unavailable)
+                                purchaseMessage = productUnavailable
                             }
                         }
                     },
