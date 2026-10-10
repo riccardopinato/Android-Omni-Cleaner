@@ -10,7 +10,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 data class GalleryUiState(
-    val hasAccess: Boolean = false,
+    val accessHealth: GalleryAccessHealth = GalleryAccessHealth(
+        level = GalleryAccessLevel.NONE,
+        canReadImages = false,
+        canReadVideos = false,
+    ),
     val loading: Boolean = false,
     val loadingNextPage: Boolean = false,
     val hasMore: Boolean = false,
@@ -22,6 +26,9 @@ data class GalleryUiState(
     val totalReviewedCount: Int = 0,
     val error: String? = null,
 ) {
+    val hasAccess: Boolean
+        get() = accessHealth.hasAccess
+
     val currentItem: GalleryMediaItem?
         get() = items.getOrNull(currentIndex)
 
@@ -61,11 +68,35 @@ class GalleryController(
     }
 
     fun refreshAccess() {
-        update(state.copy(hasAccess = GalleryAccess.hasAccess(context)))
+        val health = GalleryAccess.health(context)
+        val compatibleFilter = when {
+            health.level == GalleryAccessLevel.NONE -> state.filter
+            state.filter == GalleryMediaFilter.IMAGES && !health.canReadImages && health.canReadVideos ->
+                GalleryMediaFilter.VIDEOS
+            state.filter == GalleryMediaFilter.VIDEOS && !health.canReadVideos && health.canReadImages ->
+                GalleryMediaFilter.IMAGES
+            else -> state.filter
+        }
+        update(
+            state.copy(
+                accessHealth = health,
+                filter = compatibleFilter,
+                error = null,
+            ),
+        )
     }
 
     fun setFilter(filter: GalleryMediaFilter) {
-        update(state.copy(filter = filter, currentIndex = 0, history = emptyList()))
+        val allowed = when (filter) {
+            GalleryMediaFilter.ALL -> state.hasAccess
+            GalleryMediaFilter.IMAGES -> state.accessHealth.canReadImages
+            GalleryMediaFilter.VIDEOS -> state.accessHealth.canReadVideos
+        }
+        if (!allowed) {
+            update(state.copy(error = "That media type is not included in the current Android media access."))
+            return
+        }
+        update(state.copy(filter = filter, currentIndex = 0, history = emptyList(), error = null))
         scope.launch { preferences.saveFilterAndSort(filter, state.sortOrder) }
     }
 

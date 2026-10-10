@@ -11,13 +11,18 @@ Android Omni Cleaner uses two explicit capability lanes.
 Standard Cleaning must remain useful without `MANAGE_EXTERNAL_STORAGE`.
 
 Examples:
-- Gallery Cleaner through MediaStore;
+- Gallery Cleaner through MediaStore, including Android 14+ Selected Photos Access;
 - EXIF Privacy through user-selected SAF trees;
 - manual maintenance flows;
 - app-local Safe Trash management.
 
 The app must not ask for All files access at first launch merely to make these
 scoped features work.
+
+On Android 14+ Gallery Cleaner recognizes Selected Photos Access as a valid
+partial capability via `READ_MEDIA_VISUAL_USER_SELECTED`. Partial access is
+shown truthfully in the UI and the user can explicitly reopen the Android media
+selection flow. It is never upgraded to "full access" in app state.
 
 ### Deep Cleaning
 

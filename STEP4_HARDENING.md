@@ -18,7 +18,8 @@ Status: **IN PROGRESS**
 - Android 11+: Deep Cleaning requires explicit All files access.
 - Android 10: scoped storage is not represented as full-device access.
 - Android 6–9: legacy read + write permissions are requested only for Deep Cleaning.
-- unmounted shared storage disables storage-dependent lanes truthfully.
+- unmounted shared storage disables storage-dependent lanes truthfully;
+- Android 14+ selected photo/video access is modeled as PARTIAL rather than denied or falsely FULL.
 
 ### Destructive revalidation
 
