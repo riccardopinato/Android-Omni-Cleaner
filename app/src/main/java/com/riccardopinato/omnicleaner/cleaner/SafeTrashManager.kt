@@ -201,7 +201,7 @@ class SafeTrashManager private constructor(
             !parent.isDirectory ||
             !parent.canWrite() ||
             PathSafety.isSymlink(parent) ||
-            !PathSafety.isWithinRoot(parent, restoreRoot)
+            !PathSafety.isWithinOrEqualRoot(parent, restoreRoot)
         ) {
             return SafeTrashRestoreResult(SafeTrashRestoreStatus.DESTINATION_UNAVAILABLE)
         }
@@ -314,7 +314,9 @@ class SafeTrashManager private constructor(
         if (!metadata.isFile || !payload.isFile) return null
 
         val properties = runCatching {
-            Properties().apply { metadata.inputStream().use(::load) }
+            Properties().apply {
+                metadata.inputStream().use { input -> load(input) }
+            }
         }.getOrNull() ?: return null
 
         val originalPath = properties.getProperty(KEY_ORIGINAL_PATH)?.takeIf { it.isNotBlank() }
@@ -325,9 +327,18 @@ class SafeTrashManager private constructor(
             ?: return null
         val lastModified = properties.getProperty(KEY_LAST_MODIFIED)?.toLongOrNull()?.takeIf { it >= 0L }
             ?: return null
-        val hash = properties.getProperty(KEY_SHA256)
-            ?.takeIf { it.length == 64 && it.all { char -> char in '0'..'9' || char in 'a'..'f' } }
-            ?: return null
+        val storedHash = properties.getProperty(KEY_SHA256)
+        val hash = when {
+            storedHash == null -> {
+                // Recovery 0.4 entries predate the stored digest. Their payload
+                // is app-private, so establish a migration baseline from the
+                // current private copy instead of making the entry inaccessible.
+                runCatching { sha256(payload) }.getOrNull() ?: return null
+            }
+            storedHash.length == 64 &&
+                storedHash.all { char -> char in '0'..'9' || char in 'a'..'f' } -> storedHash
+            else -> return null
+        }
 
         return SafeTrashEntry(
             id = candidate.name,
