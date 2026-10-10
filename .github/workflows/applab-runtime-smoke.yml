@@ -42,6 +42,12 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
+        with:
+          cache-provider: basic
+          add-job-summary: on-failure
+
       - name: Build debug APK
         working-directory: target
         run: ./gradlew assembleDebug --stacktrace
@@ -100,12 +106,19 @@ jobs:
           if [[ -s "$GITHUB_WORKSPACE/applab-runtime-smoke/result.json" ]]; then
             cat "$GITHUB_WORKSPACE/applab-runtime-smoke/result.json"
           fi
+          if [[ -s "$GITHUB_WORKSPACE/applab-runtime-smoke/interaction-crawl.md" ]]; then
+            echo "===== APPLAB INTERACTION CRAWL ====="
+            cat "$GITHUB_WORKSPACE/applab-runtime-smoke/interaction-crawl.md"
+          fi
+          if [[ -s "$GITHUB_WORKSPACE/applab-runtime-smoke/interaction-crawl.json" ]]; then
+            cat "$GITHUB_WORKSPACE/applab-runtime-smoke/interaction-crawl.json"
+          fi
           {
             echo "## AppLab Runtime Smoke"
             echo
             echo "**Authority:** NON_TRUSTED_SMOKE — useful runtime evidence, not certification."
             echo
-            echo "**Target:** `$GITHUB_SHA`"
+            echo "**Target:** $GITHUB_SHA"
             echo
             if [[ -s "$GITHUB_WORKSPACE/applab-runtime-smoke/summary.md" ]]; then
               cat "$GITHUB_WORKSPACE/applab-runtime-smoke/summary.md"

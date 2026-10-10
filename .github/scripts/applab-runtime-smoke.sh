@@ -24,4 +24,18 @@ export RUN_MAESTRO="true"
 export MAESTRO_FLOW="$GITHUB_WORKSPACE/target/.maestro/runtime-smoke.yaml"
 
 cd "$GITHUB_WORKSPACE/.applab"
+
+set +e
 bash ./scripts/verify_apk.sh "$APK_PATH" "$PACKAGE_ID"
+status=$?
+set -e
+
+for evidence in   summary.md   result.json   interaction-crawl.md   interaction-crawl.json   visual-qa.md   system-lab.md   app-logcat.txt; do
+  path="$REPORT_DIR/$evidence"
+  if [[ -s "$path" ]]; then
+    echo "===== $evidence ====="
+    cat "$path"
+  fi
+done
+
+exit "$status"
