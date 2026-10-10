@@ -70,7 +70,7 @@ class SafeTrashManager private constructor(
         }
 
         val requiredFreeSpace = originalSize + COPY_FREE_SPACE_MARGIN_BYTES
-        if (trashDirectory.usableSpace in 0 until requiredFreeSpace) {
+        if (trashDirectory.usableSpace in 0L until requiredFreeSpace) {
             entry.deleteRecursively()
             return null
         }
