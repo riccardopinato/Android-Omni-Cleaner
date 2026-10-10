@@ -19,6 +19,7 @@ internal fun evaluateStorageCapability(
     sdkInt: Int,
     allFilesGranted: Boolean,
     legacyReadGranted: Boolean,
+    legacyWriteGranted: Boolean,
     storageMounted: Boolean,
 ): StorageCapabilityHealth {
     if (!storageMounted) {
@@ -52,7 +53,7 @@ internal fun evaluateStorageCapability(
             canRequestDeepAccess = false,
         )
 
-        legacyReadGranted -> StorageCapabilityHealth(
+        legacyReadGranted && legacyWriteGranted -> StorageCapabilityHealth(
             status = DeepStorageAccessStatus.READY,
             standardCleaningAvailable = true,
             deepScanAvailable = true,

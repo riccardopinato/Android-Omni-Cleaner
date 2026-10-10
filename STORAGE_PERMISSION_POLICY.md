@@ -42,8 +42,8 @@ permission must not be represented as equivalent to full-filesystem access. The
 app therefore keeps Standard Cleaning available but does not claim a complete
 Deep Cleaning scan.
 
-On Android 9 and lower, legacy storage permission remains the platform capability
-for the reconstructed donor behavior and is requested just-in-time.
+On Android 9 and lower, legacy read + write storage permissions remain the platform
+capability for the reconstructed donor behavior and are requested together, just-in-time.
 
 ## Destructive-flow rules
 

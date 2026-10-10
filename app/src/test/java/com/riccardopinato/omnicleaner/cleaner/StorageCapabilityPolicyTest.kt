@@ -12,6 +12,7 @@ class StorageCapabilityPolicyTest {
             sdkInt = 35,
             allFilesGranted = false,
             legacyReadGranted = true,
+            legacyWriteGranted = true,
             storageMounted = true,
         )
         assertEquals(DeepStorageAccessStatus.NEEDS_ALL_FILES_ACCESS, missing.status)
@@ -23,6 +24,7 @@ class StorageCapabilityPolicyTest {
             sdkInt = 35,
             allFilesGranted = true,
             legacyReadGranted = false,
+            legacyWriteGranted = false,
             storageMounted = true,
         )
         assertEquals(DeepStorageAccessStatus.READY, granted.status)
@@ -35,6 +37,7 @@ class StorageCapabilityPolicyTest {
             sdkInt = 29,
             allFilesGranted = false,
             legacyReadGranted = true,
+            legacyWriteGranted = true,
             storageMounted = true,
         )
 
@@ -50,14 +53,25 @@ class StorageCapabilityPolicyTest {
             sdkInt = 28,
             allFilesGranted = false,
             legacyReadGranted = false,
+            legacyWriteGranted = false,
             storageMounted = true,
         )
         assertEquals(DeepStorageAccessStatus.NEEDS_LEGACY_PERMISSION, missing.status)
+
+        val readOnly = evaluateStorageCapability(
+            sdkInt = 28,
+            allFilesGranted = false,
+            legacyReadGranted = true,
+            legacyWriteGranted = false,
+            storageMounted = true,
+        )
+        assertEquals(DeepStorageAccessStatus.NEEDS_LEGACY_PERMISSION, readOnly.status)
 
         val granted = evaluateStorageCapability(
             sdkInt = 28,
             allFilesGranted = false,
             legacyReadGranted = true,
+            legacyWriteGranted = true,
             storageMounted = true,
         )
         assertEquals(DeepStorageAccessStatus.READY, granted.status)
@@ -70,6 +84,7 @@ class StorageCapabilityPolicyTest {
             sdkInt = 35,
             allFilesGranted = true,
             legacyReadGranted = true,
+            legacyWriteGranted = true,
             storageMounted = false,
         )
         assertEquals(DeepStorageAccessStatus.STORAGE_UNAVAILABLE, health.status)

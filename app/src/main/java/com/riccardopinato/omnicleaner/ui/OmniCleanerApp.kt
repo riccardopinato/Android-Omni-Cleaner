@@ -3,6 +3,7 @@ package com.riccardopinato.omnicleaner.ui
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,10 +25,14 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -54,6 +59,7 @@ fun OmniCleanerApp() {
     }
     val state = controller.state
     val activity = remember(context) { context.findActivity() }
+    var showDeepAccessDisclosure by remember { mutableStateOf(false) }
 
     LaunchedEffect(activity) {
         if (activity != null) {
@@ -71,8 +77,8 @@ fun OmniCleanerApp() {
     ) {
         controller.refreshAccessAndStorage()
     }
-    val legacyReadLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
+    val legacyStorageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
     ) {
         controller.refreshAccessAndStorage()
     }
@@ -83,7 +89,12 @@ fun OmniCleanerApp() {
                 storageSettingsLauncher.launch(StorageAccess.settingsIntent(context))
 
             DeepStorageAccessStatus.NEEDS_LEGACY_PERMISSION ->
-                legacyReadLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+                legacyStorageLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.READ_EXTERNAL_STORAGE,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    ),
+                )
 
             else -> Unit
         }
@@ -116,7 +127,7 @@ fun OmniCleanerApp() {
             item {
                 StorageCard(
                     state = state,
-                    onGrantAccess = ::requestStorageAccess,
+                    onGrantAccess = { showDeepAccessDisclosure = true },
                     onRefresh = controller::refreshAccessAndStorage,
                 )
             }
@@ -253,6 +264,29 @@ fun OmniCleanerApp() {
             item { Spacer(Modifier.height(20.dp)) }
         }
     }
+
+    if (showDeepAccessDisclosure) {
+        AlertDialog(
+            onDismissRequest = { showDeepAccessDisclosure = false },
+            title = { Text(stringResource(R.string.deep_access_dialog_title)) },
+            text = { Text(stringResource(R.string.deep_access_dialog_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeepAccessDisclosure = false
+                        requestStorageAccess()
+                    },
+                ) {
+                    Text(stringResource(R.string.deep_access_dialog_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeepAccessDisclosure = false }) {
+                    Text(stringResource(R.string.deep_access_dialog_cancel))
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -366,8 +400,16 @@ private fun StorageCard(
                 )
             }
             Text(
-                stringResource(R.string.standard_cleaning_ready),
-                color = MaterialTheme.colorScheme.primary,
+                if (state.storageCapability.standardCleaningAvailable) {
+                    stringResource(R.string.standard_cleaning_ready)
+                } else {
+                    stringResource(R.string.standard_cleaning_unavailable)
+                },
+                color = if (state.storageCapability.standardCleaningAvailable) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.error
+                },
             )
             Text(
                 when (state.storageCapability.status) {
