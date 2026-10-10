@@ -114,7 +114,9 @@ class BillingManager(
                 ?: product.oneTimePurchaseOfferDetails
             val productParams = BillingFlowParams.ProductDetailsParams.newBuilder()
                 .setProductDetails(product)
-                .apply { if (offer != null) setOfferToken(offer.offerToken) }
+                .apply {
+                    offer?.offerToken?.let { token -> setOfferToken(token) }
+                }
                 .build()
 
             val launchResult = billingClient.launchBillingFlow(

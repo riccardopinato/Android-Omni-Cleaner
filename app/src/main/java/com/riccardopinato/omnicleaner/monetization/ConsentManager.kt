@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Context
 import com.google.android.ump.ConsentInformation
 import com.google.android.ump.ConsentRequestParameters
-import com.google.android.ump.PrivacyOptionsRequirementStatus
 import com.google.android.ump.UserMessagingPlatform
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -50,7 +49,7 @@ class ConsentManager(context: Context) {
             canRequestAds = consentInformation.canRequestAds(),
             privacyOptionsRequired =
                 consentInformation.privacyOptionsRequirementStatus ==
-                    PrivacyOptionsRequirementStatus.REQUIRED,
+                    ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED,
             error = error,
         )
     }
