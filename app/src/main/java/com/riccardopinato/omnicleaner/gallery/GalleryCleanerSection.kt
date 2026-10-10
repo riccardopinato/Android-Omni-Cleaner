@@ -53,7 +53,9 @@ fun GalleryCleanerSection() {
     val trashLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult(),
     ) { result ->
-        controller.onTrashResult(result.resultCode == Activity.RESULT_OK)
+        val success = result.resultCode == Activity.RESULT_OK
+        controller.onTrashResult(success)
+        if (success) CleanupEventBus.publishCompleted()
     }
 
     Card(
