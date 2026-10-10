@@ -246,6 +246,10 @@ fun OmniCleanerApp() {
             }
 
             item {
+                SafeTrashSection()
+            }
+
+            item {
                 GalleryCleanerSection()
             }
 
