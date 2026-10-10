@@ -22,9 +22,26 @@ class CleanupSelectionTest {
             }
             val group = DuplicateGroup(
                 hash = "hash",
+                sizeBytes = newest.length(),
                 files = listOf(
-                    DuplicateFile(newest, newest.length(), newest.lastModified()),
-                    DuplicateFile(oldest, oldest.length(), oldest.lastModified()),
+                    DuplicateFile(
+                        file = newest,
+                        name = newest.name,
+                        path = newest.absolutePath,
+                        displayPath = newest.absolutePath,
+                        sizeBytes = newest.length(),
+                        lastModified = newest.lastModified(),
+                        extension = newest.extension,
+                    ),
+                    DuplicateFile(
+                        file = oldest,
+                        name = oldest.name,
+                        path = oldest.absolutePath,
+                        displayPath = oldest.absolutePath,
+                        sizeBytes = oldest.length(),
+                        lastModified = oldest.lastModified(),
+                        extension = oldest.extension,
+                    ),
                 ),
             )
 
