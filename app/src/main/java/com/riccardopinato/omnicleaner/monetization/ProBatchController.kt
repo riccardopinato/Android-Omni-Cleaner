@@ -2,6 +2,8 @@ package com.riccardopinato.omnicleaner.monetization
 
 import android.app.PendingIntent
 import android.content.Context
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import com.riccardopinato.omnicleaner.cleaner.FileScanner
 import com.riccardopinato.omnicleaner.cleaner.FolderStatus
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
