@@ -46,7 +46,10 @@ Implemented:
 - well-known top-level user folders protected from empty-folder deletion;
 - Safe Trash / Android trash explicitly not counted as already reclaimed space;
 - thumbnail cleanup records bytes actually deleted;
-- current Google Play All files access justification documented in `STORAGE_PERMISSION_POLICY.md`.
+- current Google Play All files access justification documented in `STORAGE_PERMISSION_POLICY.md`;
+- Android 14+ Selected Photos Access modeled as FULL / PARTIAL / NONE;
+- Gallery session invalidated when media authorization changes;
+- Safe Trash now has integrity-verified restore, no-overwrite behavior and permanent-empty UI.
 
 Remaining Step 4 gates:
 - Android CI + AppLab on the hardened branch;

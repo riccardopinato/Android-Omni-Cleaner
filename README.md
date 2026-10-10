@@ -47,7 +47,9 @@ defensibility before monetization productization and the planned UI redesign.
 - media use Android system trash;
 - small non-media files may use Safe Trash;
 - large non-media files have no permanent-delete fallback;
-- moving to a trash location is not reported as bytes already freed.
+- moving to a trash location is not reported as bytes already freed;
+- Safe Trash stores integrity metadata and supports verified restore without overwrite;
+- Android 14+ partial photo/video access is supported without pretending it is full access.
 
 See `STORAGE_PERMISSION_POLICY.md`.
 

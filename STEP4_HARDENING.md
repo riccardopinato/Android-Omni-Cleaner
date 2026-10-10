@@ -19,7 +19,8 @@ Status: **IN PROGRESS**
 - Android 10: scoped storage is not represented as full-device access.
 - Android 6–9: legacy read + write permissions are requested only for Deep Cleaning.
 - unmounted shared storage disables storage-dependent lanes truthfully;
-- Android 14+ selected photo/video access is modeled as PARTIAL rather than denied or falsely FULL.
+- Android 14+ selected photo/video access is modeled as PARTIAL rather than denied or falsely FULL;
+- changing Android media selection invalidates previously loaded Gallery URIs immediately.
 
 ### Destructive revalidation
 
@@ -42,9 +43,18 @@ Empty-folder cleanup blocks:
 - well-known top-level user collections such as DCIM, Download, Documents,
   Pictures, Movies and Music.
 
+### Safe Trash integrity and restore
+
+- every new Safe Trash payload stores SHA-256, original path, size and modified time;
+- recovery 0.4 entries without a digest are migrated by persisting a one-time app-private SHA-256 baseline;
+- restore verifies payload integrity and never overwrites an existing destination;
+- unsafe/out-of-root destinations are rejected;
+- purge deletion does not recurse through symlink targets;
+- Safe Trash has an explicit user-facing restore / permanent-empty surface.
+
 ### Reclaimed-space truth
 
-- Safe Trash: reversible movement, **not reclaimed bytes**.
+- Safe Trash: verified reversible movement, **not reclaimed bytes**.
 - Android system trash: trash operation, **not reclaimed bytes**.
 - thumbnail deletion: actual deleted bytes are measured.
 - candidate/recoverable estimates remain estimates until the operation completes.

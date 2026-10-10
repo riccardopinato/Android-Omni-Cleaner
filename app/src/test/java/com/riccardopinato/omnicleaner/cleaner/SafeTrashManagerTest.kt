@@ -134,6 +134,10 @@ class SafeTrashManagerTest {
         try {
             val manager = SafeTrashManager.forTests(trash)
             val entry = manager.listEntries().single()
+            val migratedProperties = Properties().apply {
+                metadata.inputStream().use { input -> load(input) }
+            }
+            assertEquals(64, migratedProperties.getProperty("sha256").length)
 
             val result = manager.restore(entry.id)
 
