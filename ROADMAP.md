@@ -33,15 +33,26 @@ Explicitly blocked rather than inferred:
 - trusted artifact-bound AppLab certification while artifact quota is saturated.
 
 ## MAXI STEP 4 — Safety & Storage Hardening
-**Status: NEXT**
+**Status: IN PROGRESS**
 
-- capability/permission health model;
-- scoped-storage-first review;
-- explicit Deep Cleaning lane only where justified;
-- destructive-flow revalidation;
-- `MANAGE_EXTERNAL_STORAGE` Play-policy justification;
-- device/OEM edge cases;
-- cleanup result truth and reclaimed-byte verification.
+Implemented:
+- explicit Standard Cleaning vs Deep Cleaning capability model;
+- no false "broad access" claim on Android 10 scoped storage;
+- just-in-time Deep Cleaning disclosure before special access;
+- Android 6–9 read + write storage permission pair requested only for Deep Cleaning;
+- `requestLegacyExternalStorage` removed;
+- scan-result snapshots revalidated immediately before mutation;
+- duplicate cleanup requires an unchanged verified keeper;
+- well-known top-level user folders protected from empty-folder deletion;
+- Safe Trash / Android trash explicitly not counted as already reclaimed space;
+- thumbnail cleanup records bytes actually deleted;
+- current Google Play All files access justification documented in `STORAGE_PERMISSION_POLICY.md`.
+
+Remaining Step 4 gates:
+- Android CI + AppLab on the hardened branch;
+- inspect AppLab findings and fix actionable issues;
+- bounded runtime smoke;
+- OEM/device-only cases remain physical-validation work, not inferred PASS.
 
 ## MAXI STEP 5 — Monetization Productization
 
