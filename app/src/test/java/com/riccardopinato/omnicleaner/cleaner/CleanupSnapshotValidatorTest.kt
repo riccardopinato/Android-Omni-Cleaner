@@ -8,6 +8,42 @@ import kotlin.io.path.createTempDirectory
 
 class CleanupSnapshotValidatorTest {
     @Test
+    fun duplicateSnapshotWinsWhenSamePathAlsoAppearsAsLargeFile() {
+        val root = createTempDirectory("omni-strongest-").toFile()
+        try {
+            val file = File(root, "same.bin").apply { writeBytes(byteArrayOf(1, 2, 3, 4)) }
+            val peer = File(root, "peer.bin").apply { writeBytes(byteArrayOf(1, 2, 3, 4)) }
+            val hash = FileInventoryScanner().digest(file)
+
+            val large = CleanupFileSnapshot(
+                file = file,
+                expectedBytes = file.length(),
+                expectedModified = file.lastModified(),
+                kind = CleanupCandidateKind.LARGE_FILE,
+            )
+            val duplicate = CleanupFileSnapshot(
+                file = file,
+                expectedBytes = file.length(),
+                expectedModified = file.lastModified(),
+                expectedSha256 = hash,
+                kind = CleanupCandidateKind.DUPLICATE,
+                requiredDuplicatePeer = CleanupPeerSnapshot(
+                    file = peer,
+                    expectedBytes = peer.length(),
+                    expectedModified = peer.lastModified(),
+                    expectedSha256 = hash,
+                ),
+            )
+
+            val merged = strongestCleanupSnapshots(listOf(large, duplicate))
+            assertEquals(1, merged.size)
+            assertEquals(CleanupCandidateKind.DUPLICATE, merged.single().kind)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun rejectsFileChangedAfterScan() {
         val root = createTempDirectory("omni-stale-").toFile()
         try {

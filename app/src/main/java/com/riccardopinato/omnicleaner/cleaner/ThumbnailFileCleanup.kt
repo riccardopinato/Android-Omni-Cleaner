@@ -88,6 +88,16 @@ class ThumbnailFileCleanup {
                 continue
             }
 
+            // The file may have changed while hashing. Recheck metadata once more
+            // immediately before the destructive call.
+            if (
+                current.length() != expected.bytes ||
+                current.lastModified() != expected.modified
+            ) {
+                rejected++
+                continue
+            }
+
             if (current.delete()) {\n                removed++\n                removedBytes += expected.bytes.coerceAtLeast(0L)\n            } else {\n                rejected++\n            }
         }
 

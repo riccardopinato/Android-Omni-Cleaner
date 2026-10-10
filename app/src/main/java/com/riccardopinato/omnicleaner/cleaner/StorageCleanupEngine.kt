@@ -151,7 +151,7 @@ class StorageCleanupEngine(
         val blocked = ArrayList<File>()
         val stale = ArrayList<File>()
 
-        for (snapshot in snapshots.distinctBy { canonicalKey(it.file) }) {
+        for (snapshot in strongestCleanupSnapshots(snapshots)) {
             coroutineContext.ensureActive()
 
             val validation = CleanupSnapshotValidator.validate(snapshot)
@@ -215,7 +215,7 @@ class StorageCleanupEngine(
         var rejected = 0
         var movedBytes = 0L
 
-        for (snapshot in snapshots.distinctBy { canonicalKey(it.file) }) {
+        for (snapshot in strongestCleanupSnapshots(snapshots)) {
             coroutineContext.ensureActive()
 
             // Revalidate again immediately before mutation. This also protects
@@ -225,7 +225,7 @@ class StorageCleanupEngine(
                 continue
             }
 
-            if (safeTrashManager.moveToTrash(snapshot.file) != null) {
+            if (safeTrashManager.moveToTrash(snapshot) != null) {
                 moved++
                 movedBytes += snapshot.expectedBytes.coerceAtLeast(0L)
             } else {

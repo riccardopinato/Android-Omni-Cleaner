@@ -24,6 +24,11 @@ class SafeTrashManager private constructor(
             .filter { it.isFile }
             .sumOf { it.length().coerceAtLeast(0L) }
 
+    fun moveToTrash(snapshot: CleanupFileSnapshot): File? {
+        if (!CleanupSnapshotValidator.validate(snapshot).valid) return null
+        return moveToTrash(snapshot.file)
+    }
+
     fun moveToTrash(file: File): File? {
         if (!file.exists() || !file.isFile) return null
         if (PathSafety.isDangerousPath(file) || PathSafety.isSymlink(file)) return null

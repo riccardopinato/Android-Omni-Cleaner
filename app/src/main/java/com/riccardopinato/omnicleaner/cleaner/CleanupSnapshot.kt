@@ -104,3 +104,27 @@ object CleanupSnapshotValidator {
         return digest.digest().joinToString("") { "%02x".format(it) }
     }
 }
+
+
+internal fun strongestCleanupSnapshots(
+    snapshots: List<CleanupFileSnapshot>,
+): List<CleanupFileSnapshot> {
+    val byPath = linkedMapOf<String, CleanupFileSnapshot>()
+
+    for (snapshot in snapshots) {
+        val key = runCatching { snapshot.file.canonicalPath }
+            .getOrElse { snapshot.file.absolutePath }
+        val current = byPath[key]
+        if (current == null || snapshot.kind.safetyRank() > current.kind.safetyRank()) {
+            byPath[key] = snapshot
+        }
+    }
+
+    return byPath.values.toList()
+}
+
+private fun CleanupCandidateKind.safetyRank(): Int = when (this) {
+    CleanupCandidateKind.LEGACY -> 0
+    CleanupCandidateKind.LARGE_FILE -> 1
+    CleanupCandidateKind.DUPLICATE -> 2
+}
