@@ -207,3 +207,43 @@ jobs:
           echo "Step 4 APK SHA-256: $APK_SHA256" >> "$GITHUB_STEP_SUMMARY"
           echo "Release tag: $TAG" >> "$GITHUB_STEP_SUMMARY"
 
+
+      - name: Publish Step 5 monetization APK prerelease
+        if: success() && github.ref == 'refs/heads/monetization/maxi-step-5-productization-clean'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          APK="$GITHUB_WORKSPACE/target/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+
+          SHORT_SHA="${GITHUB_SHA:0:12}"
+          TAG="step5-monetization-$SHORT_SHA"
+          ASSET="Android-Omni-Cleaner-Step5-$SHORT_SHA-debug.apk"
+          HASH_FILE="$ASSET.sha256"
+
+          cp "$APK" "$RUNNER_TEMP/$ASSET"
+          APK_SHA256="$(sha256sum "$RUNNER_TEMP/$ASSET" | awk '{print $1}')"
+          printf '%s  %s\n' "$APK_SHA256" "$ASSET" > "$RUNNER_TEMP/$HASH_FILE"
+
+          NOTES="$RUNNER_TEMP/step5-release-notes.md"
+          {
+            echo "# Android Omni Cleaner — Step 5 monetization APK"
+            echo "- Source SHA: $GITHUB_SHA"
+            echo "- APK SHA-256: $APK_SHA256"
+            echo "- Version: 0.6.0-recovery / code 6"
+            echo "- Google demo ads only"
+            echo "- Billing purchase validation requires Play Internal Testing with production package/signing"
+            echo "- Runtime lane: AppLab v4.5 NON_TRUSTED_SMOKE PASS"
+            echo "- Not a store release"
+          } > "$NOTES"
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Step 5 monetization APK · $SHORT_SHA" --notes-file "$NOTES" --prerelease
+          fi
+
+          echo "Step 5 APK SHA-256: $APK_SHA256" >> "$GITHUB_STEP_SUMMARY"
+          echo "Release tag: $TAG" >> "$GITHUB_STEP_SUMMARY"
