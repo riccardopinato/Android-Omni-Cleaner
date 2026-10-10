@@ -1,12 +1,19 @@
 appId: com.riccardopinato.omnicleaner.debug
 ---
+- launchApp:
+    clearState: false
 - assertVisible: "Android Omni Cleaner"
 - assertVisible: "Storage access ready"
 - tapOn:
     text: "Analyze storage"
-- extendedWaitUntil:
-    visible: "Storage overview"
-    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: ".*indexed.*"
+    direction: DOWN
+    timeout: 120000
+    speed: 50
+    visibilityPercentage: 50
 - assertVisible:
-    text: "files"
-    optional: true
+    text: "Storage overview"
+- assertVisible:
+    text: ".*indexed.*"
