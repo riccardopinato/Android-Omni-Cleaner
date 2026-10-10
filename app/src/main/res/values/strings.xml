@@ -42,6 +42,10 @@
     <string name="pro_free">Free mode · ads are requested only after privacy consent</string>
     <string name="pro_buy">Unlock Premium · %1$s</string>
     <string name="pro_price_unavailable">price from Google Play</string>
+    <string name="pro_model">One-time lifetime unlock · core cleaning stays Free · Premium adds Pro batch tools and removes all ad requests</string>
+    <string name="pro_checking_purchase">Checking Premium ownership with Google Play…</string>
+    <string name="pro_purchase_pending">Purchase pending · Premium activates only after Google Play reports PURCHASED</string>
+    <string name="pro_restore">Restore purchase</string>
     <string name="pro_product_unavailable">Premium is not available from Google Play on this build/account yet.</string>
     <string name="pro_purchase_context_error">Purchase flow is unavailable in this screen context.</string>
     <string name="pro_batch_title">Pro batch analysis</string>

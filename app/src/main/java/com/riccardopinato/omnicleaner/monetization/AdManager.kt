@@ -3,10 +3,12 @@ package com.riccardopinato.omnicleaner.monetization
 import android.app.Activity
 import android.content.Context
 import android.util.Log
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
@@ -143,15 +145,26 @@ object AdManager {
             return
         }
 
-        AndroidView(
+        val context = LocalContext.current
+        BoxWithConstraints(
             modifier = modifier.fillMaxWidth().wrapContentHeight(),
-            factory = { context ->
-                AdView(context).apply {
-                    setAdSize(AdSize.BANNER)
-                    adUnitId = BuildConfig.ADMOB_BANNER_UNIT_ID
-                    loadAd(AdRequest.Builder().build())
-                }
-            },
-        )
+        ) {
+            val adWidthDp = maxWidth.value.toInt().coerceAtLeast(32)
+            AndroidView(
+                modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+                factory = { viewContext ->
+                    AdView(viewContext).apply {
+                        setAdSize(
+                            AdSize.getCurrentOrientationInlineAdaptiveBannerAdSize(
+                                context,
+                                adWidthDp,
+                            ),
+                        )
+                        adUnitId = BuildConfig.ADMOB_BANNER_UNIT_ID
+                        loadAd(AdRequest.Builder().build())
+                    }
+                },
+            )
+        }
     }
 }

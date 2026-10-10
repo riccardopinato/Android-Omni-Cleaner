@@ -11,8 +11,8 @@ android {
         applicationId = "com.riccardopinato.omnicleaner"
         minSdk = 24
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.5.0-recovery"
+        versionCode = 6
+        versionName = "0.6.0-recovery"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -28,6 +28,18 @@ android {
         releaseBannerUnitId,
         releaseInterstitialUnitId,
     ).all { !it.isNullOrBlank() }
+    val requireProductionMonetization =
+        providers.gradleProperty("OMNI_REQUIRE_PRODUCTION_MONETIZATION")
+            .orNull
+            ?.toBooleanStrictOrNull()
+            ?: false
+
+    if (requireProductionMonetization && !releaseAdsConfigured) {
+        throw GradleException(
+            "Production monetization requested, but OMNI_ADMOB_APP_ID, " +
+                "OMNI_ADMOB_BANNER_ID and OMNI_ADMOB_INTERSTITIAL_ID are not all configured.",
+        )
+    }
 
     fun quoted(value: String): String = "\"$value\""
 
@@ -38,6 +50,7 @@ android {
             isDebuggable = true
             manifestPlaceholders["admobAppId"] = testAdmobAppId
             buildConfigField("boolean", "ADS_ENABLED", "true")
+            buildConfigField("boolean", "PRODUCTION_ADS_CONFIGURED", "false")
             buildConfigField("String", "ADMOB_BANNER_UNIT_ID", quoted(testBannerUnitId))
             buildConfigField("String", "ADMOB_INTERSTITIAL_UNIT_ID", quoted(testInterstitialUnitId))
         }
@@ -48,6 +61,7 @@ android {
             isShrinkResources = true
             manifestPlaceholders["admobAppId"] = releaseAdmobAppId ?: testAdmobAppId
             buildConfigField("boolean", "ADS_ENABLED", releaseAdsConfigured.toString())
+            buildConfigField("boolean", "PRODUCTION_ADS_CONFIGURED", releaseAdsConfigured.toString())
             buildConfigField("String", "ADMOB_BANNER_UNIT_ID", quoted(releaseBannerUnitId.orEmpty()))
             buildConfigField("String", "ADMOB_INTERSTITIAL_UNIT_ID", quoted(releaseInterstitialUnitId.orEmpty()))
             proguardFiles(

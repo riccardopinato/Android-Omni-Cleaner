@@ -18,10 +18,13 @@ import kotlinx.coroutines.flow.asStateFlow
 
 data class BillingState(
     val connected: Boolean = false,
+    val ownershipResolved: Boolean = false,
     val premiumOwned: Boolean = false,
+    val purchasePending: Boolean = false,
     val priceLabel: String? = null,
     val productAvailable: Boolean = false,
     val purchaseInProgress: Boolean = false,
+    val restoreInProgress: Boolean = false,
     val error: String? = null,
 )
 
@@ -32,11 +35,14 @@ class BillingManager(
     private val _state = MutableStateFlow(BillingState())
     val state: StateFlow<BillingState> = _state.asStateFlow()
 
+    private var restoreAfterConnect = false
+
     private val billingClient = BillingClient.newBuilder(context.applicationContext)
         .setListener(this)
         .enablePendingPurchases(
             PendingPurchasesParams.newBuilder().enableOneTimeProducts().build(),
         )
+        .enableAutoServiceReconnection()
         .build()
 
     fun start() {
@@ -50,11 +56,16 @@ class BillingManager(
                 val ready = result.responseCode == BillingClient.BillingResponseCode.OK
                 _state.value = _state.value.copy(
                     connected = ready,
-                    error = if (ready) null else result.debugMessage,
+                    error = if (ready) null else userMessage(result),
                 )
                 if (ready) {
-                    queryPurchases()
+                    val restoring = restoreAfterConnect
+                    restoreAfterConnect = false
+                    queryPurchases(userInitiated = restoring)
                     queryProductDetails()
+                } else if (restoreAfterConnect) {
+                    restoreAfterConnect = false
+                    _state.value = _state.value.copy(restoreInProgress = false)
                 }
             }
 
@@ -64,48 +75,98 @@ class BillingManager(
         })
     }
 
-    fun queryPurchases() {
-        if (!billingClient.isReady) return
+    fun restorePurchases() {
+        _state.value = _state.value.copy(
+            restoreInProgress = true,
+            error = null,
+        )
+        if (billingClient.isReady) {
+            queryPurchases(userInitiated = true)
+        } else {
+            restoreAfterConnect = true
+            start()
+        }
+    }
+
+    fun queryPurchases(userInitiated: Boolean = false) {
+        if (!billingClient.isReady) {
+            if (userInitiated) {
+                restoreAfterConnect = true
+                start()
+            }
+            return
+        }
+
+        if (userInitiated) {
+            _state.value = _state.value.copy(restoreInProgress = true, error = null)
+        }
+
         val params = QueryPurchasesParams.newBuilder()
             .setProductType(BillingClient.ProductType.INAPP)
             .build()
+
         billingClient.queryPurchasesAsync(params) { result, purchases ->
             if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-                _state.value = _state.value.copy(error = result.debugMessage)
+                _state.value = _state.value.copy(
+                    restoreInProgress = false,
+                    error = userMessage(result),
+                )
                 return@queryPurchasesAsync
             }
-            val premium = purchases.any {
-                it.purchaseState == Purchase.PurchaseState.PURCHASED &&
-                    PREMIUM_PRODUCT_ID in it.products
-            }
-            _state.value = _state.value.copy(premiumOwned = premium, error = null)
-            publishPremium(premium)
-            purchases.filter {
-                it.purchaseState == Purchase.PurchaseState.PURCHASED &&
-                    PREMIUM_PRODUCT_ID in it.products &&
-                    !it.isAcknowledged
-            }.forEach(::acknowledgePurchase)
+
+            val evaluation = evaluate(purchases)
+            _state.value = _state.value.copy(
+                ownershipResolved = true,
+                premiumOwned = evaluation.owned,
+                purchasePending = evaluation.pending,
+                restoreInProgress = false,
+                error = null,
+            )
+            publishPremium(evaluation.owned)
+
+            purchases
+                .asSequence()
+                .filter {
+                    it.purchaseState == Purchase.PurchaseState.PURCHASED &&
+                        PREMIUM_PRODUCT_ID in it.products &&
+                        !it.isAcknowledged
+                }
+                .forEach(::acknowledgePurchase)
         }
     }
 
     fun launchBillingFlow(activity: Activity, onProductNotFound: () -> Unit = {}) {
         if (!billingClient.isReady) {
-            _state.value = _state.value.copy(error = "Google Play Billing non è connesso.")
+            _state.value = _state.value.copy(error = "Google Play Billing non è disponibile al momento.")
             onProductNotFound()
             return
         }
+        if (_state.value.premiumOwned) return
+
         _state.value = _state.value.copy(purchaseInProgress = true, error = null)
         billingClient.queryProductDetailsAsync(premiumProductQuery()) { result, queryResult ->
             if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-                _state.value = _state.value.copy(purchaseInProgress = false, error = result.debugMessage)
+                _state.value = _state.value.copy(
+                    purchaseInProgress = false,
+                    error = userMessage(result),
+                )
                 onProductNotFound()
                 return@queryProductDetailsAsync
             }
+
             val product = queryResult.productDetailsList.firstOrNull {
                 it.productId == PREMIUM_PRODUCT_ID
             }
             if (product == null) {
-                _state.value = _state.value.copy(purchaseInProgress = false, productAvailable = false)
+                _state.value = _state.value.copy(
+                    purchaseInProgress = false,
+                    productAvailable = false,
+                    error = if (queryResult.unfetchedProductList.isNotEmpty()) {
+                        "Google Play non ha restituito il prodotto Premium per questo account/build."
+                    } else {
+                        null
+                    },
+                )
                 onProductNotFound()
                 return@queryProductDetailsAsync
             }
@@ -115,7 +176,7 @@ class BillingManager(
             val productParams = BillingFlowParams.ProductDetailsParams.newBuilder()
                 .setProductDetails(product)
                 .apply {
-                    offer?.offerToken?.let { token -> setOfferToken(token) }
+                    offer?.offerToken?.let(::setOfferToken)
                 }
                 .build()
 
@@ -128,7 +189,7 @@ class BillingManager(
             if (launchResult.responseCode != BillingClient.BillingResponseCode.OK) {
                 _state.value = _state.value.copy(
                     purchaseInProgress = false,
-                    error = launchResult.debugMessage,
+                    error = userMessage(launchResult),
                 )
             }
         }
@@ -136,26 +197,48 @@ class BillingManager(
 
     override fun onPurchasesUpdated(result: BillingResult, purchases: MutableList<Purchase>?) {
         _state.value = _state.value.copy(purchaseInProgress = false)
-        if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-            if (result.responseCode != BillingClient.BillingResponseCode.USER_CANCELED) {
-                _state.value = _state.value.copy(error = result.debugMessage)
-            }
-            return
-        }
-        val owned = purchases.orEmpty().filter {
-            it.purchaseState == Purchase.PurchaseState.PURCHASED &&
-                PREMIUM_PRODUCT_ID in it.products
-        }
-        if (owned.isNotEmpty()) {
-            _state.value = _state.value.copy(premiumOwned = true, error = null)
-            publishPremium(true)
-            owned.filterNot { it.isAcknowledged }.forEach(::acknowledgePurchase)
-        }
-    }
 
-    private fun publishPremium(owned: Boolean) {
-        PremiumEntitlementStore.update(owned)
-        onPremiumChanged(owned)
+        when (result.responseCode) {
+            BillingClient.BillingResponseCode.OK -> {
+                val relevant = purchases.orEmpty()
+                val evaluation = evaluate(relevant)
+                if (evaluation.owned) {
+                    _state.value = _state.value.copy(
+                        ownershipResolved = true,
+                        premiumOwned = true,
+                        purchasePending = false,
+                        error = null,
+                    )
+                    publishPremium(true)
+                    relevant
+                        .filter {
+                            it.purchaseState == Purchase.PurchaseState.PURCHASED &&
+                                PREMIUM_PRODUCT_ID in it.products &&
+                                !it.isAcknowledged
+                        }
+                        .forEach(::acknowledgePurchase)
+                } else if (evaluation.pending) {
+                    _state.value = _state.value.copy(
+                        purchasePending = true,
+                        error = null,
+                    )
+                } else {
+                    queryPurchases()
+                }
+            }
+
+            BillingClient.BillingResponseCode.USER_CANCELED -> {
+                _state.value = _state.value.copy(error = null)
+            }
+
+            BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> {
+                queryPurchases()
+            }
+
+            else -> {
+                _state.value = _state.value.copy(error = userMessage(result))
+            }
+        }
     }
 
     fun endConnection() {
@@ -166,18 +249,24 @@ class BillingManager(
         if (!billingClient.isReady) return
         billingClient.queryProductDetailsAsync(premiumProductQuery()) { result, queryResult ->
             if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-                _state.value = _state.value.copy(error = result.debugMessage)
+                _state.value = _state.value.copy(error = userMessage(result))
                 return@queryProductDetailsAsync
             }
+
             val product = queryResult.productDetailsList.firstOrNull {
                 it.productId == PREMIUM_PRODUCT_ID
             }
             val offer = product?.oneTimePurchaseOfferDetailsList?.firstOrNull()
                 ?: product?.oneTimePurchaseOfferDetails
+
             _state.value = _state.value.copy(
                 productAvailable = product != null,
                 priceLabel = offer?.formattedPrice,
-                error = null,
+                error = if (product == null && queryResult.unfetchedProductList.isNotEmpty()) {
+                    "Prodotto Premium non disponibile per questa build/account."
+                } else {
+                    null
+                },
             )
         }
     }
@@ -188,9 +277,29 @@ class BillingManager(
             .build()
         billingClient.acknowledgePurchase(params) { result ->
             if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-                _state.value = _state.value.copy(error = result.debugMessage)
+                _state.value = _state.value.copy(
+                    error = "Premium attivo, ma Google Play non ha ancora confermato la consegna. Riproveremo al prossimo controllo.",
+                )
             }
         }
+    }
+
+    private fun evaluate(purchases: List<Purchase>): PremiumPurchaseEvaluation =
+        evaluatePremiumPurchases(
+            signals = purchases.map {
+                PurchaseSignal(
+                    products = it.products.toSet(),
+                    purchaseState = it.purchaseState,
+                )
+            },
+            premiumProductId = PREMIUM_PRODUCT_ID,
+            purchasedState = Purchase.PurchaseState.PURCHASED,
+            pendingState = Purchase.PurchaseState.PENDING,
+        )
+
+    private fun publishPremium(owned: Boolean) {
+        PremiumEntitlementStore.updateFromPlay(owned)
+        onPremiumChanged(owned)
     }
 
     private fun premiumProductQuery(): QueryProductDetailsParams =
@@ -204,6 +313,20 @@ class BillingManager(
                 ),
             )
             .build()
+
+    private fun userMessage(result: BillingResult): String = when (result.responseCode) {
+        BillingClient.BillingResponseCode.SERVICE_DISCONNECTED ->
+            "Connessione a Google Play interrotta. Riprova."
+        BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE ->
+            "Google Play Billing non è disponibile al momento."
+        BillingClient.BillingResponseCode.NETWORK_ERROR ->
+            "Connessione di rete non disponibile per Google Play."
+        BillingClient.BillingResponseCode.BILLING_UNAVAILABLE ->
+            "Gli acquisti Google Play non sono disponibili su questo dispositivo/account."
+        BillingClient.BillingResponseCode.DEVELOPER_ERROR ->
+            "Configurazione Google Play Billing non valida per questa build."
+        else -> "Google Play Billing: operazione non completata."
+    }
 
     companion object {
         const val PREMIUM_PRODUCT_ID = "premium_unlock"
