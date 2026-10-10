@@ -11,8 +11,8 @@ android {
         applicationId = "com.riccardopinato.omnicleaner"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0-recovery"
+        versionCode = 2
+        versionName = "0.2.0-recovery"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -68,6 +68,7 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

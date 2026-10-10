@@ -1,13 +1,30 @@
 <resources>
     <string name="app_name">Android Omni Cleaner</string>
-    <string name="recovery_title">Baseline di recupero</string>
-    <string name="recovery_body">Il progetto Android nativo è operativo. I moduli del cleaner verranno ripristinati uno alla volta e verificati prima di essere attivati.</string>
-    <string name="recovery_pending">Recupero in attesa — funzione non ancora attiva</string>
+    <string name="home_subtitle">Analisi sicura dello spazio. Nulla viene eliminato senza revisione.</string>
+    <string name="storage">Memoria</string>
+    <string name="storage_usage">%1$s usati su %2$s</string>
+    <string name="access_ready">Accesso alla memoria pronto</string>
+    <string name="access_required">Serve l’accesso alla memoria per analizzare tutto il dispositivo</string>
+    <string name="grant_access">Concedi accesso</string>
+    <string name="refresh">Aggiorna</string>
+    <string name="scan_tools">Strumenti di analisi</string>
+    <string name="cancel">Annulla</string>
+    <string name="scan_overview">Analizza memoria</string>
+    <string name="scan_folders">Analizza cartelle</string>
+    <string name="scan_big_files">Trova file grandi</string>
+    <string name="scan_duplicates">Trova duplicati</string>
+    <string name="scan_error">Errore di analisi</string>
 
     <string name="module_storage_overview">Panoramica spazio</string>
+    <string name="module_folders">Cartelle</string>
     <string name="module_large_files">File grandi</string>
     <string name="module_duplicates">Duplicati</string>
     <string name="module_safe_trash">Cestino sicuro</string>
     <string name="module_gallery_cleaner">Pulizia galleria</string>
     <string name="module_exif_privacy">Privacy EXIF</string>
+
+    <string name="overview_summary">%1$d file · %2$s indicizzati</string>
+    <string name="folder_summary">%1$d cartelle principali · %2$d vuote</string>
+    <string name="big_files_summary">%1$d file sopra la soglia corrente</string>
+    <string name="duplicates_summary">%1$d gruppi duplicati · fino a %2$s recuperabili</string>
 </resources>

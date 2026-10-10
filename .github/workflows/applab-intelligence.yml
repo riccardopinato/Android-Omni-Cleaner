@@ -1,0 +1,27 @@
+name: AppLab Intelligence
+
+on:
+  push:
+    branches:
+      - main
+      - "recovery/**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: applab-intelligence-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  intelligence:
+    uses: riccardopinato/AppLab/.github/workflows/app-intelligence.yml@d3681e4d2b92631ce96fcfc80349a079cbed40bb
+    with:
+      target_repository: riccardopinato/Android-Omni-Cleaner
+      target_ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      max_files: "3500"
+    secrets: inherit
