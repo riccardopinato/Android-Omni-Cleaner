@@ -10,6 +10,6 @@ adb shell mkdir -p /sdcard/DCIM/.thumbnails
 adb shell 'printf parity-fixture > /sdcard/Download/OmniParity/duplicates/a.txt'
 adb shell 'cp /sdcard/Download/OmniParity/duplicates/a.txt /sdcard/Download/OmniParity/duplicates/b.txt'
 adb shell 'printf erutxif-ytirap > /sdcard/Download/OmniParity/duplicates/same-size-different.txt'
-adb shell 'dd if=/dev/zero of=/sdcard/Download/OmniParity/large/parity-large.bin bs=1048576 count=12 status=none'
+adb shell 'dd if=/dev/zero of=/sdcard/Download/OmniParity/large/parity-large.bin bs=1048576 count=12 2>/dev/null'
 adb shell 'printf thumb-parity > /sdcard/DCIM/.thumbnails/parity-thumb.bin'
 adb shell sync
