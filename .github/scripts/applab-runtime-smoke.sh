@@ -24,4 +24,4 @@ export RUN_MAESTRO="true"
 export MAESTRO_FLOW="$GITHUB_WORKSPACE/target/.maestro/runtime-smoke.yaml"
 
 cd "$GITHUB_WORKSPACE/.applab"
-./scripts/verify_apk.sh "$APK_PATH" "$PACKAGE_ID"
+bash ./scripts/verify_apk.sh "$APK_PATH" "$PACKAGE_ID"
