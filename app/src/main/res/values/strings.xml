@@ -51,4 +51,48 @@
     <string name="pro_batch_title">Pro batch analysis</string>
     <string name="pro_batch_scan">Run Pro batch analysis</string>
     <string name="privacy_options">Privacy options</string>
+
+    <string name="nav_home">Home</string>
+    <string name="nav_clean">Clean</string>
+    <string name="nav_gallery">Gallery</string>
+    <string name="nav_privacy">Privacy</string>
+    <string name="nav_pro">Pro</string>
+
+    <string name="redesign_home_eyebrow">Storage, simplified</string>
+    <string name="redesign_home_subtitle">A clear view of what takes space, with safe actions always under your control.</string>
+    <string name="redesign_storage_detail">%1$s free of %2$s total</string>
+    <string name="redesign_storage_waiting">Storage information is being prepared</string>
+    <string name="redesign_metric_large_files">Large files</string>
+    <string name="redesign_metric_duplicates">Duplicate groups</string>
+    <string name="redesign_metric_folders">Folders scanned</string>
+    <string name="redesign_quick_analyze">Analyze storage</string>
+    <string name="redesign_quick_analyze_subtitle">See where your storage is going</string>
+    <string name="redesign_quick_duplicates">Find duplicates</string>
+    <string name="redesign_quick_duplicates_subtitle">Keep one verified copy</string>
+    <string name="redesign_quick_gallery_subtitle">Review photos and videos</string>
+    <string name="redesign_quick_privacy_subtitle">Export clean JPEG copies</string>
+    <string name="redesign_access_title">Cleaning access</string>
+    <string name="redesign_standard_ready">Standard Cleaning ready</string>
+    <string name="redesign_deep_ready">Deep Cleaning is enabled for full-device analysis.</string>
+    <string name="redesign_deep_optional">Deep Cleaning is optional. Standard Cleaning stays available without broad file access.</string>
+    <string name="redesign_open_clean_workspace">Open cleaning workspace</string>
+    <string name="redesign_pro_card_title">Go further with Pro</string>
+    <string name="redesign_pro_card_body">Pro batch tools, one-time lifetime unlock and zero ad requests.</string>
+
+    <string name="redesign_clean_eyebrow">Deep Cleaning</string>
+    <string name="redesign_clean_subtitle">Scan, review and clean with reversible or system-mediated actions whenever possible.</string>
+    <string name="redesign_deep_locked_title">Deep Cleaning is optional</string>
+    <string name="redesign_deep_locked_body">Enable it only when you want full-device scans for folders, large files and duplicates.</string>
+    <string name="redesign_filters_title">Filters & thresholds</string>
+    <string name="redesign_search_large">Search large files</string>
+    <string name="redesign_search_duplicates">Search duplicates</string>
+    <string name="redesign_large_threshold">Large-file threshold</string>
+    <string name="redesign_small_folder_threshold">Small-folder threshold</string>
+
+    <string name="redesign_media_eyebrow">Media</string>
+    <string name="redesign_gallery_subtitle">Review your media one item at a time before Android moves anything to system trash.</string>
+    <string name="redesign_privacy_eyebrow">Metadata</string>
+    <string name="redesign_privacy_subtitle">Remove selected EXIF metadata by exporting verified clean copies. Originals stay untouched.</string>
+    <string name="redesign_pro_eyebrow">Premium</string>
+    <string name="redesign_pro_subtitle">A one-time unlock for Pro batch tools and an ad-free experience.</string>
 </resources>
