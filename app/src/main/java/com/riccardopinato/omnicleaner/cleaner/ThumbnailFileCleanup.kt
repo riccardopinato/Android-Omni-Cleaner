@@ -65,6 +65,7 @@ class ThumbnailFileCleanup {
         val rootPrefix = root.path.trimEnd(File.separatorChar) + File.separator
         var removed = 0
         var rejected = 0
+        var removedBytes = 0L
 
         for (expected in snapshot.files) {
             coroutineContext.ensureActive()
@@ -72,7 +73,8 @@ class ThumbnailFileCleanup {
             onProgress(expected)
 
             val current = runCatching { expected.file.canonicalFile }.getOrNull()
-            if (current == null ||
+            if (
+                current == null ||
                 !current.path.startsWith(rootPrefix) ||
                 !regular(current) ||
                 current.length() != expected.bytes ||
@@ -88,8 +90,6 @@ class ThumbnailFileCleanup {
                 continue
             }
 
-            // The file may have changed while hashing. Recheck metadata once more
-            // immediately before the destructive call.
             if (
                 current.length() != expected.bytes ||
                 current.lastModified() != expected.modified
@@ -98,11 +98,16 @@ class ThumbnailFileCleanup {
                 continue
             }
 
-            if (current.delete()) {\n                removed++\n                removedBytes += expected.bytes.coerceAtLeast(0L)\n            } else {\n                rejected++\n            }
+            if (current.delete()) {
+                removed++
+                removedBytes += expected.bytes.coerceAtLeast(0L)
+            } else {
+                rejected++
+            }
         }
 
         root.walkBottomUp()
-            .filter { it != root && it.isDirectory }
+            .filter { it != root && it.isDirectory && !PathSafety.isSymlink(it) }
             .forEach { dir ->
                 runCatching {
                     if (dir.listFiles()?.isEmpty() == true) dir.delete()

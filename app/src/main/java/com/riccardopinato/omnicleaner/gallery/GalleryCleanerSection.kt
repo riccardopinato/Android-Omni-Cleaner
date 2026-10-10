@@ -98,7 +98,6 @@ fun GalleryCleanerSection() {
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     GalleryMediaFilter.entries.forEach { filter ->
                         if (state.filter == filter) {
                             Button(
@@ -248,7 +247,6 @@ fun GalleryCleanerSection() {
         )
     }
 }
-
 
 private fun GalleryMediaFilter.isAvailableFor(health: GalleryAccessHealth): Boolean = when (this) {
     GalleryMediaFilter.ALL -> health.canReadImages && health.canReadVideos

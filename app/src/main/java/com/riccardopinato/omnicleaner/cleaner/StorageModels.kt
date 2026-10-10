@@ -69,7 +69,11 @@ data class ThumbnailSnapshot(
     val bytes: Long get() = files.sumOf { it.bytes }
 }
 
-data class ThumbnailCleanupResult(\n    val removed: Int,\n    val rejected: Int,\n    val removedBytes: Long = 0L,\n)
+data class ThumbnailCleanupResult(
+    val removed: Int,
+    val rejected: Int,
+    val removedBytes: Long = 0L,
+)
 
 data class ThumbnailCacheItem(
     val file: File,
