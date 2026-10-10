@@ -1,6 +1,6 @@
 project:
   repository: riccardopinato/Android-Omni-Cleaner
-  status: RECOVERY_PARITY_AUDIT_NEXT
+  status: PARITY_AUDIT_IN_PROGRESS
   recovery_started_at: 2026-10-09
   current_maxi_step: 3
 
@@ -13,10 +13,12 @@ factory:
 
 applab:
   repository: riccardopinato/AppLab
-  commit_sha: d3681e4d2b92631ce96fcfc80349a079cbed40bb
+  version: "4.5"
+  commit_sha: dc826264c31dd79fc7617ab7a4a8aee61f9b5aba
   static_intelligence: configured
-  trusted_runtime: blocked_by_github_artifact_quota
-  authority_note: static_intelligence_is_advisory
+  bounded_runtime_parity: configured
+  physical_evidence_hub: required_later
+  trusted_artifact_path: blocked_by_github_artifact_quota
 
 product:
   working_name: Android Omni Cleaner
@@ -24,14 +26,7 @@ product:
   platform: android
   monetizable: true
   planned_visual_redesign: true
-  stack:
-    language: Kotlin
-    ui: Jetpack Compose
-    design: Material 3
   local_first: true
-  web_preview:
-    enabled: false
-    reason: native filesystem/media behavior cannot be truthfully certified on web
 
 identity:
   final_application_id: com.riccardopinato.omnicleaner
@@ -42,63 +37,28 @@ identity:
   recovery_version_code: 4
   signing_lane: internal_pending
 
-android:
-  min_sdk: 24
-  target_sdk: 36
-  compile_sdk: 37
-  jdk: 17
-  gradle: "9.6.0"
-  agp: "9.4.0"
-  release_debuggable: false
-  release_minify: true
-  release_shrink_resources: true
-
-recovery:
-  source_of_behavior: supplied APK
-  strategy: clean reconstruction from forensic APK evidence
-  preserve_native_stack: true
-  rewrite_to_flutter: false
-  bootstrap_complete: true
-  functional_reconstruction: source_level_near_parity
+parity:
+  donor_contract: parity/DONOR_CONTRACT.json
+  deterministic_jvm_fixture: configured
+  emulator_fixture: configured
+  maestro_journey: .maestro/parity-storage.yaml
+  test_apk_distribution: github_prerelease_after_runtime_pass
+  physical_plan: parity/PHYSICAL_DEVICE_PLAN.md
   visual_parity_required: false
-  parity_matrix: DONOR_PARITY_MATRIX.md
 
-capabilities:
-  storage_scan: source_recovered_runtime_pending
-  folders: source_recovered_runtime_pending
-  large_files: source_recovered_runtime_pending
-  duplicate_scan: source_recovered_runtime_pending
-  duplicate_keeper_rules: source_recovered_runtime_pending
-  safe_trash: recovered_safer_runtime_pending
-  thumbnail_cleanup: recovered_safer_runtime_pending
-  app_residue_scan: source_recovered_runtime_pending
-  app_residue_cleanup: intentional_safety_partial
-  gallery_cleaner: source_recovered_runtime_pending
-  gallery_undo: source_recovered_runtime_pending
-  media_system_trash: source_recovered_runtime_pending
-  exif_cleaner: source_recovered_runtime_pending
-  pro_batch_scan: source_recovered_runtime_pending
-  pro_batch_review: source_recovered_runtime_pending
-  pro_batch_cleanup: recovered_safer_runtime_pending
-  billing: source_recovered_external_config_pending
-  ads: source_recovered_external_config_pending
-  ump_consent: source_recovered_runtime_pending
-  google_sign_in: donor_unproven_not_implemented
-
-monetization:
-  donor_product_id: premium_unlock
-  product_type: one_time_inapp
-  premium_blocks_ad_requests: true
-  interstitial_cleanup_actions: 3
-  interstitial_min_interval_ms: 180000
-  debug_ads: google_test_ids
-  release_ads: disabled_until_gradle_properties_configured
+physical_validation:
+  required: true
+  capabilities:
+    - storage
+    - file_picker
+    - billing
+  status: blocked_until_real_device_execution
 
 release:
   ci: configured
   signing: policy_defined_identity_not_provisioned
   physical_validation: not_started
-  distribution_validation: not_started
+  distribution_validation: parity_prerelease_only
   billing_play_test: not_started
   production_ads_configured: false
   store_ready: false

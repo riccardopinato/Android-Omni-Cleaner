@@ -1,28 +1,31 @@
 # Runtime evidence lanes
 
-## Trusted AppLab runtime
+## Step 3 bounded emulator parity
 
-Status: **BLOCKED by GitHub Actions artifact quota**.
+AppLab pin:
+`dc826264c31dd79fc7617ab7a4a8aee61f9b5aba` — v4.5 Physical Evidence Hub.
 
-This is the authoritative AppLab runtime/certification boundary because build and runtime evidence are bound through immutable artifact identity.
-
-Do not replace it with a weaker lane.
-
-## AppLab Runtime Smoke
-
-Status: **available without artifact upload**.
-
-The repository builds the debug APK and executes the pinned AppLab verifier in one GitHub Actions job on an Android emulator.
-
-Coverage includes:
-- APK installation and launch;
-- target-process fatal/ANR checks;
-- bounded Maestro flow;
-- safe interaction crawling;
-- AppLab visual runtime checks;
-- System UI/permission checks;
-- controlled storage fixture.
+The runtime job:
+- builds the debug APK;
+- prepares a deterministic storage fixture;
+- grants the emulator all-files app-op;
+- runs `.maestro/parity-storage.yaml`;
+- enables bounded AppLab system, persistence and storage labs;
+- retries only a known PID-loss crawler flake when there is no FATAL/ANR/OOM/fatal-signal evidence;
+- publishes the exact passing APK as a GitHub pre-release with SHA-256.
 
 Authority: `NON_TRUSTED_SMOKE`.
 
-This lane is valid evidence that the reconstructed app launches and survives bounded runtime interaction. It does **not** establish byte-bound trusted runtime identity, donor equivalence, physical-device behavior or store certification.
+## Physical authority
+
+`applab.project.json` requires physical validation for:
+- storage;
+- file picker / SAF;
+- Billing.
+
+See `parity/PHYSICAL_DEVICE_PLAN.md`.
+
+Physical PASS requires the AppLab v4.5 Physical Evidence Hub and exact APK
+binding. GitHub Actions artifact quota currently blocks the trusted
+artifact-bound certification path; this does not block the non-trusted emulator
+parity lane or GitHub Release delivery of the test APK.
