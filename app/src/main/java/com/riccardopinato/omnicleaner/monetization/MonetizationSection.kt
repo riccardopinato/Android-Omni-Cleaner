@@ -38,7 +38,8 @@ fun MonetizationSection() {
     val activity = context.findActivity()
     val appContext = context.applicationContext
     val scope = rememberCoroutineScope()
-    val premium by PremiumEntitlementStore.isPremium.collectAsState()
+    val entitlement by PremiumEntitlementStore.state.collectAsState()
+    val premium = entitlement.isPremium
     var purchaseMessage by remember { mutableStateOf<String?>(null) }
     val purchaseContextError = stringResource(R.string.pro_purchase_context_error)
     val productUnavailable = stringResource(R.string.pro_product_unavailable)
@@ -63,14 +64,22 @@ fun MonetizationSection() {
         }
     }
 
-    LaunchedEffect(activity, premium) {
-        if (activity != null && !premium) consent.refresh(activity)
-        if (premium) AdManager.setEligibility(appContext, false)
+    LaunchedEffect(activity, entitlement.resolved, premium) {
+        if (activity != null && entitlement.resolved && !premium) {
+            consent.refresh(activity)
+        }
+        if (premium || !entitlement.resolved) {
+            AdManager.setEligibility(appContext, false)
+        }
     }
     LaunchedEffect(premium, consentState.canRequestAds) {
         AdManager.setEligibility(
             appContext,
-            AdRequestPolicy.mayRequestAds(premium, consentState.canRequestAds),
+            AdRequestPolicy.mayRequestAds(
+                isPremium = premium,
+                consentAllowsAds = consentState.canRequestAds,
+                entitlementResolved = entitlement.resolved,
+            ),
         )
     }
 
@@ -170,6 +179,7 @@ fun MonetizationSection() {
                 AdManager.Banner(
                     isPremium = false,
                     consentAllowsAds = consentState.canRequestAds,
+                    entitlementResolved = entitlement.resolved,
                 )
             }
         }
