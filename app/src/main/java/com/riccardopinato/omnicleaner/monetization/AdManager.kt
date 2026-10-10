@@ -128,12 +128,17 @@ object AdManager {
     fun Banner(
         isPremium: Boolean,
         consentAllowsAds: Boolean,
+        entitlementResolved: Boolean,
         modifier: Modifier = Modifier,
     ) {
         if (
             !BuildConfig.ADS_ENABLED ||
             BuildConfig.ADMOB_BANNER_UNIT_ID.isBlank() ||
-            !AdRequestPolicy.mayRequestAds(isPremium, consentAllowsAds)
+            !AdRequestPolicy.mayRequestAds(
+                isPremium = isPremium,
+                consentAllowsAds = consentAllowsAds,
+                entitlementResolved = entitlementResolved,
+            )
         ) {
             return
         }
