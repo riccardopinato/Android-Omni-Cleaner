@@ -6,14 +6,43 @@ import org.junit.Test
 
 class AdRequestPolicyTest {
     @Test
-    fun premiumNeverRequestsAds() {
-        assertFalse(AdRequestPolicy.mayRequestAds(isPremium = true, consentAllowsAds = true))
+    fun unresolvedEntitlementNeverRequestsAds() {
+        assertFalse(
+            AdRequestPolicy.mayRequestAds(
+                isPremium = false,
+                consentAllowsAds = true,
+                entitlementResolved = false,
+            ),
+        )
     }
 
     @Test
-    fun freeRequiresConsentBeforeAds() {
-        assertFalse(AdRequestPolicy.mayRequestAds(isPremium = false, consentAllowsAds = false))
-        assertTrue(AdRequestPolicy.mayRequestAds(isPremium = false, consentAllowsAds = true))
+    fun premiumNeverRequestsAds() {
+        assertFalse(
+            AdRequestPolicy.mayRequestAds(
+                isPremium = true,
+                consentAllowsAds = true,
+                entitlementResolved = true,
+            ),
+        )
+    }
+
+    @Test
+    fun freeRequiresConsentAndResolvedEntitlementBeforeAds() {
+        assertFalse(
+            AdRequestPolicy.mayRequestAds(
+                isPremium = false,
+                consentAllowsAds = false,
+                entitlementResolved = true,
+            ),
+        )
+        assertTrue(
+            AdRequestPolicy.mayRequestAds(
+                isPremium = false,
+                consentAllowsAds = true,
+                entitlementResolved = true,
+            ),
+        )
     }
 
     @Test
