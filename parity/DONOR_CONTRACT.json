@@ -18,7 +18,7 @@
     "storage_overview": {"status": "donor_proven", "symbols": ["SpaceOverviewScanner.scan", "FileInventoryScanner.collect"]},
     "folders": {"status": "donor_proven", "symbols": ["FileScanner.scanFolders", "FileScanner.computeFolderStats"]},
     "large_files": {"status": "donor_proven", "symbols": ["FileScanner.findBigFiles"]},
-    "duplicates": {"status": "donor_proven", "digest": "SHA-256", "symbols": ["FileInventoryScanner.duplicates", "FileInventoryScanner.digest"]},
+    "duplicates": {"status": "donor_proven", "digest": "SHA-256", "requires_byte_verification": true, "requires_unchanged_recheck": true, "symbols": ["FileInventoryScanner.duplicates", "FileInventoryScanner.duplicatesProgressive", "FileInventoryScanner.digest", "FileInventoryScanner.identical", "FileInventoryScanner.unchanged"]},
     "duplicate_keeper_rules": {"status": "donor_proven", "symbols": ["select all", "keep oldest", "keep newest"]},
     "safe_trash": {"status": "donor_proven", "symbols": ["SafeTrashManager.moveToTrash", "SafeTrashManager.emptyTrash", "SafeTrashManager.permanentlyDelete"]},
     "media_system_trash": {"status": "donor_proven", "symbols": ["MediaStoreHelper.trashMediaFiles"]},
