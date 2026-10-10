@@ -206,6 +206,10 @@ fun OmniCleanerApp() {
                 ExifCleanerSection()
             }
 
+            item {
+                com.riccardopinato.omnicleaner.monetization.MonetizationSection()
+            }
+
             item { Spacer(Modifier.height(20.dp)) }
         }
     }

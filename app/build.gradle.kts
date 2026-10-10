@@ -11,10 +11,10 @@ android {
         applicationId = "com.riccardopinato.omnicleaner"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0-recovery"
-
+        versionCode = 3
+        versionName = "0.3.0-recovery"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders["admobAppId"] = "ca-app-pub-3940256099942544~3347511713"
     }
 
     buildTypes {
@@ -23,7 +23,6 @@ android {
             versionNameSuffix = "-debug"
             isDebuggable = true
         }
-
         release {
             isDebuggable = false
             isMinifyEnabled = true
@@ -60,7 +59,6 @@ android {
 
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
-
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
@@ -71,11 +69,13 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.2.1")
     implementation("androidx.documentfile:documentfile:1.1.0")
     implementation("androidx.exifinterface:exifinterface:1.4.2")
+    implementation("com.android.billingclient:billing:9.1.0")
+    implementation("com.google.android.gms:play-services-ads:25.5.0")
+    implementation("com.google.android.ump:user-messaging-platform:4.0.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
-
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")

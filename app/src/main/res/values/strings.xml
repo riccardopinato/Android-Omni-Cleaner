@@ -27,4 +27,14 @@
     <string name="folder_summary">%1$d top-level folders · %2$d empty</string>
     <string name="big_files_summary">%1$d files above the current threshold</string>
     <string name="duplicates_summary">%1$d duplicate groups · up to %2$s recoverable</string>
+    <string name="pro_title">Omni Cleaner Pro</string>
+    <string name="pro_active">Premium active · no ad requests</string>
+    <string name="pro_free">Free mode · ads are requested only after privacy consent</string>
+    <string name="pro_buy">Unlock Premium · %1$s</string>
+    <string name="pro_price_unavailable">price from Google Play</string>
+    <string name="pro_product_unavailable">Premium is not available from Google Play on this build/account yet.</string>
+    <string name="pro_purchase_context_error">Purchase flow is unavailable in this screen context.</string>
+    <string name="pro_batch_title">Pro batch analysis</string>
+    <string name="pro_batch_scan">Run Pro batch analysis</string>
+    <string name="privacy_options">Privacy options</string>
 </resources>
