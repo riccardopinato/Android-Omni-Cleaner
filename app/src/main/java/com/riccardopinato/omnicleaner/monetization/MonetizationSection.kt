@@ -38,12 +38,12 @@ fun MonetizationSection() {
     val activity = context.findActivity()
     val appContext = context.applicationContext
     val scope = rememberCoroutineScope()
-    var premium by remember { mutableStateOf(false) }
+    val premium by PremiumEntitlementStore.isPremium.collectAsState()
     var purchaseMessage by remember { mutableStateOf<String?>(null) }
     val purchaseContextError = stringResource(R.string.pro_purchase_context_error)
     val productUnavailable = stringResource(R.string.pro_product_unavailable)
 
-    val billing = remember(appContext) { BillingManager(appContext) { premium = it } }
+    val billing = remember(appContext) { BillingManager(appContext) }
     val consent = remember(appContext) { ConsentManager(appContext) }
     val preferences = remember(appContext) { ProPreferencesManager(appContext) }
     val batch = remember(appContext, scope) { ProBatchController(appContext, scope) }
@@ -179,12 +179,6 @@ fun MonetizationSection() {
             }
         }
     }
-}
-
-private tailrec fun Context.findActivity(): Activity? = when (this) {
-    is Activity -> this
-    is ContextWrapper -> baseContext.findActivity()
-    else -> null
 }
 
 private fun formatBytes(bytes: Long): String {
