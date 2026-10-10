@@ -34,8 +34,14 @@ user-facing purpose is repeated on-device storage analysis across many directori
 The permission is requested only after the user explicitly chooses to enable Deep
 Cleaning.
 
-Google Play approval is **not assumed**. Store readiness remains blocked until
-the declaration is reviewed and accepted.
+Google Play approval is **not assumed**. The declaration strategy maps Deep
+Cleaning to the permitted **file management / maintenance** use: the app's core
+purpose includes locating, reviewing and managing files/folders outside
+app-specific storage (large files, duplicates and folder maintenance).
+
+The permission is never justified by Gallery media access or user-selected EXIF
+processing: Gallery uses MediaStore and EXIF uses SAF. Store readiness remains
+blocked until the declaration is reviewed and accepted.
 
 On Android 10 (API 29), a targetSdk 36 app uses scoped storage and the legacy read
 permission must not be represented as equivalent to full-filesystem access. The
@@ -72,7 +78,18 @@ https://developer.android.com/training/data-storage
 Google Play — All files access permission:
 https://support.google.com/googleplay/android-developer/answer/10467955
 
-Google Play classifies All files access as high-risk/sensitive. It must be tied
-to essential core user-facing functionality, requested clearly, and approved in
-Play review. This document records the product justification; it does not claim
-that Google Play has approved the app.
+Google Play classifies All files access as high-risk/sensitive. Its current
+permitted-use table explicitly includes file management where the core purpose
+is access, editing and management — including maintenance — of files/folders
+outside app-specific storage. Approval is still review-based.
+
+Play submission wording must therefore describe the real core functionality:
+user-directed on-device storage/file management and maintenance, not a vague
+"booster" claim.
+
+If Play does not approve broad access, the architecture can ship a scoped-only
+variant by disabling Deep Cleaning while retaining Standard Cleaning. The app
+must never disguise a rejected/unapproved permission path.
+
+This document records the product justification; it does not claim that Google
+Play has approved the app.
