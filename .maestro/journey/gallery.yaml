@@ -1,0 +1,5 @@
+appId: com.riccardopinato.omnicleaner.debug
+---
+- tapOn:
+    text: "Gallery"
+- assertVisible: "Gallery Cleaner"
