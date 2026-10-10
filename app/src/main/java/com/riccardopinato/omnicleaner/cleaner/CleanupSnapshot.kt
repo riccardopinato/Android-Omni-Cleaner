@@ -91,6 +91,25 @@ object CleanupSnapshotValidator {
         return CleanupSnapshotValidation(true)
     }
 
+    fun withCurrentDigest(snapshot: CleanupFileSnapshot): CleanupFileSnapshot? {
+        if (!validate(snapshot).valid) return null
+        val file = snapshot.file
+        val digest = runCatching { sha256(file) }.getOrNull() ?: return null
+        if (
+            !file.isFile ||
+            file.length() != snapshot.expectedBytes ||
+            file.lastModified() != snapshot.expectedModified
+        ) {
+            return null
+        }
+        if (snapshot.expectedSha256 != null && snapshot.expectedSha256 != digest) {
+            return null
+        }
+        return snapshot.copy(expectedSha256 = snapshot.expectedSha256 ?: digest)
+    }
+
+    internal fun currentSha256(file: File): String = sha256(file)
+
     private fun sha256(file: File): String {
         val digest = MessageDigest.getInstance("SHA-256")
         FileInputStream(file).use { input ->
