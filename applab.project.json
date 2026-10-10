@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "project_type": "native_android",
+  "working_directory": ".",
+  "package_id": "com.riccardopinato.omnicleaner",
+  "toolchain": {
+    "java_version": "17"
+  },
+  "journeys": {
+    "primary": ".maestro/parity-storage.yaml",
+    "critical": [
+      ".maestro/runtime-smoke.yaml"
+    ]
+  },
+  "physical_validation": {
+    "required": true,
+    "capabilities": [
+      "storage",
+      "file_picker",
+      "billing"
+    ]
+  }
+}

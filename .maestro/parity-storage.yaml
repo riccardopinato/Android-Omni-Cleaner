@@ -1,0 +1,83 @@
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+- assertVisible: "Android Omni Cleaner"
+- assertVisible: "Storage access ready"
+
+- tapOn:
+    text: "Analyze storage"
+- scrollUntilVisible:
+    element:
+      text: ".*indexed.*"
+    direction: DOWN
+    timeout: 120000
+    speed: 50
+    visibilityPercentage: 50
+- assertVisible: "Storage overview"
+
+- scrollUntilVisible:
+    element:
+      text: "Find duplicates"
+    direction: UP
+    timeout: 30000
+- tapOn:
+    text: "Find duplicates"
+- scrollUntilVisible:
+    element:
+      text: "a.txt"
+    direction: DOWN
+    timeout: 120000
+    speed: 50
+- assertVisible: "a.txt"
+
+- scrollUntilVisible:
+    element:
+      text: "> 10 MB"
+    direction: UP
+    timeout: 30000
+- tapOn:
+    text: "> 10 MB"
+- scrollUntilVisible:
+    element:
+      text: "Find large files"
+    direction: UP
+    timeout: 30000
+- tapOn:
+    text: "Find large files"
+- scrollUntilVisible:
+    element:
+      text: "parity-large.bin"
+    direction: DOWN
+    timeout: 120000
+    speed: 50
+- assertVisible: "parity-large.bin"
+
+- scrollUntilVisible:
+    element:
+      text: "Cache miniature"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    text: "Cache miniature"
+- scrollUntilVisible:
+    element:
+      text: ".*DCIM/.thumbnails.*"
+    direction: DOWN
+    timeout: 60000
+- assertVisible:
+    text: ".*DCIM/.thumbnails.*"
+
+- scrollUntilVisible:
+    element:
+      text: "Gallery Cleaner"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Gallery Cleaner"
+
+- scrollUntilVisible:
+    element:
+      text: "EXIF Privacy"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "EXIF Privacy"

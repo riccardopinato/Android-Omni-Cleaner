@@ -9,19 +9,16 @@ set -Eeuo pipefail
 adb install -r -t "$APK_PATH"
 adb shell appops set "$PACKAGE_ID" MANAGE_EXTERNAL_STORAGE allow || true
 
-adb shell mkdir -p /sdcard/Download/OmniParity/empty
-adb shell mkdir -p /sdcard/Download/OmniParity/duplicates
-adb shell 'printf parity-fixture > /sdcard/Download/OmniParity/duplicates/a.txt'
-adb shell 'cp /sdcard/Download/OmniParity/duplicates/a.txt /sdcard/Download/OmniParity/duplicates/b.txt'
+bash "$GITHUB_WORKSPACE/target/.github/scripts/prepare-parity-fixture.sh"
 
 export REPORT_DIR="$GITHUB_WORKSPACE/applab-runtime-smoke"
-export APPLAB_VERSION="4.2.0-pinned-smoke"
+export APPLAB_VERSION="4.5.0-pinned-smoke"
 export APPLAB_ANALYSIS_MODE="fast"
 export APPLAB_ANALYSIS_PLAN_JSON="$APPLAB_PLAN"
 export APPLAB_TARGET_ROOT="$GITHUB_WORKSPACE/target"
 export APPLAB_PROJECT_ROOT="$GITHUB_WORKSPACE/target"
 export RUN_MAESTRO="true"
-export MAESTRO_FLOW="$GITHUB_WORKSPACE/target/.maestro/runtime-smoke.yaml"
+export MAESTRO_FLOW="$GITHUB_WORKSPACE/target/.maestro/parity-storage.yaml"
 
 cd "$GITHUB_WORKSPACE/.applab"
 

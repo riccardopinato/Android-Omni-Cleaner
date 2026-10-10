@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   review:
-    uses: riccardopinato/AppLab/.github/workflows/autonomous-app-review-v31.yml@d3681e4d2b92631ce96fcfc80349a079cbed40bb
+    uses: riccardopinato/AppLab/.github/workflows/autonomous-app-review-v31.yml@dc826264c31dd79fc7617ab7a4a8aee61f9b5aba
     with:
       target_repository: riccardopinato/Android-Omni-Cleaner
       target_ref: ${{ github.sha }}

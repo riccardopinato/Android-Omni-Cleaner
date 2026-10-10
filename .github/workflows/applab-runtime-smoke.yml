@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "recovery/**"
+      - "audit/**"
   pull_request:
     branches:
       - main
@@ -32,7 +33,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: riccardopinato/AppLab
-          ref: d3681e4d2b92631ce96fcfc80349a079cbed40bb
+          ref: dc826264c31dd79fc7617ab7a4a8aee61f9b5aba
           path: .applab
           persist-credentials: false
 
@@ -72,11 +73,11 @@ jobs:
               "system": true,
               "performance": false,
               "network": false,
-              "persistence": false,
+              "persistence": true,
               "configuration": false,
               "resource_pressure": false,
               "background": false,
-              "storage": false,
+              "storage": true,
               "upgrade": false
             }
           }
