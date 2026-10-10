@@ -48,6 +48,18 @@ fun OmniCleanerApp() {
         CleanerController(context.applicationContext, scope)
     }
     val state = controller.state
+    val activity = remember(context) { context.findActivity() }
+
+    LaunchedEffect(activity) {
+        if (activity != null) {
+            CleanupEventBus.events.collect {
+                AdManager.onCleanupCompleted(
+                    activity = activity,
+                    isPremium = PremiumEntitlementStore.isPremium.value,
+                )
+            }
+        }
+    }
 
     val storageSettingsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
