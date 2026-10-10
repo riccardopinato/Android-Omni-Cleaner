@@ -187,6 +187,10 @@ fun OmniCleanerApp() {
             }
 
             item {
+                MaintenanceSection()
+            }
+
+            item {
                 ExifCleanerSection()
             }
 
