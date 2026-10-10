@@ -26,6 +26,12 @@ class FileInventoryScanner {
         while (stack.isNotEmpty()) {
             coroutineContext.ensureActive()
             val directory = stack.removeLast()
+
+            if (directory != root && FileInventoryPolicy.shouldIgnore(root, directory)) {
+                excluded++
+                continue
+            }
+
             val canonical = runCatching { directory.canonicalPath }.getOrNull()
             if (canonical == null || !visited.add(canonical)) {
                 excluded++
@@ -84,11 +90,25 @@ class FileInventoryScanner {
             }
             for ((hash, matches) in byDigest) {
                 if (matches.size <= 1) continue
+                val sorted = matches.sortedWith(
+                    compareBy<IndexedFile> { it.modified }
+                        .thenBy { it.file.absolutePath },
+                )
                 groups += DuplicateGroup(
                     hash = hash,
-                    files = matches
-                        .sortedWith(compareBy<IndexedFile> { it.modified }.thenBy { it.file.absolutePath })
-                        .map { DuplicateFile(it.file, it.size, it.modified) },
+                    sizeBytes = sorted.first().size,
+                    files = sorted.map { item ->
+                        val path = item.file.absolutePath
+                        DuplicateFile(
+                            file = item.file,
+                            name = item.file.name,
+                            path = path,
+                            displayPath = path,
+                            sizeBytes = item.size,
+                            lastModified = item.modified,
+                            extension = item.file.extension.lowercase(),
+                        )
+                    },
                 )
             }
         }

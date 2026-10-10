@@ -135,7 +135,7 @@ fun OmniCleanerApp() {
 
             if (state.folders.isNotEmpty()) {
                 item {
-                    val empty = state.folders.count { it.status.name == "EMPTY" }
+                    val empty = state.folders.count { it.status == com.riccardopinato.omnicleaner.cleaner.FolderStatus.COMPLETELY_EMPTY }
                     ResultHeader(
                         title = stringResource(R.string.module_folders),
                         subtitle = stringResource(R.string.folder_summary, state.folders.size, empty),
