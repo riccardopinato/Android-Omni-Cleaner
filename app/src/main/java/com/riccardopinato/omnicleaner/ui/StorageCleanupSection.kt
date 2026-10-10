@@ -33,6 +33,7 @@ import com.riccardopinato.omnicleaner.cleaner.FolderItem
 import com.riccardopinato.omnicleaner.cleaner.FolderStatus
 import com.riccardopinato.omnicleaner.cleaner.ManualMaintenance
 import com.riccardopinato.omnicleaner.cleaner.StorageCleanupEngine
+import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
 import kotlinx.coroutines.launch
 
 private enum class CleanupDialog {
