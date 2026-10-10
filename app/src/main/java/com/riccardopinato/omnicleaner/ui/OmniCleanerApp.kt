@@ -60,7 +60,7 @@ fun OmniCleanerApp() {
             CleanupEventBus.events.collect {
                 AdManager.onCleanupCompleted(
                     activity = activity,
-                    isPremium = PremiumEntitlementStore.isPremium.value,
+                    isPremium = PremiumEntitlementStore.state.value.isPremium,
                 )
             }
         }
