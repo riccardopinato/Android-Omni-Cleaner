@@ -92,8 +92,10 @@ internal class CleanerController(
     }
 
     fun refreshAccessAndStorage() {
+        val capability = StorageAccess.capabilityHealth(context)
         state = state.copy(
-            hasBroadAccess = StorageAccess.hasBroadAccess(context),
+            hasBroadAccess = capability.deepScanAvailable,
+            storageCapability = capability,
             storageInfo = runCatching { StorageAccess.storageInfo() }.getOrNull(),
             error = null,
         )
@@ -158,7 +160,7 @@ internal class CleanerController(
 
     private fun runScan(label: String, block: suspend () -> Unit) {
         if (!state.hasBroadAccess) {
-            state = state.copy(error = "Storage access is required before scanning.")
+            state = state.copy(error = "Deep Cleaning access is required before a full-device scan.")
             return
         }
         scanJob?.cancel()

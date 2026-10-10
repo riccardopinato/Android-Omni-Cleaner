@@ -61,7 +61,7 @@ class ThumbnailFileCleanup {
         onProgress: (ThumbnailFileStamp) -> Unit = {},
     ): ThumbnailCleanupResult = withContext(Dispatchers.IO) {
         val root = runCatching { snapshot.directory.canonicalFile }.getOrNull()
-            ?: return@withContext ThumbnailCleanupResult(0, snapshot.files.size)
+            ?: return@withContext ThumbnailCleanupResult(0, snapshot.files.size, 0L)
         val rootPrefix = root.path.trimEnd(File.separatorChar) + File.separator
         var removed = 0
         var rejected = 0
@@ -88,7 +88,7 @@ class ThumbnailFileCleanup {
                 continue
             }
 
-            if (current.delete()) removed++ else rejected++
+            if (current.delete()) {\n                removed++\n                removedBytes += expected.bytes.coerceAtLeast(0L)\n            } else {\n                rejected++\n            }
         }
 
         root.walkBottomUp()
@@ -99,7 +99,7 @@ class ThumbnailFileCleanup {
                 }
             }
 
-        ThumbnailCleanupResult(removed, rejected)
+        ThumbnailCleanupResult(removed, rejected, removedBytes)
     }
 
     private fun regular(file: File): Boolean = runCatching {

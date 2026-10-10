@@ -95,7 +95,8 @@ private class MaintenanceController(
         val refreshed = scanner.scanThumbnailCache(StorageAccess.primaryRoot())
         state = state.copy(
             thumbnails = refreshed,
-            message = "${result.removed} file rimossi; ${result.rejected} rifiutati perché cambiati o non verificabili.",
+            message = "${result.removed} file rimossi definitivamente (${result.removedBytes} byte); " +
+                "${result.rejected} rifiutati perché cambiati o non verificabili.",
         )
         if (result.removed > 0) CleanupEventBus.publishCompleted()
     }

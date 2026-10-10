@@ -73,14 +73,18 @@ fun StorageCleanupSection(
         }
 
         scope.launch {
-            val safeResult = engine.movePreparedNonMediaToSafeTrash(preparation.safeTrashFiles)
+            val safeResult = engine.movePreparedSnapshotsToSafeTrash(preparation.safeTrashCandidates)
             message = buildString {
-                append("Cestino Android confermato")
+                append("Cestino Android confermato (spazio non conteggiato come già liberato)")
                 if (safeResult.moved > 0) append(" · " + safeResult.moved + " file spostati nel Safe Trash")
                 if (safeResult.rejected > 0) append(" · " + safeResult.rejected + " file rifiutati")
+                if (preparation.staleFiles.isNotEmpty()) {
+                    append(" · " + preparation.staleFiles.size + " file cambiati dopo la scansione e lasciati invariati")
+                }
                 if (preparation.blockedFiles.isNotEmpty()) {
                     append(" · " + preparation.blockedFiles.size + " file lasciati invariati perché non eliminabili in modo reversibile")
                 }
+                if (safeResult.moved > 0) append(" · Safe Trash non è spazio già liberato")
             }
             selectedBigFiles = emptySet()
             selectedDuplicates = emptySet()
@@ -90,8 +94,8 @@ fun StorageCleanupSection(
     }
 
     fun executeSelectedFiles() {
-        val big = bigFiles.filter { it.path in selectedBigFiles }.map { it.file }
-        val duplicates = engine.protectedDuplicateFiles(duplicateGroups, selectedDuplicates)
+        val big = engine.snapshotsForBigFiles(bigFiles, selectedBigFiles)
+        val duplicates = engine.protectedDuplicateSnapshots(duplicateGroups, selectedDuplicates)
         val requested = big + duplicates
         if (requested.isEmpty()) {
             message = "Nessun file selezionato."
@@ -99,7 +103,7 @@ fun StorageCleanupSection(
         }
 
         scope.launch {
-            val preparation = engine.prepareFiles(requested)
+            val preparation = engine.prepareSnapshots(requested)
             if (preparation.mediaUris.isNotEmpty()) {
                 val request = engine.createSystemTrashRequest(preparation.mediaUris)
                 if (request == null) {
@@ -111,14 +115,18 @@ fun StorageCleanupSection(
                 return@launch
             }
 
-            val safeResult = engine.movePreparedNonMediaToSafeTrash(preparation.safeTrashFiles)
+            val safeResult = engine.movePreparedSnapshotsToSafeTrash(preparation.safeTrashCandidates)
             message = buildString {
                 append(safeResult.moved)
                 append(" file spostati nel Safe Trash")
                 if (safeResult.rejected > 0) append(" · " + safeResult.rejected + " rifiutati")
+                if (preparation.staleFiles.isNotEmpty()) {
+                    append(" · " + preparation.staleFiles.size + " cambiati dopo la scansione e lasciati invariati")
+                }
                 if (preparation.blockedFiles.isNotEmpty()) {
                     append(" · " + preparation.blockedFiles.size + " lasciati invariati perché non eliminabili in modo reversibile")
                 }
+                if (safeResult.moved > 0) append(" · Safe Trash non è spazio già liberato")
             }
             selectedBigFiles = emptySet()
             selectedDuplicates = emptySet()
@@ -287,7 +295,7 @@ fun StorageCleanupSection(
             title = { Text("Confermare la pulizia?") },
             text = {
                 Text(
-                    "I duplicati mantengono almeno una copia. I media passano dal cestino Android. I non-media vanno nel Safe Trash solo quando l’operazione è verificabile; nessun file grande viene eliminato permanentemente come fallback.",
+                    "I file vengono ricontrollati subito prima della modifica. I duplicati mantengono una copia valida e invariata. I media passano dal cestino Android. I non-media vanno nel Safe Trash solo quando l’operazione è verificabile; nessun file grande viene eliminato permanentemente come fallback.",
                 )
             },
             confirmButton = {

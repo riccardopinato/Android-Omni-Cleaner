@@ -78,10 +78,14 @@ fun OmniCleanerApp() {
     }
 
     fun requestStorageAccess() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            storageSettingsLauncher.launch(StorageAccess.settingsIntent(context))
-        } else {
-            legacyReadLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+        when (state.storageCapability.status) {
+            DeepStorageAccessStatus.NEEDS_ALL_FILES_ACCESS ->
+                storageSettingsLauncher.launch(StorageAccess.settingsIntent(context))
+
+            DeepStorageAccessStatus.NEEDS_LEGACY_PERMISSION ->
+                legacyReadLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+
+            else -> Unit
         }
     }
 
@@ -362,15 +366,31 @@ private fun StorageCard(
                 )
             }
             Text(
-                if (state.hasBroadAccess) stringResource(R.string.access_ready)
-                else stringResource(R.string.access_required),
-                color = if (state.hasBroadAccess) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.error,
+                stringResource(R.string.standard_cleaning_ready),
+                color = MaterialTheme.colorScheme.primary,
             )
+            Text(
+                when (state.storageCapability.status) {
+                    DeepStorageAccessStatus.READY -> stringResource(R.string.access_ready)
+                    DeepStorageAccessStatus.NEEDS_ALL_FILES_ACCESS -> stringResource(R.string.deep_access_optional)
+                    DeepStorageAccessStatus.NEEDS_LEGACY_PERMISSION -> stringResource(R.string.deep_access_optional)
+                    DeepStorageAccessStatus.SCOPED_ONLY_ANDROID_10 -> stringResource(R.string.deep_access_android10)
+                    DeepStorageAccessStatus.STORAGE_UNAVAILABLE -> stringResource(R.string.deep_access_unavailable)
+                },
+                color = if (state.hasBroadAccess) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (!state.hasBroadAccess) {
+                Text(
+                    stringResource(R.string.access_required),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (!state.hasBroadAccess) {
+                if (state.storageCapability.canRequestDeepAccess) {
                     Button(onClick = onGrantAccess) {
-                        Text(stringResource(R.string.grant_access))
+                        Text(stringResource(R.string.grant_deep_access))
                     }
                 }
                 OutlinedButton(onClick = onRefresh) {

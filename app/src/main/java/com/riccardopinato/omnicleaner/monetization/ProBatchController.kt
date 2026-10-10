@@ -173,29 +173,37 @@ class ProBatchController(
                 if (folderResult.removed > 0) cleanupChangedAnything = true
 
                 var thumbnailRemoved = 0
+                var thumbnailRemovedBytes = 0L
                 var thumbnailRejected = 0
                 for (item in state.thumbnails.filter { it.path in state.selectedThumbnailPaths }) {
                     val result = thumbnailCleanup.clean(item.inventory)
                     thumbnailRemoved += result.removed
+                    thumbnailRemovedBytes += result.removedBytes
                     thumbnailRejected += result.rejected
                 }
                 if (thumbnailRemoved > 0) cleanupChangedAnything = true
 
-                val duplicateFiles = cleanupEngine.protectedDuplicateFiles(
+                val duplicateFiles = cleanupEngine.protectedDuplicateSnapshots(
                     state.duplicateGroups,
                     state.selectedDuplicatePaths,
                 )
-                val largeFiles = state.largeFiles
-                    .filter { it.path in state.selectedLargeFilePaths }
-                    .map { it.file }
+                val largeFiles = cleanupEngine.snapshotsForBigFiles(
+                    state.largeFiles,
+                    state.selectedLargeFilePaths,
+                )
 
-                val preparation = cleanupEngine.prepareFiles(duplicateFiles + largeFiles)
-                val safeTrash = cleanupEngine.movePreparedNonMediaToSafeTrash(preparation.safeTrashFiles)
+                val preparation = cleanupEngine.prepareSnapshots(duplicateFiles + largeFiles)
+                val safeTrash = cleanupEngine.movePreparedSnapshotsToSafeTrash(preparation.safeTrashCandidates)
                 if (safeTrash.moved > 0) cleanupChangedAnything = true
 
                 val mediaRequest = cleanupEngine.createSystemTrashRequest(preparation.mediaUris)
                 val residueMessage = if (state.residues.isNotEmpty()) {
                     " · ${state.residues.size} residui lasciati in review per sicurezza package visibility"
+                } else {
+                    ""
+                }
+                val staleMessage = if (preparation.staleFiles.isNotEmpty()) {
+                    " · ${preparation.staleFiles.size} file cambiati dopo lo scan e lasciati invariati"
                 } else {
                     ""
                 }
@@ -212,10 +220,13 @@ class ProBatchController(
                         append(folderResult.removed)
                         append(" cartelle vuote · ")
                         append(thumbnailRemoved)
-                        append(" thumbnail · ")
+                        append(" thumbnail eliminate definitivamente")
+                        if (thumbnailRemovedBytes > 0L) append(" ($thumbnailRemovedBytes byte)")
+                        append(" · ")
                         append(safeTrash.moved)
-                        append(" file in Safe Trash")
+                        append(" file in Safe Trash (non spazio già liberato)")
                         if (thumbnailRejected > 0) append(" · $thumbnailRejected thumbnail rifiutate")
+                        append(staleMessage)
                         append(blockedMessage)
                         append(residueMessage)
                     },
@@ -245,7 +256,7 @@ class ProBatchController(
             awaitingSystemTrash = false,
             message = buildString {
                 append(state.message.orEmpty())
-                if (success) append(" · cestino Android confermato")
+                if (success) append(" · cestino Android confermato (non conteggiato come spazio già liberato)")
                 else append(" · cestino Android annullato")
             },
         )
