@@ -88,7 +88,7 @@ class FileScanner(
     }
 
     fun isSafeThumbnailDirectory(directory: File): Boolean {
-        val normalized = directory.absolutePath.replace('\', '/').lowercase()
+        val normalized = directory.absolutePath.replace('\\', '/').lowercase()
         return normalized.endsWith("/dcim/.thumbnails") ||
             normalized.endsWith("/pictures/.thumbnails") ||
             (normalized.contains("/android/media/") && normalized.endsWith("/.thumbnails"))
