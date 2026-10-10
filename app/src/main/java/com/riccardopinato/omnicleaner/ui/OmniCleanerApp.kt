@@ -26,6 +26,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -38,6 +39,10 @@ import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.ThresholdUnit
 import com.riccardopinato.omnicleaner.exif.ExifCleanerSection
 import com.riccardopinato.omnicleaner.gallery.GalleryCleanerSection
+import com.riccardopinato.omnicleaner.monetization.AdManager
+import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
+import com.riccardopinato.omnicleaner.monetization.PremiumEntitlementStore
+import com.riccardopinato.omnicleaner.monetization.findActivity
 import java.util.Locale
 
 @Composable
