@@ -72,19 +72,41 @@ class SafeTrashManager private constructor(
 
     fun moveToTrash(snapshot: CleanupFileSnapshot): File? {
         if (!CleanupSnapshotValidator.validate(snapshot).valid) return null
-        return moveToTrash(snapshot.file)
+        return moveToTrashInternal(
+            file = snapshot.file,
+            expectedSize = snapshot.expectedBytes,
+            expectedModified = snapshot.expectedModified,
+            expectedHash = snapshot.expectedSha256,
+        )
     }
 
-    fun moveToTrash(file: File): File? {
+    fun moveToTrash(file: File): File? =
+        moveToTrashInternal(
+            file = file,
+            expectedSize = null,
+            expectedModified = null,
+            expectedHash = null,
+        )
+
+    private fun moveToTrashInternal(
+        file: File,
+        expectedSize: Long?,
+        expectedModified: Long?,
+        expectedHash: String?,
+    ): File? {
         if (!file.exists() || !file.isFile) return null
+        if (!PathSafety.isWithinRoot(file, restoreRoot)) return null
         if (PathSafety.isDangerousPath(file) || PathSafety.isSymlink(file)) return null
         if (MediaStoreHelper.isMediaFile(file)) return null
 
         val originalSize = file.length().coerceAtLeast(0L)
         val originalModified = file.lastModified().coerceAtLeast(0L)
         if (originalSize > MAX_SMALL_FILE_TRASH_BYTES) return null
+        if (expectedSize != null && originalSize != expectedSize) return null
+        if (expectedModified != null && originalModified != expectedModified) return null
 
         val originalHash = runCatching { sha256(file) }.getOrNull() ?: return null
+        if (expectedHash != null && originalHash != expectedHash) return null
         if (
             file.length() != originalSize ||
             file.lastModified() != originalModified
