@@ -96,6 +96,7 @@ private class MaintenanceController(
             thumbnails = refreshed,
             message = "${result.removed} file rimossi; ${result.rejected} rifiutati perché cambiati o non verificabili.",
         )
+        if (result.removed > 0) CleanupEventBus.publishCompleted()
     }
 
     fun updateThumbnailSearchQuery(query: String) {
