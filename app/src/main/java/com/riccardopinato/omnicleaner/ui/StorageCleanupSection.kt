@@ -189,12 +189,21 @@ fun StorageCleanupSection(
 
                 if (duplicateGroups.isNotEmpty()) {
                     Text("Duplicati", style = MaterialTheme.typography.titleMedium)
-                    OutlinedButton(
-                        onClick = {
-                            selectedDuplicates = engine.selectDuplicatesExceptOldest(duplicateGroups)
-                        },
-                    ) {
-                        Text("Seleziona copie lasciando la più vecchia")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                selectedDuplicates = engine.selectDuplicatesExceptOldest(duplicateGroups)
+                            },
+                        ) {
+                            Text("Keep oldest")
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                selectedDuplicates = engine.selectDuplicatesExceptNewest(duplicateGroups)
+                            },
+                        ) {
+                            Text("Keep newest")
+                        }
                     }
 
                     duplicateGroups.take(12).forEach { group ->

@@ -141,15 +141,26 @@ class StorageCleanupEngine(
     }
 
     fun selectDuplicatesExceptOldest(groups: List<DuplicateGroup>): Set<String> =
-        buildSet {
-            for (group in groups) {
-                val keeper = group.files.minWithOrNull(
-                    compareBy<DuplicateFile> { it.lastModified }.thenBy { it.path },
-                ) ?: continue
-                group.files
-                    .asSequence()
-                    .filterNot { it.path == keeper.path }
-                    .mapTo(this) { it.path }
-            }
+        selectDuplicatesExcept(groups, keepNewest = false)
+
+    fun selectDuplicatesExceptNewest(groups: List<DuplicateGroup>): Set<String> =
+        selectDuplicatesExcept(groups, keepNewest = true)
+
+    private fun selectDuplicatesExcept(
+        groups: List<DuplicateGroup>,
+        keepNewest: Boolean,
+    ): Set<String> = buildSet {
+        for (group in groups) {
+            val comparator = compareBy<DuplicateFile> { it.lastModified }.thenBy { it.path }
+            val keeper = if (keepNewest) {
+                group.files.maxWithOrNull(comparator)
+            } else {
+                group.files.minWithOrNull(comparator)
+            } ?: continue
+            group.files
+                .asSequence()
+                .filterNot { it.path == keeper.path }
+                .mapTo(this) { it.path }
         }
+    }
 }

@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,6 +22,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
+import com.riccardopinato.omnicleaner.cleaner.BigFileSizeFilter
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.exif.ExifCleanerSection
 import com.riccardopinato.omnicleaner.gallery.GalleryCleanerSection
@@ -118,6 +122,18 @@ fun OmniCleanerApp() {
                 }
             }
 
+            if (state.hasBroadAccess) {
+                item {
+                    SearchAndFilterCard(
+                        state = state,
+                        onFolderQuery = controller::updateFolderSearchQuery,
+                        onBigFileQuery = controller::updateBigFileSearchQuery,
+                        onDuplicateQuery = controller::updateDuplicateSearchQuery,
+                        onBigFileSizeFilter = controller::updateBigFileSizeFilter,
+                    )
+                }
+            }
+
             state.overview?.let { overview ->
                 item {
                     ResultHeader(
@@ -134,15 +150,15 @@ fun OmniCleanerApp() {
                 }
             }
 
-            if (state.folders.isNotEmpty()) {
+            if (state.visibleFolders.isNotEmpty()) {
                 item {
-                    val empty = state.folders.count { it.status == com.riccardopinato.omnicleaner.cleaner.FolderStatus.COMPLETELY_EMPTY }
+                    val empty = state.visibleFolders.count { it.status == com.riccardopinato.omnicleaner.cleaner.FolderStatus.COMPLETELY_EMPTY }
                     ResultHeader(
                         title = stringResource(R.string.module_folders),
-                        subtitle = stringResource(R.string.folder_summary, state.folders.size, empty),
+                        subtitle = stringResource(R.string.folder_summary, state.visibleFolders.size, empty),
                     )
                 }
-                items(state.folders.take(30), key = { it.path }) { folder ->
+                items(state.visibleFolders.take(30), key = { it.path }) { folder ->
                     ResultRow(
                         title = folder.name,
                         value = "${formatBytes(folder.sizeBytes)} · ${folder.fileCount}",
@@ -150,31 +166,31 @@ fun OmniCleanerApp() {
                 }
             }
 
-            if (state.bigFiles.isNotEmpty()) {
+            if (state.visibleBigFiles.isNotEmpty()) {
                 item {
                     ResultHeader(
                         title = stringResource(R.string.module_large_files),
-                        subtitle = stringResource(R.string.big_files_summary, state.bigFiles.size),
+                        subtitle = stringResource(R.string.big_files_summary, state.visibleBigFiles.size),
                     )
                 }
-                items(state.bigFiles.take(40), key = { it.path }) { item ->
+                items(state.visibleBigFiles.take(40), key = { it.path }) { item ->
                     ResultRow(item.name, formatBytes(item.sizeBytes))
                 }
             }
 
-            if (state.duplicates.isNotEmpty()) {
+            if (state.visibleDuplicates.isNotEmpty()) {
                 item {
-                    val waste = state.duplicates.sumOf { it.totalWasteBytes }
+                    val waste = state.visibleDuplicates.sumOf { it.totalWasteBytes }
                     ResultHeader(
                         title = stringResource(R.string.module_duplicates),
                         subtitle = stringResource(
                             R.string.duplicates_summary,
-                            state.duplicates.size,
+                            state.visibleDuplicates.size,
                             formatBytes(waste),
                         ),
                     )
                 }
-                items(state.duplicates.take(30), key = { it.hash }) { group ->
+                items(state.visibleDuplicates.take(30), key = { it.hash }) { group ->
                     ResultRow(
                         title = group.files.firstOrNull()?.name ?: group.hash.take(12),
                         value = "${group.files.size} × ${formatBytes(group.sizeBytes)}",
@@ -184,9 +200,9 @@ fun OmniCleanerApp() {
 
             item {
                 StorageCleanupSection(
-                    folders = state.folders,
-                    bigFiles = state.bigFiles,
-                    duplicateGroups = state.duplicates,
+                    folders = state.visibleFolders,
+                    bigFiles = state.visibleBigFiles,
+                    duplicateGroups = state.visibleDuplicates,
                     onCleanupFinished = {
                         controller.refreshAccessAndStorage()
                         controller.scanOverview()
@@ -211,6 +227,69 @@ fun OmniCleanerApp() {
             }
 
             item { Spacer(Modifier.height(20.dp)) }
+        }
+    }
+}
+
+@Composable
+@Composable
+private fun SearchAndFilterCard(
+    state: CleanerUiState,
+    onFolderQuery: (String) -> Unit,
+    onBigFileQuery: (String) -> Unit,
+    onDuplicateQuery: (String) -> Unit,
+    onBigFileSizeFilter: (BigFileSizeFilter) -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text("Filtri recuperati", style = MaterialTheme.typography.titleLarge)
+            OutlinedTextField(
+                value = state.folderSearchQuery,
+                onValueChange = onFolderQuery,
+                label = { Text("Cerca cartelle") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = state.bigFileSearchQuery,
+                onValueChange = onBigFileQuery,
+                label = { Text("Cerca file grandi") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = state.duplicateSearchQuery,
+                onValueChange = onDuplicateQuery,
+                label = { Text("Cerca duplicati") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text("Soglia file grandi", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                BigFileSizeFilter.entries.forEach { filter ->
+                    if (filter == state.bigFileSizeFilter) {
+                        Button(onClick = { onBigFileSizeFilter(filter) }) {
+                            Text(filter.label)
+                        }
+                    } else {
+                        OutlinedButton(onClick = { onBigFileSizeFilter(filter) }) {
+                            Text(filter.label)
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.riccardopinato.omnicleaner.cleaner.BigFileItem
+import com.riccardopinato.omnicleaner.cleaner.BigFileSizeFilter
 import com.riccardopinato.omnicleaner.cleaner.DuplicateGroup
 import com.riccardopinato.omnicleaner.cleaner.FileScanner
 import com.riccardopinato.omnicleaner.cleaner.FolderItem
@@ -25,8 +26,44 @@ internal data class CleanerUiState(
     val folders: List<FolderItem> = emptyList(),
     val bigFiles: List<BigFileItem> = emptyList(),
     val duplicates: List<DuplicateGroup> = emptyList(),
+    val folderSearchQuery: String = "",
+    val bigFileSearchQuery: String = "",
+    val duplicateSearchQuery: String = "",
+    val bigFileSizeFilter: BigFileSizeFilter = BigFileSizeFilter.SIZE_100MB,
     val error: String? = null,
-)
+) {
+    val visibleFolders: List<FolderItem>
+        get() = folders.filterByQuery(folderSearchQuery) { listOf(it.name, it.path) }
+
+    val visibleBigFiles: List<BigFileItem>
+        get() = bigFiles.filterByQuery(bigFileSearchQuery) { listOf(it.name, it.path, it.extension) }
+
+    val visibleDuplicates: List<DuplicateGroup>
+        get() {
+            val normalized = duplicateSearchQuery.trim().lowercase()
+            if (normalized.isBlank()) return duplicates
+            return duplicates.filter { group ->
+                group.files.any { file ->
+                    file.name.lowercase().contains(normalized) ||
+                        file.path.lowercase().contains(normalized) ||
+                        file.extension.lowercase().contains(normalized)
+                }
+            }
+        }
+}
+
+private inline fun <T> List<T>.filterByQuery(
+    query: String,
+    fields: (T) -> List<String>,
+): List<T> {
+    val normalized = query.trim().lowercase()
+    if (normalized.isBlank()) return this
+    return filter { item ->
+        fields(item).any { it.lowercase().contains(normalized) }
+    }
+}
+
+
 
 internal class CleanerController(
     private val context: Context,
@@ -61,9 +98,28 @@ internal class CleanerController(
         state = state.copy(folders = folders)
     }
 
-    fun scanBigFiles(minimumBytes: Long = 100L * 1024L * 1024L) = runScan("Large files") {
+    fun scanBigFiles(
+        minimumBytes: Long = state.bigFileSizeFilter.minimumBytes,
+    ) = runScan("Large files") {
         val files = fileScanner.findBigFiles(StorageAccess.primaryRoot(), minimumBytes)
         state = state.copy(bigFiles = files)
+    }
+
+    fun updateFolderSearchQuery(query: String) {
+        state = state.copy(folderSearchQuery = query)
+    }
+
+    fun updateBigFileSearchQuery(query: String) {
+        state = state.copy(bigFileSearchQuery = query)
+    }
+
+    fun updateDuplicateSearchQuery(query: String) {
+        state = state.copy(duplicateSearchQuery = query)
+    }
+
+    fun updateBigFileSizeFilter(filter: BigFileSizeFilter) {
+        state = state.copy(bigFileSizeFilter = filter)
+        if (state.hasBroadAccess) scanBigFiles(filter.minimumBytes)
     }
 
     fun scanDuplicates() = runScan("Duplicates") {
