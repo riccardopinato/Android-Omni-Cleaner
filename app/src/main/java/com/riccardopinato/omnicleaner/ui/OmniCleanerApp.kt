@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -293,13 +292,12 @@ private fun ResultHeader(title: String, subtitle: String) {
 @Composable
 private fun ResultRow(title: String, value: String) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(title, modifier = Modifier.weight(1f), maxLines = 1)
-            Text(value, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+        Text(title, maxLines = 1)
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
     }
 }
