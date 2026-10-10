@@ -46,6 +46,11 @@ appId: com.riccardopinato.omnicleaner.debug
 - tapOn:
     text: "Pro"
 - assertVisible: "Omni Cleaner Pro"
+- scrollUntilVisible:
+    element:
+      text: "Restore purchase"
+    direction: DOWN
+    timeout: 30000
 - assertVisible: "Restore purchase"
 
 - tapOn:
