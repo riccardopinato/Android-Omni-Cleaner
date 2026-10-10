@@ -48,7 +48,7 @@ fun GalleryCleanerSection() {
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
     ) {
-        controller.refreshAccess()
+        controller.refreshAccess(clearLoadedMedia = true)
     }
 
     val trashLauncher = rememberLauncherForActivityResult(
