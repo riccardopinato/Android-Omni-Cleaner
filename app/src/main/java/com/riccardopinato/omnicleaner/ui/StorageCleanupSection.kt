@@ -83,6 +83,7 @@ fun StorageCleanupSection(
             }
             selectedBigFiles = emptySet()
             selectedDuplicates = emptySet()
+            CleanupEventBus.publishCompleted()
             onCleanupFinished()
         }
     }
@@ -120,6 +121,7 @@ fun StorageCleanupSection(
             }
             selectedBigFiles = emptySet()
             selectedDuplicates = emptySet()
+            if (safeResult.moved > 0) CleanupEventBus.publishCompleted()
             onCleanupFinished()
         }
     }
@@ -268,6 +270,7 @@ fun StorageCleanupSection(
                             message = result.removed.toString() + " cartelle eliminate · " +
                                 result.rejected + " rifiutate"
                             selectedFolders = emptySet()
+                            if (result.removed > 0) CleanupEventBus.publishCompleted()
                             onCleanupFinished()
                         }
                     },
