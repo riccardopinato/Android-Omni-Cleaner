@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.BigFileSizeFilter
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
+import com.riccardopinato.omnicleaner.cleaner.ThresholdUnit
 import com.riccardopinato.omnicleaner.exif.ExifCleanerSection
 import com.riccardopinato.omnicleaner.gallery.GalleryCleanerSection
 import java.util.Locale
@@ -130,6 +131,8 @@ fun OmniCleanerApp() {
                         onBigFileQuery = controller::updateBigFileSearchQuery,
                         onDuplicateQuery = controller::updateDuplicateSearchQuery,
                         onBigFileSizeFilter = controller::updateBigFileSizeFilter,
+                        onThresholdValue = controller::updateThresholdValue,
+                        onThresholdUnit = controller::updateThresholdUnit,
                     )
                 }
             }
@@ -238,6 +241,8 @@ private fun SearchAndFilterCard(
     onBigFileQuery: (String) -> Unit,
     onDuplicateQuery: (String) -> Unit,
     onBigFileSizeFilter: (BigFileSizeFilter) -> Unit,
+    onThresholdValue: (String) -> Unit,
+    onThresholdUnit: (ThresholdUnit) -> Unit,
 ) {
     Card(
         modifier = Modifier
@@ -270,6 +275,23 @@ private fun SearchAndFilterCard(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            Text("Soglia cartelle piccole", style = MaterialTheme.typography.titleMedium)
+            OutlinedTextField(
+                value = state.thresholdValue,
+                onValueChange = onThresholdValue,
+                label = { Text("Valore soglia") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ThresholdUnit.entries.forEach { unit ->
+                    if (unit == state.thresholdUnit) {
+                        Button(onClick = { onThresholdUnit(unit) }) { Text(unit.label) }
+                    } else {
+                        OutlinedButton(onClick = { onThresholdUnit(unit) }) { Text(unit.label) }
+                    }
+                }
+            }
             Text("Soglia file grandi", style = MaterialTheme.typography.titleMedium)
             Row(
                 modifier = Modifier

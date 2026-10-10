@@ -13,6 +13,7 @@ import com.riccardopinato.omnicleaner.cleaner.SpaceOverview
 import com.riccardopinato.omnicleaner.cleaner.SpaceOverviewScanner
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.StorageInfo
+import com.riccardopinato.omnicleaner.cleaner.ThresholdUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -30,6 +31,8 @@ internal data class CleanerUiState(
     val bigFileSearchQuery: String = "",
     val duplicateSearchQuery: String = "",
     val bigFileSizeFilter: BigFileSizeFilter = BigFileSizeFilter.SIZE_100MB,
+    val thresholdValue: String = "10",
+    val thresholdUnit: ThresholdUnit = ThresholdUnit.MB,
     val error: String? = null,
 ) {
     val visibleFolders: List<FolderItem>
@@ -37,6 +40,14 @@ internal data class CleanerUiState(
 
     val visibleBigFiles: List<BigFileItem>
         get() = bigFiles.filterByQuery(bigFileSearchQuery) { listOf(it.name, it.path, it.extension) }
+
+    val folderThresholdBytes: Long
+        get() = (thresholdValue.toLongOrNull() ?: 0L)
+            .coerceAtLeast(0L)
+            .let { value ->
+                runCatching { Math.multiplyExact(value, thresholdUnit.multiplier) }
+                    .getOrDefault(Long.MAX_VALUE)
+            }
 
     val visibleDuplicates: List<DuplicateGroup>
         get() {
@@ -94,8 +105,20 @@ internal class CleanerController(
     }
 
     fun scanFolders() = runScan("Folders") {
-        val folders = fileScanner.scanFolders(StorageAccess.primaryRoot())
+        val folders = fileScanner.scanFolders(
+            root = StorageAccess.primaryRoot(),
+            smallFolderThresholdBytes = state.folderThresholdBytes,
+        )
         state = state.copy(folders = folders)
+    }
+
+    fun updateThresholdValue(value: String) {
+        val normalized = value.filter(Char::isDigit).take(9)
+        state = state.copy(thresholdValue = normalized)
+    }
+
+    fun updateThresholdUnit(unit: ThresholdUnit) {
+        state = state.copy(thresholdUnit = unit)
     }
 
     fun scanBigFiles(

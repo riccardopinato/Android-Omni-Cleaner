@@ -12,6 +12,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,8 +39,30 @@ private data class MaintenanceState(
     val thumbnails: List<ThumbnailCacheItem> = emptyList(),
     val residues: List<AppResidueItem> = emptyList(),
     val residueVisibilityWarning: Boolean = false,
+    val thumbnailSearchQuery: String = "",
+    val residueSearchQuery: String = "",
     val message: String? = null,
-)
+) {
+    val visibleThumbnails: List<ThumbnailCacheItem>
+        get() {
+            val q = thumbnailSearchQuery.trim().lowercase()
+            if (q.isBlank()) return thumbnails
+            return thumbnails.filter {
+                it.name.lowercase().contains(q) || it.path.lowercase().contains(q)
+            }
+        }
+
+    val visibleResidues: List<AppResidueItem>
+        get() {
+            val q = residueSearchQuery.trim().lowercase()
+            if (q.isBlank()) return residues
+            return residues.filter {
+                it.name.lowercase().contains(q) || it.path.lowercase().contains(q)
+            }
+        }
+}
+
+
 
 private class MaintenanceController(
     private val context: Context,
@@ -73,6 +96,14 @@ private class MaintenanceController(
             thumbnails = refreshed,
             message = "${result.removed} file rimossi; ${result.rejected} rifiutati perché cambiati o non verificabili.",
         )
+    }
+
+    fun updateThumbnailSearchQuery(query: String) {
+        state = state.copy(thumbnailSearchQuery = query)
+    }
+
+    fun updateResidueSearchQuery(query: String) {
+        state = state.copy(residueSearchQuery = query)
     }
 
     fun clearMessage() {
@@ -133,12 +164,27 @@ fun MaintenanceSection() {
                 }
             }
 
+            OutlinedTextField(
+                value = state.thumbnailSearchQuery,
+                onValueChange = controller::updateThumbnailSearchQuery,
+                label = { Text("Cerca cache miniature") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = state.residueSearchQuery,
+                onValueChange = controller::updateResidueSearchQuery,
+                label = { Text("Cerca residui app") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
             if (state.running) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 Text(state.operation.orEmpty(), style = MaterialTheme.typography.bodySmall)
             }
 
-            state.thumbnails.take(8).forEach { item ->
+            state.visibleThumbnails.take(8).forEach { item ->
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(item.displayPath, style = MaterialTheme.typography.bodyMedium)
                     Text(
@@ -152,7 +198,7 @@ fun MaintenanceSection() {
                 }
             }
 
-            if (state.residues.isNotEmpty()) {
+            if (state.visibleResidues.isNotEmpty()) {
                 Text("Candidati residui app", style = MaterialTheme.typography.titleMedium)
                 if (state.residueVisibilityWarning) {
                     Text(
@@ -161,7 +207,7 @@ fun MaintenanceSection() {
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
-                state.residues.take(10).forEach { item ->
+                state.visibleResidues.take(10).forEach { item ->
                     Text(
                         "${item.name} · ${item.formattedSize()} · ${item.fileCount} file",
                         style = MaterialTheme.typography.bodySmall,
