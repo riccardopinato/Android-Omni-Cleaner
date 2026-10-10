@@ -14,10 +14,22 @@ import java.io.File
 object StorageAccess {
     fun primaryRoot(): File = Environment.getExternalStorageDirectory()
 
-    fun hasBroadAccess(context: Context): Boolean = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> Environment.isExternalStorageManager()
-        else -> context.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+    fun capabilityHealth(context: Context): StorageCapabilityHealth {
+        val mounted = Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
+        val legacyReadGranted =
+            context.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+
+        return evaluateStorageCapability(
+            sdkInt = Build.VERSION.SDK_INT,
+            allFilesGranted = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                Environment.isExternalStorageManager(),
+            legacyReadGranted = legacyReadGranted,
+            storageMounted = mounted,
+        )
     }
+
+    fun hasBroadAccess(context: Context): Boolean =
+        capabilityHealth(context).deepScanAvailable
 
     fun settingsIntent(context: Context): Intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
         Intent(
