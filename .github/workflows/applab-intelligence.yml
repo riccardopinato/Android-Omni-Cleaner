@@ -1,0 +1,60 @@
+name: AppLab Intelligence
+
+on:
+  push:
+    branches:
+      - main
+      - "recovery/**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: applab-intelligence-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  intelligence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Android Omni Cleaner
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: target
+          persist-credentials: false
+
+      - name: Checkout pinned AppLab
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: riccardopinato/AppLab
+          ref: d3681e4d2b92631ce96fcfc80349a079cbed40bb
+          path: .applab
+          persist-credentials: false
+
+      - name: Run AppLab Product UX Architecture Intelligence
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python .applab/scripts/app_intelligence.py             --repo-root "$GITHUB_WORKSPACE/target"             --output-dir "$GITHUB_WORKSPACE/applab-intelligence"             --max-files 3500
+
+      - name: Publish AppLab report
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          echo "===== APPLAB INTELLIGENCE REPORT ====="
+          cat "$GITHUB_WORKSPACE/applab-intelligence/app-intelligence.md"
+          {
+            echo "## AppLab Intelligence"
+            echo
+            cat "$GITHUB_WORKSPACE/applab-intelligence/app-intelligence.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify machine-readable evidence exists
+        shell: bash
+        run: |
+          test -s "$GITHUB_WORKSPACE/applab-intelligence/app-intelligence.json"
+          test -s "$GITHUB_WORKSPACE/applab-intelligence/app-intelligence.md"

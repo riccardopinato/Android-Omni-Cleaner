@@ -1,0 +1,18 @@
+name: AppLab Autonomous Review
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  review:
+    uses: riccardopinato/AppLab/.github/workflows/autonomous-app-review-v31.yml@d3681e4d2b92631ce96fcfc80349a079cbed40bb
+    with:
+      target_repository: riccardopinato/Android-Omni-Cleaner
+      target_ref: ${{ github.sha }}
+      max_files: "3500"
+      run_maestro: true
+    secrets: inherit

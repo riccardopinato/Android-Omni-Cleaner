@@ -1,13 +1,40 @@
 <resources>
     <string name="app_name">Android Omni Cleaner</string>
-    <string name="recovery_title">Recovery baseline</string>
-    <string name="recovery_body">The native project is healthy. Recovered cleaner modules will be restored one at a time and verified before they become active.</string>
-    <string name="recovery_pending">Recovery pending — not active yet</string>
+    <string name="home_subtitle">Safe storage analysis. Nothing is deleted without review.</string>
+    <string name="storage">Storage</string>
+    <string name="storage_usage">%1$s used of %2$s</string>
+    <string name="access_ready">Storage access ready</string>
+    <string name="access_required">Storage access is required for full-device scans</string>
+    <string name="grant_access">Grant access</string>
+    <string name="refresh">Refresh</string>
+    <string name="scan_tools">Scan tools</string>
+    <string name="cancel">Cancel</string>
+    <string name="scan_overview">Analyze storage</string>
+    <string name="scan_folders">Scan folders</string>
+    <string name="scan_big_files">Find large files</string>
+    <string name="scan_duplicates">Find duplicates</string>
+    <string name="scan_error">Scan error</string>
 
     <string name="module_storage_overview">Storage overview</string>
+    <string name="module_folders">Folders</string>
     <string name="module_large_files">Large files</string>
     <string name="module_duplicates">Duplicates</string>
     <string name="module_safe_trash">Safe Trash</string>
     <string name="module_gallery_cleaner">Gallery cleaner</string>
     <string name="module_exif_privacy">EXIF privacy</string>
+
+    <string name="overview_summary">%1$d files · %2$s indexed</string>
+    <string name="folder_summary">%1$d top-level folders · %2$d empty</string>
+    <string name="big_files_summary">%1$d files above the current threshold</string>
+    <string name="duplicates_summary">%1$d duplicate groups · up to %2$s recoverable</string>
+    <string name="pro_title">Omni Cleaner Pro</string>
+    <string name="pro_active">Premium active · no ad requests</string>
+    <string name="pro_free">Free mode · ads are requested only after privacy consent</string>
+    <string name="pro_buy">Unlock Premium · %1$s</string>
+    <string name="pro_price_unavailable">price from Google Play</string>
+    <string name="pro_product_unavailable">Premium is not available from Google Play on this build/account yet.</string>
+    <string name="pro_purchase_context_error">Purchase flow is unavailable in this screen context.</string>
+    <string name="pro_batch_title">Pro batch analysis</string>
+    <string name="pro_batch_scan">Run Pro batch analysis</string>
+    <string name="privacy_options">Privacy options</string>
 </resources>

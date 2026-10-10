@@ -1,13 +1,40 @@
 <resources>
     <string name="app_name">Android Omni Cleaner</string>
-    <string name="recovery_title">Baseline di recupero</string>
-    <string name="recovery_body">Il progetto Android nativo è operativo. I moduli del cleaner verranno ripristinati uno alla volta e verificati prima di essere attivati.</string>
-    <string name="recovery_pending">Recupero in attesa — funzione non ancora attiva</string>
+    <string name="home_subtitle">Analisi sicura dello spazio. Nulla viene eliminato senza revisione.</string>
+    <string name="storage">Memoria</string>
+    <string name="storage_usage">%1$s usati su %2$s</string>
+    <string name="access_ready">Accesso alla memoria pronto</string>
+    <string name="access_required">Serve l’accesso alla memoria per analizzare tutto il dispositivo</string>
+    <string name="grant_access">Concedi accesso</string>
+    <string name="refresh">Aggiorna</string>
+    <string name="scan_tools">Strumenti di analisi</string>
+    <string name="cancel">Annulla</string>
+    <string name="scan_overview">Analizza memoria</string>
+    <string name="scan_folders">Analizza cartelle</string>
+    <string name="scan_big_files">Trova file grandi</string>
+    <string name="scan_duplicates">Trova duplicati</string>
+    <string name="scan_error">Errore di analisi</string>
 
     <string name="module_storage_overview">Panoramica spazio</string>
+    <string name="module_folders">Cartelle</string>
     <string name="module_large_files">File grandi</string>
     <string name="module_duplicates">Duplicati</string>
     <string name="module_safe_trash">Cestino sicuro</string>
     <string name="module_gallery_cleaner">Pulizia galleria</string>
     <string name="module_exif_privacy">Privacy EXIF</string>
+
+    <string name="overview_summary">%1$d file · %2$s indicizzati</string>
+    <string name="folder_summary">%1$d cartelle principali · %2$d vuote</string>
+    <string name="big_files_summary">%1$d file sopra la soglia corrente</string>
+    <string name="duplicates_summary">%1$d gruppi duplicati · fino a %2$s recuperabili</string>
+    <string name="pro_title">Omni Cleaner Pro</string>
+    <string name="pro_active">Premium attivo · nessuna richiesta pubblicitaria</string>
+    <string name="pro_free">Modalità Free · pubblicità solo dopo consenso privacy</string>
+    <string name="pro_buy">Sblocca Premium · %1$s</string>
+    <string name="pro_price_unavailable">prezzo da Google Play</string>
+    <string name="pro_product_unavailable">Premium non è ancora disponibile da Google Play per questa build/account.</string>
+    <string name="pro_purchase_context_error">Il flusso di acquisto non è disponibile in questo contesto.</string>
+    <string name="pro_batch_title">Analisi Pro combinata</string>
+    <string name="pro_batch_scan">Avvia analisi Pro</string>
+    <string name="privacy_options">Opzioni privacy</string>
 </resources>
