@@ -7,8 +7,9 @@
     "java_version": "17"
   },
   "journeys": {
-    "primary": ".maestro/parity-storage.yaml",
+    "primary": ".maestro/ui-redesign.yaml",
     "critical": [
+      ".maestro/parity-storage.yaml",
       ".maestro/runtime-smoke.yaml"
     ]
   },
