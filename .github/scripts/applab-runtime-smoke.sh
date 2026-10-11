@@ -43,28 +43,52 @@ run_verifier() {
 }
 
 is_transient_pid_flake() {
-  local crawl_json="$REPORT_DIR/interaction-crawl.json"
+  local interaction_json="$REPORT_DIR/interaction-crawl.json"
+  local journey_json="$REPORT_DIR/journey-crawl.json"
   local app_logcat="$REPORT_DIR/app-logcat.txt"
+  local system_logcat="$REPORT_DIR/logcat.txt"
 
-  [[ -s "$crawl_json" ]] || return 1
-
-  local reason
-  reason="$(
-    python3 - "$crawl_json" <<'PY'
+  local transient
+  transient="$(
+    python3 - "$interaction_json" "$journey_json" <<'PY'
 import json
 import sys
 from pathlib import Path
 
-payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-print(payload.get("reason") or "")
+def contains_pid_loss(value):
+    if isinstance(value, dict):
+        if value.get("reason") == "application process died":
+            return True
+        return any(contains_pid_loss(item) for item in value.values())
+    if isinstance(value, list):
+        return any(contains_pid_loss(item) for item in value)
+    return False
+
+found = False
+for raw in sys.argv[1:]:
+    path = Path(raw)
+    if not path.is_file():
+        continue
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        continue
+    if payload.get("result") == "FAIL" and contains_pid_loss(payload):
+        found = True
+        break
+
+print("yes" if found else "no")
 PY
   )"
 
-  [[ "$reason" == "application process died" ]] || return 1
+  [[ "$transient" == "yes" ]] || return 1
 
-  if [[ -s "$app_logcat" ]] && grep -Eiq 'FATAL EXCEPTION|ANR in |OutOfMemoryError|SIG(SEGV|ABRT|BUS|ILL)' "$app_logcat"; then
-    return 1
-  fi
+  for log_file in "$app_logcat" "$system_logcat"; do
+    if [[ -s "$log_file" ]] &&
+       grep -Eiq 'FATAL EXCEPTION|ANR in |OutOfMemoryError|SIG(SEGV|ABRT|BUS|ILL)' "$log_file"; then
+      return 1
+    fi
+  done
 
   return 0
 }
