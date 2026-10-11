@@ -1,15 +1,36 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-adb shell rm -rf /sdcard/Download/OmniParity
-adb shell mkdir -p /sdcard/Download/OmniParity/empty
-adb shell mkdir -p /sdcard/Download/OmniParity/duplicates
-adb shell mkdir -p /sdcard/Download/OmniParity/large
-adb shell mkdir -p /sdcard/DCIM/.thumbnails
+HOST_ROOT="${RUNNER_TEMP:-/tmp}/omni-parity-fixture"
+DEVICE_ROOT="/sdcard/Download/OmniParity"
+HOST_THUMB="$HOST_ROOT/parity-thumb.bin"
+DEVICE_THUMB_ROOT="/sdcard/DCIM/.thumbnails"
 
-adb shell 'printf parity-fixture > /sdcard/Download/OmniParity/duplicates/a.txt'
-adb shell 'cp /sdcard/Download/OmniParity/duplicates/a.txt /sdcard/Download/OmniParity/duplicates/b.txt'
-adb shell 'printf erutxif-ytirap > /sdcard/Download/OmniParity/duplicates/same-size-different.txt'
-adb shell 'dd if=/dev/zero of=/sdcard/Download/OmniParity/large/parity-large.bin bs=1048576 count=12 2>/dev/null'
-adb shell 'printf thumb-parity > /sdcard/DCIM/.thumbnails/parity-thumb.bin'
+rm -rf "$HOST_ROOT"
+mkdir -p "$HOST_ROOT"/{empty,duplicates,large}
+
+printf 'parity-fixture' > "$HOST_ROOT/duplicates/a.txt"
+cp "$HOST_ROOT/duplicates/a.txt" "$HOST_ROOT/duplicates/b.txt"
+printf 'erutxif-ytirap' > "$HOST_ROOT/duplicates/same-size-different.txt"
+truncate -s $((12 * 1024 * 1024)) "$HOST_ROOT/large/parity-large.bin"
+printf 'thumb-parity' > "$HOST_THUMB"
+
+# Use adb sync/push instead of writing through an interactive device shell.
+# Fresh hosted AVDs can temporarily reject shell redirections on emulated
+# storage even after mkdir succeeds, while adb push remains reliable.
+adb shell rm -rf "$DEVICE_ROOT"
+adb shell mkdir -p "$DEVICE_ROOT"
+adb push "$HOST_ROOT/." "$DEVICE_ROOT/"
+
+adb shell mkdir -p "$DEVICE_THUMB_ROOT"
+adb push "$HOST_THUMB" "$DEVICE_THUMB_ROOT/parity-thumb.bin"
 adb shell sync
+
+for required in   "$DEVICE_ROOT/duplicates/a.txt"   "$DEVICE_ROOT/duplicates/b.txt"   "$DEVICE_ROOT/duplicates/same-size-different.txt"   "$DEVICE_ROOT/large/parity-large.bin"   "$DEVICE_THUMB_ROOT/parity-thumb.bin"; do
+  if ! adb shell test -f "$required"; then
+    echo "[Omni/Parity] missing fixture file: $required" >&2
+    exit 1
+  fi
+done
+
+echo "[Omni/Parity] fixture prepared via adb push."
