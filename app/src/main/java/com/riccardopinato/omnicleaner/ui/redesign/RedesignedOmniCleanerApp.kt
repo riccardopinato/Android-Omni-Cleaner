@@ -93,8 +93,8 @@ private enum class OmniDestination(
 fun RedesignedOmniCleanerApp() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val controller = remember(context.applicationContext, scope) {
-        CleanerController(context.applicationContext, scope)
+    val controller = remember(context, scope) {
+        CleanerController(context, scope)
     }
     val monetizationRuntime = rememberMonetizationRuntime()
     val entitlement by PremiumEntitlementStore.state.collectAsState()
