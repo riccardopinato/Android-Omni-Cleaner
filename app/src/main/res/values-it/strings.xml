@@ -95,4 +95,13 @@
     <string name="redesign_privacy_subtitle">Rimuovi i metadati EXIF selezionati esportando copie pulite verificate. Gli originali restano intatti.</string>
     <string name="redesign_pro_eyebrow">Premium</string>
     <string name="redesign_pro_subtitle">Sblocco una tantum per strumenti Pro combinati ed esperienza senza pubblicità.</string>
+
+    <string name="billing_error_service_disconnected">Connessione a Google Play interrotta. Riprova.</string>
+    <string name="billing_error_service_unavailable">Google Play Billing non è disponibile al momento.</string>
+    <string name="billing_error_network">Serve una connessione di rete per raggiungere Google Play.</string>
+    <string name="billing_error_billing_unavailable">Gli acquisti Google Play non sono disponibili su questo dispositivo o account.</string>
+    <string name="billing_error_developer">Google Play Billing non è configurato correttamente per questa build.</string>
+    <string name="billing_error_product_unavailable">Premium non è disponibile per questa build o account Google Play.</string>
+    <string name="billing_error_acknowledgement_pending">Premium è attivo, ma Google Play non ha ancora confermato la consegna. Il controllo verrà ripetuto automaticamente.</string>
+    <string name="billing_error_generic">L’operazione Google Play Billing non è stata completata.</string>
 </resources>
