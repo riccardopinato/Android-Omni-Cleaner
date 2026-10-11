@@ -174,16 +174,18 @@ fun MaintenanceSection() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = { controller.scanThumbnails(thumbnailLabel, accessRequired) },
                     enabled = !state.running,
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(thumbnailLabel)
                 }
                 OutlinedButton(
                     onClick = { controller.scanResidues(residueLabel, accessRequired) },
                     enabled = !state.running,
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(residueLabel)
                 }
