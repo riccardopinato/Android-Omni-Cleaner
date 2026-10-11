@@ -10,6 +10,7 @@ on:
       - "redesign/**"
       - "step-7-product-expansion"
       - "step-8-localization-accessibility"
+      - "step-9-performance-deep-qa"
   pull_request:
     branches:
       - main
@@ -25,7 +26,7 @@ concurrency:
 jobs:
   runtime-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
 
     steps:
       - name: Checkout Android Omni Cleaner
@@ -72,7 +73,24 @@ jobs:
 
       - name: Prepare bounded AppLab plan
         run: |
-          cat > "$RUNNER_TEMP/applab-fast-plan.json" <<'JSON'
+          if [[ "$GITHUB_REF" == "refs/heads/step-9-performance-deep-qa" ]]; then
+            cat > "$RUNNER_TEMP/applab-fast-plan.json" <<'JSON'
+          {
+            "selected_labs": {
+              "system": true,
+              "performance": true,
+              "network": false,
+              "persistence": true,
+              "configuration": true,
+              "resource_pressure": true,
+              "background": true,
+              "storage": true,
+              "upgrade": false
+            }
+          }
+          JSON
+          else
+            cat > "$RUNNER_TEMP/applab-fast-plan.json" <<'JSON'
           {
             "selected_labs": {
               "system": true,
@@ -87,6 +105,7 @@ jobs:
             }
           }
           JSON
+          fi
 
       - name: Run AppLab emulator smoke
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
