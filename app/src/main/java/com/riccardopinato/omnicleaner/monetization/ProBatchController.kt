@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.FileScanner
 import com.riccardopinato.omnicleaner.cleaner.FolderStatus
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
@@ -29,11 +30,11 @@ class ProBatchController(
 
     fun scan(selectedTypes: Set<ProScanType>) {
         if (!StorageAccess.hasBroadAccess(context)) {
-            state = state.copy(error = "Serve l’accesso alla memoria per la scansione Pro.")
+            state = state.copy(error = context.getString(R.string.pro_error_access_required))
             return
         }
         if (selectedTypes.isEmpty()) {
-            state = state.copy(error = "Seleziona almeno una categoria.")
+            state = state.copy(error = context.getString(R.string.pro_error_select_category))
             return
         }
 
@@ -197,39 +198,61 @@ class ProBatchController(
                 if (safeTrash.moved > 0) cleanupChangedAnything = true
 
                 val mediaRequest = cleanupEngine.createSystemTrashRequest(preparation.mediaUris)
-                val residueMessage = if (state.residues.isNotEmpty()) {
-                    " · ${state.residues.size} residui lasciati in review per sicurezza package visibility"
-                } else {
-                    ""
+                val summaryParts = mutableListOf<String>()
+                summaryParts += context.getString(
+                    R.string.pro_resolve_empty_folders,
+                    folderResult.removed,
+                )
+                summaryParts += buildString {
+                    append(
+                        context.getString(
+                            R.string.pro_resolve_thumbnails,
+                            thumbnailRemoved,
+                        ),
+                    )
+                    if (thumbnailRemovedBytes > 0L) {
+                        append(" ")
+                        append(
+                            context.getString(
+                                R.string.pro_resolve_thumbnail_bytes,
+                                thumbnailRemovedBytes,
+                            ),
+                        )
+                    }
                 }
-                val staleMessage = if (preparation.staleFiles.isNotEmpty()) {
-                    " · ${preparation.staleFiles.size} file cambiati dopo lo scan e lasciati invariati"
-                } else {
-                    ""
+                summaryParts += context.getString(
+                    R.string.pro_resolve_safe_trash,
+                    safeTrash.moved,
+                )
+                if (thumbnailRejected > 0) {
+                    summaryParts += context.getString(
+                        R.string.pro_resolve_thumbnail_rejected,
+                        thumbnailRejected,
+                    )
                 }
-                val blockedMessage = if (preparation.blockedFiles.isNotEmpty()) {
-                    " · ${preparation.blockedFiles.size} file non eliminati perché non reversibili"
-                } else {
-                    ""
+                if (preparation.staleFiles.isNotEmpty()) {
+                    summaryParts += context.getString(
+                        R.string.pro_resolve_stale,
+                        preparation.staleFiles.size,
+                    )
+                }
+                if (preparation.blockedFiles.isNotEmpty()) {
+                    summaryParts += context.getString(
+                        R.string.pro_resolve_blocked,
+                        preparation.blockedFiles.size,
+                    )
+                }
+                if (state.residues.isNotEmpty()) {
+                    summaryParts += context.getString(
+                        R.string.pro_resolve_residues,
+                        state.residues.size,
+                    )
                 }
 
                 state = state.copy(
                     resolving = false,
                     awaitingSystemTrash = mediaRequest != null,
-                    message = buildString {
-                        append(folderResult.removed)
-                        append(" cartelle vuote · ")
-                        append(thumbnailRemoved)
-                        append(" thumbnail eliminate definitivamente")
-                        if (thumbnailRemovedBytes > 0L) append(" ($thumbnailRemovedBytes byte)")
-                        append(" · ")
-                        append(safeTrash.moved)
-                        append(" file in Safe Trash (non spazio già liberato)")
-                        if (thumbnailRejected > 0) append(" · $thumbnailRejected thumbnail rifiutate")
-                        append(staleMessage)
-                        append(blockedMessage)
-                        append(residueMessage)
-                    },
+                    message = summaryParts.joinToString(" · "),
                 )
 
                 if (mediaRequest != null) {
@@ -256,8 +279,13 @@ class ProBatchController(
             awaitingSystemTrash = false,
             message = buildString {
                 append(state.message.orEmpty())
-                if (success) append(" · cestino Android confermato (non conteggiato come spazio già liberato)")
-                else append(" · cestino Android annullato")
+                if (isNotEmpty()) append(" · ")
+                append(
+                    context.getString(
+                        if (success) R.string.pro_system_trash_confirmed
+                        else R.string.pro_system_trash_cancelled,
+                    ),
+                )
             },
         )
         finishResolve(systemTrashConfirmed = success)
