@@ -11,9 +11,10 @@ Recovery and productization of the lost-source Android cleaner APK.
 **MAXI STEP 4 — Safety & Storage Hardening: COMPLETE**  
 **MAXI STEP 5 — Monetization Productization: COMPLETE (provider validation pending)**  
 **MAXI STEP 6 — UI/UX Redesign: COMPLETE**  
-**MAXI STEP 7 — Product Expansion: IN PROGRESS**
+**MAXI STEP 7 — Product Expansion: COMPLETE**  
+**MAXI STEP 8 — Localization & Accessibility: IN PROGRESS**
 
-The donor functionality, storage hardening, monetization architecture and multi-surface UI/UX shell are reconstructed. Active work is Step 7 product expansion with truthful, local-first cleanup candidates; Play/AdMob provider validation remains a separate release gate.
+The recovered cleaner, safety model, monetization architecture, redesigned shell and Step 7 Smart Categories are complete. Active work is Step 8 localization and accessibility; Play/AdMob provider validation remains a separate release gate.
 
 ## Product direction
 
@@ -30,7 +31,7 @@ The donor functionality, storage hardening, monetization architecture and multi-
 ## Current recovery version
 
 - applicationId: `com.riccardopinato.omnicleaner`
-- version: `0.8.0-recovery` / code 8
+- version: `0.9.0-recovery` / code 9
 - minSdk 24
 - targetSdk 36
 - compileSdk 37
@@ -75,6 +76,14 @@ Smart Categories adds review-only discovery for:
 The scan uses one local inventory pass, never auto-selects files, and reuses the existing snapshot revalidation + Android Trash / Safe Trash safety model. Perceptual similar-photo detection is deferred until the performance/deep-QA step.
 
 See `STEP7_PRODUCT_EXPANSION.md`.
+
+## Localization & accessibility
+
+The interface is fully resource-driven across English, Italian, Spanish, French and Portuguese, with exact resource-key and format-placeholder parity. A manual System / EN / IT / ES / FR / PT selector is available in Pro settings.
+
+Accessibility hardening includes TalkBack-friendly selection rows, explicit non-gesture alternatives for Gallery actions, progress semantics, decorative-glyph suppression and large-font layout resilience.
+
+See `STEP8_LOCALIZATION_ACCESSIBILITY.md`.
 
 ## Storage safety model
 
