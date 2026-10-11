@@ -10,7 +10,8 @@
     "primary": ".maestro/ui-redesign.yaml",
     "critical": [
       ".maestro/parity-storage.yaml",
-      ".maestro/runtime-smoke.yaml"
+      ".maestro/runtime-smoke.yaml",
+      ".maestro/localization-accessibility.yaml"
     ]
   },
   "physical_validation": {

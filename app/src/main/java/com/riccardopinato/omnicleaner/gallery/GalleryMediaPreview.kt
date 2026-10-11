@@ -29,7 +29,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.riccardopinato.omnicleaner.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.max
@@ -86,14 +88,14 @@ fun GalleryMediaPreview(
             )
         } else {
             Text(
-                text = "Anteprima non disponibile",
+                text = stringResource(R.string.gallery_preview_unavailable),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(vertical = 36.dp),
             )
         }
 
         Text(
-            text = "← Cestino   ·   Tieni →",
+            text = stringResource(R.string.gallery_swipe_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 6.dp),

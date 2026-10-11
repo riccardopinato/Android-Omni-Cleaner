@@ -4,11 +4,13 @@ import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -26,15 +28,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
 
 @Composable
 fun GalleryCleanerSection() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val controller = remember(context.applicationContext, scope) {
-        GalleryController(context.applicationContext, scope)
+    val controller = remember(context, scope) {
+        GalleryController(context, scope)
     }
 
     var state by remember { mutableStateOf(controller.state) }
@@ -68,9 +72,9 @@ fun GalleryCleanerSection() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text("Gallery Cleaner", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.module_gallery_cleaner), style = MaterialTheme.typography.titleLarge)
             Text(
-                "Keep or mark media for Android system trash. Nothing is removed without confirmation.",
+                stringResource(R.string.gallery_body),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -80,12 +84,12 @@ fun GalleryCleanerSection() {
                     onClick = { permissionLauncher.launch(GalleryAccess.requiredPermissions()) },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Allow photos and videos")
+                    Text(stringResource(R.string.gallery_allow_media))
                 }
             } else {
                 if (state.accessHealth.level == GalleryAccessLevel.PARTIAL) {
                     Text(
-                        "Accesso limitato: Gallery Cleaner vede solo i contenuti autorizzati da Android.",
+                        stringResource(R.string.gallery_partial_access),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -93,25 +97,30 @@ fun GalleryCleanerSection() {
                         onClick = { permissionLauncher.launch(GalleryAccess.requiredPermissions()) },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Modifica selezione foto e video")
+                        Text(stringResource(R.string.gallery_modify_selection))
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     GalleryMediaFilter.entries.forEach { filter ->
                         if (state.filter == filter) {
                             Button(
                                 onClick = { controller.setFilter(filter) },
                                 enabled = filter.isAvailableFor(state.accessHealth),
                             ) {
-                                Text(filter.label)
+                                Text(galleryFilterLabel(filter))
                             }
                         } else {
                             OutlinedButton(
                                 onClick = { controller.setFilter(filter) },
                                 enabled = filter.isAvailableFor(state.accessHealth),
                             ) {
-                                Text(filter.label)
+                                Text(galleryFilterLabel(filter))
                             }
                         }
                     }
@@ -121,7 +130,7 @@ fun GalleryCleanerSection() {
                     onClick = controller::cycleSortOrder,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Ordine: ${state.sortOrder.label}")
+                    Text(stringResource(R.string.gallery_sort, gallerySortLabel(state.sortOrder)))
                 }
 
                 Button(
@@ -129,7 +138,10 @@ fun GalleryCleanerSection() {
                     enabled = !state.loading,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (state.items.isEmpty()) "Carica galleria" else "Ricarica galleria")
+                    Text(
+                        if (state.items.isEmpty()) stringResource(R.string.gallery_load)
+                        else stringResource(R.string.gallery_reload),
+                    )
                 }
             }
 
@@ -138,6 +150,12 @@ fun GalleryCleanerSection() {
             }
 
             state.currentItem?.let { current ->
+                val displayDate = if (current.dateTaken > 0L) {
+                    current.formattedDate
+                } else {
+                    stringResource(R.string.gallery_unknown_date)
+                }
+
                 GalleryMediaPreview(
                     item = current,
                     onKeep = controller::keepCurrent,
@@ -148,7 +166,7 @@ fun GalleryCleanerSection() {
                     buildString {
                         append(current.formattedSize)
                         append(" · ")
-                        append(current.formattedDate)
+                        append(displayDate)
                         current.album?.takeIf { it.isNotBlank() }?.let {
                             append(" · ")
                             append(it)
@@ -161,16 +179,21 @@ fun GalleryCleanerSection() {
                     style = MaterialTheme.typography.bodySmall,
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     Button(onClick = controller::keepCurrent) {
-                        Text("Tieni")
+                        Text(stringResource(R.string.action_keep))
                     }
                     Button(onClick = controller::trashCurrent) {
-                        Text("Cestino")
+                        Text(stringResource(R.string.action_trash))
                     }
                     if (state.history.isNotEmpty()) {
                         OutlinedButton(onClick = controller::undoLastAction) {
-                            Text("Annulla")
+                            Text(stringResource(R.string.action_undo))
                         }
                     }
                 }
@@ -178,7 +201,7 @@ fun GalleryCleanerSection() {
 
             if (state.loadingNextPage) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                Text("Caricamento pagina successiva…", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.gallery_loading_next), style = MaterialTheme.typography.bodySmall)
             }
 
             if (state.hasMore && !state.loadingNextPage) {
@@ -186,31 +209,31 @@ fun GalleryCleanerSection() {
                     onClick = controller::loadNextPage,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Carica altri elementi")
+                    Text(stringResource(R.string.gallery_load_more))
                 }
             }
 
             if (state.items.isNotEmpty() && state.currentItem == null && !state.hasMore) {
-                Text("Revisione completata per tutti gli elementi caricati.")
+                Text(stringResource(R.string.gallery_review_complete))
             }
 
             if (state.selectedForTrash.isNotEmpty()) {
                 Text(
-                    "${state.selectedForTrash.size} elementi selezionati per il cestino",
+                    stringResource(R.string.gallery_selected_for_trash, state.selectedForTrash.size),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Button(
                     onClick = { showTrashConfirmation = true },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Sposta nel cestino di Android")
+                    Text(stringResource(R.string.gallery_move_android_trash))
                 }
             }
 
             state.error?.let { error ->
                 Text(error, color = MaterialTheme.colorScheme.error)
                 TextButton(onClick = controller::clearError) {
-                    Text("Chiudi")
+                    Text(stringResource(R.string.action_close))
                 }
             }
         }
@@ -219,12 +242,9 @@ fun GalleryCleanerSection() {
     if (showTrashConfirmation) {
         AlertDialog(
             onDismissRequest = { showTrashConfirmation = false },
-            title = { Text("Conferma cestino") },
+            title = { Text(stringResource(R.string.gallery_trash_confirm_title)) },
             text = {
-                Text(
-                    "Android mostrerà una seconda conferma di sistema. " +
-                        "Gli elementi verranno spostati nel cestino multimediale, non eliminati direttamente.",
-                )
+                Text(stringResource(R.string.gallery_trash_confirm_body))
             },
             confirmButton = {
                 TextButton(
@@ -236,12 +256,12 @@ fun GalleryCleanerSection() {
                         )
                     },
                 ) {
-                    Text("Continua")
+                    Text(stringResource(R.string.action_continue))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showTrashConfirmation = false }) {
-                    Text("Annulla")
+                    Text(stringResource(R.string.cancel))
                 }
             },
         )
@@ -253,3 +273,27 @@ private fun GalleryMediaFilter.isAvailableFor(health: GalleryAccessHealth): Bool
     GalleryMediaFilter.IMAGES -> health.canReadImages
     GalleryMediaFilter.VIDEOS -> health.canReadVideos
 }
+
+
+@Composable
+private fun galleryFilterLabel(filter: GalleryMediaFilter): String =
+    stringResource(
+        when (filter) {
+            GalleryMediaFilter.ALL -> R.string.gallery_filter_all
+            GalleryMediaFilter.IMAGES -> R.string.gallery_filter_images
+            GalleryMediaFilter.VIDEOS -> R.string.gallery_filter_videos
+        },
+    )
+
+@Composable
+private fun gallerySortLabel(sortOrder: GallerySortOrder): String =
+    stringResource(
+        when (sortOrder) {
+            GallerySortOrder.DATE_DESC -> R.string.gallery_sort_date_desc
+            GallerySortOrder.DATE_ASC -> R.string.gallery_sort_date_asc
+            GallerySortOrder.SIZE_DESC -> R.string.gallery_sort_size_desc
+            GallerySortOrder.SIZE_ASC -> R.string.gallery_sort_size_asc
+            GallerySortOrder.NAME_ASC -> R.string.gallery_sort_name
+            GallerySortOrder.ALBUM -> R.string.gallery_sort_album
+        },
+    )

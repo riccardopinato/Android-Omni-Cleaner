@@ -55,11 +55,11 @@ appId: com.riccardopinato.omnicleaner.debug
 
 - scrollUntilVisible:
     element:
-      text: "Cache miniature"
+      text: "Thumbnail cache"
     direction: DOWN
     timeout: 30000
 - tapOn:
-    text: "Cache miniature"
+    text: "Thumbnail cache"
 - scrollUntilVisible:
     element:
       text: ".*DCIM/.thumbnails.*"

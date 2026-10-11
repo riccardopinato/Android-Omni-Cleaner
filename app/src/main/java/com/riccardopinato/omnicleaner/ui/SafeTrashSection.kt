@@ -22,7 +22,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.SafeTrashEntry
 import com.riccardopinato.omnicleaner.cleaner.SafeTrashManager
 import com.riccardopinato.omnicleaner.cleaner.SafeTrashRestoreStatus
@@ -45,7 +47,7 @@ fun SafeTrashSection() {
     var entries by remember { mutableStateOf<List<SafeTrashEntry>>(emptyList()) }
     var trashBytes by remember { mutableStateOf(0L) }
     var loading by remember { mutableStateOf(true) }
-    var message by remember { mutableStateOf<String?>(null) }
+    var message by remember { mutableStateOf<SafeTrashMessage?>(null) }
     var confirmEmpty by remember { mutableStateOf(false) }
     val canRestore = StorageAccess.hasBroadAccess(context)
 
@@ -74,9 +76,9 @@ fun SafeTrashSection() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text("Safe Trash", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.module_safe_trash), style = MaterialTheme.typography.titleLarge)
             Text(
-                "I file qui dentro occupano ancora spazio. Puoi ripristinarli senza sovrascrivere file esistenti oppure eliminarli definitivamente.",
+                stringResource(R.string.safe_trash_body),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -85,16 +87,16 @@ fun SafeTrashSection() {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             } else {
                 Text(
-                    "${entries.size} elementi · ${formatSafeTrashBytes(trashBytes)}",
+                    stringResource(R.string.safe_trash_summary, entries.size, formatSafeTrashBytes(trashBytes)),
                     style = MaterialTheme.typography.bodyMedium,
                 )
 
                 if (entries.isEmpty()) {
-                    Text("Safe Trash vuoto.", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.safe_trash_empty), style = MaterialTheme.typography.bodySmall)
                 } else {
                     if (!canRestore) {
                         Text(
-                            "Per ripristinare nel percorso originale riattiva Pulizia Profonda. Puoi comunque svuotare il cestino privato.",
+                            stringResource(R.string.safe_trash_restore_access),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -105,7 +107,7 @@ fun SafeTrashSection() {
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(entry.originalName, maxLines = 1)
                                 Text(
                                     "${formatSafeTrashBytes(entry.sizeBytes)} · ${entry.originalPath}",
@@ -124,55 +126,60 @@ fun SafeTrashSection() {
                                         }
                                         message = when (result.status) {
                                             SafeTrashRestoreStatus.RESTORED ->
-                                                "Ripristinato: ${entry.originalName}"
+                                                SafeTrashMessage(R.string.safe_trash_restored, listOf(entry.originalName))
                                             SafeTrashRestoreStatus.DESTINATION_EXISTS ->
-                                                "Ripristino rifiutato: esiste già un file nel percorso originale."
+                                                SafeTrashMessage(R.string.safe_trash_restore_destination_exists)
                                             SafeTrashRestoreStatus.PAYLOAD_INVALID ->
-                                                "Ripristino rifiutato: il payload non supera la verifica d’integrità."
+                                                SafeTrashMessage(R.string.safe_trash_restore_payload_invalid)
                                             SafeTrashRestoreStatus.UNSAFE_DESTINATION ->
-                                                "Ripristino rifiutato: destinazione non sicura."
+                                                SafeTrashMessage(R.string.safe_trash_restore_unsafe_destination)
                                             SafeTrashRestoreStatus.DESTINATION_UNAVAILABLE ->
-                                                "Destinazione originale non disponibile."
+                                                SafeTrashMessage(R.string.safe_trash_restore_destination_unavailable)
                                             SafeTrashRestoreStatus.INSUFFICIENT_SPACE ->
-                                                "Spazio insufficiente per il ripristino."
+                                                SafeTrashMessage(R.string.safe_trash_restore_insufficient_space)
                                             SafeTrashRestoreStatus.COPY_FAILED ->
-                                                "Ripristino non completato: la copia verificata è fallita."
+                                                SafeTrashMessage(R.string.safe_trash_restore_copy_failed)
                                             SafeTrashRestoreStatus.ENTRY_NOT_FOUND ->
-                                                "Elemento Safe Trash non più disponibile."
+                                                SafeTrashMessage(R.string.safe_trash_restore_entry_missing)
                                         }
                                         reload()
                                     }
                                 },
                             ) {
-                                Text("Ripristina")
+                                Text(stringResource(R.string.action_restore))
                             }
                         }
                     }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
                             enabled = !loading,
                             onClick = {
                                 loading = true
                                 scope.launch { reload() }
                             },
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text("Aggiorna")
+                            Text(stringResource(R.string.refresh))
                         }
                         Button(
                             enabled = !loading && trashBytes > 0L,
                             onClick = { confirmEmpty = true },
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text("Svuota definitivamente")
+                            Text(stringResource(R.string.safe_trash_empty_permanently))
                         }
                     }
                 }
             }
 
-            message?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall)
+            message?.let { value ->
+                Text(
+                    stringResource(value.stringRes, *value.args.toTypedArray()),
+                    style = MaterialTheme.typography.bodySmall,
+                )
                 TextButton(onClick = { message = null }) {
-                    Text("Chiudi")
+                    Text(stringResource(R.string.action_close))
                 }
             }
         }
@@ -181,10 +188,10 @@ fun SafeTrashSection() {
     if (confirmEmpty) {
         AlertDialog(
             onDismissRequest = { confirmEmpty = false },
-            title = { Text("Svuotare Safe Trash?") },
+            title = { Text(stringResource(R.string.safe_trash_empty_confirm_title)) },
             text = {
                 Text(
-                    "Questa azione elimina definitivamente le copie private. Solo dopo lo svuotamento questi byte possono essere considerati realmente liberati.",
+                    stringResource(R.string.safe_trash_empty_confirm_body),
                 )
             },
             confirmButton = {
@@ -198,21 +205,27 @@ fun SafeTrashSection() {
                             val after = withContext(Dispatchers.IO) { manager.getTrashSize() }
                             val reclaimed = (before - after).coerceAtLeast(0L)
                             message = if (completed) {
-                                "Safe Trash svuotato · ${formatSafeTrashBytes(reclaimed)} liberati definitivamente."
+                                SafeTrashMessage(
+                                    R.string.safe_trash_emptied,
+                                    listOf(formatSafeTrashBytes(reclaimed)),
+                                )
                             } else {
-                                "Svuotamento parziale · ${formatSafeTrashBytes(reclaimed)} liberati; alcuni elementi sono stati lasciati per sicurezza."
+                                SafeTrashMessage(
+                                    R.string.safe_trash_partial_empty,
+                                    listOf(formatSafeTrashBytes(reclaimed)),
+                                )
                             }
                             reload()
                             if (reclaimed > 0L) CleanupEventBus.publishCompleted()
                         }
                     },
                 ) {
-                    Text("Elimina definitivamente")
+                    Text(stringResource(R.string.safe_trash_delete_permanently))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirmEmpty = false }) {
-                    Text("Annulla")
+                    Text(stringResource(R.string.cancel))
                 }
             },
         )
@@ -230,3 +243,9 @@ private fun formatSafeTrashBytes(bytes: Long): String {
     }
     return String.format(Locale.getDefault(), "%.1f %s", value, units[unit])
 }
+
+
+private data class SafeTrashMessage(
+    val stringRes: Int,
+    val args: List<Any> = emptyList(),
+)

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
@@ -19,9 +20,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
 import kotlinx.coroutines.launch
@@ -43,7 +46,7 @@ fun MonetizationSection(
     val billing = runtime.billing
     val consent = runtime.consent
     val preferences = remember(appContext) { ProPreferencesManager(appContext) }
-    val batch = remember(appContext, scope) { ProBatchController(appContext, scope) }
+    val batch = remember(context, scope) { ProBatchController(context, scope) }
 
     val billingState by billing.state.collectAsState()
     val consentState by consent.state.collectAsState()
@@ -140,18 +143,29 @@ fun MonetizationSection(
             if (premium) {
                 Text(stringResource(R.string.pro_batch_title), style = MaterialTheme.typography.titleMedium)
                 ProScanType.entries.forEach { type ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val selected = type in selectedTypes
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = selected,
+                                role = Role.Checkbox,
+                                onValueChange = { checked ->
+                                    val updated = if (checked) selectedTypes + type else selectedTypes - type
+                                    scope.launch { preferences.saveSelectedTypes(updated) }
+                                },
+                            ),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.Top,
+                    ) {
                         Checkbox(
-                            checked = type in selectedTypes,
-                            onCheckedChange = { checked ->
-                                val updated = if (checked) selectedTypes + type else selectedTypes - type
-                                scope.launch { preferences.saveSelectedTypes(updated) }
-                            },
+                            checked = selected,
+                            onCheckedChange = null,
                         )
-                        Column {
-                            Text(type.label, style = MaterialTheme.typography.bodyMedium)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(proScanTypeLabel(type), style = MaterialTheme.typography.bodyMedium)
                             Text(
-                                type.description,
+                                proScanTypeDescription(type),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -208,5 +222,30 @@ private fun billingErrorMessage(error: BillingError): String =
             BillingError.PRODUCT_UNAVAILABLE -> R.string.billing_error_product_unavailable
             BillingError.ACKNOWLEDGEMENT_PENDING -> R.string.billing_error_acknowledgement_pending
             BillingError.GENERIC -> R.string.billing_error_generic
+        },
+    )
+
+
+@Composable
+private fun proScanTypeLabel(type: ProScanType): String =
+    stringResource(
+        when (type) {
+            ProScanType.EMPTY_FOLDERS -> R.string.pro_scan_empty_folders_label
+            ProScanType.DUPLICATES -> R.string.pro_scan_duplicates_label
+            ProScanType.LARGE_FILES -> R.string.pro_scan_large_files_label
+            ProScanType.THUMBNAIL_CACHE -> R.string.pro_scan_thumbnail_label
+            ProScanType.APP_RESIDUES -> R.string.pro_scan_residues_label
+        },
+    )
+
+@Composable
+private fun proScanTypeDescription(type: ProScanType): String =
+    stringResource(
+        when (type) {
+            ProScanType.EMPTY_FOLDERS -> R.string.pro_scan_empty_folders_description
+            ProScanType.DUPLICATES -> R.string.pro_scan_duplicates_description
+            ProScanType.LARGE_FILES -> R.string.pro_scan_large_files_description
+            ProScanType.THUMBNAIL_CACHE -> R.string.pro_scan_thumbnail_description
+            ProScanType.APP_RESIDUES -> R.string.pro_scan_residues_description
         },
     )

@@ -4,10 +4,13 @@ import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -22,8 +25,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.riccardopinato.omnicleaner.R
 import java.util.Locale
 
 @Composable
@@ -45,16 +52,15 @@ fun ProBatchReview(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         HorizontalDivider()
-        Text("Review Pro", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.pro_review_title), style = MaterialTheme.typography.titleMedium)
         Text(
-            "Candidati rilevati: ${formatBytes(state.totalRecoverableBytes)}. " +
-                "La stima non equivale a spazio già liberato.",
+            stringResource(R.string.pro_review_candidates, formatBytes(state.totalRecoverableBytes)),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         if (state.emptyFolders.isNotEmpty()) {
-            Text("Cartelle realmente vuote", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.pro_empty_folders), style = MaterialTheme.typography.labelLarge)
             state.emptyFolders.take(8).forEach { item ->
                 ReviewCheckRow(
                     checked = item.path in state.selectedFolderPaths,
@@ -66,18 +72,23 @@ fun ProBatchReview(
         }
 
         if (state.duplicateGroups.isNotEmpty()) {
-            Text("Duplicati", style = MaterialTheme.typography.labelLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.pro_duplicates), style = MaterialTheme.typography.labelLarge)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 OutlinedButton(onClick = controller::selectDuplicateKeepOldest) {
-                    Text("Keep oldest")
+                    Text(stringResource(R.string.action_keep_oldest))
                 }
                 OutlinedButton(onClick = controller::selectDuplicateKeepNewest) {
-                    Text("Keep newest")
+                    Text(stringResource(R.string.action_keep_newest))
                 }
             }
             state.duplicateGroups.take(6).forEach { group ->
                 Text(
-                    "${group.files.size} copie · ${formatBytes(group.sizeBytes)} ciascuna",
+                    stringResource(R.string.pro_duplicate_group, group.files.size, formatBytes(group.sizeBytes)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -93,7 +104,7 @@ fun ProBatchReview(
         }
 
         if (state.largeFiles.isNotEmpty()) {
-            Text("File grandi — selezione manuale", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.pro_large_files), style = MaterialTheme.typography.labelLarge)
             state.largeFiles.take(10).forEach { item ->
                 ReviewCheckRow(
                     checked = item.path in state.selectedLargeFilePaths,
@@ -105,28 +116,27 @@ fun ProBatchReview(
         }
 
         if (state.thumbnails.isNotEmpty()) {
-            Text("Cache e miniature verificate", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.pro_thumbnail_cache), style = MaterialTheme.typography.labelLarge)
             state.thumbnails.take(8).forEach { item ->
                 ReviewCheckRow(
                     checked = item.path in state.selectedThumbnailPaths,
                     title = item.name,
-                    detail = "${item.fileCount} file · ${formatBytes(item.sizeBytes)}",
+                    detail = stringResource(R.string.pro_thumbnail_detail, item.fileCount, formatBytes(item.sizeBytes)),
                     onChecked = { controller.toggleThumbnail(item.path, it) },
                 )
             }
         }
 
         if (state.residues.isNotEmpty()) {
-            Text("Residui accessibili — solo review", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.pro_residues), style = MaterialTheme.typography.labelLarge)
             Text(
-                "Android può limitare la visibilità dei pacchetti installati. " +
-                    "Per evitare falsi positivi questi candidati non vengono rimossi automaticamente.",
+                stringResource(R.string.pro_residue_warning),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
             state.residues.take(8).forEach { item ->
                 Text(
-                    "${item.name} · ${formatBytes(item.sizeBytes)} · ${item.displayPath}",
+                    stringResource(R.string.pro_residue_detail, item.name, formatBytes(item.sizeBytes), item.displayPath),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -141,13 +151,13 @@ fun ProBatchReview(
             enabled = !state.resolving && !state.awaitingSystemTrash,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Risolvi selezione Pro")
+            Text(stringResource(R.string.pro_resolve_selection))
         }
 
         state.message?.let { message ->
             Text(message, style = MaterialTheme.typography.bodySmall)
             TextButton(onClick = controller::clearMessage) {
-                Text("Chiudi")
+                Text(stringResource(R.string.action_close))
             }
         }
 
@@ -159,14 +169,9 @@ fun ProBatchReview(
     if (showResolveConfirmation) {
         AlertDialog(
             onDismissRequest = { showResolveConfirmation = false },
-            title = { Text("Confermare la sequenza Pro?") },
+            title = { Text(stringResource(R.string.pro_confirm_title)) },
             text = {
-                Text(
-                    "Cartelle vuote e thumbnail verranno ricontrollate prima della rimozione. " +
-                        "I duplicati manterranno almeno una copia. I media selezionati passeranno " +
-                        "dal cestino Android con una seconda conferma di sistema. I residui app " +
-                        "resteranno invariati.",
-                )
+                Text(stringResource(R.string.pro_confirm_body))
             },
             confirmButton = {
                 TextButton(
@@ -179,12 +184,12 @@ fun ProBatchReview(
                         }
                     },
                 ) {
-                    Text("Continua")
+                    Text(stringResource(R.string.action_continue))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showResolveConfirmation = false }) {
-                    Text("Annulla")
+                    Text(stringResource(R.string.cancel))
                 }
             },
         )
@@ -198,9 +203,19 @@ private fun ReviewCheckRow(
     detail: String,
     onChecked: (Boolean) -> Unit,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Checkbox(checked = checked, onCheckedChange = onChecked)
-        Column {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(
+                value = checked,
+                role = Role.Checkbox,
+                onValueChange = onChecked,
+            ),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Checkbox(checked = checked, onCheckedChange = null)
+        Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
             Text(
                 detail,

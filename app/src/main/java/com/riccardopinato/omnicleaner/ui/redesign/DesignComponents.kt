@@ -1,6 +1,7 @@
 package com.riccardopinato.omnicleaner.ui.redesign
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.progressSemantics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -89,6 +91,7 @@ internal fun OmniHeroCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .progressSemantics(progress.coerceIn(0f, 1f))
                         .background(Color.White.copy(alpha = 0.20f), RoundedCornerShape(99.dp)),
                 ) {
                     Box(
@@ -152,7 +155,7 @@ internal fun OmniMetricCard(
                     .background(accent.copy(alpha = 0.14f), CircleShape)
                     .padding(6.dp),
             ) {
-                Text("•", color = accent, fontWeight = FontWeight.Bold)
+                Text("•", modifier = Modifier.clearAndSetSemantics { }, color = accent, fontWeight = FontWeight.Bold)
             }
             Text(text = value, style = MaterialTheme.typography.titleLarge)
             Text(
@@ -191,6 +194,7 @@ internal fun OmniModuleCard(
             ) {
                 Text(
                     text = glyph,
+                    modifier = Modifier.clearAndSetSemantics { },
                     style = MaterialTheme.typography.titleMedium,
                     color = accent,
                 )

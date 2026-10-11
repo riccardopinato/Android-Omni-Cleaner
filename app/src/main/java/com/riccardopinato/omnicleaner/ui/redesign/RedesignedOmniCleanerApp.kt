@@ -66,6 +66,7 @@ import com.riccardopinato.omnicleaner.monetization.findActivity
 import com.riccardopinato.omnicleaner.monetization.rememberMonetizationRuntime
 import com.riccardopinato.omnicleaner.ui.CleanerController
 import com.riccardopinato.omnicleaner.ui.CleanerUiState
+import com.riccardopinato.omnicleaner.ui.LanguageSelectorSection
 import com.riccardopinato.omnicleaner.ui.MaintenanceSection
 import com.riccardopinato.omnicleaner.ui.SafeTrashSection
 import com.riccardopinato.omnicleaner.ui.SmartCategoriesSection
@@ -92,8 +93,8 @@ private enum class OmniDestination(
 fun RedesignedOmniCleanerApp() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val controller = remember(context.applicationContext, scope) {
-        CleanerController(context.applicationContext, scope)
+    val controller = remember(context, scope) {
+        CleanerController(context, scope)
     }
     val monetizationRuntime = rememberMonetizationRuntime()
     val entitlement by PremiumEntitlementStore.state.collectAsState()
@@ -260,7 +261,12 @@ fun RedesignedOmniCleanerApp() {
                             subtitle = stringResource(R.string.redesign_pro_subtitle),
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                            MonetizationSection(runtime = monetizationRuntime)
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(14.dp),
+                            ) {
+                                MonetizationSection(runtime = monetizationRuntime)
+                                LanguageSelectorSection()
+                            }
                         }
                     }
                 }
