@@ -84,6 +84,7 @@
     <string name="redesign_deep_locked_title">Pulizia Profonda è opzionale</string>
     <string name="redesign_deep_locked_body">Attivala solo quando vuoi analisi complete di cartelle, file grandi e duplicati.</string>
     <string name="redesign_filters_title">Filtri e soglie</string>
+    <string name="redesign_search_folders">Cerca cartelle</string>
     <string name="redesign_search_large">Cerca file grandi</string>
     <string name="redesign_search_duplicates">Cerca duplicati</string>
     <string name="redesign_large_threshold">Soglia file grandi</string>
