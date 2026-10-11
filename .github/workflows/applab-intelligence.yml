@@ -8,6 +8,7 @@ on:
       - "audit/**"
       - "hardening/**"
       - "monetization/**"
+      - "redesign/**"
   pull_request:
     branches:
       - main
