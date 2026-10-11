@@ -22,13 +22,13 @@ object AppLanguage {
         context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
             .edit()
             .putString(KEY_LANGUAGE_TAG, normalized)
-            .apply()
+            .commit()
     }
 
     fun wrap(base: Context): Context {
         val languageTag = selectedTag(base)
         val locale = if (languageTag.isBlank()) {
-            Resources.getSystem().configuration.locales[0]
+            base.resources.configuration.locales[0]
         } else {
             Locale.forLanguageTag(languageTag)
         }
