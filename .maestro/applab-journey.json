@@ -1,0 +1,24 @@
+{
+  "checkpoints": [
+    {
+      "name": "home",
+      "flow": ".maestro/journey/home.yaml"
+    },
+    {
+      "name": "clean",
+      "flow": ".maestro/journey/clean.yaml"
+    },
+    {
+      "name": "gallery",
+      "flow": ".maestro/journey/gallery.yaml"
+    },
+    {
+      "name": "privacy",
+      "flow": ".maestro/journey/privacy.yaml"
+    },
+    {
+      "name": "pro",
+      "flow": ".maestro/journey/pro.yaml"
+    }
+  ]
+}
