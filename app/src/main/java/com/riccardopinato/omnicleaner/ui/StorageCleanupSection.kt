@@ -206,7 +206,12 @@ fun StorageCleanupSection(
                             },
                         )
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
                         OutlinedButton(
                             onClick = {
                                 selectedFolders = emptyFolders.mapTo(linkedSetOf()) { it.path }
@@ -239,7 +244,12 @@ fun StorageCleanupSection(
 
                 if (duplicateGroups.isNotEmpty()) {
                     Text(stringResource(R.string.module_duplicates), style = MaterialTheme.typography.titleMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
                         OutlinedButton(
                             onClick = {
                                 selectedDuplicates = engine.selectDuplicatesExceptOldest(duplicateGroups)
@@ -258,8 +268,11 @@ fun StorageCleanupSection(
 
                     duplicateGroups.take(12).forEach { group ->
                         Text(
-                            group.files.size.toString() + " copie · " +
+                            stringResource(
+                                R.string.pro_duplicate_group,
+                                group.files.size,
                                 group.files.firstOrNull()?.formattedSize().orEmpty(),
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -373,7 +386,7 @@ private fun ManualMaintenanceCard() {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(stringResource(R.string.manual_maintenance_title), style = MaterialTheme.typography.titleMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                     onClick = {
                         val activity = context as? Activity
@@ -383,6 +396,7 @@ private fun ManualMaintenanceCard() {
                             else -> clipboardRetry
                         }
                     },
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.manual_clear_clipboard))
                 }
@@ -394,6 +408,7 @@ private fun ManualMaintenanceCard() {
                             appManagementFailed
                         }
                     },
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.manual_app_management))
                 }
