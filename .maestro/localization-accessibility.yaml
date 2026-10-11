@@ -1,0 +1,41 @@
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+- assertVisible: "Android Omni Cleaner"
+
+- tapOn:
+    text: "Pro"
+- scrollUntilVisible:
+    element:
+      text: "App language"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "App language"
+- assertVisible: "English"
+- assertVisible: "Italiano"
+
+- tapOn:
+    text: "Italiano"
+- tapOn:
+    text: "Pro"
+- scrollUntilVisible:
+    element:
+      text: "Lingua dell’app"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Lingua dell’app"
+- assertVisible: "Sistema"
+- assertVisible: "English"
+
+- tapOn:
+    text: "English"
+- tapOn:
+    text: "Pro"
+- scrollUntilVisible:
+    element:
+      text: "App language"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "App language"
+- assertVisible: "System"
