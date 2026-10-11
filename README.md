@@ -12,7 +12,8 @@ Recovery and productization of the lost-source Android cleaner APK.
 **MAXI STEP 5 — Monetization Productization: COMPLETE (provider validation pending)**  
 **MAXI STEP 6 — UI/UX Redesign: COMPLETE**  
 **MAXI STEP 7 — Product Expansion: COMPLETE**  
-**MAXI STEP 8 — Localization & Accessibility: COMPLETE**
+**MAXI STEP 8 — Localization & Accessibility: COMPLETE**  
+**MAXI STEP 9 — Performance & Deep QA: IN PROGRESS**
 
 The recovered cleaner, safety model, monetization architecture, redesigned shell, Smart Categories and localization/accessibility layer are complete through Step 8. Play/AdMob provider validation and physical-device certification remain separate release gates.
 
@@ -31,7 +32,7 @@ The recovered cleaner, safety model, monetization architecture, redesigned shell
 ## Current recovery version
 
 - applicationId: `com.riccardopinato.omnicleaner`
-- version: `0.9.0-recovery` / code 9
+- version: `0.10.0-recovery` / code 10
 - minSdk 24
 - targetSdk 36
 - compileSdk 37
@@ -84,6 +85,12 @@ The interface is fully resource-driven across English, Italian, Spanish, French 
 Accessibility hardening includes TalkBack-friendly selection rows, explicit non-gesture alternatives for Gallery actions, progress semantics, decorative-glyph suppression and large-font layout resilience.
 
 See `STEP8_LOCALIZATION_ACCESSIBILITY.md`.
+
+## Performance & deep QA
+
+Step 9 hardens large-library behavior with duplicate candidate prefiltering, cancellable hashing/MediaStore queries, a bounded Gallery review window, lower-I/O EXIF export and a deterministic large-library runtime fixture. AppLab runs the performance, lifecycle, process-death, background and storage labs explicitly for this step.
+
+See `STEP9_PERFORMANCE_DEEP_QA.md`.
 
 ## Storage safety model
 
