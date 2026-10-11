@@ -17,6 +17,7 @@ import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.StorageCapabilityHealth
 import com.riccardopinato.omnicleaner.cleaner.StorageInfo
 import com.riccardopinato.omnicleaner.cleaner.ThresholdUnit
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -98,6 +99,7 @@ internal class CleanerController(
         private set
 
     private var scanJob: Job? = null
+    private var scanGeneration = 0L
 
     init {
         refreshAccessAndStorage()
@@ -173,6 +175,7 @@ internal class CleanerController(
     }
 
     fun cancelScan() {
+        scanGeneration++
         scanJob?.cancel()
         scanJob = null
         state = state.copy(scanning = false, currentOperation = null)
@@ -184,15 +187,20 @@ internal class CleanerController(
             return
         }
         scanJob?.cancel()
+        val generation = ++scanGeneration
         scanJob = scope.launch {
             state = state.copy(scanning = true, currentOperation = label, error = null)
-            runCatching { block() }
-                .onFailure { error ->
-                    if (error !is kotlinx.coroutines.CancellationException) {
-                        state = state.copy(error = error.message ?: error.javaClass.simpleName)
-                    }
+            try {
+                block()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                state = state.copy(error = error.message ?: error.javaClass.simpleName)
+            } finally {
+                if (generation == scanGeneration) {
+                    state = state.copy(scanning = false, currentOperation = null)
                 }
-            state = state.copy(scanning = false, currentOperation = null)
+            }
         }
     }
 }
