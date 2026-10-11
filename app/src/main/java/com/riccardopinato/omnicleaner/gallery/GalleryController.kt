@@ -2,6 +2,7 @@ package com.riccardopinato.omnicleaner.gallery
 
 import android.app.PendingIntent
 import android.content.Context
+import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.MediaStoreHelper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
