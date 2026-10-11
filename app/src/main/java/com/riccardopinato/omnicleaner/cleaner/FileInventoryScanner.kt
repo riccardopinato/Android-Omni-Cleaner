@@ -1,5 +1,6 @@
 package com.riccardopinato.omnicleaner.cleaner
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -110,9 +111,9 @@ class FileInventoryScanner {
                 coroutineContext.ensureActive()
 
                 if (unchanged(item)) {
-                    val sample = runCatching {
+                    val sample = nullableUnlessCancelled {
                         sampleFingerprintCancellable(item.file, item.size)
-                    }.getOrNull()
+                    }
                     if (sample != null && unchanged(item)) {
                         bySample.getOrPut(sample) { ArrayList() }.add(item)
                     }
@@ -131,9 +132,9 @@ class FileInventoryScanner {
                     coroutineContext.ensureActive()
                     if (!unchanged(item)) continue
 
-                    val hash = runCatching {
+                    val hash = nullableUnlessCancelled {
                         digestCancellable(item.file)
-                    }.getOrNull()
+                    }
                     if (hash != null && unchanged(item)) {
                         byHash.getOrPut(hash) { ArrayList() }.add(item)
                     }
@@ -315,4 +316,15 @@ class FileInventoryScanner {
     private companion object {
         const val DUPLICATE_SAMPLE_BYTES: Long = 64L * 1024L
     }
+}
+
+
+internal suspend fun <T> nullableUnlessCancelled(
+    block: suspend () -> T,
+): T? = try {
+    block()
+} catch (error: CancellationException) {
+    throw error
+} catch (_: Throwable) {
+    null
 }
