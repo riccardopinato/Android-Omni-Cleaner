@@ -1,0 +1,5 @@
+appId: com.riccardopinato.omnicleaner.debug
+---
+- tapOn:
+    text: "Pro"
+- assertVisible: "Omni Cleaner Pro"
