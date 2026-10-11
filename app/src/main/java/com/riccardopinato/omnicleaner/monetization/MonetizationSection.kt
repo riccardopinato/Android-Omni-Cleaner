@@ -128,9 +128,9 @@ fun MonetizationSection(
                 }
             }
 
-            billingState.error?.let {
+            billingState.error?.let { error ->
                 Text(
-                    it,
+                    billingErrorMessage(error),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -196,3 +196,19 @@ fun MonetizationSection(
         }
     }
 }
+
+
+@Composable
+private fun billingErrorMessage(error: BillingError): String =
+    stringResource(
+        when (error) {
+            BillingError.SERVICE_DISCONNECTED -> R.string.billing_error_service_disconnected
+            BillingError.SERVICE_UNAVAILABLE -> R.string.billing_error_service_unavailable
+            BillingError.NETWORK_ERROR -> R.string.billing_error_network
+            BillingError.BILLING_UNAVAILABLE -> R.string.billing_error_billing_unavailable
+            BillingError.DEVELOPER_ERROR -> R.string.billing_error_developer
+            BillingError.PRODUCT_UNAVAILABLE -> R.string.billing_error_product_unavailable
+            BillingError.ACKNOWLEDGEMENT_PENDING -> R.string.billing_error_acknowledgement_pending
+            BillingError.GENERIC -> R.string.billing_error_generic
+        },
+    )
