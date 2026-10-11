@@ -1,8 +1,8 @@
 project:
   repository: riccardopinato/Android-Omni-Cleaner
-  status: LOCALIZATION_ACCESSIBILITY_COMPLETE
+  status: PERFORMANCE_DEEP_QA_IN_PROGRESS
   recovery_started_at: 2026-10-09
-  current_maxi_step: 8
+  current_maxi_step: 9
 
 factory:
   repository: riccardopinato/App-Factory-Core
@@ -36,8 +36,8 @@ identity:
   debug_application_id: com.riccardopinato.omnicleaner.debug
   legacy_application_id: com.aistudio.foldercleaner.zjijip
   donor_apk_sha256: c77f48bbbac1d8e5e16ee44dab67346f3caa0f846bd117e5b05d2cb3b2a88310
-  recovery_version_name: "0.9.0-recovery"
-  recovery_version_code: 9
+  recovery_version_name: "0.10.0-recovery"
+  recovery_version_code: 10
   signing_lane: internal_pending
 
 parity:
@@ -156,3 +156,25 @@ localization_accessibility:
   decorative_glyphs_hidden_from_semantics: true
   storage_progress_semantics: true
   large_font_layout_hardening: true
+
+
+performance_deep_qa:
+  status: implementation_complete_validation_pending
+  duplicate_sample_prefilter_bytes_per_edge: 65536
+  duplicate_full_sha256_retained: true
+  duplicate_byte_verification_retained: true
+  media_store_query_cancellation: true
+  gallery_bounded_review_window: true
+  gallery_max_undo_history: 50
+  exif_reduced_io_passes: true
+  exif_cancellation_propagated: true
+  thumbnail_hash_cancellation: true
+  runtime_fixture_files: 1253
+  applab_mode: full
+  deep_labs:
+    performance: true
+    persistence_restart: true
+    configuration_lifecycle: true
+    resource_pressure_process_death: true
+    background_recovery: true
+    storage_integrity: true
