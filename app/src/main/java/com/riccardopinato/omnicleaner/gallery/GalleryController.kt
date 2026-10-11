@@ -296,25 +296,28 @@ class GalleryController(
     }
 
     private fun compactReviewWindow(candidate: GalleryUiState): GalleryUiState {
-        if (candidate.currentIndex <= MAX_REVIEWED_ITEMS_IN_MEMORY) return candidate
+        val compaction = compactGalleryReviewWindow(
+            items = candidate.items,
+            currentIndex = candidate.currentIndex,
+            maxReviewedItemsInMemory = MAX_REVIEWED_ITEMS_IN_MEMORY,
+            retainReviewedItems = RETAIN_REVIEWED_ITEMS,
+        )
+        if (compaction.removedPrefix.isEmpty()) return candidate
 
-        val removeCount = candidate.currentIndex - RETAIN_REVIEWED_ITEMS
-        if (removeCount <= 0) return candidate
-
-        val removed = candidate.items.take(removeCount)
+        val removedCount = compaction.removedPrefix.size
         val retainedTrash = (candidate.pendingTrashItems.asSequence() +
-            removed.asSequence().filter { it.isSelectedForTrash })
+            compaction.removedPrefix.asSequence().filter { it.isSelectedForTrash })
             .distinctBy { it.id }
             .toList()
 
         val adjustedHistory = candidate.history.mapNotNull { entry ->
-            val adjustedIndex = entry.previousIndex - removeCount
+            val adjustedIndex = entry.previousIndex - removedCount
             if (adjustedIndex < 0) null else entry.copy(previousIndex = adjustedIndex)
         }
 
         return candidate.copy(
-            items = candidate.items.drop(removeCount),
-            currentIndex = candidate.currentIndex - removeCount,
+            items = compaction.items,
+            currentIndex = compaction.currentIndex,
             history = adjustedHistory,
             pendingTrashItems = retainedTrash,
         )
