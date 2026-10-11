@@ -91,6 +91,15 @@ class BillingManager(
         })
     }
 
+    fun refreshPurchases() {
+        if (billingClient.isReady) {
+            queryPurchases()
+            queryProductDetails()
+        } else {
+            start()
+        }
+    }
+
     fun restorePurchases() {
         _state.value = _state.value.copy(
             restoreInProgress = true,
@@ -153,8 +162,11 @@ class BillingManager(
 
     fun launchBillingFlow(activity: Activity, onProductNotFound: () -> Unit = {}) {
         if (!billingClient.isReady) {
-            _state.value = _state.value.copy(error = BillingError.SERVICE_UNAVAILABLE)
-            onProductNotFound()
+            _state.value = _state.value.copy(
+                purchaseInProgress = false,
+                error = BillingError.SERVICE_DISCONNECTED,
+            )
+            start()
             return
         }
         if (_state.value.premiumOwned) return
