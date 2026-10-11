@@ -11,9 +11,18 @@ adb shell appops set "$PACKAGE_ID" MANAGE_EXTERNAL_STORAGE allow || true
 
 bash "$GITHUB_WORKSPACE/target/.github/scripts/prepare-parity-fixture.sh"
 
+if [[ "${GITHUB_REF:-}" == "refs/heads/step-9-performance-deep-qa" ]]; then
+  echo "[Omni/AppLab] preparing Step 9 large-library fixture..."
+  bash "$GITHUB_WORKSPACE/target/.github/scripts/prepare-performance-fixture.sh"
+fi
+
 export REPORT_DIR="$GITHUB_WORKSPACE/applab-runtime-smoke"
 export APPLAB_VERSION="4.5.0-pinned-smoke"
-export APPLAB_ANALYSIS_MODE="fast"
+if [[ "${GITHUB_REF:-}" == "refs/heads/step-9-performance-deep-qa" ]]; then
+  export APPLAB_ANALYSIS_MODE="full"
+else
+  export APPLAB_ANALYSIS_MODE="fast"
+fi
 export APPLAB_ANALYSIS_PLAN_JSON="$APPLAB_PLAN"
 export APPLAB_TARGET_ROOT="$GITHUB_WORKSPACE/target"
 export APPLAB_PROJECT_ROOT="$GITHUB_WORKSPACE/target"
@@ -100,7 +109,20 @@ if [[ "$status" -eq 0 ]]; then
   adb shell am force-stop "$PACKAGE_ID" || true
 fi
 
-for evidence in   summary.md   result.json   interaction-crawl.md   interaction-crawl.json   visual-qa.md   system-lab.md   app-logcat.txt; do
+for evidence in \
+  summary.md \
+  result.json \
+  interaction-crawl.md \
+  interaction-crawl.json \
+  visual-qa.md \
+  system-lab.md \
+  persistence-lab.md \
+  configuration-lab.md \
+  resource-pressure-lab.md \
+  background-lab.md \
+  storage-lab.md \
+  performance-lab.md \
+  app-logcat.txt; do
   path="$REPORT_DIR/$evidence"
   if [[ -s "$path" ]]; then
     echo "===== $evidence ====="
