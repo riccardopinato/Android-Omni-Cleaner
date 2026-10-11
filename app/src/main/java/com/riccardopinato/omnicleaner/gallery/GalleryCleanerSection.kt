@@ -173,7 +173,12 @@ fun GalleryCleanerSection() {
                     style = MaterialTheme.typography.bodySmall,
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     Button(onClick = controller::keepCurrent) {
                         Text(stringResource(R.string.action_keep))
                     }
