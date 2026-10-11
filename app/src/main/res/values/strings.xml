@@ -285,4 +285,22 @@
     <string name="pro_scan_residues_label">Accessible residues</string>
     <string name="pro_scan_residues_description">Review candidate folders in Android/media manually</string>
 
+
+    <string name="gallery_error_type_unavailable">That media type is not included in the current Android media access.</string>
+    <string name="gallery_error_permission_required">Gallery permission is required.</string>
+    <string name="gallery_error_no_selection">No media selected for trash.</string>
+    <string name="gallery_error_trash_android11">System media trash requires Android 11 or newer.</string>
+    <string name="pro_error_access_required">Storage access is required for the Pro scan.</string>
+    <string name="pro_error_select_category">Select at least one category.</string>
+    <string name="pro_resolve_empty_folders">%1$d empty folders</string>
+    <string name="pro_resolve_thumbnails">%1$d thumbnails permanently deleted</string>
+    <string name="pro_resolve_thumbnail_bytes">(%1$d bytes)</string>
+    <string name="pro_resolve_safe_trash">%1$d files in Safe Trash (not space already reclaimed)</string>
+    <string name="pro_resolve_thumbnail_rejected">%1$d thumbnails rejected</string>
+    <string name="pro_resolve_stale">%1$d files changed after the scan and left unchanged</string>
+    <string name="pro_resolve_blocked">%1$d files left unchanged because reversible deletion is unavailable</string>
+    <string name="pro_resolve_residues">%1$d residues kept for review because package visibility may be restricted</string>
+    <string name="pro_system_trash_confirmed">Android Trash confirmed (not counted as space already reclaimed)</string>
+    <string name="pro_system_trash_cancelled">Android Trash cancelled</string>
+
 </resources>
