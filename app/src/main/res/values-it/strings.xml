@@ -285,4 +285,22 @@
     <string name="pro_scan_residues_label">Residui accessibili</string>
     <string name="pro_scan_residues_description">Revisiona manualmente le cartelle candidate in Android/media</string>
 
+
+    <string name="gallery_error_type_unavailable">Questo tipo di media non è incluso nell’accesso Android corrente.</string>
+    <string name="gallery_error_permission_required">Serve il permesso per accedere alla galleria.</string>
+    <string name="gallery_error_no_selection">Nessun media selezionato per il cestino.</string>
+    <string name="gallery_error_trash_android11">Il cestino multimediale di sistema richiede Android 11 o successivo.</string>
+    <string name="pro_error_access_required">Serve l’accesso alla memoria per la scansione Pro.</string>
+    <string name="pro_error_select_category">Seleziona almeno una categoria.</string>
+    <string name="pro_resolve_empty_folders">%1$d cartelle vuote</string>
+    <string name="pro_resolve_thumbnails">%1$d thumbnail eliminate definitivamente</string>
+    <string name="pro_resolve_thumbnail_bytes">(%1$d byte)</string>
+    <string name="pro_resolve_safe_trash">%1$d file nel Safe Trash (non spazio già liberato)</string>
+    <string name="pro_resolve_thumbnail_rejected">%1$d thumbnail rifiutate</string>
+    <string name="pro_resolve_stale">%1$d file cambiati dopo la scansione e lasciati invariati</string>
+    <string name="pro_resolve_blocked">%1$d file lasciati invariati perché non eliminabili in modo reversibile</string>
+    <string name="pro_resolve_residues">%1$d residui lasciati in revisione perché la visibilità dei pacchetti può essere limitata</string>
+    <string name="pro_system_trash_confirmed">Cestino Android confermato (non conteggiato come spazio già liberato)</string>
+    <string name="pro_system_trash_cancelled">Cestino Android annullato</string>
+
 </resources>
