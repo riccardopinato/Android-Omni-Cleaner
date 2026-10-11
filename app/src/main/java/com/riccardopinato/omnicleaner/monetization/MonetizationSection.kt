@@ -98,9 +98,7 @@ fun MonetizationSection(
                         }
                     },
                     enabled =
-                        billingState.connected &&
-                            billingState.productAvailable &&
-                            !billingState.purchaseInProgress &&
+                        !billingState.purchaseInProgress &&
                             !billingState.purchasePending,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
