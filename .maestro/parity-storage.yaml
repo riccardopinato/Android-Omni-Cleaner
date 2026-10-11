@@ -68,25 +68,20 @@ appId: com.riccardopinato.omnicleaner.debug
 - assertVisible:
     text: ".*DCIM/.thumbnails.*"
 
-- scrollUntilVisible:
-    element:
-      text: "Gallery Cleaner"
-    direction: DOWN
-    timeout: 30000
+- tapOn:
+    text: "Gallery"
 - assertVisible: "Gallery Cleaner"
 
-- scrollUntilVisible:
-    element:
-      text: "EXIF Privacy"
-    direction: DOWN
-    timeout: 30000
+- tapOn:
+    text: "Privacy"
 - assertVisible: "EXIF Privacy"
 
-
+- tapOn:
+    text: "Pro"
+- assertVisible: "Omni Cleaner Pro"
 - scrollUntilVisible:
     element:
-      text: "Omni Cleaner Pro"
+      text: "Restore purchase"
     direction: DOWN
     timeout: 30000
-- assertVisible: "Omni Cleaner Pro"
 - assertVisible: "Restore purchase"
