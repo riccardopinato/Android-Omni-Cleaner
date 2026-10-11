@@ -8,6 +8,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 
 class MonetizationRuntime internal constructor(
     val billing: BillingManager,
@@ -42,6 +45,19 @@ fun rememberMonetizationRuntime(): MonetizationRuntime {
 
     LaunchedEffect(billing) {
         billing.start()
+    }
+
+    val lifecycleOwner = activity as? LifecycleOwner
+    DisposableEffect(lifecycleOwner, billing) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                billing.refreshPurchases()
+            }
+        }
+        lifecycleOwner?.lifecycle?.addObserver(observer)
+        onDispose {
+            lifecycleOwner?.lifecycle?.removeObserver(observer)
+        }
     }
 
     DisposableEffect(appContext) {
