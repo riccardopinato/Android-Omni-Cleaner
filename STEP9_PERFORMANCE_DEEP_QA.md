@@ -1,7 +1,7 @@
 # MAXI STEP 9 — Performance & Deep QA
 
 Factory baseline: `a4a97ca79e85d2faebcdcc9a3ae4a9644f5caf03`  
-App baseline entering Step 9: `929fc91ee0f8a2dc07d27e67daeb609a5e357d66`
+App baseline entering Step 9: `379cbae5e332bd44ce5f78833c61a56da3faa923`
 
 ## Goal
 
