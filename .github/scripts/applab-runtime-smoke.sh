@@ -84,6 +84,22 @@ if [[ "$status" -eq 0 ]]; then
   fi
 fi
 
+if [[ "$status" -eq 0 ]]; then
+  echo "[Omni/AppLab] running localization/accessibility journey at 1.3x font scale..."
+  adb shell settings put system font_scale 1.3 || true
+  adb shell am force-stop "$PACKAGE_ID" || true
+
+  if maestro test "$GITHUB_WORKSPACE/target/.maestro/localization-accessibility.yaml"; then
+    echo "[Omni/AppLab] localization/accessibility journey passed."
+  else
+    status=$?
+    echo "[Omni/AppLab] localization/accessibility journey failed with status $status."
+  fi
+
+  adb shell settings put system font_scale 1.0 || true
+  adb shell am force-stop "$PACKAGE_ID" || true
+fi
+
 for evidence in   summary.md   result.json   interaction-crawl.md   interaction-crawl.json   visual-qa.md   system-lab.md   app-logcat.txt; do
   path="$REPORT_DIR/$evidence"
   if [[ -s "$path" ]]; then
