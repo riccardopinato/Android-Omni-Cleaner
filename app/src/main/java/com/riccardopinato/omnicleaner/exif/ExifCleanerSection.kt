@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
@@ -21,9 +22,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
 import kotlinx.coroutines.launch
@@ -87,23 +90,44 @@ fun ExifCleanerSection() {
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .toggleable(
+                        value = recursive,
+                        role = Role.Checkbox,
+                        onValueChange = { recursive = it },
+                    ),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Checkbox(
                     checked = recursive,
-                    onCheckedChange = { recursive = it },
+                    onCheckedChange = null,
                 )
                 Text(stringResource(R.string.exif_include_subfolders))
             }
 
             ExifGroup.entries.forEach { group ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val selected = group in groups
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .toggleable(
+                            value = selected,
+                            role = Role.Checkbox,
+                            onValueChange = { checked ->
+                                groups = if (checked) groups + group else groups - group
+                                scan = null
+                                export = null
+                            },
+                        ),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Checkbox(
-                        checked = group in groups,
-                        onCheckedChange = { checked ->
-                            groups = if (checked) groups + group else groups - group
-                            scan = null
-                            export = null
-                        },
+                        checked = selected,
+                        onCheckedChange = null,
                     )
                     Text(exifGroupLabel(group))
                 }
