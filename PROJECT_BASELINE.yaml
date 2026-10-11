@@ -1,8 +1,8 @@
 project:
   repository: riccardopinato/Android-Omni-Cleaner
-  status: UI_UX_REDESIGN_IN_PROGRESS
+  status: PRODUCT_EXPANSION_IN_PROGRESS
   recovery_started_at: 2026-10-09
-  current_maxi_step: 6
+  current_maxi_step: 7
 
 factory:
   repository: riccardopinato/App-Factory-Core
@@ -36,8 +36,8 @@ identity:
   debug_application_id: com.riccardopinato.omnicleaner.debug
   legacy_application_id: com.aistudio.foldercleaner.zjijip
   donor_apk_sha256: c77f48bbbac1d8e5e16ee44dab67346f3caa0f846bd117e5b05d2cb3b2a88310
-  recovery_version_name: "0.7.0-recovery"
-  recovery_version_code: 7
+  recovery_version_name: "0.8.0-recovery"
+  recovery_version_code: 8
   signing_lane: internal_pending
 
 parity:
@@ -104,7 +104,7 @@ monetization:
   play_internal_testing: blocked_until_provider_setup
 
 ui_redesign:
-  status: implementation_complete_validation_pending
+  status: complete_runtime_validated
   shell: multi_surface_bottom_navigation
   destinations:
     - home
@@ -120,3 +120,20 @@ ui_redesign:
   engine_changes: none
   maestro_flow: .maestro/ui-redesign.yaml
   applab_visual_journey: .maestro/applab-journey.json
+
+
+product_expansion:
+  status: smart_categories_implementation_validation_pending
+  smart_categories:
+    old_download_days: 90
+    installers: true
+    archives: true
+    screenshots: true
+    single_inventory_pass: true
+    automatic_selection: false
+    automatic_deletion: false
+    snapshot_revalidation: true
+    media_android_trash: true
+    non_media_safe_trash_when_supported: true
+  similar_photo_detection: deferred_performance_step
+  shizuku_root_expansion: deferred
