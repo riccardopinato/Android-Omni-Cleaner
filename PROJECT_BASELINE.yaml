@@ -1,8 +1,8 @@
 project:
   repository: riccardopinato/Android-Omni-Cleaner
-  status: PRODUCT_EXPANSION_IN_PROGRESS
+  status: LOCALIZATION_ACCESSIBILITY_IN_PROGRESS
   recovery_started_at: 2026-10-09
-  current_maxi_step: 7
+  current_maxi_step: 8
 
 factory:
   repository: riccardopinato/App-Factory-Core
@@ -36,8 +36,8 @@ identity:
   debug_application_id: com.riccardopinato.omnicleaner.debug
   legacy_application_id: com.aistudio.foldercleaner.zjijip
   donor_apk_sha256: c77f48bbbac1d8e5e16ee44dab67346f3caa0f846bd117e5b05d2cb3b2a88310
-  recovery_version_name: "0.8.0-recovery"
-  recovery_version_code: 8
+  recovery_version_name: "0.9.0-recovery"
+  recovery_version_code: 9
   signing_lane: internal_pending
 
 parity:
@@ -123,7 +123,7 @@ ui_redesign:
 
 
 product_expansion:
-  status: smart_categories_implementation_validation_pending
+  status: complete_runtime_validated
   smart_categories:
     old_download_days: 90
     installers: true
@@ -137,3 +137,22 @@ product_expansion:
     non_media_safe_trash_when_supported: true
   similar_photo_detection: deferred_performance_step
   shizuku_root_expansion: deferred
+
+
+localization_accessibility:
+  status: implementation_complete_validation_pending
+  supported_locales:
+    - en
+    - it
+    - es
+    - fr
+    - pt
+  manual_language_selector: true
+  system_language_fallback: true
+  locale_key_parity: pass_284_each
+  locale_placeholder_parity: pass
+  android_locale_config: true
+  talkback_toggle_rows: true
+  decorative_glyphs_hidden_from_semantics: true
+  storage_progress_semantics: true
+  large_font_layout_hardening: true
