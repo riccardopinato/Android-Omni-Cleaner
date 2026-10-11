@@ -1,7 +1,7 @@
 # Android Omni Cleaner — Product Bible
 
-Status: RECOVERY BASELINE / NOT STORE READY
-Date: 2026-10-09
+Status: RECOVERY + PRODUCTIZATION / NOT STORE READY
+Date: 2026-10-11
 
 ## Product problem
 
@@ -67,6 +67,15 @@ Android users who need:
 - JPEG EXIF parsing/editing;
 - folder EXIF cleaner;
 - cleaned-copy/export flow.
+
+### Smart Categories
+- one-pass local candidate inventory;
+- downloads older than 90 days;
+- installer packages;
+- archives;
+- screenshot discovery;
+- no automatic selection or deletion;
+- existing scan-snapshot revalidation and reversible cleanup policy retained.
 
 ### Monetization infrastructure already visible in APK
 - AdMob integration;
