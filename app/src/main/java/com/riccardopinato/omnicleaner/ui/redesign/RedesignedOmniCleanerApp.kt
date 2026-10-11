@@ -179,11 +179,19 @@ fun RedesignedOmniCleanerApp() {
                 onOpenPro = { destinationName = OmniDestination.PRO.name },
                 onAnalyzeStorage = {
                     destinationName = OmniDestination.CLEAN.name
-                    controller.scanOverview()
+                    if (state.hasBroadAccess) {
+                        controller.scanOverview()
+                    } else {
+                        showDeepAccessDisclosure = true
+                    }
                 },
                 onFindDuplicates = {
                     destinationName = OmniDestination.CLEAN.name
-                    controller.scanDuplicates()
+                    if (state.hasBroadAccess) {
+                        controller.scanDuplicates()
+                    } else {
+                        showDeepAccessDisclosure = true
+                    }
                 },
             )
 
