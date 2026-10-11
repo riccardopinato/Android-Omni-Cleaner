@@ -5,6 +5,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
+import java.io.RandomAccessFile
 import java.security.MessageDigest
 import kotlin.coroutines.coroutineContext
 
@@ -100,14 +101,20 @@ class FileInventoryScanner {
         for (sameSize in bySize) {
             coroutineContext.ensureActive()
 
-            val byHash = linkedMapOf<String, MutableList<IndexedFile>>()
+            // A cheap prefix/suffix fingerprint avoids reading every same-size
+            // file in full. Identical files necessarily share this fingerprint;
+            // collisions are still verified later with full SHA-256 and a
+            // byte-for-byte comparison, so correctness is unchanged.
+            val bySample = linkedMapOf<String, MutableList<IndexedFile>>()
             for (item in sameSize) {
                 coroutineContext.ensureActive()
 
                 if (unchanged(item)) {
-                    val hash = runCatching { digest(item.file) }.getOrNull()
-                    if (hash != null && unchanged(item)) {
-                        byHash.getOrPut(hash) { ArrayList() }.add(item)
+                    val sample = runCatching {
+                        sampleFingerprintCancellable(item.file, item.size)
+                    }.getOrNull()
+                    if (sample != null && unchanged(item)) {
+                        bySample.getOrPut(sample) { ArrayList() }.add(item)
                     }
                 }
 
@@ -115,7 +122,24 @@ class FileInventoryScanner {
                 onProgress?.invoke(processed, totalCandidates)
             }
 
-            for ((hash, hashes) in byHash) {
+            for (sampleMatches in bySample.values) {
+                coroutineContext.ensureActive()
+                if (sampleMatches.size <= 1) continue
+
+                val byHash = linkedMapOf<String, MutableList<IndexedFile>>()
+                for (item in sampleMatches) {
+                    coroutineContext.ensureActive()
+                    if (!unchanged(item)) continue
+
+                    val hash = runCatching {
+                        digestCancellable(item.file)
+                    }.getOrNull()
+                    if (hash != null && unchanged(item)) {
+                        byHash.getOrPut(hash) { ArrayList() }.add(item)
+                    }
+                }
+
+                for ((hash, hashes) in byHash) {
                 coroutineContext.ensureActive()
                 if (hashes.size <= 1) continue
 
@@ -176,6 +200,7 @@ class FileInventoryScanner {
                         },
                     )
                 }
+                }
             }
         }
 
@@ -216,6 +241,64 @@ class FileInventoryScanner {
             item.file.length() == item.size &&
             item.file.lastModified() == item.modified
 
+    private suspend fun sampleFingerprintCancellable(
+        file: File,
+        expectedBytes: Long,
+    ): String {
+        val md = MessageDigest.getInstance("SHA-256")
+        val sampleBytes = DUPLICATE_SAMPLE_BYTES.toInt()
+
+        if (expectedBytes <= DUPLICATE_SAMPLE_BYTES * 2L) {
+            FileInputStream(file).use { input ->
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                while (true) {
+                    coroutineContext.ensureActive()
+                    val read = input.read(buffer)
+                    if (read <= 0) break
+                    md.update(buffer, 0, read)
+                }
+            }
+        } else {
+            RandomAccessFile(file, "r").use { input ->
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                var remaining = sampleBytes
+                while (remaining > 0) {
+                    coroutineContext.ensureActive()
+                    val read = input.read(buffer, 0, minOf(buffer.size, remaining))
+                    if (read <= 0) break
+                    md.update(buffer, 0, read)
+                    remaining -= read
+                }
+
+                input.seek(expectedBytes - DUPLICATE_SAMPLE_BYTES)
+                remaining = sampleBytes
+                while (remaining > 0) {
+                    coroutineContext.ensureActive()
+                    val read = input.read(buffer, 0, minOf(buffer.size, remaining))
+                    if (read <= 0) break
+                    md.update(buffer, 0, read)
+                    remaining -= read
+                }
+            }
+        }
+
+        return md.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private suspend fun digestCancellable(file: File): String {
+        val md = MessageDigest.getInstance("SHA-256")
+        FileInputStream(file).use { input ->
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            while (true) {
+                coroutineContext.ensureActive()
+                val read = input.read(buffer)
+                if (read <= 0) break
+                md.update(buffer, 0, read)
+            }
+        }
+        return md.digest().joinToString("") { "%02x".format(it) }
+    }
+
     fun digest(file: File): String {
         val md = MessageDigest.getInstance("SHA-256")
         FileInputStream(file).use { input ->
@@ -227,5 +310,9 @@ class FileInventoryScanner {
             }
         }
         return md.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private companion object {
+        const val DUPLICATE_SAMPLE_BYTES: Long = 64L * 1024L
     }
 }
