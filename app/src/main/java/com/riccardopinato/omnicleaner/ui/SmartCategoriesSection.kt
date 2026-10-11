@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -209,11 +210,13 @@ fun SmartCategoriesSection(
                         SmartCategory.entries.forEach { category ->
                             val items = scan.itemsFor(category)
                             if (items.isNotEmpty()) {
-                                OutlinedButton(onClick = {}) {
+                                Card {
                                     Text(
-                                        categoryLabel(category) + " · " +
+                                        text = categoryLabel(category) + " · " +
                                             items.size + " · " +
                                             formatSmartBytes(scan.bytesFor(category)),
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                        style = MaterialTheme.typography.bodySmall,
                                     )
                                 }
                             }
