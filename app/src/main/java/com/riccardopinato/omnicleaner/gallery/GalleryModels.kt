@@ -83,3 +83,38 @@ internal fun formatMediaSize(bytes: Long): String {
     }
     return String.format(Locale.getDefault(), "%.1f %s", value, units[unit])
 }
+
+
+internal data class GalleryReviewWindowCompaction<T>(
+    val items: List<T>,
+    val currentIndex: Int,
+    val removedPrefix: List<T>,
+)
+
+internal fun <T> compactGalleryReviewWindow(
+    items: List<T>,
+    currentIndex: Int,
+    maxReviewedItemsInMemory: Int = 240,
+    retainReviewedItems: Int = 60,
+): GalleryReviewWindowCompaction<T> {
+    val safeCurrentIndex = currentIndex.coerceIn(0, items.size)
+    val safeMax = maxReviewedItemsInMemory.coerceAtLeast(1)
+    val safeRetain = retainReviewedItems.coerceIn(0, safeMax)
+
+    if (safeCurrentIndex <= safeMax) {
+        return GalleryReviewWindowCompaction(
+            items = items,
+            currentIndex = safeCurrentIndex,
+            removedPrefix = emptyList(),
+        )
+    }
+
+    val removeCount = (safeCurrentIndex - safeRetain)
+        .coerceIn(0, safeCurrentIndex)
+
+    return GalleryReviewWindowCompaction(
+        items = items.drop(removeCount),
+        currentIndex = safeCurrentIndex - removeCount,
+        removedPrefix = items.take(removeCount),
+    )
+}
