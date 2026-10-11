@@ -322,19 +322,19 @@ private fun HomeScreen(
             ) {
                 OmniMetricCard(
                     label = stringResource(R.string.redesign_metric_large_files),
-                    value = state.bigFiles.size.toString(),
+                    value = if (state.bigFilesScanned) state.bigFiles.size.toString() else "—",
                     accent = OmniOrange,
                     modifier = Modifier.width(128.dp),
                 )
                 OmniMetricCard(
                     label = stringResource(R.string.redesign_metric_duplicates),
-                    value = state.duplicates.size.toString(),
+                    value = if (state.duplicatesScanned) state.duplicates.size.toString() else "—",
                     accent = OmniRose,
                     modifier = Modifier.width(128.dp),
                 )
                 OmniMetricCard(
                     label = stringResource(R.string.redesign_metric_folders),
-                    value = state.folders.size.toString(),
+                    value = if (state.foldersScanned) state.folders.size.toString() else "—",
                     accent = OmniMint,
                     modifier = Modifier.width(128.dp),
                 )
@@ -401,12 +401,17 @@ private fun HomeScreen(
                         style = MaterialTheme.typography.titleMedium,
                     )
                     OmniStatusPill(
-                        text = if (state.hasBroadAccess) {
-                            stringResource(R.string.access_ready)
-                        } else {
-                            stringResource(R.string.redesign_standard_ready)
+                        text = when {
+                            state.hasBroadAccess -> stringResource(R.string.access_ready)
+                            state.storageCapability.standardCleaningAvailable ->
+                                stringResource(R.string.redesign_standard_ready)
+                            else -> stringResource(R.string.standard_cleaning_unavailable)
                         },
-                        accent = if (state.hasBroadAccess) OmniMint else OmniBlue,
+                        accent = when {
+                            state.hasBroadAccess -> OmniMint
+                            state.storageCapability.standardCleaningAvailable -> OmniBlue
+                            else -> MaterialTheme.colorScheme.error
+                        },
                     )
                     Text(
                         when (state.storageCapability.status) {
@@ -635,10 +640,10 @@ private fun CleanScreen(
                 )
             }
 
-            item { SafeTrashSection() }
             item { MaintenanceSection() }
         }
 
+        item { SafeTrashSection() }
         item { Spacer(Modifier.height(10.dp)) }
     }
 }
@@ -704,6 +709,13 @@ private fun CleanFiltersCard(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(stringResource(R.string.redesign_filters_title), style = MaterialTheme.typography.titleMedium)
+            OutlinedTextField(
+                value = state.folderSearchQuery,
+                onValueChange = controller::updateFolderSearchQuery,
+                label = { Text(stringResource(R.string.redesign_search_folders)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
             OutlinedTextField(
                 value = state.bigFileSearchQuery,
                 onValueChange = controller::updateBigFileSearchQuery,
