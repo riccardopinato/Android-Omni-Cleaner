@@ -141,7 +141,7 @@ Exit gate:
 See `STEP7_PRODUCT_EXPANSION.md`.
 
 ## MAXI STEP 8 — Localization & Accessibility
-**Status: IN PROGRESS**
+**Status: COMPLETE**
 
 Implemented:
 - complete EN / IT / ES / FR / PT resource bundles;

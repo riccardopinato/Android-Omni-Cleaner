@@ -1,6 +1,6 @@
 project:
   repository: riccardopinato/Android-Omni-Cleaner
-  status: LOCALIZATION_ACCESSIBILITY_IN_PROGRESS
+  status: LOCALIZATION_ACCESSIBILITY_COMPLETE
   recovery_started_at: 2026-10-09
   current_maxi_step: 8
 
@@ -140,7 +140,7 @@ product_expansion:
 
 
 localization_accessibility:
-  status: implementation_complete_validation_pending
+  status: complete_runtime_validated
   supported_locales:
     - en
     - it

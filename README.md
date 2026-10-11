@@ -12,9 +12,9 @@ Recovery and productization of the lost-source Android cleaner APK.
 **MAXI STEP 5 — Monetization Productization: COMPLETE (provider validation pending)**  
 **MAXI STEP 6 — UI/UX Redesign: COMPLETE**  
 **MAXI STEP 7 — Product Expansion: COMPLETE**  
-**MAXI STEP 8 — Localization & Accessibility: IN PROGRESS**
+**MAXI STEP 8 — Localization & Accessibility: COMPLETE**
 
-The recovered cleaner, safety model, monetization architecture, redesigned shell and Step 7 Smart Categories are complete. Active work is Step 8 localization and accessibility; Play/AdMob provider validation remains a separate release gate.
+The recovered cleaner, safety model, monetization architecture, redesigned shell, Smart Categories and localization/accessibility layer are complete through Step 8. Play/AdMob provider validation and physical-device certification remain separate release gates.
 
 ## Product direction
 
