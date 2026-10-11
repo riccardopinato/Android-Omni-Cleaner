@@ -96,9 +96,11 @@ fun SmartCategoriesSection(
                 CleanupEventBus.publishCompleted()
             }
             onCleanupFinished()
-            result = runCatching {
+            runCatching {
                 scanner.scan(StorageAccess.primaryRoot())
-            }.getOrElse { result }
+            }.onSuccess { refreshed ->
+                result = refreshed
+            }
         }
     }
 
@@ -317,14 +319,40 @@ private fun SmartCandidateRow(
     ) {
         Checkbox(checked = checked, onCheckedChange = onCheckedChange)
         Column(modifier = Modifier.weight(1f)) {
+            val oldDownloads = if (SmartCategory.OLD_DOWNLOADS in item.categories) {
+                stringResource(R.string.smart_category_old_downloads)
+            } else {
+                null
+            }
+            val installers = if (SmartCategory.INSTALLERS in item.categories) {
+                stringResource(R.string.smart_category_installers)
+            } else {
+                null
+            }
+            val archives = if (SmartCategory.ARCHIVES in item.categories) {
+                stringResource(R.string.smart_category_archives)
+            } else {
+                null
+            }
+            val screenshots = if (SmartCategory.SCREENSHOTS in item.categories) {
+                stringResource(R.string.smart_category_screenshots)
+            } else {
+                null
+            }
+            val categoryText = listOfNotNull(
+                oldDownloads,
+                installers,
+                archives,
+                screenshots,
+            ).joinToString(" · ")
+
             Text(
                 text = item.name,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
             )
             Text(
-                text = item.categories.joinToString(" · ") { categoryLabel(it) } +
-                    " · " + formatSmartBytes(item.sizeBytes),
+                text = categoryText + " · " + formatSmartBytes(item.sizeBytes),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
