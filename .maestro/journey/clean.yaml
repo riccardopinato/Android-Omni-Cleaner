@@ -1,0 +1,6 @@
+appId: com.riccardopinato.omnicleaner.debug
+---
+- tapOn:
+    text: "Clean"
+- assertVisible: "Deep Cleaning"
+- assertVisible: "Analyze storage"
