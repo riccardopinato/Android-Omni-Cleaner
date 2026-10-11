@@ -11,6 +11,7 @@ on:
       - "redesign/**"
       - "step-7-product-expansion"
       - "step-8-localization-accessibility"
+      - "step-9-performance-deep-qa"
   pull_request:
     branches:
       - main
