@@ -98,7 +98,7 @@ class GalleryController(
             GalleryMediaFilter.VIDEOS -> state.accessHealth.canReadVideos
         }
         if (!allowed) {
-            update(state.copy(error = "That media type is not included in the current Android media access."))
+            update(state.copy(error = context.getString(R.string.gallery_error_type_unavailable)))
             return
         }
         update(state.copy(filter = filter, currentIndex = 0, history = emptyList(), error = null))
@@ -114,7 +114,7 @@ class GalleryController(
 
     fun load(pageSize: Int = DEFAULT_PAGE_SIZE) {
         if (!state.hasAccess) {
-            update(state.copy(error = "Gallery permission is required."))
+            update(state.copy(error = context.getString(R.string.gallery_error_permission_required)))
             return
         }
         loadJob?.cancel()
@@ -210,12 +210,12 @@ class GalleryController(
     fun createTrashRequest(): PendingIntent? {
         val uris = state.selectedForTrash.map { it.uri }
         if (uris.isEmpty()) {
-            update(state.copy(error = "No media selected for trash."))
+            update(state.copy(error = context.getString(R.string.gallery_error_no_selection)))
             return null
         }
         val pendingIntent = MediaStoreHelper.trashMediaFiles(context.contentResolver, uris)
         if (pendingIntent == null) {
-            update(state.copy(error = "System media trash requires Android 11 or newer."))
+            update(state.copy(error = context.getString(R.string.gallery_error_trash_android11)))
         }
         return pendingIntent
     }
