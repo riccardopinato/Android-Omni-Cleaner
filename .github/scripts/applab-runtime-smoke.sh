@@ -18,7 +18,7 @@ export APPLAB_ANALYSIS_PLAN_JSON="$APPLAB_PLAN"
 export APPLAB_TARGET_ROOT="$GITHUB_WORKSPACE/target"
 export APPLAB_PROJECT_ROOT="$GITHUB_WORKSPACE/target"
 export RUN_MAESTRO="true"
-export MAESTRO_FLOW="$GITHUB_WORKSPACE/target/.maestro/parity-storage.yaml"
+export MAESTRO_FLOW="$GITHUB_WORKSPACE/target/.maestro/monetization-smoke.yaml"
 
 cd "$GITHUB_WORKSPACE/.applab"
 

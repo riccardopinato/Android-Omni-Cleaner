@@ -1,8 +1,5 @@
 package com.riccardopinato.omnicleaner.monetization
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,8 +13,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,10 +25,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 @Composable
-fun MonetizationSection() {
+fun MonetizationSection(
+    runtime: MonetizationRuntime,
+) {
     val context = LocalContext.current
     val activity = context.findActivity()
     val appContext = context.applicationContext
@@ -44,8 +40,8 @@ fun MonetizationSection() {
     val purchaseContextError = stringResource(R.string.pro_purchase_context_error)
     val productUnavailable = stringResource(R.string.pro_product_unavailable)
 
-    val billing = remember(appContext) { BillingManager(appContext) }
-    val consent = remember(appContext) { ConsentManager(appContext) }
+    val billing = runtime.billing
+    val consent = runtime.consent
     val preferences = remember(appContext) { ProPreferencesManager(appContext) }
     val batch = remember(appContext, scope) { ProBatchController(appContext, scope) }
 
@@ -55,33 +51,6 @@ fun MonetizationSection() {
         initial = ProScanType.entries.toSet(),
     )
     val batchState = batch.state
-
-    DisposableEffect(billing) {
-        billing.start()
-        onDispose {
-            billing.endConnection()
-            AdManager.setEligibility(appContext, false)
-        }
-    }
-
-    LaunchedEffect(activity, entitlement.resolved, premium) {
-        if (activity != null && entitlement.resolved && !premium) {
-            consent.refresh(activity)
-        }
-        if (premium || !entitlement.resolved) {
-            AdManager.setEligibility(appContext, false)
-        }
-    }
-    LaunchedEffect(premium, consentState.canRequestAds) {
-        AdManager.setEligibility(
-            appContext,
-            AdRequestPolicy.mayRequestAds(
-                isPremium = premium,
-                consentAllowsAds = consentState.canRequestAds,
-                entitlementResolved = entitlement.resolved,
-            ),
-        )
-    }
 
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -96,6 +65,26 @@ fun MonetizationSection() {
                 color = if (premium) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Text(
+                stringResource(R.string.pro_model),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            if (!billingState.ownershipResolved && !premium) {
+                Text(
+                    stringResource(R.string.pro_checking_purchase),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+
+            if (billingState.purchasePending && !premium) {
+                Text(
+                    stringResource(R.string.pro_purchase_pending),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
 
             if (!premium) {
                 Button(
@@ -108,7 +97,9 @@ fun MonetizationSection() {
                             }
                         }
                     },
-                    enabled = !billingState.purchaseInProgress,
+                    enabled =
+                        !billingState.purchaseInProgress &&
+                            !billingState.purchasePending,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
@@ -118,15 +109,33 @@ fun MonetizationSection() {
                         ),
                     )
                 }
-                if (billingState.purchaseInProgress) {
+
+                OutlinedButton(
+                    onClick = {
+                        purchaseMessage = null
+                        billing.restorePurchases()
+                    },
+                    enabled = !billingState.restoreInProgress && !billingState.purchaseInProgress,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.pro_restore))
+                }
+
+                if (billingState.purchaseInProgress || billingState.restoreInProgress) {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
             }
 
-            billingState.error?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            billingState.error?.let { error ->
+                Text(
+                    billingErrorMessage(error),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
-            purchaseMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+            purchaseMessage?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall)
+            }
 
             if (premium) {
                 Text(stringResource(R.string.pro_batch_title), style = MaterialTheme.typography.titleMedium)
@@ -186,3 +195,18 @@ fun MonetizationSection() {
     }
 }
 
+
+@Composable
+private fun billingErrorMessage(error: BillingError): String =
+    stringResource(
+        when (error) {
+            BillingError.SERVICE_DISCONNECTED -> R.string.billing_error_service_disconnected
+            BillingError.SERVICE_UNAVAILABLE -> R.string.billing_error_service_unavailable
+            BillingError.NETWORK_ERROR -> R.string.billing_error_network
+            BillingError.BILLING_UNAVAILABLE -> R.string.billing_error_billing_unavailable
+            BillingError.DEVELOPER_ERROR -> R.string.billing_error_developer
+            BillingError.PRODUCT_UNAVAILABLE -> R.string.billing_error_product_unavailable
+            BillingError.ACKNOWLEDGEMENT_PENDING -> R.string.billing_error_acknowledgement_pending
+            BillingError.GENERIC -> R.string.billing_error_generic
+        },
+    )

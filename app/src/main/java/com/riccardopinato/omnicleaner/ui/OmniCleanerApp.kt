@@ -47,6 +47,7 @@ import com.riccardopinato.omnicleaner.gallery.GalleryCleanerSection
 import com.riccardopinato.omnicleaner.monetization.AdManager
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
 import com.riccardopinato.omnicleaner.monetization.PremiumEntitlementStore
+import com.riccardopinato.omnicleaner.monetization.rememberMonetizationRuntime
 import com.riccardopinato.omnicleaner.monetization.findActivity
 import java.util.Locale
 
@@ -57,6 +58,7 @@ fun OmniCleanerApp() {
     val controller = remember(context.applicationContext, scope) {
         CleanerController(context.applicationContext, scope)
     }
+    val monetizationRuntime = rememberMonetizationRuntime()
     val state = controller.state
     val activity = remember(context) { context.findActivity() }
     var showDeepAccessDisclosure by remember { mutableStateOf(false) }
@@ -262,7 +264,9 @@ fun OmniCleanerApp() {
             }
 
             item {
-                com.riccardopinato.omnicleaner.monetization.MonetizationSection()
+                com.riccardopinato.omnicleaner.monetization.MonetizationSection(
+                    runtime = monetizationRuntime,
+                )
             }
 
             item { Spacer(Modifier.height(20.dp)) }

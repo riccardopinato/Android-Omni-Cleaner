@@ -33,7 +33,7 @@ Explicitly blocked rather than inferred:
 - trusted artifact-bound AppLab certification while artifact quota is saturated.
 
 ## MAXI STEP 4 — Safety & Storage Hardening
-**Status: IN PROGRESS**
+**Status: COMPLETE — PHYSICAL OEM/STORAGE GATES REMAIN**
 
 Implemented:
 - explicit Standard Cleaning vs Deep Cleaning capability model;
@@ -51,21 +51,38 @@ Implemented:
 - Gallery session invalidated when media authorization changes;
 - Safe Trash now has integrity-verified restore, no-overwrite behavior and permanent-empty UI.
 
-Remaining Step 4 gates:
-- Android CI + AppLab on the hardened branch;
-- inspect AppLab findings and fix actionable issues;
-- bounded runtime smoke;
-- OEM/device-only cases remain physical-validation work, not inferred PASS.
+Step 4 evidence:
+- Android CI PASS;
+- AppLab Intelligence PASS;
+- AppLab Runtime push PASS on the final source head;
+- physical OEM/storage/SAF behavior remains a separate validation gate.
 
 ## MAXI STEP 5 — Monetization Productization
+**Status: IN PROGRESS**
 
-- configure Play Console one-time product;
-- Billing purchase/restore/acknowledge tests;
-- production AdMob IDs;
-- UMP/privacy validation;
-- final Free/Pro boundary;
-- final pricing;
-- verify Premium generates zero ad requests.
+Implemented in source:
+- Billing Library 9.1.0;
+- one app-level BillingClient lifecycle;
+- automatic service reconnection;
+- donor one-time product `premium_unlock`;
+- ownership query at startup and explicit Restore purchase;
+- PENDING never unlocks Premium;
+- PURCHASED unlocks Premium and is acknowledged;
+- Free core cleaner / Premium Pro batch boundary;
+- Premium produces zero ad requests;
+- UMP 4.0.0 before ad eligibility;
+- inline adaptive banner;
+- donor interstitial cadence retained;
+- debug demo ads only;
+- release ads disabled until real AdMob IDs are configured;
+- production monetization fail-fast guard available.
+
+External blockers:
+- Play Console product activation;
+- signed AAB/Internal Testing;
+- purchase/restore/pending/refund validation;
+- production AdMob IDs and UMP message;
+- app-ads.txt.
 
 ## MAXI STEP 6 — UI/UX Redesign
 

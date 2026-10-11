@@ -1,8 +1,8 @@
 project:
   repository: riccardopinato/Android-Omni-Cleaner
-  status: SAFETY_STORAGE_HARDENING_IN_PROGRESS
+  status: MONETIZATION_PRODUCTIZATION_IN_PROGRESS
   recovery_started_at: 2026-10-09
-  current_maxi_step: 4
+  current_maxi_step: 5
 
 factory:
   repository: riccardopinato/App-Factory-Core
@@ -36,8 +36,8 @@ identity:
   debug_application_id: com.riccardopinato.omnicleaner.debug
   legacy_application_id: com.aistudio.foldercleaner.zjijip
   donor_apk_sha256: c77f48bbbac1d8e5e16ee44dab67346f3caa0f846bd117e5b05d2cb3b2a88310
-  recovery_version_name: "0.5.0-recovery"
-  recovery_version_code: 5
+  recovery_version_name: "0.6.0-recovery"
+  recovery_version_code: 6
   signing_lane: internal_pending
 
 parity:
@@ -82,3 +82,23 @@ storage_hardening:
   protected_top_level_user_folders: enabled
   safe_trash_counts_as_reclaimed_space: false
   system_trash_counts_as_reclaimed_space: false
+
+monetization:
+  status: implementation_complete_provider_validation_pending
+  billing_library: "9.1.0"
+  ump_sdk: "4.0.0"
+  product_type: inapp_one_time
+  premium_product_id: premium_unlock
+  lifetime_unlock: true
+  price_source: google_play
+  free_core_cleaner: true
+  premium_pro_batch: true
+  premium_no_ad_requests: true
+  entitlement_resolved_before_ads: true
+  pending_purchase_grants_premium: false
+  restore_purchase: enabled
+  billing_auto_reconnect: enabled
+  billing_verification: client_side_play_ownership
+  server_side_verification: recommended_future_hardening
+  production_ads_configured: false
+  play_internal_testing: blocked_until_provider_setup

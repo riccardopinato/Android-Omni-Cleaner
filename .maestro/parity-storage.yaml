@@ -81,3 +81,17 @@ appId: com.riccardopinato.omnicleaner.debug
     direction: DOWN
     timeout: 30000
 - assertVisible: "EXIF Privacy"
+
+
+- scrollUntilVisible:
+    element:
+      text: "Omni Cleaner Pro"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Omni Cleaner Pro"
+- scrollUntilVisible:
+    element:
+      text: "Restore purchase"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Restore purchase"

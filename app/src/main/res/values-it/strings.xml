@@ -42,9 +42,22 @@
     <string name="pro_free">Modalità Free · pubblicità solo dopo consenso privacy</string>
     <string name="pro_buy">Sblocca Premium · %1$s</string>
     <string name="pro_price_unavailable">prezzo da Google Play</string>
+    <string name="pro_model">Sblocco a vita una tantum · la pulizia base resta Free · Premium aggiunge gli strumenti Pro combinati e rimuove ogni richiesta pubblicitaria</string>
+    <string name="pro_checking_purchase">Verifica proprietà Premium con Google Play…</string>
+    <string name="pro_purchase_pending">Acquisto in attesa · Premium si attiva solo quando Google Play restituisce PURCHASED</string>
+    <string name="pro_restore">Ripristina acquisto</string>
     <string name="pro_product_unavailable">Premium non è ancora disponibile da Google Play per questa build/account.</string>
     <string name="pro_purchase_context_error">Il flusso di acquisto non è disponibile in questo contesto.</string>
     <string name="pro_batch_title">Analisi Pro combinata</string>
     <string name="pro_batch_scan">Avvia analisi Pro</string>
     <string name="privacy_options">Opzioni privacy</string>
+
+    <string name="billing_error_service_disconnected">Connessione a Google Play interrotta. Riprova.</string>
+    <string name="billing_error_service_unavailable">Google Play Billing non è disponibile al momento.</string>
+    <string name="billing_error_network">Serve una connessione di rete per raggiungere Google Play.</string>
+    <string name="billing_error_billing_unavailable">Gli acquisti Google Play non sono disponibili su questo dispositivo o account.</string>
+    <string name="billing_error_developer">Google Play Billing non è configurato correttamente per questa build.</string>
+    <string name="billing_error_product_unavailable">Premium non è disponibile per questa build o account Google Play.</string>
+    <string name="billing_error_acknowledgement_pending">Premium è attivo, ma Google Play non ha ancora confermato la consegna. Il controllo verrà ripetuto automaticamente.</string>
+    <string name="billing_error_generic">L’operazione Google Play Billing non è stata completata.</string>
 </resources>
