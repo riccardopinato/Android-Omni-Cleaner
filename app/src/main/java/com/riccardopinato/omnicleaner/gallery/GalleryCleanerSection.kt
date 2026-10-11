@@ -120,7 +120,7 @@ fun GalleryCleanerSection() {
                                 onClick = { controller.setFilter(filter) },
                                 enabled = filter.isAvailableFor(state.accessHealth),
                             ) {
-                                Text(filter.label)
+                                Text(galleryFilterLabel(filter))
                             }
                         }
                     }
@@ -150,6 +150,12 @@ fun GalleryCleanerSection() {
             }
 
             state.currentItem?.let { current ->
+                val displayDate = if (current.dateTaken > 0L) {
+                    current.formattedDate
+                } else {
+                    stringResource(R.string.gallery_unknown_date)
+                }
+
                 GalleryMediaPreview(
                     item = current,
                     onKeep = controller::keepCurrent,
@@ -160,7 +166,7 @@ fun GalleryCleanerSection() {
                     buildString {
                         append(current.formattedSize)
                         append(" · ")
-                        append(if (current.dateTaken > 0L) current.formattedDate else stringResource(R.string.gallery_unknown_date))
+                        append(displayDate)
                         current.album?.takeIf { it.isNotBlank() }?.let {
                             append(" · ")
                             append(it)
