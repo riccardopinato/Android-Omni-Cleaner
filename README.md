@@ -9,9 +9,10 @@ Recovery and productization of the lost-source Android cleaner APK.
 **MAXI STEP 2 — Full APK Functional Reconstruction: COMPLETE**  
 **MAXI STEP 3 — APK Parity Audit: COMPLETE**  
 **MAXI STEP 4 — Safety & Storage Hardening: COMPLETE**  
-**MAXI STEP 5 — Monetization Productization: IN PROGRESS**
+**MAXI STEP 5 — Monetization Productization: COMPLETE (provider validation pending)**  
+**MAXI STEP 6 — UI/UX Redesign: IN PROGRESS**
 
-The donor functionality is reconstructed and storage hardening is complete within the current evidence boundary. The active work is Play Billing, Ads/UMP productization and provider-side release validation before the planned UI redesign.
+The donor functionality, storage hardening and monetization architecture are reconstructed. The active work is the new multi-surface UI/UX shell; Play/AdMob provider validation remains a separate release gate.
 
 ## Product direction
 
@@ -22,13 +23,13 @@ The donor functionality is reconstructed and storage hardening is complete withi
 - safe/reversible cleanup before maximum deletion
 - monetizable Free/Pro architecture
 - one-time donor product id: `premium_unlock`
-- UI redesign planned after parity/safety validation
+- colorful five-surface UI shell with later visual refinement supported
 - no fake booster/antivirus claims
 
 ## Current recovery version
 
 - applicationId: `com.riccardopinato.omnicleaner`
-- version: `0.6.0-recovery` / code 6
+- version: `0.7.0-recovery` / code 7
 - minSdk 24
 - targetSdk 36
 - compileSdk 37
@@ -47,6 +48,20 @@ The donor functionality is reconstructed and storage hardening is complete withi
 - Release ads stay disabled until production AdMob IDs are configured.
 
 See `MONETIZATION_CONTRACT.md` and `PLAY_CONSOLE_SETUP.md`.
+
+## UI/UX shell
+
+The recovery-era single long screen has been replaced by five destinations:
+
+- Home — storage hero, metrics, access health and quick actions;
+- Clean — scans, thresholds, findings, cleanup, Safe Trash and advanced maintenance;
+- Gallery — focused media review;
+- Privacy — focused EXIF safe-copy workflow;
+- Pro — purchase/restore, privacy options and Pro batch tools.
+
+The visual system uses a fixed colorful identity, soft surfaces and dark mode without adding a heavy navigation/icon dependency. Cleaner, Gallery, EXIF and monetization engines remain independent from the shell.
+
+See `STEP6_UI_REDESIGN.md`.
 
 ## Storage safety model
 
