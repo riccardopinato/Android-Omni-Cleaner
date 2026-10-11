@@ -22,6 +22,17 @@ appId: com.riccardopinato.omnicleaner.debug
 
 - scrollUntilVisible:
     element:
+      text: "Smart categories"
+    direction: UP
+    timeout: 30000
+- assertVisible: "Smart categories"
+- tapOn:
+    text: "Scan smart categories"
+- assertVisible:
+    text: "Scan smart categories"
+
+- scrollUntilVisible:
+    element:
       text: "Find duplicates"
     direction: UP
     timeout: 30000
