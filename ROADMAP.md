@@ -111,7 +111,7 @@ Exit gate:
 The design system is intentionally tokenized so later user-specific visual ideas can change colors, card language and composition without rewriting cleaner engines.
 
 ## MAXI STEP 7 — Product Expansion
-**Status: IN PROGRESS**
+**Status: COMPLETE**
 
 Scope selected after REUSE-FIRST comparison:
 - Smart Categories based on one local inventory pass;
@@ -141,8 +141,30 @@ Exit gate:
 See `STEP7_PRODUCT_EXPANSION.md`.
 
 ## MAXI STEP 8 — Localization & Accessibility
+**Status: IN PROGRESS**
 
-en/it/es/fr/pt, manual language selection, TalkBack, scaling and responsive layouts.
+Implemented:
+- complete EN / IT / ES / FR / PT resource bundles;
+- exact 284-key parity across all five locales;
+- exact format-placeholder parity;
+- manual System / EN / IT / ES / FR / PT language selector;
+- lightweight persisted locale override applied at Activity context boundary;
+- Android localeConfig for all supported locales;
+- TalkBack-friendly toggleable selection rows;
+- decorative glyphs removed from accessibility semantics;
+- progress semantics for the storage hero;
+- large-font resilience for action/filter rows and selection content;
+- version `0.9.0-recovery` / code 9.
+
+Exit gate:
+- resource key/placeholder parity PASS;
+- Android CI PASS;
+- AppLab Intelligence PASS;
+- AppLab runtime + Maestro PASS;
+- multi-screen visual journey PASS/WARN with no high-confidence visual failure;
+- Step 8 exact-head debug APK prerelease generated.
+
+See `STEP8_LOCALIZATION_ACCESSIBILITY.md`.
 
 ## MAXI STEP 9 — Performance & Deep QA
 
