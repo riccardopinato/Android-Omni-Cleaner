@@ -342,7 +342,7 @@ fun StorageCleanupSection(
                 ) { Text(stringResource(R.string.action_continue)) }
             },
             dismissButton = {
-                TextButton(onClick = { dialog = null }) { Text("Annulla") }
+                TextButton(onClick = { dialog = null }) { Text(stringResource(R.string.cancel)) }
             },
         )
 
