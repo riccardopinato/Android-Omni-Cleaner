@@ -10,10 +10,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -69,21 +68,17 @@ fun LanguageSelectorSection() {
             ) {
                 choices.forEach { choice ->
                     val selected = selectedTag == choice.tag
-                    if (selected) {
-                        Button(onClick = {}) {
-                            Text(choice.label)
-                        }
-                    } else {
-                        OutlinedButton(
-                            onClick = {
+                    FilterChip(
+                        selected = selected,
+                        onClick = {
+                            if (!selected) {
                                 selectedTag = choice.tag
                                 AppLanguage.setSelectedTag(context, choice.tag)
                                 context.findActivityForLanguage()?.recreate()
-                            },
-                        ) {
-                            Text(choice.label)
-                        }
-                    }
+                            }
+                        },
+                        label = { Text(choice.label) },
+                    )
                 }
             }
         }
