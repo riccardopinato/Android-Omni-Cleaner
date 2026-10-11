@@ -10,6 +10,7 @@ on:
       - "monetization/**"
       - "redesign/**"
       - "step-7-product-expansion"
+      - "step-8-localization-accessibility"
   pull_request:
     branches:
       - main
@@ -44,6 +45,9 @@ jobs:
 
       - name: Verify Gradle wrapper
         run: ./gradlew --version
+
+      - name: Verify locale resource parity
+        run: python3 .github/scripts/check-locales.py
 
       - name: Static analysis, tests and builds
         run: ./gradlew lintDebug testDebugUnitTest assembleDebug assembleRelease --stacktrace
