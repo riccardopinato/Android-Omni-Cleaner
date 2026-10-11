@@ -167,8 +167,30 @@ Exit gate:
 See `STEP8_LOCALIZATION_ACCESSIBILITY.md`.
 
 ## MAXI STEP 9 — Performance & Deep QA
+**Status: IN PROGRESS**
 
-Large libraries, low storage, cancellation, background/process death and low-end devices.
+Implemented:
+- duplicate 64 KiB prefix/suffix prefilter before full SHA-256;
+- full duplicate hashing remains cancellable and byte-verified;
+- MediaStore queries cancel with their coroutine;
+- stale Gallery queries are cancelled on filter/sort changes;
+- Gallery review memory and undo history are bounded;
+- EXIF export reduces redundant I/O while retaining end-to-end digest verification;
+- EXIF cancellation is propagated and temp-file failures are contained per item;
+- thumbnail hashing/cleanup traversal is cancellation-aware;
+- deterministic 1,253-file runtime performance fixture;
+- AppLab FULL plan enables performance, lifecycle, resource-pressure/process-death, background and storage labs;
+- version `0.10.0-recovery` / code 10.
+
+Exit gate:
+- Android CI PASS;
+- focused performance/correctness tests PASS;
+- AppLab Intelligence PASS;
+- AppLab FULL runtime + retained parity + accessibility journeys PASS;
+- deep labs execute with no blocking error, crash, ANR or OOM;
+- Step 9 exact-head APK prerelease generated.
+
+See `STEP9_PERFORMANCE_DEEP_QA.md`.
 
 ## MAXI STEP 10 — Store & Release Certification
 
