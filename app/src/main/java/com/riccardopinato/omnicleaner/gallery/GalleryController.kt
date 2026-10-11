@@ -109,14 +109,43 @@ class GalleryController(
             update(state.copy(error = context.getString(R.string.gallery_error_type_unavailable)))
             return
         }
-        update(state.copy(filter = filter, currentIndex = 0, history = emptyList(), error = null))
+        loadJob?.cancel()
+        loadJob = null
+        update(
+            state.copy(
+                filter = filter,
+                loading = false,
+                loadingNextPage = false,
+                hasMore = false,
+                items = emptyList(),
+                currentIndex = 0,
+                loadedSourceCount = 0,
+                history = emptyList(),
+                pendingTrashItems = emptyList(),
+                error = null,
+            ),
+        )
         scope.launch { preferences.saveFilterAndSort(filter, state.sortOrder) }
     }
 
     fun cycleSortOrder() {
         val values = GallerySortOrder.entries
         val next = values[(state.sortOrder.ordinal + 1) % values.size]
-        update(state.copy(sortOrder = next, currentIndex = 0, history = emptyList()))
+        loadJob?.cancel()
+        loadJob = null
+        update(
+            state.copy(
+                sortOrder = next,
+                loading = false,
+                loadingNextPage = false,
+                hasMore = false,
+                items = emptyList(),
+                currentIndex = 0,
+                loadedSourceCount = 0,
+                history = emptyList(),
+                pendingTrashItems = emptyList(),
+            ),
+        )
         scope.launch { preferences.saveFilterAndSort(state.filter, next) }
     }
 
