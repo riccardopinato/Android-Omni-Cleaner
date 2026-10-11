@@ -16,6 +16,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+enum class BillingError {
+    SERVICE_DISCONNECTED,
+    SERVICE_UNAVAILABLE,
+    NETWORK_ERROR,
+    BILLING_UNAVAILABLE,
+    DEVELOPER_ERROR,
+    PRODUCT_UNAVAILABLE,
+    ACKNOWLEDGEMENT_PENDING,
+    GENERIC,
+}
+
 data class BillingState(
     val connected: Boolean = false,
     val ownershipResolved: Boolean = false,
@@ -25,7 +36,7 @@ data class BillingState(
     val productAvailable: Boolean = false,
     val purchaseInProgress: Boolean = false,
     val restoreInProgress: Boolean = false,
-    val error: String? = null,
+    val error: BillingError? = null,
 )
 
 class BillingManager(
@@ -36,6 +47,7 @@ class BillingManager(
     val state: StateFlow<BillingState> = _state.asStateFlow()
 
     private var restoreAfterConnect = false
+    private var connectionInProgress = false
 
     private val billingClient = BillingClient.newBuilder(context.applicationContext)
         .setListener(this)
@@ -51,12 +63,15 @@ class BillingManager(
             queryProductDetails()
             return
         }
+        if (connectionInProgress) return
+        connectionInProgress = true
         billingClient.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(result: BillingResult) {
+                connectionInProgress = false
                 val ready = result.responseCode == BillingClient.BillingResponseCode.OK
                 _state.value = _state.value.copy(
                     connected = ready,
-                    error = if (ready) null else userMessage(result),
+                    error = if (ready) null else errorFor(result),
                 )
                 if (ready) {
                     val restoring = restoreAfterConnect
@@ -70,6 +85,7 @@ class BillingManager(
             }
 
             override fun onBillingServiceDisconnected() {
+                connectionInProgress = false
                 _state.value = _state.value.copy(connected = false)
             }
         })
@@ -109,7 +125,7 @@ class BillingManager(
             if (result.responseCode != BillingClient.BillingResponseCode.OK) {
                 _state.value = _state.value.copy(
                     restoreInProgress = false,
-                    error = userMessage(result),
+                    error = errorFor(result),
                 )
                 return@queryPurchasesAsync
             }
@@ -137,7 +153,7 @@ class BillingManager(
 
     fun launchBillingFlow(activity: Activity, onProductNotFound: () -> Unit = {}) {
         if (!billingClient.isReady) {
-            _state.value = _state.value.copy(error = "Google Play Billing non è disponibile al momento.")
+            _state.value = _state.value.copy(error = BillingError.SERVICE_UNAVAILABLE)
             onProductNotFound()
             return
         }
@@ -148,7 +164,7 @@ class BillingManager(
             if (result.responseCode != BillingClient.BillingResponseCode.OK) {
                 _state.value = _state.value.copy(
                     purchaseInProgress = false,
-                    error = userMessage(result),
+                    error = errorFor(result),
                 )
                 onProductNotFound()
                 return@queryProductDetailsAsync
@@ -162,7 +178,7 @@ class BillingManager(
                     purchaseInProgress = false,
                     productAvailable = false,
                     error = if (queryResult.unfetchedProductList.isNotEmpty()) {
-                        "Google Play non ha restituito il prodotto Premium per questo account/build."
+                        BillingError.PRODUCT_UNAVAILABLE
                     } else {
                         null
                     },
@@ -189,7 +205,7 @@ class BillingManager(
             if (launchResult.responseCode != BillingClient.BillingResponseCode.OK) {
                 _state.value = _state.value.copy(
                     purchaseInProgress = false,
-                    error = userMessage(launchResult),
+                    error = errorFor(launchResult),
                 )
             }
         }
@@ -236,20 +252,21 @@ class BillingManager(
             }
 
             else -> {
-                _state.value = _state.value.copy(error = userMessage(result))
+                _state.value = _state.value.copy(error = errorFor(result))
             }
         }
     }
 
     fun endConnection() {
-        if (billingClient.isReady) billingClient.endConnection()
+        connectionInProgress = false
+        billingClient.endConnection()
     }
 
     private fun queryProductDetails() {
         if (!billingClient.isReady) return
         billingClient.queryProductDetailsAsync(premiumProductQuery()) { result, queryResult ->
             if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-                _state.value = _state.value.copy(error = userMessage(result))
+                _state.value = _state.value.copy(error = errorFor(result))
                 return@queryProductDetailsAsync
             }
 
@@ -263,7 +280,7 @@ class BillingManager(
                 productAvailable = product != null,
                 priceLabel = offer?.formattedPrice,
                 error = if (product == null && queryResult.unfetchedProductList.isNotEmpty()) {
-                    "Prodotto Premium non disponibile per questa build/account."
+                    BillingError.PRODUCT_UNAVAILABLE
                 } else {
                     null
                 },
@@ -278,7 +295,7 @@ class BillingManager(
         billingClient.acknowledgePurchase(params) { result ->
             if (result.responseCode != BillingClient.BillingResponseCode.OK) {
                 _state.value = _state.value.copy(
-                    error = "Premium attivo, ma Google Play non ha ancora confermato la consegna. Riproveremo al prossimo controllo.",
+                    error = BillingError.ACKNOWLEDGEMENT_PENDING,
                 )
             }
         }
@@ -314,18 +331,18 @@ class BillingManager(
             )
             .build()
 
-    private fun userMessage(result: BillingResult): String = when (result.responseCode) {
+    private fun errorFor(result: BillingResult): BillingError = when (result.responseCode) {
         BillingClient.BillingResponseCode.SERVICE_DISCONNECTED ->
-            "Connessione a Google Play interrotta. Riprova."
+            BillingError.SERVICE_DISCONNECTED
         BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE ->
-            "Google Play Billing non è disponibile al momento."
+            BillingError.SERVICE_UNAVAILABLE
         BillingClient.BillingResponseCode.NETWORK_ERROR ->
-            "Connessione di rete non disponibile per Google Play."
+            BillingError.NETWORK_ERROR
         BillingClient.BillingResponseCode.BILLING_UNAVAILABLE ->
-            "Gli acquisti Google Play non sono disponibili su questo dispositivo/account."
+            BillingError.BILLING_UNAVAILABLE
         BillingClient.BillingResponseCode.DEVELOPER_ERROR ->
-            "Configurazione Google Play Billing non valida per questa build."
-        else -> "Google Play Billing: operazione non completata."
+            BillingError.DEVELOPER_ERROR
+        else -> BillingError.GENERIC
     }
 
     companion object {
