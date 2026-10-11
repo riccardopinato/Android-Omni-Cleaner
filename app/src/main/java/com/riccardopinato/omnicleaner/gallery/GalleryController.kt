@@ -22,6 +22,7 @@ data class GalleryUiState(
     val items: List<GalleryMediaItem> = emptyList(),
     val currentIndex: Int = 0,
     val loadedSourceCount: Int = 0,
+    val sourceOffset: Int = 0,
     val history: List<GallerySwipeHistoryItem> = emptyList(),
     val pendingTrashItems: List<GalleryMediaItem> = emptyList(),
     val filter: GalleryMediaFilter = GalleryMediaFilter.ALL,
@@ -52,18 +53,36 @@ class GalleryController(
 
     private val observers = LinkedHashSet<(GalleryUiState) -> Unit>()
     private var loadJob: Job? = null
+    private var sessionLoaded = false
+    private var resumeMediaId = 0L
 
     init {
         refreshAccess()
-        scope.launch {
-            val session = preferences.sessionFlow.first()
-            update(
-                state.copy(
-                    filter = session.filter,
-                    sortOrder = session.sortOrder,
-                    totalReviewedCount = session.totalReviewedCount,
-                ),
-            )
+        scope.launch { restoreSessionIfNeeded() }
+    }
+
+    private suspend fun restoreSessionIfNeeded() {
+        if (sessionLoaded) return
+        val session = preferences.sessionFlow.first()
+        val restoredFilter = compatibleFilter(session.filter, state.accessHealth)
+        val cursorCompatible = restoredFilter == session.filter
+        resumeMediaId = if (cursorCompatible) session.lastMediaId else 0L
+        update(
+            state.copy(
+                filter = restoredFilter,
+                sortOrder = session.sortOrder,
+                totalReviewedCount = session.totalReviewedCount,
+                sourceOffset = if (cursorCompatible) session.sourceOffset.coerceAtLeast(0) else 0,
+                pendingTrashItems = if (cursorCompatible) {
+                    restorePendingTrashItems(session.pendingTrashRefs)
+                } else {
+                    emptyList()
+                },
+            ),
+        )
+        sessionLoaded = true
+        if (!cursorCompatible) {
+            preferences.saveFilterAndSort(restoredFilter, session.sortOrder)
         }
     }
 
@@ -88,6 +107,7 @@ class GalleryController(
                 items = if (clearLoadedMedia) emptyList() else state.items,
                 currentIndex = if (clearLoadedMedia) 0 else state.currentIndex,
                 loadedSourceCount = if (clearLoadedMedia) 0 else state.loadedSourceCount,
+                sourceOffset = if (clearLoadedMedia) 0 else state.sourceOffset,
                 history = if (clearLoadedMedia) emptyList() else state.history,
                 pendingTrashItems = if (clearLoadedMedia) emptyList() else state.pendingTrashItems,
                 hasMore = if (clearLoadedMedia) false else state.hasMore,
@@ -96,6 +116,10 @@ class GalleryController(
                 error = null,
             ),
         )
+        if (clearLoadedMedia) {
+            resumeMediaId = 0L
+            persistProgress()
+        }
     }
 
     fun setFilter(filter: GalleryMediaFilter) {
@@ -120,11 +144,13 @@ class GalleryController(
                 items = emptyList(),
                 currentIndex = 0,
                 loadedSourceCount = 0,
+                sourceOffset = 0,
                 history = emptyList(),
                 pendingTrashItems = emptyList(),
                 error = null,
             ),
         )
+        resumeMediaId = 0L
         scope.launch { preferences.saveFilterAndSort(filter, state.sortOrder) }
     }
 
@@ -142,10 +168,12 @@ class GalleryController(
                 items = emptyList(),
                 currentIndex = 0,
                 loadedSourceCount = 0,
+                sourceOffset = 0,
                 history = emptyList(),
                 pendingTrashItems = emptyList(),
             ),
         )
+        resumeMediaId = 0L
         scope.launch { preferences.saveFilterAndSort(state.filter, next) }
     }
 
@@ -156,18 +184,40 @@ class GalleryController(
         }
         loadJob?.cancel()
         loadJob = scope.launch {
-            update(state.copy(loading = true, loadingNextPage = false, error = null))
-            runCatching {
-                MediaStoreHelper.loadGalleryMediaCancellable(
+            try {
+                restoreSessionIfNeeded()
+                update(state.copy(loading = true, loadingNextPage = false, error = null))
+
+                val requestedOffset = state.sourceOffset.coerceAtLeast(0)
+                var loaded = MediaStoreHelper.loadGalleryMediaCancellable(
                     context = context,
                     filter = state.filter,
                     sortOrder = state.sortOrder,
                     limit = pageSize + 1,
-                    offset = 0,
+                    offset = requestedOffset,
                 )
-            }.onSuccess { loaded ->
+                var effectiveOffset = validatedGalleryResumeOffset(
+                    requestedOffset = requestedOffset,
+                    expectedMediaId = resumeMediaId,
+                    actualFirstMediaId = loaded.firstOrNull()?.id,
+                )
+                var pendingTrash = state.pendingTrashItems
+
+                if (effectiveOffset != requestedOffset) {
+                    loaded = MediaStoreHelper.loadGalleryMediaCancellable(
+                        context = context,
+                        filter = state.filter,
+                        sortOrder = state.sortOrder,
+                        limit = pageSize + 1,
+                        offset = 0,
+                    )
+                    effectiveOffset = 0
+                    pendingTrash = emptyList()
+                }
+
                 val hasMore = loaded.size > pageSize
                 val page = loaded.take(pageSize)
+                resumeMediaId = page.firstOrNull()?.id ?: 0L
                 update(
                     state.copy(
                         loading = false,
@@ -175,15 +225,23 @@ class GalleryController(
                         hasMore = hasMore,
                         items = page,
                         currentIndex = 0,
-                        loadedSourceCount = page.size,
+                        loadedSourceCount = effectiveOffset + page.size,
+                        sourceOffset = effectiveOffset,
                         history = emptyList(),
-                        pendingTrashItems = emptyList(),
+                        pendingTrashItems = pendingTrash,
                     ),
                 )
-            }.onFailure { error ->
-                if (error !is CancellationException) {
-                    update(state.copy(loading = false, loadingNextPage = false, error = error.message ?: error.javaClass.simpleName))
-                }
+                if (effectiveOffset != requestedOffset) persistProgress()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                update(
+                    state.copy(
+                        loading = false,
+                        loadingNextPage = false,
+                        error = error.message ?: error.javaClass.simpleName,
+                    ),
+                )
             }
         }
     }
@@ -194,15 +252,14 @@ class GalleryController(
         loadJob = scope.launch {
             val offset = state.loadedSourceCount
             update(state.copy(loadingNextPage = true, error = null))
-            runCatching {
-                MediaStoreHelper.loadGalleryMediaCancellable(
+            try {
+                val loaded = MediaStoreHelper.loadGalleryMediaCancellable(
                     context = context,
                     filter = state.filter,
                     sortOrder = state.sortOrder,
                     limit = pageSize + 1,
                     offset = offset,
                 )
-            }.onSuccess { loaded ->
                 val hasMore = loaded.size > pageSize
                 val consumed = loaded.take(pageSize)
                 val existingIds = buildSet {
@@ -218,10 +275,15 @@ class GalleryController(
                         items = state.items + page,
                     ),
                 )
-            }.onFailure { error ->
-                if (error !is CancellationException) {
-                    update(state.copy(loadingNextPage = false, error = error.message ?: error.javaClass.simpleName))
-                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                update(
+                    state.copy(
+                        loadingNextPage = false,
+                        error = error.message ?: error.javaClass.simpleName,
+                    ),
+                )
             }
         }
     }
@@ -246,6 +308,7 @@ class GalleryController(
                 currentIndex = last.previousIndex.coerceAtLeast(0),
                 history = state.history.dropLast(1),
                 pendingTrashItems = state.pendingTrashItems.filterNot { it.id == last.item.id },
+                sourceOffset = (state.sourceOffset - 1).coerceAtLeast(0),
                 totalReviewedCount = (state.totalReviewedCount - 1).coerceAtLeast(0),
             ),
         )
@@ -268,10 +331,21 @@ class GalleryController(
     fun onTrashResult(success: Boolean) {
         if (!success) return
         val removedIds = state.selectedForTrash.mapTo(HashSet()) { it.id }
+        val currentId = state.currentItem?.id
+        val remainingItems = state.items.filterNot { it.id in removedIds }
+        val nextIndex = currentId
+            ?.let { id -> remainingItems.indexOfFirst { it.id == id } }
+            ?.takeIf { it >= 0 }
+            ?: 0
+        val adjustedOffset = (state.sourceOffset - removedIds.size).coerceAtLeast(0)
+        val adjustedLoadedCount = (state.loadedSourceCount - removedIds.size).coerceAtLeast(0)
+
         update(
             state.copy(
-                items = state.items.filterNot { it.id in removedIds },
-                currentIndex = 0,
+                items = remainingItems,
+                currentIndex = nextIndex.coerceAtMost(remainingItems.size),
+                loadedSourceCount = adjustedLoadedCount,
+                sourceOffset = adjustedOffset,
                 history = emptyList(),
                 pendingTrashItems = emptyList(),
                 error = null,
@@ -300,6 +374,7 @@ class GalleryController(
             currentIndex = (previousIndex + 1).coerceAtMost(changedItems.size),
             history = (state.history + GallerySwipeHistoryItem(item, direction, previousIndex))
                 .takeLast(MAX_UNDO_HISTORY),
+            sourceOffset = state.sourceOffset + 1,
             totalReviewedCount = state.totalReviewedCount + 1,
         )
         update(compactReviewWindow(nextState))
@@ -315,13 +390,43 @@ class GalleryController(
 
     private fun persistProgress() {
         val current = state.currentItem
+        resumeMediaId = current?.id ?: 0L
+        val pendingRefs = state.selectedForTrash
+            .mapTo(linkedSetOf()) { encodePersistedTrashRef(it.id, it.uri.toString()) }
         scope.launch {
             preferences.saveProgress(
-                lastMediaId = current?.id ?: 0L,
+                lastMediaId = resumeMediaId,
                 lastMediaIndex = state.currentIndex,
+                sourceOffset = state.sourceOffset,
+                pendingTrashRefs = pendingRefs,
                 totalReviewedCount = state.totalReviewedCount,
             )
         }
+    }
+
+    private fun restorePendingTrashItems(rawRefs: Set<String>): List<GalleryMediaItem> =
+        rawRefs.mapNotNull(::decodePersistedTrashRef).map { ref ->
+            val isVideo = ref.uri.contains("/video/", ignoreCase = true)
+            GalleryMediaItem(
+                id = ref.id,
+                uri = android.net.Uri.parse(ref.uri),
+                name = "Media_${ref.id}",
+                sizeBytes = 0L,
+                dateTaken = 0L,
+                mimeType = if (isVideo) "video/*" else "image/*",
+                album = null,
+                isSelectedForTrash = true,
+            )
+        }
+
+    private fun compatibleFilter(
+        requested: GalleryMediaFilter,
+        health: GalleryAccessHealth,
+    ): GalleryMediaFilter = when {
+        health.level == GalleryAccessLevel.NONE -> requested
+        health.canReadImages && !health.canReadVideos -> GalleryMediaFilter.IMAGES
+        health.canReadVideos && !health.canReadImages -> GalleryMediaFilter.VIDEOS
+        else -> requested
     }
 
     private fun compactReviewWindow(candidate: GalleryUiState): GalleryUiState {
@@ -364,4 +469,34 @@ class GalleryController(
         const val MAX_REVIEWED_ITEMS_IN_MEMORY = 240
         const val RETAIN_REVIEWED_ITEMS = 60
     }
+}
+
+
+internal data class PersistedTrashRef(
+    val id: Long,
+    val uri: String,
+)
+
+internal fun encodePersistedTrashRef(id: Long, uri: String): String =
+    "$id\t$uri"
+
+internal fun decodePersistedTrashRef(raw: String): PersistedTrashRef? {
+    val separator = raw.indexOf('\t')
+    if (separator <= 0 || separator >= raw.lastIndex) return null
+    val id = raw.substring(0, separator).toLongOrNull()?.takeIf { it > 0L } ?: return null
+    val uri = raw.substring(separator + 1).takeIf { it.startsWith("content://") } ?: return null
+    return PersistedTrashRef(id = id, uri = uri)
+}
+
+internal fun validatedGalleryResumeOffset(
+    requestedOffset: Int,
+    expectedMediaId: Long,
+    actualFirstMediaId: Long?,
+): Int {
+    val safeOffset = requestedOffset.coerceAtLeast(0)
+    if (safeOffset == 0) return 0
+    if (expectedMediaId <= 0L) {
+        return if (actualFirstMediaId == null) safeOffset else 0
+    }
+    return if (actualFirstMediaId == expectedMediaId) safeOffset else 0
 }
