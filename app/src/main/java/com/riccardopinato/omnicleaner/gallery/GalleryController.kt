@@ -53,6 +53,7 @@ class GalleryController(
 
     private val observers = LinkedHashSet<(GalleryUiState) -> Unit>()
     private var loadJob: Job? = null
+    private var persistJob: Job? = null
     private var sessionLoaded = false
     private var resumeMediaId = 0L
 
@@ -151,7 +152,10 @@ class GalleryController(
             ),
         )
         resumeMediaId = 0L
-        scope.launch { preferences.saveFilterAndSort(filter, state.sortOrder) }
+        persistJob?.cancel()
+        persistJob = scope.launch {
+            preferences.saveFilterAndSort(filter, state.sortOrder)
+        }
     }
 
     fun cycleSortOrder() {
@@ -174,7 +178,10 @@ class GalleryController(
             ),
         )
         resumeMediaId = 0L
-        scope.launch { preferences.saveFilterAndSort(state.filter, next) }
+        persistJob?.cancel()
+        persistJob = scope.launch {
+            preferences.saveFilterAndSort(state.filter, next)
+        }
     }
 
     fun load(pageSize: Int = DEFAULT_PAGE_SIZE) {
@@ -393,7 +400,8 @@ class GalleryController(
         resumeMediaId = current?.id ?: 0L
         val pendingRefs = state.selectedForTrash
             .mapTo(linkedSetOf()) { encodePersistedTrashRef(it.id, it.uri.toString()) }
-        scope.launch {
+        persistJob?.cancel()
+        persistJob = scope.launch {
             preferences.saveProgress(
                 lastMediaId = resumeMediaId,
                 lastMediaIndex = state.currentIndex,
