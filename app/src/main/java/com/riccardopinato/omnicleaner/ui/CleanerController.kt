@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.BigFileItem
 import com.riccardopinato.omnicleaner.cleaner.BigFileSizeFilter
 import com.riccardopinato.omnicleaner.cleaner.DuplicateGroup
@@ -120,12 +121,12 @@ internal class CleanerController(
         )
     }
 
-    fun scanOverview() = runScan("Storage overview") {
+    fun scanOverview() = runScan(context.getString(R.string.module_storage_overview)) {
         val overview = overviewScanner.scan(StorageAccess.primaryRoot())
         state = state.copy(overview = overview)
     }
 
-    fun scanFolders() = runScan("Folders") {
+    fun scanFolders() = runScan(context.getString(R.string.module_folders)) {
         val folders = fileScanner.scanFolders(
             root = StorageAccess.primaryRoot(),
             smallFolderThresholdBytes = state.folderThresholdBytes,
@@ -144,7 +145,7 @@ internal class CleanerController(
 
     fun scanBigFiles(
         minimumBytes: Long = state.bigFileSizeFilter.minimumBytes,
-    ) = runScan("Large files") {
+    ) = runScan(context.getString(R.string.module_large_files)) {
         val files = fileScanner.findBigFiles(StorageAccess.primaryRoot(), minimumBytes)
         state = state.copy(bigFiles = files, bigFilesScanned = true)
     }
@@ -166,7 +167,7 @@ internal class CleanerController(
         if (state.hasBroadAccess) scanBigFiles(filter.minimumBytes)
     }
 
-    fun scanDuplicates() = runScan("Duplicates") {
+    fun scanDuplicates() = runScan(context.getString(R.string.module_duplicates)) {
         val groups = fileScanner.findDuplicates(StorageAccess.primaryRoot())
         state = state.copy(duplicates = groups, duplicatesScanned = true)
     }
@@ -179,7 +180,7 @@ internal class CleanerController(
 
     private fun runScan(label: String, block: suspend () -> Unit) {
         if (!state.hasBroadAccess) {
-            state = state.copy(error = "Deep Cleaning access is required before a full-device scan.")
+            state = state.copy(error = context.getString(R.string.deep_cleaning_access_required))
             return
         }
         scanJob?.cancel()
