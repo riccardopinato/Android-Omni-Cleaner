@@ -252,7 +252,7 @@ class BillingManager(
             }
 
             else -> {
-                _state.value = _state.value.copy(error = userMessage(result))
+                _state.value = _state.value.copy(error = errorFor(result))
             }
         }
     }
@@ -266,7 +266,7 @@ class BillingManager(
         if (!billingClient.isReady) return
         billingClient.queryProductDetailsAsync(premiumProductQuery()) { result, queryResult ->
             if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-                _state.value = _state.value.copy(error = userMessage(result))
+                _state.value = _state.value.copy(error = errorFor(result))
                 return@queryProductDetailsAsync
             }
 
