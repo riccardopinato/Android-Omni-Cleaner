@@ -1,5 +1,6 @@
 package com.riccardopinato.omnicleaner.cleaner
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -50,6 +51,29 @@ class FileInventoryScannerTest {
         } finally {
             root.deleteRecursively()
         }
+    }
+
+    @Test
+    fun nullableUnlessCancelledRethrowsCancellation() = runBlocking {
+        var propagated = false
+        try {
+            nullableUnlessCancelled<Unit> {
+                throw CancellationException("cancel")
+            }
+        } catch (_: CancellationException) {
+            propagated = true
+        }
+
+        assertTrue(propagated)
+    }
+
+    @Test
+    fun nullableUnlessCancelledContainsOrdinaryIoFailure() = runBlocking {
+        val value = nullableUnlessCancelled<String> {
+            error("io-like failure")
+        }
+
+        assertEquals(null, value)
     }
 
     @Test
