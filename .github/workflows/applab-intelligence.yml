@@ -10,6 +10,7 @@ on:
       - "monetization/**"
       - "redesign/**"
       - "step-7-product-expansion"
+      - "step-8-localization-accessibility"
   pull_request:
     branches:
       - main
