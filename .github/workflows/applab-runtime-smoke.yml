@@ -393,3 +393,46 @@ jobs:
 
           echo "Step 8 APK SHA-256: $APK_SHA256" >> "$GITHUB_STEP_SUMMARY"
           echo "Release tag: $TAG" >> "$GITHUB_STEP_SUMMARY"
+
+
+      - name: Publish Step 9 performance deep-QA APK prerelease
+        if: success() && github.ref == 'refs/heads/step-9-performance-deep-qa'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          APK="$GITHUB_WORKSPACE/target/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+
+          SHORT_SHA="${GITHUB_SHA:0:12}"
+          TAG="step9-performance-$SHORT_SHA"
+          ASSET="Android-Omni-Cleaner-Step9-$SHORT_SHA-debug.apk"
+          HASH_FILE="$ASSET.sha256"
+
+          cp "$APK" "$RUNNER_TEMP/$ASSET"
+          APK_SHA256="$(sha256sum "$RUNNER_TEMP/$ASSET" | awk '{print $1}')"
+          printf '%s  %s\n' "$APK_SHA256" "$ASSET" > "$RUNNER_TEMP/$HASH_FILE"
+
+          NOTES="$RUNNER_TEMP/step9-release-notes.md"
+          {
+            echo "# Android Omni Cleaner — Step 9 performance & deep QA APK"
+            echo "- Source SHA: $GITHUB_SHA"
+            echo "- APK SHA-256: $APK_SHA256"
+            echo "- Version: 0.10.0-recovery / code 10"
+            echo "- Large-library duplicate prefilter + cancellable full verification"
+            echo "- Bounded Gallery review memory + cancellable MediaStore queries"
+            echo "- Reduced-I/O EXIF export with end-to-end verification retained"
+            echo "- AppLab FULL: performance/lifecycle/process-death/background/storage enabled"
+            echo "- Runtime dataset: deterministic 1,253-file fixture"
+            echo "- Not a store release and not physical-device certified"
+          } > "$NOTES"
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Step 9 performance & deep QA APK · $SHORT_SHA" --notes-file "$NOTES" --prerelease
+          fi
+
+          echo "Step 9 APK SHA-256: $APK_SHA256" >> "$GITHUB_STEP_SUMMARY"
+          echo "Release tag: $TAG" >> "$GITHUB_STEP_SUMMARY"
