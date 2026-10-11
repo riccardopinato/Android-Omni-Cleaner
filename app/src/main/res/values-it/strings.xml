@@ -52,6 +52,51 @@
     <string name="pro_batch_scan">Avvia analisi Pro</string>
     <string name="privacy_options">Opzioni privacy</string>
 
+    <string name="nav_home">Home</string>
+    <string name="nav_clean">Pulisci</string>
+    <string name="nav_gallery">Galleria</string>
+    <string name="nav_privacy">Privacy</string>
+    <string name="nav_pro">Pro</string>
+
+    <string name="redesign_home_eyebrow">Spazio, più semplice</string>
+    <string name="redesign_home_subtitle">Una vista chiara di ciò che occupa memoria, con azioni sicure sempre sotto il tuo controllo.</string>
+    <string name="redesign_storage_detail">%1$s liberi su %2$s totali</string>
+    <string name="redesign_storage_waiting">Preparazione informazioni memoria</string>
+    <string name="redesign_metric_large_files">File grandi</string>
+    <string name="redesign_metric_duplicates">Gruppi duplicati</string>
+    <string name="redesign_metric_folders">Cartelle analizzate</string>
+    <string name="redesign_quick_analyze">Analizza memoria</string>
+    <string name="redesign_quick_analyze_subtitle">Scopri dove finisce lo spazio</string>
+    <string name="redesign_quick_duplicates">Trova duplicati</string>
+    <string name="redesign_quick_duplicates_subtitle">Mantieni una copia verificata</string>
+    <string name="redesign_quick_gallery_subtitle">Revisiona foto e video</string>
+    <string name="redesign_quick_privacy_subtitle">Esporta copie JPEG pulite</string>
+    <string name="redesign_access_title">Accesso alla pulizia</string>
+    <string name="redesign_standard_ready">Pulizia Standard pronta</string>
+    <string name="redesign_deep_ready">Pulizia Profonda attiva per l’analisi completa del dispositivo.</string>
+    <string name="redesign_deep_optional">Pulizia Profonda è opzionale. Pulizia Standard resta disponibile senza accesso esteso ai file.</string>
+    <string name="redesign_open_clean_workspace">Apri area pulizia</string>
+    <string name="redesign_pro_card_title">Vai oltre con Pro</string>
+    <string name="redesign_pro_card_body">Strumenti Pro combinati, sblocco a vita una tantum e nessuna richiesta pubblicitaria.</string>
+
+    <string name="redesign_clean_eyebrow">Pulizia Profonda</string>
+    <string name="redesign_clean_subtitle">Analizza, revisiona e pulisci privilegiando azioni reversibili o mediate da Android.</string>
+    <string name="redesign_deep_locked_title">Pulizia Profonda è opzionale</string>
+    <string name="redesign_deep_locked_body">Attivala solo quando vuoi analisi complete di cartelle, file grandi e duplicati.</string>
+    <string name="redesign_filters_title">Filtri e soglie</string>
+    <string name="redesign_search_folders">Cerca cartelle</string>
+    <string name="redesign_search_large">Cerca file grandi</string>
+    <string name="redesign_search_duplicates">Cerca duplicati</string>
+    <string name="redesign_large_threshold">Soglia file grandi</string>
+    <string name="redesign_small_folder_threshold">Soglia cartelle piccole</string>
+
+    <string name="redesign_media_eyebrow">Media</string>
+    <string name="redesign_gallery_subtitle">Revisiona foto e video uno alla volta prima che Android sposti qualsiasi elemento nel cestino di sistema.</string>
+    <string name="redesign_privacy_eyebrow">Metadati</string>
+    <string name="redesign_privacy_subtitle">Rimuovi i metadati EXIF selezionati esportando copie pulite verificate. Gli originali restano intatti.</string>
+    <string name="redesign_pro_eyebrow">Premium</string>
+    <string name="redesign_pro_subtitle">Sblocco una tantum per strumenti Pro combinati ed esperienza senza pubblicità.</string>
+
     <string name="billing_error_service_disconnected">Connessione a Google Play interrotta. Riprova.</string>
     <string name="billing_error_service_unavailable">Google Play Billing non è disponibile al momento.</string>
     <string name="billing_error_network">Serve una connessione di rete per raggiungere Google Play.</string>

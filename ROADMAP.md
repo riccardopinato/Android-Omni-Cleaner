@@ -58,7 +58,7 @@ Step 4 evidence:
 - physical OEM/storage/SAF behavior remains a separate validation gate.
 
 ## MAXI STEP 5 — Monetization Productization
-**Status: IN PROGRESS**
+**Status: COMPLETE — PROVIDER/PLAY VALIDATION BLOCKED**
 
 Implemented in source:
 - Billing Library 9.1.0;
@@ -85,8 +85,30 @@ External blockers:
 - app-ads.txt.
 
 ## MAXI STEP 6 — UI/UX Redesign
+**Status: IN PROGRESS**
 
-Apply the user's later design ideas without rewriting recovered engines.
+Implemented:
+- new colorful design system with fixed light/dark identity;
+- recovery mega-scroll replaced by five stable destinations: Home, Clean, Gallery, Privacy, Pro;
+- storage hero with capacity progress;
+- horizontal metrics and quick-action cards;
+- bottom navigation with persistent destination state;
+- dedicated cleaning workspace for scans, filters and results;
+- Gallery / EXIF / Pro moved to focused surfaces;
+- old recovery shell removed after replacement;
+- no new heavy icon/navigation dependency;
+- version `0.7.0-recovery` / code 7;
+- dedicated Step 6 Maestro journey;
+- AppLab custom visual journey for all five primary destinations.
+
+Exit gate:
+- Android CI PASS;
+- AppLab Intelligence PASS;
+- AppLab runtime + Maestro PASS;
+- multi-screen visual journey PASS/WARN with no high-confidence visual failure;
+- Step 6 debug APK prerelease generated.
+
+The design system is intentionally tokenized so later user-specific visual ideas can change colors, card language and composition without rewriting cleaner engines.
 
 ## MAXI STEP 7 — Product Expansion
 

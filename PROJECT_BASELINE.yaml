@@ -1,8 +1,8 @@
 project:
   repository: riccardopinato/Android-Omni-Cleaner
-  status: MONETIZATION_PRODUCTIZATION_IN_PROGRESS
+  status: UI_UX_REDESIGN_IN_PROGRESS
   recovery_started_at: 2026-10-09
-  current_maxi_step: 5
+  current_maxi_step: 6
 
 factory:
   repository: riccardopinato/App-Factory-Core
@@ -36,8 +36,8 @@ identity:
   debug_application_id: com.riccardopinato.omnicleaner.debug
   legacy_application_id: com.aistudio.foldercleaner.zjijip
   donor_apk_sha256: c77f48bbbac1d8e5e16ee44dab67346f3caa0f846bd117e5b05d2cb3b2a88310
-  recovery_version_name: "0.6.0-recovery"
-  recovery_version_code: 6
+  recovery_version_name: "0.7.0-recovery"
+  recovery_version_code: 7
   signing_lane: internal_pending
 
 parity:
@@ -102,3 +102,21 @@ monetization:
   server_side_verification: recommended_future_hardening
   production_ads_configured: false
   play_internal_testing: blocked_until_provider_setup
+
+ui_redesign:
+  status: implementation_complete_validation_pending
+  shell: multi_surface_bottom_navigation
+  destinations:
+    - home
+    - clean
+    - gallery
+    - privacy
+    - pro
+  colorful_consumer_identity: true
+  dark_mode: true
+  recovery_mega_scroll_removed: true
+  old_recovery_shell_removed: true
+  heavy_navigation_dependency_added: false
+  engine_changes: none
+  maestro_flow: .maestro/ui-redesign.yaml
+  applab_visual_journey: .maestro/applab-journey.json

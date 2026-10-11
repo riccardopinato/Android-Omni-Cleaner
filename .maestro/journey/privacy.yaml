@@ -1,0 +1,7 @@
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Privacy"
+- assertVisible: "EXIF Privacy"

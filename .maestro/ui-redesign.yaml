@@ -1,0 +1,58 @@
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+- assertVisible: "Android Omni Cleaner"
+- assertVisible: "Home"
+- assertVisible: "Analyze storage"
+
+- tapOn:
+    text: "Clean"
+- assertVisible: "Deep Cleaning"
+- assertVisible: "Analyze storage"
+- tapOn:
+    text: "Analyze storage"
+- scrollUntilVisible:
+    element:
+      text: "Storage overview"
+    direction: DOWN
+    timeout: 120000
+    speed: 50
+- assertVisible: "Storage overview"
+
+- scrollUntilVisible:
+    element:
+      text: "Find duplicates"
+    direction: UP
+    timeout: 30000
+- tapOn:
+    text: "Find duplicates"
+- scrollUntilVisible:
+    element:
+      text: "a.txt"
+    direction: DOWN
+    timeout: 120000
+    speed: 50
+- assertVisible: "a.txt"
+
+- tapOn:
+    text: "Gallery"
+- assertVisible: "Gallery Cleaner"
+
+- tapOn:
+    text: "Privacy"
+- assertVisible: "EXIF Privacy"
+
+- tapOn:
+    text: "Pro"
+- assertVisible: "Omni Cleaner Pro"
+- scrollUntilVisible:
+    element:
+      text: "Restore purchase"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Restore purchase"
+
+- tapOn:
+    text: "Home"
+- assertVisible: "Android Omni Cleaner"

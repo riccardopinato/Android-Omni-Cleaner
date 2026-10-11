@@ -1,0 +1,8 @@
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Home"
+- assertVisible: "Android Omni Cleaner"
+- assertVisible: "Analyze storage"
