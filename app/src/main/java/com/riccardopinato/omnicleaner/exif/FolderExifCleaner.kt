@@ -134,8 +134,11 @@ class FolderExifCleaner(
 
             var temp: File? = null
             try {
-                temp = File.createTempFile("omni-exif-", ".jpg", context.cacheDir)
-                val workingFile = temp
+                val workingFile = File.createTempFile(
+                    "omni-exif-",
+                    ".jpg",
+                    context.cacheDir,
+                ).also { temp = it }
 
                 val originalDigest = resolver.openInputStream(candidate.uri)?.use { input ->
                     FileOutputStream(workingFile).use { output ->
