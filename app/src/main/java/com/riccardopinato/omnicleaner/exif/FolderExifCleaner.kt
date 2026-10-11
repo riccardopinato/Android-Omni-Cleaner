@@ -133,6 +133,7 @@ class FolderExifCleaner(
             onProgress(index, scan.candidates.size)
 
             var temp: File? = null
+            var unverifiedOutput: DocumentFile? = null
             try {
                 val workingFile = File.createTempFile(
                     "omni-exif-",
@@ -166,6 +167,7 @@ class FolderExifCleaner(
                 val outputName = cleanedName(candidate.name)
                 val output = createUniqueJpeg(destinationRoot, outputName)
                     ?: error("Impossibile creare il file di destinazione")
+                unverifiedOutput = output
 
                 val cleanedDigest = resolver.openOutputStream(output.uri, "w")?.use { target ->
                     FileInputStream(workingFile).use { source ->
@@ -183,14 +185,16 @@ class FolderExifCleaner(
                 if (!exportedDigest.contentEquals(cleanedDigest)) {
                     incomplete += candidate.name
                     onIncomplete(candidate.name)
-                    runCatching { output.delete() }
                     error("Copia esportata incompleta")
                 }
 
+                unverifiedOutput = null
                 created++
             } catch (error: CancellationException) {
+                runCatching { unverifiedOutput?.delete() }
                 throw error
             } catch (error: Throwable) {
+                runCatching { unverifiedOutput?.delete() }
                 failed++
                 errors += "${candidate.name}: ${error.message ?: error.javaClass.simpleName}"
             } finally {
