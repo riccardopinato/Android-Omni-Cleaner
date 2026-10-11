@@ -21,7 +21,9 @@ data class GalleryUiState(
     val hasMore: Boolean = false,
     val items: List<GalleryMediaItem> = emptyList(),
     val currentIndex: Int = 0,
+    val loadedSourceCount: Int = 0,
     val history: List<GallerySwipeHistoryItem> = emptyList(),
+    val pendingTrashItems: List<GalleryMediaItem> = emptyList(),
     val filter: GalleryMediaFilter = GalleryMediaFilter.ALL,
     val sortOrder: GallerySortOrder = GallerySortOrder.DATE_DESC,
     val totalReviewedCount: Int = 0,
@@ -34,7 +36,10 @@ data class GalleryUiState(
         get() = items.getOrNull(currentIndex)
 
     val selectedForTrash: List<GalleryMediaItem>
-        get() = items.filter { it.isSelectedForTrash }
+        get() = (pendingTrashItems.asSequence() +
+            items.asSequence().filter { it.isSelectedForTrash })
+            .distinctBy { it.id }
+            .toList()
 }
 
 class GalleryController(
@@ -82,7 +87,9 @@ class GalleryController(
                 filter = compatibleFilter,
                 items = if (clearLoadedMedia) emptyList() else state.items,
                 currentIndex = if (clearLoadedMedia) 0 else state.currentIndex,
+                loadedSourceCount = if (clearLoadedMedia) 0 else state.loadedSourceCount,
                 history = if (clearLoadedMedia) emptyList() else state.history,
+                pendingTrashItems = if (clearLoadedMedia) emptyList() else state.pendingTrashItems,
                 hasMore = if (clearLoadedMedia) false else state.hasMore,
                 loading = if (clearLoadedMedia) false else state.loading,
                 loadingNextPage = if (clearLoadedMedia) false else state.loadingNextPage,
@@ -139,7 +146,9 @@ class GalleryController(
                         hasMore = hasMore,
                         items = page,
                         currentIndex = 0,
+                        loadedSourceCount = page.size,
                         history = emptyList(),
+                        pendingTrashItems = emptyList(),
                     ),
                 )
             }.onFailure { error ->
@@ -154,7 +163,7 @@ class GalleryController(
         if (!state.hasAccess || !state.hasMore || state.loading || state.loadingNextPage) return
 
         loadJob = scope.launch {
-            val offset = state.items.size
+            val offset = state.loadedSourceCount
             update(state.copy(loadingNextPage = true, error = null))
             runCatching {
                 MediaStoreHelper.loadGalleryMediaCancellable(
@@ -166,12 +175,17 @@ class GalleryController(
                 )
             }.onSuccess { loaded ->
                 val hasMore = loaded.size > pageSize
-                val existingIds = state.items.mapTo(HashSet()) { it.id }
-                val page = loaded.take(pageSize).filterNot { it.id in existingIds }
+                val consumed = loaded.take(pageSize)
+                val existingIds = buildSet {
+                    state.items.mapTo(this) { it.id }
+                    state.pendingTrashItems.mapTo(this) { it.id }
+                }
+                val page = consumed.filterNot { it.id in existingIds }
                 update(
                     state.copy(
                         loadingNextPage = false,
                         hasMore = hasMore,
+                        loadedSourceCount = offset + consumed.size,
                         items = state.items + page,
                     ),
                 )
@@ -202,6 +216,7 @@ class GalleryController(
                 items = restoredItems,
                 currentIndex = last.previousIndex.coerceAtLeast(0),
                 history = state.history.dropLast(1),
+                pendingTrashItems = state.pendingTrashItems.filterNot { it.id == last.item.id },
                 totalReviewedCount = (state.totalReviewedCount - 1).coerceAtLeast(0),
             ),
         )
@@ -229,6 +244,7 @@ class GalleryController(
                 items = state.items.filterNot { it.id in removedIds },
                 currentIndex = 0,
                 history = emptyList(),
+                pendingTrashItems = emptyList(),
                 error = null,
             ),
         )
@@ -250,14 +266,14 @@ class GalleryController(
             state.items
         }
 
-        update(
-            state.copy(
-                items = changedItems,
-                currentIndex = (previousIndex + 1).coerceAtMost(changedItems.size),
-                history = state.history + GallerySwipeHistoryItem(item, direction, previousIndex),
-                totalReviewedCount = state.totalReviewedCount + 1,
-            ),
+        val nextState = state.copy(
+            items = changedItems,
+            currentIndex = (previousIndex + 1).coerceAtMost(changedItems.size),
+            history = (state.history + GallerySwipeHistoryItem(item, direction, previousIndex))
+                .takeLast(MAX_UNDO_HISTORY),
+            totalReviewedCount = state.totalReviewedCount + 1,
         )
+        update(compactReviewWindow(nextState))
         persistProgress()
         if (
             state.hasMore &&
@@ -279,6 +295,31 @@ class GalleryController(
         }
     }
 
+    private fun compactReviewWindow(candidate: GalleryUiState): GalleryUiState {
+        if (candidate.currentIndex <= MAX_REVIEWED_ITEMS_IN_MEMORY) return candidate
+
+        val removeCount = candidate.currentIndex - RETAIN_REVIEWED_ITEMS
+        if (removeCount <= 0) return candidate
+
+        val removed = candidate.items.take(removeCount)
+        val retainedTrash = (candidate.pendingTrashItems.asSequence() +
+            removed.asSequence().filter { it.isSelectedForTrash })
+            .distinctBy { it.id }
+            .toList()
+
+        val adjustedHistory = candidate.history.mapNotNull { entry ->
+            val adjustedIndex = entry.previousIndex - removeCount
+            if (adjustedIndex < 0) null else entry.copy(previousIndex = adjustedIndex)
+        }
+
+        return candidate.copy(
+            items = candidate.items.drop(removeCount),
+            currentIndex = candidate.currentIndex - removeCount,
+            history = adjustedHistory,
+            pendingTrashItems = retainedTrash,
+        )
+    }
+
     private fun update(newState: GalleryUiState) {
         state = newState
         observers.toList().forEach { it(newState) }
@@ -287,5 +328,8 @@ class GalleryController(
     private companion object {
         const val DEFAULT_PAGE_SIZE = 120
         const val PREFETCH_DISTANCE = 12
+        const val MAX_UNDO_HISTORY = 50
+        const val MAX_REVIEWED_ITEMS_IN_MEMORY = 240
+        const val RETAIN_REVIEWED_ITEMS = 60
     }
 }
