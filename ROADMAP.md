@@ -85,7 +85,7 @@ External blockers:
 - app-ads.txt.
 
 ## MAXI STEP 6 — UI/UX Redesign
-**Status: IN PROGRESS**
+**Status: COMPLETE**
 
 Implemented:
 - new colorful design system with fixed light/dark identity;
@@ -111,8 +111,34 @@ Exit gate:
 The design system is intentionally tokenized so later user-specific visual ideas can change colors, card language and composition without rewriting cleaner engines.
 
 ## MAXI STEP 7 — Product Expansion
+**Status: IN PROGRESS**
 
-Evaluate new cleaner capabilities without fake RAM/CPU/battery/antivirus claims.
+Scope selected after REUSE-FIRST comparison:
+- Smart Categories based on one local inventory pass;
+- Old Downloads (90+ days);
+- installer packages (APK/APKS/XAPK/APKM);
+- archives (ZIP/RAR/7Z/TAR/GZ and related formats);
+- screenshots by folder/name signal;
+- no automatic selection or automatic deletion;
+- scan-bound snapshot revalidation before any mutation;
+- media remain mediated by Android Trash;
+- small non-media can use verified Safe Trash;
+- unsupported irreversible deletion remains blocked.
+
+Explicitly deferred:
+- perceptual/similar-photo hashing until performance work is ready;
+- Shizuku/root expansion;
+- scheduled/background deletion;
+- RAM/CPU/battery/antivirus claims.
+
+Exit gate:
+- focused JVM classification tests PASS;
+- Android CI PASS;
+- AppLab Intelligence PASS;
+- AppLab runtime + Maestro PASS/WARN with no high-confidence failure;
+- Step 7 exact-head APK prerelease generated.
+
+See `STEP7_PRODUCT_EXPANSION.md`.
 
 ## MAXI STEP 8 — Localization & Accessibility
 

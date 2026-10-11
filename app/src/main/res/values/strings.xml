@@ -105,4 +105,26 @@
     <string name="billing_error_product_unavailable">Premium is unavailable for this build or Google Play account.</string>
     <string name="billing_error_acknowledgement_pending">Premium is active, but Google Play has not confirmed delivery yet. It will be checked again automatically.</string>
     <string name="billing_error_generic">The Google Play Billing operation could not be completed.</string>
+
+    <string name="smart_categories_title">Smart categories</string>
+    <string name="smart_categories_body">Review likely cleanup candidates without automatic deletion: old downloads, installer packages, archives and screenshots.</string>
+    <string name="smart_categories_scan">Scan smart categories</string>
+    <string name="smart_categories_scanning">Scanning one local file inventory…</string>
+    <string name="smart_categories_empty">No review candidates found.</string>
+    <string name="smart_categories_candidate_summary">%1$d candidates · %2$s unique</string>
+    <string name="smart_categories_more_candidates">+ %1$d more candidates not shown</string>
+    <string name="smart_categories_cleanup_selected">Review selected (%1$d)</string>
+    <string name="smart_categories_partial_scan">Partial scan · %1$d unreadable locations · %2$d excluded directories</string>
+    <string name="smart_categories_confirm_title">Move selected candidates?</string>
+    <string name="smart_categories_confirm_body">Every file is revalidated against the scan snapshot. Media uses Android Trash. Small non-media files use Safe Trash when reversible cleanup can be verified. Unsupported files remain unchanged.</string>
+    <string name="smart_categories_confirm">Continue</string>
+    <string name="smart_categories_close">Close</string>
+    <string name="smart_categories_no_selection">No candidates selected.</string>
+    <string name="smart_categories_android_trash_cancelled">Android Trash operation cancelled.</string>
+    <string name="smart_categories_trash_unavailable">Android Trash is unavailable for the selected media.</string>
+    <string name="smart_category_old_downloads">Old downloads · 90d+</string>
+    <string name="smart_category_installers">Installers</string>
+    <string name="smart_category_archives">Archives</string>
+    <string name="smart_category_screenshots">Screenshots</string>
+
 </resources>

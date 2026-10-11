@@ -9,6 +9,7 @@ on:
       - "hardening/**"
       - "monetization/**"
       - "redesign/**"
+      - "step-7-product-expansion"
   pull_request:
     branches:
       - main

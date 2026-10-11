@@ -105,4 +105,26 @@
     <string name="billing_error_product_unavailable">Premium non è disponibile per questa build o account Google Play.</string>
     <string name="billing_error_acknowledgement_pending">Premium è attivo, ma Google Play non ha ancora confermato la consegna. Il controllo verrà ripetuto automaticamente.</string>
     <string name="billing_error_generic">L’operazione Google Play Billing non è stata completata.</string>
+
+    <string name="smart_categories_title">Categorie intelligenti</string>
+    <string name="smart_categories_body">Revisiona possibili candidati alla pulizia senza eliminazioni automatiche: download vecchi, pacchetti di installazione, archivi e screenshot.</string>
+    <string name="smart_categories_scan">Analizza categorie intelligenti</string>
+    <string name="smart_categories_scanning">Analisi di un unico inventario locale dei file…</string>
+    <string name="smart_categories_empty">Nessun candidato da revisionare trovato.</string>
+    <string name="smart_categories_candidate_summary">%1$d candidati · %2$s unici</string>
+    <string name="smart_categories_more_candidates">+ altri %1$d candidati non mostrati</string>
+    <string name="smart_categories_cleanup_selected">Revisiona selezionati (%1$d)</string>
+    <string name="smart_categories_partial_scan">Analisi parziale · %1$d posizioni illeggibili · %2$d cartelle escluse</string>
+    <string name="smart_categories_confirm_title">Spostare i candidati selezionati?</string>
+    <string name="smart_categories_confirm_body">Ogni file viene ricontrollato rispetto allo snapshot della scansione. I media usano il Cestino Android. I piccoli file non-media usano il Cestino sicuro quando la pulizia reversibile è verificabile. I file non supportati restano invariati.</string>
+    <string name="smart_categories_confirm">Continua</string>
+    <string name="smart_categories_close">Chiudi</string>
+    <string name="smart_categories_no_selection">Nessun candidato selezionato.</string>
+    <string name="smart_categories_android_trash_cancelled">Operazione nel Cestino Android annullata.</string>
+    <string name="smart_categories_trash_unavailable">Il Cestino Android non è disponibile per i media selezionati.</string>
+    <string name="smart_category_old_downloads">Download vecchi · 90g+</string>
+    <string name="smart_category_installers">Installer</string>
+    <string name="smart_category_archives">Archivi</string>
+    <string name="smart_category_screenshots">Screenshot</string>
+
 </resources>

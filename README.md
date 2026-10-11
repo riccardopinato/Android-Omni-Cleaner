@@ -10,9 +10,10 @@ Recovery and productization of the lost-source Android cleaner APK.
 **MAXI STEP 3 — APK Parity Audit: COMPLETE**  
 **MAXI STEP 4 — Safety & Storage Hardening: COMPLETE**  
 **MAXI STEP 5 — Monetization Productization: COMPLETE (provider validation pending)**  
-**MAXI STEP 6 — UI/UX Redesign: IN PROGRESS**
+**MAXI STEP 6 — UI/UX Redesign: COMPLETE**  
+**MAXI STEP 7 — Product Expansion: IN PROGRESS**
 
-The donor functionality, storage hardening and monetization architecture are reconstructed. The active work is the new multi-surface UI/UX shell; Play/AdMob provider validation remains a separate release gate.
+The donor functionality, storage hardening, monetization architecture and multi-surface UI/UX shell are reconstructed. Active work is Step 7 product expansion with truthful, local-first cleanup candidates; Play/AdMob provider validation remains a separate release gate.
 
 ## Product direction
 
@@ -29,7 +30,7 @@ The donor functionality, storage hardening and monetization architecture are rec
 ## Current recovery version
 
 - applicationId: `com.riccardopinato.omnicleaner`
-- version: `0.7.0-recovery` / code 7
+- version: `0.8.0-recovery` / code 8
 - minSdk 24
 - targetSdk 36
 - compileSdk 37
@@ -62,6 +63,18 @@ The recovery-era single long screen has been replaced by five destinations:
 The visual system uses a fixed colorful identity, soft surfaces and dark mode without adding a heavy navigation/icon dependency. Cleaner, Gallery, EXIF and monetization engines remain independent from the shell.
 
 See `STEP6_UI_REDESIGN.md`.
+
+## Step 7 product expansion
+
+Smart Categories adds review-only discovery for:
+- downloads older than 90 days;
+- installer packages (APK/APKS/XAPK/APKM);
+- archives;
+- screenshots.
+
+The scan uses one local inventory pass, never auto-selects files, and reuses the existing snapshot revalidation + Android Trash / Safe Trash safety model. Perceptual similar-photo detection is deferred until the performance/deep-QA step.
+
+See `STEP7_PRODUCT_EXPANSION.md`.
 
 ## Storage safety model
 
