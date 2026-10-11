@@ -1,5 +1,6 @@
 package com.riccardopinato.omnicleaner.monetization
 
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -13,20 +14,38 @@ class MonetizationRuntime internal constructor(
     val consent: ConsentManager,
 )
 
+private object MonetizationRuntimeStore {
+    @Volatile
+    private var instance: MonetizationRuntime? = null
+
+    fun get(context: Context): MonetizationRuntime {
+        val appContext = context.applicationContext
+        return instance ?: synchronized(this) {
+            instance ?: MonetizationRuntime(
+                billing = BillingManager(appContext),
+                consent = ConsentManager(appContext),
+            ).also { instance = it }
+        }
+    }
+}
+
 @Composable
 fun rememberMonetizationRuntime(): MonetizationRuntime {
     val context = LocalContext.current
     val appContext = context.applicationContext
     val activity = remember(context) { context.findActivity() }
-    val billing = remember(appContext) { BillingManager(appContext) }
-    val consent = remember(appContext) { ConsentManager(appContext) }
+    val runtime = remember(appContext) { MonetizationRuntimeStore.get(appContext) }
+    val billing = runtime.billing
+    val consent = runtime.consent
     val entitlement by PremiumEntitlementStore.state.collectAsState()
     val consentState by consent.state.collectAsState()
 
-    DisposableEffect(billing) {
+    LaunchedEffect(billing) {
         billing.start()
+    }
+
+    DisposableEffect(appContext) {
         onDispose {
-            billing.endConnection()
             AdManager.setEligibility(appContext, false)
         }
     }
@@ -55,10 +74,5 @@ fun rememberMonetizationRuntime(): MonetizationRuntime {
         )
     }
 
-    return remember(billing, consent) {
-        MonetizationRuntime(
-            billing = billing,
-            consent = consent,
-        )
-    }
+    return runtime
 }
