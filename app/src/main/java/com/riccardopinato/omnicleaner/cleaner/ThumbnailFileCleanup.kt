@@ -84,7 +84,7 @@ class ThumbnailFileCleanup {
                 continue
             }
 
-            val currentHash = runCatching { hash(current) }.getOrNull()
+            val currentHash = nullableUnlessCancelled { hash(current) }
             if (currentHash == null || currentHash != expected.sha256) {
                 rejected++
                 continue
