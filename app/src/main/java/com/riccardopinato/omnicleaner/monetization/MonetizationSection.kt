@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
@@ -19,9 +20,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
 import kotlinx.coroutines.launch
@@ -140,15 +143,26 @@ fun MonetizationSection(
             if (premium) {
                 Text(stringResource(R.string.pro_batch_title), style = MaterialTheme.typography.titleMedium)
                 ProScanType.entries.forEach { type ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val selected = type in selectedTypes
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = selected,
+                                role = Role.Checkbox,
+                                onValueChange = { checked ->
+                                    val updated = if (checked) selectedTypes + type else selectedTypes - type
+                                    scope.launch { preferences.saveSelectedTypes(updated) }
+                                },
+                            ),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.Top,
+                    ) {
                         Checkbox(
-                            checked = type in selectedTypes,
-                            onCheckedChange = { checked ->
-                                val updated = if (checked) selectedTypes + type else selectedTypes - type
-                                scope.launch { preferences.saveSelectedTypes(updated) }
-                            },
+                            checked = selected,
+                            onCheckedChange = null,
                         )
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(proScanTypeLabel(type), style = MaterialTheme.typography.bodyMedium)
                             Text(
                                 proScanTypeDescription(type),
