@@ -132,17 +132,20 @@ class FolderExifCleaner(
             coroutineContext.ensureActive()
             onProgress(index, scan.candidates.size)
 
-            val temp = File.createTempFile("omni-exif-", ".jpg", context.cacheDir)
+            var temp: File? = null
             try {
+                temp = File.createTempFile("omni-exif-", ".jpg", context.cacheDir)
+                val workingFile = temp
+
                 val originalDigest = resolver.openInputStream(candidate.uri)?.use { input ->
-                    FileOutputStream(temp).use { output ->
+                    FileOutputStream(workingFile).use { output ->
                         val digest = copyWithDigest(input, output)
                         output.fd.sync()
                         digest
                     }
                 } ?: error("Documento non leggibile")
 
-                val tempDigest = FileInputStream(temp).use { input ->
+                val tempDigest = FileInputStream(workingFile).use { input ->
                     digestCancellable(input)
                 }
                 if (!originalDigest.contentEquals(tempDigest)) {
@@ -152,7 +155,7 @@ class FolderExifCleaner(
                 }
 
                 JpegExifEditor.cleanTemporaryCopy(
-                    file = temp,
+                    file = workingFile,
                     groups = scan.groups,
                     checkpoint = { coroutineContext.ensureActive() },
                 )
@@ -162,7 +165,7 @@ class FolderExifCleaner(
                     ?: error("Impossibile creare il file di destinazione")
 
                 val cleanedDigest = resolver.openOutputStream(output.uri, "w")?.use { target ->
-                    FileInputStream(temp).use { source ->
+                    FileInputStream(workingFile).use { source ->
                         copyWithDigest(source, target)
                     }
                 } ?: error("Impossibile scrivere la destinazione")
@@ -188,7 +191,7 @@ class FolderExifCleaner(
                 failed++
                 errors += "${candidate.name}: ${error.message ?: error.javaClass.simpleName}"
             } finally {
-                temp.delete()
+                temp?.delete()
             }
         }
 
