@@ -68,6 +68,7 @@ import com.riccardopinato.omnicleaner.ui.CleanerController
 import com.riccardopinato.omnicleaner.ui.CleanerUiState
 import com.riccardopinato.omnicleaner.ui.MaintenanceSection
 import com.riccardopinato.omnicleaner.ui.SafeTrashSection
+import com.riccardopinato.omnicleaner.ui.SmartCategoriesSection
 import com.riccardopinato.omnicleaner.ui.StorageCleanupSection
 import com.riccardopinato.omnicleaner.ui.theme.OmniBlue
 import com.riccardopinato.omnicleaner.ui.theme.OmniMint
@@ -566,6 +567,15 @@ private fun CleanScreen(
         } else {
             item { CleanActionsCard(state = state, controller = controller) }
             item { CleanFiltersCard(state = state, controller = controller) }
+
+            item {
+                SmartCategoriesSection(
+                    onCleanupFinished = {
+                        controller.refreshAccessAndStorage()
+                        controller.scanOverview()
+                    },
+                )
+            }
 
             state.error?.let { error ->
                 item {
