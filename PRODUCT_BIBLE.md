@@ -77,6 +77,14 @@ Android users who need:
 - no automatic selection or deletion;
 - existing scan-snapshot revalidation and reversible cleanup policy retained.
 
+### Localization & accessibility
+- complete en/it/es/fr/pt interface resources;
+- device-language default plus manual in-app language selector;
+- TalkBack-friendly semantic selection controls;
+- explicit button alternatives to Gallery swipe gestures;
+- large-font and narrow-layout resilience;
+- accessibility changes do not weaken cleanup safety contracts.
+
 ### Monetization infrastructure already visible in APK
 - AdMob integration;
 - Google Play Billing;
