@@ -37,8 +37,8 @@ import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
 fun GalleryCleanerSection() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val controller = remember(context.applicationContext, scope) {
-        GalleryController(context.applicationContext, scope)
+    val controller = remember(context, scope) {
+        GalleryController(context, scope)
     }
 
     var state by remember { mutableStateOf(controller.state) }
