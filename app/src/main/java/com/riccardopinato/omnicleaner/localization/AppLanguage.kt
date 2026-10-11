@@ -2,7 +2,6 @@ package com.riccardopinato.omnicleaner.localization
 
 import android.content.Context
 import android.content.res.Configuration
-import android.content.res.Resources
 import java.util.Locale
 
 object AppLanguage {
