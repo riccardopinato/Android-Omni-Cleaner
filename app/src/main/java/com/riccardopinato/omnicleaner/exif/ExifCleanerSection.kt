@@ -23,7 +23,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.riccardopinato.omnicleaner.R
 import kotlinx.coroutines.launch
 
 @Composable
@@ -41,7 +43,7 @@ fun ExifCleanerSection() {
     var scan by remember { mutableStateOf<ExifScan?>(null) }
     var export by remember { mutableStateOf<ExifExport?>(null) }
     var busy by remember { mutableStateOf(false) }
-    var status by remember { mutableStateOf<String?>(null) }
+    var status by remember { mutableStateOf<ExifStatus?>(null) }
 
     val sourcePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
@@ -68,9 +70,9 @@ fun ExifCleanerSection() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text("EXIF Privacy", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.module_exif_privacy), style = MaterialTheme.typography.titleLarge)
             Text(
-                "Analizza JPEG e crea copie pulite. Gli originali non vengono modificati.",
+                stringResource(R.string.exif_body),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -79,7 +81,10 @@ fun ExifCleanerSection() {
                 onClick = { sourcePicker.launch(null) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(if (sourceTree == null) "Scegli cartella foto" else "Cambia cartella foto")
+                Text(
+                    if (sourceTree == null) stringResource(R.string.exif_choose_photo_folder)
+                    else stringResource(R.string.exif_change_photo_folder),
+                )
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -87,7 +92,7 @@ fun ExifCleanerSection() {
                     checked = recursive,
                     onCheckedChange = { recursive = it },
                 )
-                Text("Includi sottocartelle")
+                Text(stringResource(R.string.exif_include_subfolders))
             }
 
             ExifGroup.entries.forEach { group ->
@@ -100,7 +105,7 @@ fun ExifCleanerSection() {
                             export = null
                         },
                     )
-                    Text(group.title)
+                    Text(exifGroupLabel(group))
                 }
             }
 
@@ -118,9 +123,9 @@ fun ExifCleanerSection() {
                             )
                         }.onSuccess {
                             scan = it
-                            status = "${it.candidates.size} JPEG con metadati selezionati"
+                            status = ExifStatus(R.string.exif_scan_status, listOf(it.candidates.size))
                         }.onFailure {
-                            status = it.message ?: "Analisi EXIF non riuscita"
+                            status = ExifStatus(R.string.exif_scan_failed)
                         }
                         busy = false
                     }
@@ -128,7 +133,7 @@ fun ExifCleanerSection() {
                 enabled = sourceTree != null && groups.isNotEmpty() && !busy,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Analizza EXIF")
+                Text(stringResource(R.string.exif_scan))
             }
 
             if (busy) {
@@ -137,7 +142,7 @@ fun ExifCleanerSection() {
 
             scan?.let { result ->
                 Text(
-                    "Trovati: ${result.candidates.size} · saltati: ${result.skipped} · errori: ${result.failures}",
+                    stringResource(R.string.exif_found_summary, result.candidates.size, result.skipped, result.failures),
                     style = MaterialTheme.typography.bodySmall,
                 )
 
@@ -145,7 +150,10 @@ fun ExifCleanerSection() {
                     onClick = { destinationPicker.launch(null) },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (destinationTree == null) "Scegli cartella di esportazione" else "Cambia destinazione")
+                    Text(
+                        if (destinationTree == null) stringResource(R.string.exif_choose_export_folder)
+                        else stringResource(R.string.exif_change_export_folder),
+                    )
                 }
 
                 Button(
@@ -158,17 +166,17 @@ fun ExifCleanerSection() {
                                     scan = result,
                                     destination = destination,
                                     onProgress = { done, total ->
-                                        status = "Esportazione ${done}/${total}"
+                                        status = ExifStatus(R.string.exif_export_progress, listOf(done, total))
                                     },
                                     onIncomplete = { name ->
-                                        status = "Verifica copia fallita: $name"
+                                        status = ExifStatus(R.string.exif_copy_verification_failed, listOf(name))
                                     },
                                 )
                             }.onSuccess {
                                 export = it
-                                status = "Create ${it.created} copie pulite · errori ${it.failed}"
+                                status = ExifStatus(R.string.exif_export_status, listOf(it.created, it.failed))
                             }.onFailure {
-                                status = it.message ?: "Esportazione EXIF non riuscita"
+                                status = ExifStatus(R.string.exif_export_failed)
                             }
                             busy = false
                         }
@@ -178,20 +186,20 @@ fun ExifCleanerSection() {
                         !busy,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Esporta copie pulite")
+                    Text(stringResource(R.string.exif_export_clean_copies))
                 }
             }
 
             export?.let { result ->
                 Text(
-                    "Copie create: ${result.created} · fallite: ${result.failed}",
+                    stringResource(R.string.exif_export_summary, result.created, result.failed),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
 
-            status?.let {
+            status?.let { message ->
                 Text(
-                    it,
+                    stringResource(message.stringRes, *message.args.toTypedArray()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -199,3 +207,20 @@ fun ExifCleanerSection() {
         }
     }
 }
+
+
+private data class ExifStatus(
+    val stringRes: Int,
+    val args: List<Any> = emptyList(),
+)
+
+@Composable
+private fun exifGroupLabel(group: ExifGroup): String =
+    stringResource(
+        when (group) {
+            ExifGroup.LOCATION -> R.string.exif_group_location
+            ExifGroup.DATES -> R.string.exif_group_dates
+            ExifGroup.DEVICE -> R.string.exif_group_device
+            ExifGroup.COMMENTS -> R.string.exif_group_comments
+        },
+    )
