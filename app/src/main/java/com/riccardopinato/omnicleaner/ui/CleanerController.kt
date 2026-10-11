@@ -35,6 +35,9 @@ internal data class CleanerUiState(
     val folders: List<FolderItem> = emptyList(),
     val bigFiles: List<BigFileItem> = emptyList(),
     val duplicates: List<DuplicateGroup> = emptyList(),
+    val foldersScanned: Boolean = false,
+    val bigFilesScanned: Boolean = false,
+    val duplicatesScanned: Boolean = false,
     val folderSearchQuery: String = "",
     val bigFileSearchQuery: String = "",
     val duplicateSearchQuery: String = "",
@@ -101,10 +104,18 @@ internal class CleanerController(
 
     fun refreshAccessAndStorage() {
         val capability = StorageAccess.capabilityHealth(context)
+        val deepScanAvailable = capability.deepScanAvailable
         state = state.copy(
-            hasBroadAccess = capability.deepScanAvailable,
+            hasBroadAccess = deepScanAvailable,
             storageCapability = capability,
             storageInfo = runCatching { StorageAccess.storageInfo() }.getOrNull(),
+            overview = if (deepScanAvailable) state.overview else null,
+            folders = if (deepScanAvailable) state.folders else emptyList(),
+            bigFiles = if (deepScanAvailable) state.bigFiles else emptyList(),
+            duplicates = if (deepScanAvailable) state.duplicates else emptyList(),
+            foldersScanned = if (deepScanAvailable) state.foldersScanned else false,
+            bigFilesScanned = if (deepScanAvailable) state.bigFilesScanned else false,
+            duplicatesScanned = if (deepScanAvailable) state.duplicatesScanned else false,
             error = null,
         )
     }
@@ -119,7 +130,7 @@ internal class CleanerController(
             root = StorageAccess.primaryRoot(),
             smallFolderThresholdBytes = state.folderThresholdBytes,
         )
-        state = state.copy(folders = folders)
+        state = state.copy(folders = folders, foldersScanned = true)
     }
 
     fun updateThresholdValue(value: String) {
@@ -135,7 +146,7 @@ internal class CleanerController(
         minimumBytes: Long = state.bigFileSizeFilter.minimumBytes,
     ) = runScan("Large files") {
         val files = fileScanner.findBigFiles(StorageAccess.primaryRoot(), minimumBytes)
-        state = state.copy(bigFiles = files)
+        state = state.copy(bigFiles = files, bigFilesScanned = true)
     }
 
     fun updateFolderSearchQuery(query: String) {
@@ -157,7 +168,7 @@ internal class CleanerController(
 
     fun scanDuplicates() = runScan("Duplicates") {
         val groups = fileScanner.findDuplicates(StorageAccess.primaryRoot())
-        state = state.copy(duplicates = groups)
+        state = state.copy(duplicates = groups, duplicatesScanned = true)
     }
 
     fun cancelScan() {
