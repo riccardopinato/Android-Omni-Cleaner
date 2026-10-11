@@ -61,6 +61,13 @@ fun SmartCategoriesSection(
     var confirmCleanup by remember { mutableStateOf(false) }
     var pendingPreparation by remember { mutableStateOf<FileCleanupPreparation?>(null) }
 
+    val androidTrashCancelledMessage =
+        stringResource(R.string.smart_categories_android_trash_cancelled)
+    val noSelectionMessage =
+        stringResource(R.string.smart_categories_no_selection)
+    val trashUnavailableMessage =
+        stringResource(R.string.smart_categories_trash_unavailable)
+
     fun scan() {
         if (scanning) return
         scope.launch {
@@ -109,7 +116,7 @@ fun SmartCategoriesSection(
         val preparation = pendingPreparation
         pendingPreparation = null
         if (activityResult.resultCode != Activity.RESULT_OK || preparation == null) {
-            message = context.getString(R.string.smart_categories_android_trash_cancelled)
+            message = androidTrashCancelledMessage
         } else {
             finishPreparedCleanup(preparation)
         }
@@ -130,7 +137,7 @@ fun SmartCategoriesSection(
             .toList()
 
         if (snapshots.isEmpty()) {
-            message = context.getString(R.string.smart_categories_no_selection)
+            message = noSelectionMessage
             return
         }
 
@@ -139,7 +146,7 @@ fun SmartCategoriesSection(
             if (preparation.mediaUris.isNotEmpty()) {
                 val request = engine.createSystemTrashRequest(preparation.mediaUris)
                 if (request == null) {
-                    message = context.getString(R.string.smart_categories_trash_unavailable)
+                    message = trashUnavailableMessage
                     return@launch
                 }
                 pendingPreparation = preparation
