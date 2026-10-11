@@ -28,6 +28,31 @@ class FileInventoryScannerTest {
     }
 
     @Test
+    fun sampledFingerprintCollisionStillRequiresFullIdentity() = runBlocking {
+        val root = createTempDirectory("omni-sampled-collision-").toFile()
+        try {
+            val edge = ByteArray(64 * 1024) { index -> (index % 251).toByte() }
+            val middleA = ByteArray(32 * 1024) { 0x11 }
+            val middleB = ByteArray(32 * 1024) { 0x22 }
+
+            val identicalBytes = edge + middleA + edge
+            File(root, "a.bin").writeBytes(identicalBytes)
+            File(root, "b.bin").writeBytes(identicalBytes)
+            File(root, "same-sample-different-middle.bin").writeBytes(edge + middleB + edge)
+
+            val groups = FileInventoryScanner().duplicates(root)
+
+            assertEquals(1, groups.size)
+            assertEquals(
+                setOf("a.bin", "b.bin"),
+                groups.single().files.map { it.name }.toSet(),
+            )
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun inventoryCollectsFiles() = runBlocking {
         val root = createTempDirectory("omni-inventory-").toFile()
         try {
