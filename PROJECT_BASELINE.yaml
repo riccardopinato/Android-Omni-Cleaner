@@ -27,7 +27,7 @@ applab:
 
 product:
   working_name: Android Omni Cleaner
-  final_name: null
+  final_name: Android Omni Cleaner
   platform: android
   monetizable: true
   planned_visual_redesign: true
@@ -151,7 +151,7 @@ localization_accessibility:
     - pt
   manual_language_selector: true
   system_language_fallback: true
-  locale_key_parity: pass_290_each
+  locale_key_parity: pass_296_each
   locale_placeholder_parity: pass
   android_locale_config: true
   talkback_toggle_rows: true
