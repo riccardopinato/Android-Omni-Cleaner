@@ -1,5 +1,7 @@
 name: Fast APK
 
+# FAST_DEVELOPMENT_MODE: minimal installable build, certification deferred.
+
 on:
   push:
     branches:
