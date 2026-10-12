@@ -414,13 +414,26 @@ class SafeTrashManager private constructor(
             if (!legacyMetadata.isFile || !legacyPayload.isFile || PathSafety.isSymlink(legacyPayload)) continue
             if (!target.mkdirs()) continue
 
+            val targetMetadata = File(target, METADATA_NAME)
+            val targetPayload = File(target, PAYLOAD_NAME)
+            val sourcePayloadHash = runCatching { sha256(legacyPayload) }.getOrNull()
+
             val copied = runCatching {
-                copyAndSync(legacyMetadata, File(target, METADATA_NAME))
-                copyAndSync(legacyPayload, File(target, PAYLOAD_NAME))
+                copyAndSync(legacyMetadata, targetMetadata)
+                copyAndSync(legacyPayload, targetPayload)
                 true
             }.getOrDefault(false)
 
-            if (!copied || readEntry(target) == null) {
+            val migratedEntry = if (copied) readEntry(target) else null
+            val copyVerified =
+                sourcePayloadHash != null &&
+                    migratedEntry != null &&
+                    targetPayload.isFile &&
+                    targetPayload.length() == legacyPayload.length() &&
+                    runCatching { sha256(targetPayload) }.getOrNull() == sourcePayloadHash &&
+                    runCatching { sha256(targetPayload) }.getOrNull() == migratedEntry.sha256
+
+            if (!copyVerified) {
                 target.deleteRecursively()
                 continue
             }
