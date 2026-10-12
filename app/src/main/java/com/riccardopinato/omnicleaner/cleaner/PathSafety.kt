@@ -65,6 +65,11 @@ object PathSafety {
         if (blockedPrefixRoots.any { path == it || path.startsWith("$it/") }) return true
         if (file.name.lowercase(Locale.ROOT) in knownDevArtifactNames) return true
 
+        val managedRoot = "/" + StorageAccess.APP_MANAGED_DIRECTORY.lowercase(Locale.ROOT)
+        if (path == managedRoot || path.endsWith(managedRoot) || path.contains(managedRoot + "/")) {
+            return true
+        }
+
         // General cleanup never mutates app-owned Android/* trees. Dedicated
         // thumbnail cleanup has its own stronger snapshot/hash contract.
         if (
