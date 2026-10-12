@@ -11,8 +11,8 @@ android {
         applicationId = "com.riccardopinato.omnicleaner"
         minSdk = 24
         targetSdk = 36
-        versionCode = 10
-        versionName = "0.10.0-recovery"
+        versionCode = 11
+        versionName = "0.11.0-recovery"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
