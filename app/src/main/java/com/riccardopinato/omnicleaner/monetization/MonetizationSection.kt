@@ -32,6 +32,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun MonetizationSection(
     runtime: MonetizationRuntime,
+    batch: ProBatchController,
 ) {
     val context = LocalContext.current
     val activity = context.findActivity()
@@ -46,8 +47,6 @@ fun MonetizationSection(
     val billing = runtime.billing
     val consent = runtime.consent
     val preferences = remember(appContext) { ProPreferencesManager(appContext) }
-    val batch = remember(context, scope) { ProBatchController(context, scope) }
-
     val billingState by billing.state.collectAsState()
     val consentState by consent.state.collectAsState()
     val selectedTypes by preferences.selectedTypesFlow.collectAsState(
