@@ -88,8 +88,8 @@ fun SmartCategoriesSection(
             }.onSuccess { scan ->
                 result = scan
                 selectedPaths = emptySet()
-            }.onFailure { error ->
-                message = error.message ?: error.javaClass.simpleName
+            }.onFailure {
+                message = context.getString(R.string.smart_categories_scan_failed)
             }
             scanning = false
         }
