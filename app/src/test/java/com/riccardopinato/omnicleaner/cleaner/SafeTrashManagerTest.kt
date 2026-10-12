@@ -187,6 +187,40 @@ class SafeTrashManagerTest {
     }
 
     @Test
+    fun failedLegacyMigrationKeepsSourceUntouched() {
+        val root = createTempDirectory("omni-trash-migrate-fail-").toFile()
+        val legacy = File(root, "legacy-trash")
+        val persistent = File(root, "persistent-trash")
+        val destination = File(root, "destination.txt")
+        val entryDir = File(legacy, UUID.randomUUID().toString()).apply { mkdirs() }
+        val payload = File(entryDir, "payload").apply { writeText("original-bytes") }
+        val metadata = File(entryDir, "original.properties")
+        Properties().apply {
+            setProperty("originalPath", destination.canonicalPath)
+            setProperty("originalName", destination.name)
+            setProperty("sizeBytes", payload.length().toString())
+            setProperty("lastModified", "0")
+            setProperty("sha256", "0".repeat(64))
+        }.also { properties ->
+            metadata.outputStream().use { output -> properties.store(output, "tampered") }
+        }
+
+        try {
+            val manager = SafeTrashManager.forTests(
+                trashDirectory = persistent,
+                restoreRoot = root,
+                legacyTrashDirectory = legacy,
+            )
+
+            assertTrue(entryDir.isDirectory)
+            assertTrue(payload.isFile)
+            assertTrue(manager.listEntries().isEmpty())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun mediaIsNotMovedIntoPrivateTrash() {
         val root = createTempDirectory("omni-media-trash-").toFile()
         val source = File(root, "photo.jpg").apply { writeBytes(byteArrayOf(1, 2, 3)) }
