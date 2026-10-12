@@ -15,7 +15,7 @@ applab:
   repository: riccardopinato/AppLab
   version: "4.5"
   commit_sha: dc826264c31dd79fc7617ab7a4a8aee61f9b5aba
-  runtime_commit_sha: 9050482675d928c35b428161c1183a4c9ffc87c7
+  runtime_commit_sha: 494f9b4c4a386429b2e49ce907dea87bf05e2cd3
   runtime_pin_reason: journey_crawler_pid_grace
   static_intelligence: pass
   bounded_runtime_parity: pass
