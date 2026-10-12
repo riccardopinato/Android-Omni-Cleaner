@@ -1,6 +1,6 @@
 # Android Omni Cleaner — Recovery & Product Roadmap
 
-Factory baseline: `a4a97ca79e85d2faebcdcc9a3ae4a9644f5caf03`
+Factory baseline: `fa3c0679de393f1cb13c2fed2be314d1a1269353`
 
 ## MAXI STEP 0 — Forensic Recovery
 **Status: COMPLETE**
@@ -101,6 +101,9 @@ Implemented:
 - dedicated Step 6 Maestro journey;
 - AppLab custom visual journey for all five primary destinations.
 
+Current external blocker:
+- GitHub-hosted jobs are currently rejected before runner assignment because the account Actions allowance/budget gate is exhausted; this is BLOCKED evidence, not an application test failure.
+
 Exit gate:
 - Android CI PASS;
 - AppLab Intelligence PASS;
@@ -167,7 +170,7 @@ Exit gate:
 See `STEP8_LOCALIZATION_ACCESSIBILITY.md`.
 
 ## MAXI STEP 9 — Performance & Deep QA
-**Status: IN PROGRESS**
+**Status: IN PROGRESS — VALIDATION BLOCKED BY GITHUB ACTIONS QUOTA**
 
 Implemented:
 - duplicate 64 KiB prefix/suffix prefilter before full SHA-256;
@@ -180,7 +183,12 @@ Implemented:
 - thumbnail hashing/cleanup traversal is cancellation-aware;
 - deterministic 1,253-file runtime performance fixture;
 - AppLab FULL plan enables performance, lifecycle, resource-pressure/process-death, background and storage labs;
-- version `0.10.0-recovery` / code 10.
+- version `0.10.0-recovery` / code 10;
+- Step 9 branch detection works on pull-request and manual runs, so FULL cannot silently degrade to FAST;
+- CI checks out the immutable PR head instead of the synthetic merge ref;
+- feature-branch push + pull-request duplicate workflow runs have been removed;
+- parity thumbnail fixture is isolated from the recursively pushed storage tree;
+- EXIF temp export independently revalidates the source after copying before any cleaned output is trusted.
 
 Exit gate:
 - Android CI PASS;
