@@ -303,4 +303,11 @@
     <string name="pro_system_trash_confirmed">Cestino Android confermato (non conteggiato come spazio già liberato)</string>
     <string name="pro_system_trash_cancelled">Cestino Android annullato</string>
 
+
+    <string name="safe_trash_persistent_notice">Safe Trash è salvato nella memoria condivisa per poter sopravvivere alla disinstallazione dell’app. Reinstalla Omni Cleaner e riattiva Pulizia profonda per ripristinare questi file.</string>
+    <string name="safe_trash_unavailable">La memoria di Safe Trash non è disponibile. I file resteranno invariati.</string>
+    <string name="gallery_error_load_failed">Impossibile caricare i contenuti della Galleria. Riprova.</string>
+    <string name="smart_categories_scan_failed">Impossibile completare la scansione delle Categorie smart.</string>
+    <string name="pro_scan_failed">Impossibile completare la scansione Pro.</string>
+    <string name="pro_offline_cache">Premium è temporaneamente disponibile grazie a una recente verifica di Google Play. La proprietà verrà ricontrollata quando Play sarà raggiungibile.</string>
 </resources>
