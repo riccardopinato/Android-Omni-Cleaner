@@ -1,46 +1,40 @@
 package com.riccardopinato.omnicleaner.monetization
 
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PremiumEntitlementCacheTest {
     @Test
-    fun verifiedLifetimePurchaseIsAvailableInsideOfflineGrace() {
+    fun verifiedLifetimePurchaseIsFreshInsideOfflineGrace() {
         val verifiedAt = 1_000_000L
-        val state = resolveCachedPremium(
-            record = CachedPremiumRecord(owned = true, verifiedAtMillis = verifiedAt),
-            nowMillis = verifiedAt + 1_000L,
-        )
 
-        assertTrue(state.resolved)
-        assertTrue(state.isPremium)
-        assertTrue(state.source == PremiumEntitlementSource.OFFLINE_CACHE)
-        assertTrue(state.graceUntilMillis!! > verifiedAt)
+        assertTrue(
+            isOfflineEntitlementFresh(
+                verifiedAt = verifiedAt,
+                now = verifiedAt + 1_000L,
+                graceMs = PremiumEntitlementStore.OFFLINE_GRACE_MS,
+            ),
+        )
     }
 
     @Test
-    fun expiredPremiumCacheReturnsUnknownInsteadOfFree() {
+    fun verifiedLifetimePurchaseExpiresAfterOfflineGrace() {
         val verifiedAt = 1_000_000L
-        val state = resolveCachedPremium(
-            record = CachedPremiumRecord(owned = true, verifiedAtMillis = verifiedAt),
-            nowMillis = verifiedAt + PremiumEntitlementStore.OFFLINE_PREMIUM_GRACE_MS + 1L,
-        )
 
-        assertFalse(state.resolved)
-        assertFalse(state.isPremium)
-        assertNull(state.verifiedAtMillis)
+        assertFalse(
+            isOfflineEntitlementFresh(
+                verifiedAt = verifiedAt,
+                now = verifiedAt + PremiumEntitlementStore.OFFLINE_GRACE_MS + 1L,
+                graceMs = PremiumEntitlementStore.OFFLINE_GRACE_MS,
+            ),
+        )
     }
 
     @Test
-    fun cachedFreeStateNeverAuthorizesAdsOffline() {
-        val state = resolveCachedPremium(
-            record = CachedPremiumRecord(owned = false, verifiedAtMillis = 1_000_000L),
-            nowMillis = 1_000_001L,
-        )
-
-        assertFalse(state.resolved)
-        assertFalse(state.isPremium)
+    fun invalidOrFutureVerificationNeverBecomesFresh() {
+        assertFalse(isOfflineEntitlementFresh(0L, 1_000L, PremiumEntitlementStore.OFFLINE_GRACE_MS))
+        assertFalse(isOfflineEntitlementFresh(2_000L, 1_000L, PremiumEntitlementStore.OFFLINE_GRACE_MS))
+        assertFalse(isOfflineEntitlementFresh(1_000L, 1_001L, 0L))
     }
 }
