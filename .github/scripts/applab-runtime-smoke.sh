@@ -6,19 +6,21 @@ set -Eeuo pipefail
 : "${APPLAB_PLAN:?APPLAB_PLAN is required}"
 : "${GITHUB_WORKSPACE:?GITHUB_WORKSPACE is required}"
 
+SOURCE_BRANCH="${OMNI_SOURCE_BRANCH:-${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-}}}"
+
 adb install -r -t "$APK_PATH"
 adb shell appops set "$PACKAGE_ID" MANAGE_EXTERNAL_STORAGE allow || true
 
 bash "$GITHUB_WORKSPACE/target/.github/scripts/prepare-parity-fixture.sh"
 
-if [[ "${GITHUB_REF:-}" == "refs/heads/step-9-performance-deep-qa" ]]; then
+if [[ "$SOURCE_BRANCH" == "step-9-performance-deep-qa" ]]; then
   echo "[Omni/AppLab] preparing Step 9 large-library fixture..."
   bash "$GITHUB_WORKSPACE/target/.github/scripts/prepare-performance-fixture.sh"
 fi
 
 export REPORT_DIR="$GITHUB_WORKSPACE/applab-runtime-smoke"
 export APPLAB_VERSION="4.5.0-pinned-smoke"
-if [[ "${GITHUB_REF:-}" == "refs/heads/step-9-performance-deep-qa" ]]; then
+if [[ "$SOURCE_BRANCH" == "step-9-performance-deep-qa" ]]; then
   export APPLAB_ANALYSIS_MODE="full"
 else
   export APPLAB_ANALYSIS_MODE="fast"
