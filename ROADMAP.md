@@ -145,7 +145,7 @@ See `STEP7_PRODUCT_EXPANSION.md`.
 
 Implemented:
 - complete EN / IT / ES / FR / PT resource bundles;
-- exact 284-key parity across all five locales;
+- exact 290-key parity across all five locales;
 - exact format-placeholder parity;
 - manual System / EN / IT / ES / FR / PT language selector;
 - lightweight persisted locale override applied at Activity context boundary;
