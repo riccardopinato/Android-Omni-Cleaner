@@ -13,7 +13,7 @@ Recovery and productization of the lost-source Android cleaner APK.
 **MAXI STEP 6 — UI/UX Redesign: COMPLETE**  
 **MAXI STEP 7 — Product Expansion: COMPLETE**  
 **MAXI STEP 8 — Localization & Accessibility: COMPLETE**  
-**MAXI STEP 9 — Performance & Deep QA: IN PROGRESS (GitHub Actions validation blocked)**
+**MAXI STEP 9 — Performance & Deep QA: IMPLEMENTATION COMPLETE (validation deferred)**
 
 The recovered cleaner, safety model, monetization architecture, redesigned shell, Smart Categories and localization/accessibility layer are complete through Step 8. Play/AdMob provider validation and physical-device certification remain separate release gates.
 
@@ -136,3 +136,13 @@ remains a separate gate and is never inferred from emulator PASS.
 ## Core rule
 
 > Safe cleaning first, maximum cleaning second.
+
+
+### Fast APK
+
+During fast-development mode, feature work uses a minimal APK lane:
+- debug APK only;
+- no AppLab/emulator requirement;
+- no full lint/test certification gate;
+- APK is bound to the exact source SHA and published as a prerelease with SHA-256;
+- development/testing artifact only, not Store Ready.
