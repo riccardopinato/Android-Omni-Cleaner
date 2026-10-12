@@ -13,13 +13,28 @@ class FileScanner(
     private val thumbnailCleanup: ThumbnailFileCleanup = ThumbnailFileCleanup(),
     private val residueScanner: AppResidueScanner = AppResidueScanner(),
 ) {
-    suspend fun collectFileInventory(root: File): FileInventory = inventoryScanner.collect(root)
+    suspend fun collectFileInventory(
+        root: File,
+        forceRefresh: Boolean = false,
+    ): FileInventory =
+        StorageInventoryRepository.snapshot(root, forceRefresh = forceRefresh).inventory
 
     suspend fun findBigFiles(
         root: File,
         minimumBytes: Long = BigFileSizeFilter.SIZE_100MB.minimumBytes,
         limit: Int = 500,
-    ): List<BigFileItem> = inventoryScanner.collect(root).files
+    ): List<BigFileItem> =
+        findBigFiles(
+            inventory = StorageInventoryRepository.snapshot(root).inventory,
+            minimumBytes = minimumBytes,
+            limit = limit,
+        )
+
+    fun findBigFiles(
+        inventory: FileInventory,
+        minimumBytes: Long = BigFileSizeFilter.SIZE_100MB.minimumBytes,
+        limit: Int = 500,
+    ): List<BigFileItem> = inventory.files
         .asSequence()
         .filter { it.size >= minimumBytes }
         .sortedByDescending { it.size }
@@ -40,7 +55,11 @@ class FileScanner(
         }
         .toList()
 
-    suspend fun findDuplicates(root: File): List<DuplicateGroup> = inventoryScanner.duplicates(root)
+    suspend fun findDuplicates(root: File): List<DuplicateGroup> =
+        findDuplicates(StorageInventoryRepository.snapshot(root).inventory)
+
+    suspend fun findDuplicates(inventory: FileInventory): List<DuplicateGroup> =
+        inventoryScanner.duplicates(inventory.files)
 
     suspend fun scanFolders(
         root: File,
