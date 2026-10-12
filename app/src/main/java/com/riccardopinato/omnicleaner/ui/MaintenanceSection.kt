@@ -222,7 +222,8 @@ fun MaintenanceSection() {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(item.displayPath, style = MaterialTheme.typography.bodyMedium)
                     Text(
-                        "${item.formattedSize()} · ${item.fileCount} file",
+                        "${item.formattedSize()} · " +
+                            stringResource(R.string.maintenance_files_count, item.fileCount),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -243,7 +244,8 @@ fun MaintenanceSection() {
                 }
                 state.visibleResidues.take(10).forEach { item ->
                     Text(
-                        "${item.name} · ${item.formattedSize()} · ${item.fileCount} file",
+                        "${item.name} · ${item.formattedSize()} · " +
+                            stringResource(R.string.maintenance_files_count, item.fileCount),
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
