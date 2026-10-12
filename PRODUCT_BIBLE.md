@@ -123,7 +123,7 @@ Repository: riccardopinato/Android-Omni-Cleaner
 
 Working app name: Android Omni Cleaner
 Canonical applicationId: com.riccardopinato.omnicleaner
-Final store title: TBD
+Final store title: Android Omni Cleaner
 
 Legacy APK identity, for forensic reference only:
 - applicationId: com.aistudio.foldercleaner.zjijip
