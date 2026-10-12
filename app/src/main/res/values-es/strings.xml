@@ -316,4 +316,5 @@
     <string name="consent_error_generic">No se pudieron actualizar las opciones de privacidad. Inténtalo más tarde.</string>
     <string name="safe_trash_persistent_note">Safe Trash se guarda en el almacenamiento compartido para que sus archivos verificados no se borren solo por desinstalar la app.</string>
     <string name="safe_trash_storage_unavailable">El almacenamiento de Safe Trash no está disponible. No se moverán nuevos archivos allí.</string>
+    <string name="maintenance_files_count">%1$d archivos</string>
 </resources>
