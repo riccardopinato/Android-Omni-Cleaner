@@ -65,6 +65,7 @@ import com.riccardopinato.omnicleaner.monetization.PremiumEntitlementStore
 import com.riccardopinato.omnicleaner.monetization.findActivity
 import com.riccardopinato.omnicleaner.monetization.rememberMonetizationRuntime
 import com.riccardopinato.omnicleaner.ui.CleanerController
+import com.riccardopinato.omnicleaner.ui.OmniCleanerViewModel
 import com.riccardopinato.omnicleaner.ui.CleanerUiState
 import com.riccardopinato.omnicleaner.ui.LanguageSelectorSection
 import com.riccardopinato.omnicleaner.ui.MaintenanceSection
@@ -90,12 +91,10 @@ private enum class OmniDestination(
 }
 
 @Composable
-fun RedesignedOmniCleanerApp() {
+fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val controller = remember(context, scope) {
-        CleanerController(context, scope)
-    }
+    val controller = viewModel.cleanerController
     val monetizationRuntime = rememberMonetizationRuntime()
     val entitlement by PremiumEntitlementStore.state.collectAsState()
     val state = controller.state
@@ -243,7 +242,7 @@ fun RedesignedOmniCleanerApp() {
                             subtitle = stringResource(R.string.redesign_gallery_subtitle),
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                            GalleryCleanerSection()
+                            GalleryCleanerSection(controller = viewModel.galleryController)
                         }
 
                         OmniDestination.PRIVACY -> ModuleScreen(
@@ -264,7 +263,10 @@ fun RedesignedOmniCleanerApp() {
                             Column(
                                 verticalArrangement = Arrangement.spacedBy(14.dp),
                             ) {
-                                MonetizationSection(runtime = monetizationRuntime)
+                                MonetizationSection(
+                                runtime = monetizationRuntime,
+                                batch = viewModel.proBatchController,
+                            )
                                 LanguageSelectorSection()
                             }
                         }
