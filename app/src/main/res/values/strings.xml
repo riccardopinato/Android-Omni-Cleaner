@@ -310,4 +310,13 @@
     <string name="smart_categories_scan_failed">Smart Categories scan could not be completed.</string>
     <string name="pro_scan_failed">The Pro scan could not be completed.</string>
     <string name="pro_offline_cache">Premium is temporarily available from a recent Google Play verification. Ownership will be checked again when Play is reachable.</string>
+
+    <string name="generic_operation_failed">The operation could not be completed. Try again.</string>
+    <string name="gallery_error_load_failed">Gallery content could not be loaded. Try again.</string>
+    <string name="pro_operation_failed">The Pro operation could not be completed. Try again.</string>
+    <string name="smart_categories_scan_failed">Smart Categories scan could not be completed.</string>
+    <string name="maintenance_operation_failed">The maintenance operation could not be completed.</string>
+    <string name="consent_error_generic">Privacy choices could not be refreshed. Try again later.</string>
+    <string name="safe_trash_persistent_note">Safe Trash is stored in shared storage so its verified payloads are not erased just because the app is uninstalled.</string>
+    <string name="safe_trash_storage_unavailable">Safe Trash storage is currently unavailable. No new file will be moved there.</string>
 </resources>
