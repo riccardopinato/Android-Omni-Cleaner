@@ -170,7 +170,7 @@ Exit gate:
 See `STEP8_LOCALIZATION_ACCESSIBILITY.md`.
 
 ## MAXI STEP 9 — Performance & Deep QA
-**Status: IN PROGRESS — VALIDATION BLOCKED BY GITHUB ACTIONS QUOTA**
+**Status: IMPLEMENTATION COMPLETE — VALIDATION DEFERRED (FAST DEVELOPMENT MODE)**
 
 Implemented:
 - duplicate 64 KiB prefix/suffix prefilter before full SHA-256;
@@ -204,3 +204,16 @@ See `STEP9_PERFORMANCE_DEEP_QA.md`.
 
 Persistent signing, exact artifact identity, physical evidence, AAB, Internal Testing and final
 `CERTIFIED / NOT CERTIFIED / BLOCKED` verdict.
+
+
+## FAST DEVELOPMENT MODE
+
+Temporarily enabled to prioritize implementation and APK delivery while GitHub Actions hosted-runner usage is unavailable.
+
+Rules:
+- Step 9 validation is deferred, not converted to PASS.
+- AppLab Intelligence and AppLab Runtime are manual-only.
+- feature-branch Android CI is deferred; main CI remains available.
+- `Fast APK` is the only automatic feature-branch build lane.
+- Fast APK performs `assembleDebug` only, publishes a SHA-bound prerelease APK and checksum, and does not claim certification.
+- full Step 9 and Store/Release certification gates must be rerun before any production/store claim.
