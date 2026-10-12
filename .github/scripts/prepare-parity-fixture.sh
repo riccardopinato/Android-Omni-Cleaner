@@ -3,10 +3,10 @@ set -Eeuo pipefail
 
 HOST_ROOT="${RUNNER_TEMP:-/tmp}/omni-parity-fixture"
 DEVICE_ROOT="/sdcard/Download/OmniParity"
-HOST_THUMB="$HOST_ROOT/parity-thumb.bin"
+HOST_THUMB="${RUNNER_TEMP:-/tmp}/omni-parity-thumb.bin"
 DEVICE_THUMB_ROOT="/sdcard/DCIM/.thumbnails"
 
-rm -rf "$HOST_ROOT"
+rm -rf "$HOST_ROOT" "$HOST_THUMB"
 mkdir -p "$HOST_ROOT"/{empty,duplicates,large}
 
 printf 'parity-fixture' > "$HOST_ROOT/duplicates/a.txt"
