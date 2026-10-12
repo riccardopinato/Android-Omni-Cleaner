@@ -163,4 +163,57 @@ class SafeTrashManagerTest {
             root.deleteRecursively()
         }
     }
+    @Test
+    fun persistentTrashPathLivesOutsideAppPrivateStorageShape() {
+        val root = createTempDirectory("omni-shared-root-").toFile()
+        try {
+            val trash = StorageAccess.safeTrashRoot(root)
+            assertTrue(trash.path.contains(StorageAccess.APP_MANAGED_DIRECTORY))
+            assertTrue(trash.path.endsWith(StorageAccess.SAFE_TRASH_DIRECTORY))
+            assertTrue(PathSafety.isWithinRoot(trash, root))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun migratesLegacyPrivateEntryOnlyAfterIntegrityValidation() {
+        val root = createTempDirectory("omni-trash-migrate-").toFile()
+        val legacy = File(root, "legacy-trash")
+        val persistent = File(root, ".OmniCleaner/SafeTrash")
+        val original = File(root, "restore-me.txt")
+        val entryId = UUID.randomUUID().toString()
+        val legacyEntry = File(legacy, entryId).apply { mkdirs() }
+        val payload = File(legacyEntry, "payload").apply { writeText("survive-uninstall") }
+        val metadata = File(legacyEntry, "original.properties")
+
+        Properties().apply {
+            setProperty("originalPath", original.canonicalPath)
+            setProperty("originalName", original.name)
+            setProperty("sizeBytes", payload.length().toString())
+            setProperty("lastModified", "0")
+        }.also { properties ->
+            metadata.outputStream().use { output -> properties.store(output, "legacy") }
+        }
+
+        try {
+            val manager = SafeTrashManager.forTests(
+                trashDirectory = persistent,
+                restoreRoot = root,
+                legacyTrashDirectory = legacy,
+            )
+
+            assertTrue(manager.isPersistentTrashAvailable())
+            assertFalse(legacyEntry.exists())
+            assertEquals(1, manager.listEntries().size)
+            assertEquals(
+                SafeTrashRestoreStatus.RESTORED,
+                manager.restore(entryId).status,
+            )
+            assertEquals("survive-uninstall", original.readText())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
 }
