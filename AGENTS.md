@@ -10,7 +10,7 @@ Product truth:
 
 Factory baseline for this recovery:
 - riccardopinato/App-Factory-Core
-- SHA a4a97ca79e85d2faebcdcc9a3ae4a9644f5caf03
+- SHA fa3c0679de393f1cb13c2fed2be314d1a1269353
 - Master v25.1
 
 Do not substitute remembered older Factory rules.
@@ -20,6 +20,8 @@ Do not substitute remembered older Factory rules.
 - Android native Kotlin + Jetpack Compose is the preserved stack.
 - Do not rewrite to Flutter unless a later explicit decision changes this.
 - Main stays stable; substantial changes use branch/PR.
+- Feature branches use the pull-request gate as the single automatic CI authority; avoid duplicate push + PR runs unless a specific evidence requirement justifies both.
+- PR gates must test the immutable source head, not silently substitute the synthetic merge ref.
 - Local-first core.
 - Destructive actions must be inspectable and verified.
 - Never report cleanup success based only on a request/API call.
