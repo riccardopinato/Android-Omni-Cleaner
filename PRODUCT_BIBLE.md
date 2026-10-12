@@ -1,7 +1,7 @@
 # Android Omni Cleaner — Product Bible
 
 Status: RECOVERY + PRODUCTIZATION / NOT STORE READY
-Date: 2026-10-11
+Date: 2026-10-12
 
 ## Product problem
 
@@ -58,10 +58,12 @@ Android users who need:
 - gallery preferences.
 
 ### Safe deletion
-- Safe Trash manager;
+- persistent Safe Trash in hidden app-managed shared storage;
+- verified migration of legacy app-private Safe Trash entries;
 - path safety checks;
 - guarded cleanup;
-- explicit permanent deletion paths.
+- explicit permanent deletion paths;
+- Safe Trash survives uninstall/reinstall but is not cloud backup.
 
 ### Privacy
 - JPEG EXIF parsing/editing;
@@ -119,8 +121,9 @@ A Web Preview is not considered a truthful functional certification target for f
 
 Repository: riccardopinato/Android-Omni-Cleaner
 
-Final app name: TBD
-Final applicationId: TBD
+Working app name: Android Omni Cleaner
+Canonical applicationId: com.riccardopinato.omnicleaner
+Final store title: TBD
 
 Legacy APK identity, for forensic reference only:
 - applicationId: com.aistudio.foldercleaner.zjijip
@@ -133,10 +136,12 @@ The legacy identity must not be reused blindly.
 
 Candidate:
 - Free: useful cleaning core + non-invasive ads
-- Premium/Lifetime: no ads + premium workflows/limits to be defined
+- Premium/Lifetime: no ads + Pro batch workflows;
+- previously Play-verified lifetime Premium: bounded 30-day offline grace
 
 Rule:
 Premium / No Ads means no ad request, not "load then hide".
+Unknown entitlement also means no ad request until Play ownership is resolved.
 
 ## Permission philosophy
 
@@ -151,3 +156,8 @@ Permission granted != capability healthy != cleanup verified.
 The supplied APK is recovery evidence only.
 
 It is not a production release baseline because the forensic audit found prototype/release issues including debug signing and debuggable build state.
+
+
+## v1 scope boundary
+
+Perceptual/similar-photo detection is deferred to Product Expansion 2 / v1.1. It is not a hidden acceptance requirement for the v1 safe-cleaner release.
