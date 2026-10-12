@@ -101,9 +101,6 @@ Implemented:
 - dedicated Step 6 Maestro journey;
 - AppLab custom visual journey for all five primary destinations.
 
-Current external blocker:
-- GitHub-hosted jobs are currently rejected before runner assignment because the account Actions allowance/budget gate is exhausted; this is BLOCKED evidence, not an application test failure.
-
 Exit gate:
 - Android CI PASS;
 - AppLab Intelligence PASS;
@@ -129,7 +126,7 @@ Scope selected after REUSE-FIRST comparison:
 - unsupported irreversible deletion remains blocked.
 
 Explicitly deferred:
-- perceptual/similar-photo hashing until performance work is ready;
+- perceptual/similar-photo hashing moved explicitly to Product Expansion 2 / v1.1;
 - Shizuku/root expansion;
 - scheduled/background deletion;
 - RAM/CPU/battery/antivirus claims.
@@ -183,7 +180,7 @@ Implemented:
 - thumbnail hashing/cleanup traversal is cancellation-aware;
 - deterministic 1,253-file runtime performance fixture;
 - AppLab FULL plan enables performance, lifecycle, resource-pressure/process-death, background and storage labs;
-- version `0.10.0-recovery` / code 10;
+- Step 9 engine baseline: version `0.10.0-recovery` / code 10;
 - Step 9 branch detection works on pull-request and manual runs, so FULL cannot silently degrade to FAST;
 - CI checks out the immutable PR head instead of the synthetic merge ref;
 - feature-branch push + pull-request duplicate workflow runs have been removed;
@@ -199,6 +196,32 @@ Exit gate:
 - Step 9 exact-head APK prerelease generated.
 
 See `STEP9_PERFORMANCE_DEEP_QA.md`.
+
+## MAXI STEP 9.5 — Post-Audit P1/P2/P3 Hardening
+**Status: SOURCE COMPLETE — VALIDATION DEFERRED**
+
+Resolved in source:
+- Safe Trash moved from app-private storage to persistent hidden shared storage with verified legacy-entry migration;
+- Safe Trash app-managed directory protected from normal cleaner traversal;
+- lifetime Premium receives a bounded 30-day offline grace only after prior Play verification;
+- cached FREE/unknown state never authorizes ads;
+- intentional adaptive/monochrome launcher branding installed;
+- shared 120-second storage inventory prevents repeated full scans across core modules;
+- Cleaner, Gallery and Pro Batch controllers retained across configuration changes in an Activity ViewModel;
+- raw runtime exception text removed from user-facing Cleaner/Gallery/Smart Categories/Pro failure states;
+- AdView lifecycle now destroys banner views on composition disposal;
+- Android instrumentation contract suite added;
+- privacy policy, Data Safety, app-ads/AdMob readiness and quantitative performance documents added;
+- redesigned app shell split so Home/Clean implementation is no longer concentrated in one god file;
+- domain enums no longer carry Italian presentation labels;
+- version `0.11.0-recovery` / code 11.
+
+Evidence boundary:
+- source audit: complete;
+- exact-head compile/tests/AppLab: deferred while GitHub-hosted runners are unavailable;
+- physical/storage/provider/store validation: Step 10.
+
+See `STEP9_5_AUDIT_HARDENING.md`.
 
 ## MAXI STEP 10 — Store & Release Certification
 
