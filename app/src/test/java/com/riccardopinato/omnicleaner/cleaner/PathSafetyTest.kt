@@ -59,4 +59,19 @@ class PathSafetyTest {
         }
     }
 
+    @Test
+    fun rejectsAppManagedPersistentTrash() {
+        val root = createTempDirectory("omni-managed-").toFile()
+        try {
+            val managed = File(root, StorageAccess.APP_MANAGED_DIRECTORY)
+            val trash = File(managed, StorageAccess.SAFE_TRASH_DIRECTORY)
+            trash.mkdirs()
+            assertTrue(PathSafety.isDangerousPath(managed))
+            assertTrue(PathSafety.isDangerousPath(trash))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
 }
+
