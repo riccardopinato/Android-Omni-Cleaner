@@ -69,8 +69,9 @@ class SafeTrashManager private constructor(
             .toList()
     }
 
-    fun getTrashSize(): Long =
-        trashDirectory.listFiles()
+    fun getTrashSize(): Long {
+        if (!isPersistentTrashAvailable()) return 0L
+        return trashDirectory.listFiles()
             .orEmpty()
             .sumOf { entry ->
                 File(entry, PAYLOAD_NAME)
@@ -79,6 +80,7 @@ class SafeTrashManager private constructor(
                     ?.coerceAtLeast(0L)
                     ?: 0L
             }
+    }
 
     fun moveToTrash(snapshot: CleanupFileSnapshot): File? {
         if (!CleanupSnapshotValidator.validate(snapshot).valid) return null
@@ -204,6 +206,9 @@ class SafeTrashManager private constructor(
     }
 
     fun restore(entryId: String): SafeTrashRestoreResult {
+        if (!isPersistentTrashAvailable()) {
+            return SafeTrashRestoreResult(SafeTrashRestoreStatus.DESTINATION_UNAVAILABLE)
+        }
         if (!ENTRY_ID_PATTERN.matches(entryId)) {
             return SafeTrashRestoreResult(SafeTrashRestoreStatus.ENTRY_NOT_FOUND)
         }
@@ -303,6 +308,7 @@ class SafeTrashManager private constructor(
     }
 
     fun permanentlyDelete(file: File): Boolean {
+        if (!isPersistentTrashAvailable()) return false
         val root = runCatching { trashDirectory.canonicalFile }.getOrNull() ?: return false
         val rootPrefix = root.path.trimEnd(File.separatorChar) + File.separator
         val absolute = file.absoluteFile
@@ -320,6 +326,7 @@ class SafeTrashManager private constructor(
     }
 
     fun emptyTrash(): Boolean {
+        if (!isPersistentTrashAvailable()) return false
         val entries = trashDirectory.listFiles() ?: return true
         var allDeleted = true
         for (entry in entries) {
