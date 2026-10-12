@@ -2,6 +2,7 @@ package com.riccardopinato.omnicleaner.monetization
 
 import android.app.Activity
 import android.content.Context
+import com.riccardopinato.omnicleaner.R
 import com.google.android.ump.ConsentInformation
 import com.google.android.ump.ConsentRequestParameters
 import com.google.android.ump.UserMessagingPlatform
@@ -17,8 +18,9 @@ data class ConsentState(
 )
 
 class ConsentManager(context: Context) {
+    private val appContext = context.applicationContext
     private val consentInformation: ConsentInformation =
-        UserMessagingPlatform.getConsentInformation(context.applicationContext)
+        UserMessagingPlatform.getConsentInformation(appContext)
 
     private val _state = MutableStateFlow(ConsentState())
     val state: StateFlow<ConsentState> = _state.asStateFlow()
@@ -50,7 +52,7 @@ class ConsentManager(context: Context) {
             privacyOptionsRequired =
                 consentInformation.privacyOptionsRequirementStatus ==
                     ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED,
-            error = error,
+            error = if (error == null) null else appContext.getString(R.string.consent_error_generic),
         )
     }
 }
