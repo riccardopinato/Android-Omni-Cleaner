@@ -4,14 +4,6 @@ on:
   push:
     branches:
       - main
-      - "recovery/**"
-      - "audit/**"
-      - "hardening/**"
-      - "monetization/**"
-      - "redesign/**"
-      - "step-7-product-expansion"
-      - "step-8-localization-accessibility"
-      - "step-9-performance-deep-qa"
   pull_request:
     branches:
       - main
@@ -20,17 +12,21 @@ on:
 permissions:
   contents: read
 
+env:
+  OMNI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
 concurrency:
-  group: applab-intelligence-${{ github.ref }}
+  group: applab-intelligence-${{ github.event.pull_request.head.ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
   intelligence:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Android Omni Cleaner
+      - name: Checkout exact Android Omni Cleaner source head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          ref: ${{ env.OMNI_SOURCE_SHA }}
           path: target
           persist-credentials: false
 
