@@ -51,6 +51,7 @@ fun SafeTrashSection() {
     var message by remember { mutableStateOf<SafeTrashMessage?>(null) }
     var confirmEmpty by remember { mutableStateOf(false) }
     val canRestore = StorageAccess.hasBroadAccess(context)
+    val persistentTrashAvailable = manager.isPersistentTrashAvailable()
 
     suspend fun reload() {
         val snapshot = withContext(Dispatchers.IO) {
@@ -87,6 +88,21 @@ fun SafeTrashSection() {
                 stringResource(R.string.safe_trash_body),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                stringResource(
+                    if (persistentTrashAvailable) {
+                        R.string.safe_trash_persistent_note
+                    } else {
+                        R.string.safe_trash_storage_unavailable
+                    },
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (persistentTrashAvailable) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.error
+                },
             )
             Text(
                 stringResource(R.string.safe_trash_persistent_notice),
