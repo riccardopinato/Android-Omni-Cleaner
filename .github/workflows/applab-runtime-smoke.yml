@@ -39,7 +39,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: riccardopinato/AppLab
-          ref: dc826264c31dd79fc7617ab7a4a8aee61f9b5aba
+          ref: 9050482675d928c35b428161c1183a4c9ffc87c7
           path: .applab
           persist-credentials: false
 
