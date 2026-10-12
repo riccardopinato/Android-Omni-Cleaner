@@ -24,7 +24,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -34,12 +33,10 @@ import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
 
 @Composable
-fun GalleryCleanerSection() {
+fun GalleryCleanerSection(
+    controller: GalleryController,
+) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val controller = remember(context, scope) {
-        GalleryController(context, scope)
-    }
 
     var state by remember { mutableStateOf(controller.state) }
     var showTrashConfirmation by remember { mutableStateOf(false) }
