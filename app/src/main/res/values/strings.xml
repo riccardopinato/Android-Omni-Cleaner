@@ -303,4 +303,11 @@
     <string name="pro_system_trash_confirmed">Android Trash confirmed (not counted as space already reclaimed)</string>
     <string name="pro_system_trash_cancelled">Android Trash cancelled</string>
 
+
+    <string name="safe_trash_persistent_notice">Safe Trash is stored in shared storage so it can survive app uninstall. Reinstall Omni Cleaner and re-enable Deep Cleaning to restore these files.</string>
+    <string name="safe_trash_unavailable">Safe Trash storage is unavailable. Files will remain unchanged.</string>
+    <string name="gallery_error_load_failed">Gallery media could not be loaded. Try again.</string>
+    <string name="smart_categories_scan_failed">Smart Categories scan could not be completed.</string>
+    <string name="pro_scan_failed">The Pro scan could not be completed.</string>
+    <string name="pro_offline_cache">Premium is temporarily available from a recent Google Play verification. Ownership will be checked again when Play is reachable.</string>
 </resources>
