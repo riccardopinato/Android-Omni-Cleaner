@@ -136,7 +136,7 @@ private class MaintenanceController(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
-                state = state.copy(message = error.message ?: error.javaClass.simpleName)
+                state = state.copy(message = context.getString(R.string.maintenance_operation_failed))
             } finally {
                 if (generation == operationGeneration) {
                     state = state.copy(running = false, operation = null)
