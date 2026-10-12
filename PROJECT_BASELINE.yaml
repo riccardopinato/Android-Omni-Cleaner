@@ -6,7 +6,7 @@ project:
 
 factory:
   repository: riccardopinato/App-Factory-Core
-  commit_sha: a4a97ca79e85d2faebcdcc9a3ae4a9644f5caf03
+  commit_sha: fa3c0679de393f1cb13c2fed2be314d1a1269353
   master_version: "25.1"
   golden_index_version: 10
   golden_registry_version: 2
@@ -65,7 +65,7 @@ physical_validation:
   status: blocked_until_real_device_execution
 
 release:
-  ci: pass
+  ci: blocked_current_head_actions_quota
   signing: policy_defined_identity_not_provisioned
   physical_validation: blocked
   distribution_validation: parity_prerelease_only
@@ -161,7 +161,11 @@ localization_accessibility:
 
 
 performance_deep_qa:
-  status: implementation_complete_validation_pending
+  status: implementation_complete_validation_blocked_actions_quota
+  exact_head_checkout: true
+  feature_ci_trigger: pull_request_single_lane
+  duplicate_push_pr_runs_removed: true
+  actions_runner_blocker_observed: true
   duplicate_sample_prefilter_bytes_per_edge: 65536
   duplicate_full_sha256_retained: true
   duplicate_byte_verification_retained: true
