@@ -263,9 +263,9 @@ fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
                                 verticalArrangement = Arrangement.spacedBy(14.dp),
                             ) {
                                 MonetizationSection(
-                                runtime = monetizationRuntime,
-                                batch = viewModel.proBatchController,
-                            )
+                                    runtime = monetizationRuntime,
+                                    batch = viewModel.proBatchController,
+                                )
                                 LanguageSelectorSection()
                             }
                         }
