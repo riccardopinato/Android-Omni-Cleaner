@@ -307,4 +307,13 @@
     <string name="smart_categories_scan_failed">Impossible de terminer l’analyse des Catégories intelligentes.</string>
     <string name="pro_scan_failed">Impossible de terminer l’analyse Pro.</string>
     <string name="pro_offline_cache">Premium est temporairement disponible grâce à une vérification récente de Google Play. La propriété sera revérifiée lorsque Play sera accessible.</string>
+
+    <string name="generic_operation_failed">L’opération n’a pas pu être effectuée. Réessayez.</string>
+    <string name="gallery_error_load_failed">Le contenu de la galerie n’a pas pu être chargé. Réessayez.</string>
+    <string name="pro_operation_failed">L’opération Pro n’a pas pu être effectuée. Réessayez.</string>
+    <string name="smart_categories_scan_failed">L’analyse des catégories intelligentes n’a pas pu être effectuée.</string>
+    <string name="maintenance_operation_failed">L’opération de maintenance n’a pas pu être effectuée.</string>
+    <string name="consent_error_generic">Les choix de confidentialité n’ont pas pu être actualisés. Réessayez plus tard.</string>
+    <string name="safe_trash_persistent_note">Safe Trash est stocké dans l’espace partagé afin que ses fichiers vérifiés ne soient pas supprimés simplement lors de la désinstallation de l’application.</string>
+    <string name="safe_trash_storage_unavailable">Le stockage Safe Trash est indisponible. Aucun nouveau fichier n’y sera déplacé.</string>
 </resources>
