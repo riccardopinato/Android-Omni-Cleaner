@@ -194,8 +194,8 @@ internal class CleanerController(
                 block()
             } catch (error: CancellationException) {
                 throw error
-            } catch (error: Throwable) {
-                state = state.copy(error = error.message ?: error.javaClass.simpleName)
+            } catch (_: Throwable) {
+                state = state.copy(error = context.getString(R.string.scan_error))
             } finally {
                 if (generation == scanGeneration) {
                     state = state.copy(scanning = false, currentOperation = null)
