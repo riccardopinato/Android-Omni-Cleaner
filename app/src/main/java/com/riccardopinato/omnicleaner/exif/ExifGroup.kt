@@ -1,11 +1,9 @@
 package com.riccardopinato.omnicleaner.exif
 
 enum class ExifGroup(
-    val title: String,
     val tags: Set<String>,
 ) {
     LOCATION(
-        title = "Posizione GPS",
         tags = setOf(
             "GPSVersionID",
             "GPSLatitudeRef",
@@ -42,7 +40,6 @@ enum class ExifGroup(
         ),
     ),
     DATES(
-        title = "Date e orari EXIF",
         tags = setOf(
             "DateTime",
             "DateTimeOriginal",
@@ -56,7 +53,6 @@ enum class ExifGroup(
         ),
     ),
     DEVICE(
-        title = "Dispositivo e autore",
         tags = setOf(
             "Make",
             "Model",
@@ -72,7 +68,6 @@ enum class ExifGroup(
         ),
     ),
     COMMENTS(
-        title = "Commenti EXIF",
         tags = setOf(
             "UserComment",
             "ImageDescription",
