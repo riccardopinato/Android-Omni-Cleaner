@@ -13,7 +13,8 @@ Recovery and productization of the lost-source Android cleaner APK.
 **MAXI STEP 6 — UI/UX Redesign: COMPLETE**  
 **MAXI STEP 7 — Product Expansion: COMPLETE**  
 **MAXI STEP 8 — Localization & Accessibility: COMPLETE**  
-**MAXI STEP 9 — Performance & Deep QA: IMPLEMENTATION COMPLETE (validation deferred)**
+**MAXI STEP 9 — Performance & Deep QA: IMPLEMENTATION COMPLETE (validation deferred)**  
+**MAXI STEP 9.5 — Post-Audit P1/P2/P3 Hardening: SOURCE COMPLETE (validation deferred)**
 
 The recovered cleaner, safety model, monetization architecture, redesigned shell, Smart Categories and localization/accessibility layer are complete through Step 8. Play/AdMob provider validation and physical-device certification remain separate release gates.
 
@@ -32,7 +33,7 @@ The recovered cleaner, safety model, monetization architecture, redesigned shell
 ## Current recovery version
 
 - applicationId: `com.riccardopinato.omnicleaner`
-- version: `0.10.0-recovery` / code 10
+- version: `0.11.0-recovery` / code 11
 - minSdk 24
 - targetSdk 36
 - compileSdk 37
@@ -50,7 +51,7 @@ The recovered cleaner, safety model, monetization architecture, redesigned shell
 - Debug builds use Google demo ad units.
 - Release ads stay disabled until production AdMob IDs are configured.
 
-See `MONETIZATION_CONTRACT.md` and `PLAY_CONSOLE_SETUP.md`.
+See `MONETIZATION_CONTRACT.md`, `PLAY_CONSOLE_SETUP.md`, `PRIVACY_POLICY.md`, `DATA_SAFETY.md` and `APP_ADS_SETUP.md`.
 
 ## UI/UX shell
 
@@ -74,7 +75,7 @@ Smart Categories adds review-only discovery for:
 - archives;
 - screenshots.
 
-The scan uses one local inventory pass, never auto-selects files, and reuses the existing snapshot revalidation + Android Trash / Safe Trash safety model. Perceptual similar-photo detection is deferred until the performance/deep-QA step.
+The scan uses the shared local inventory, never auto-selects files, and reuses the existing snapshot revalidation + Android Trash / Safe Trash safety model. Perceptual similar-photo detection is explicitly deferred to Product Expansion 2 / v1.1.
 
 See `STEP7_PRODUCT_EXPANSION.md`.
 
@@ -90,7 +91,7 @@ See `STEP8_LOCALIZATION_ACCESSIBILITY.md`.
 
 Step 9 hardens large-library behavior with duplicate candidate prefiltering, cancellable hashing/MediaStore queries, a bounded Gallery review window, source-revalidated EXIF export and a deterministic large-library runtime fixture. AppLab runs the performance, lifecycle, process-death, background and storage labs explicitly for this step. PR gates now test the immutable source head, select FULL correctly on the Step 9 branch, and avoid duplicate feature push + PR runs.
 
-See `STEP9_PERFORMANCE_DEEP_QA.md`.
+See `STEP9_PERFORMANCE_DEEP_QA.md`, `STEP9_5_AUDIT_HARDENING.md` and `PERFORMANCE_BUDGETS.md`.
 
 ## Storage safety model
 
@@ -103,7 +104,7 @@ See `STEP9_PERFORMANCE_DEEP_QA.md`.
 - small non-media files may use Safe Trash;
 - large non-media files have no permanent-delete fallback;
 - moving to a trash location is not reported as bytes already freed;
-- Safe Trash stores integrity metadata and supports verified restore without overwrite;
+- Safe Trash stores integrity metadata in hidden shared storage, survives uninstall/reinstall, and supports verified restore without overwrite;
 - Android 14+ partial photo/video access is supported without pretending it is full access.
 
 See `STORAGE_PERMISSION_POLICY.md`.
