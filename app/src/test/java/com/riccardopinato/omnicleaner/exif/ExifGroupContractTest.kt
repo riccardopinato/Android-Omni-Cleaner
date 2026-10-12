@@ -6,10 +6,10 @@ import org.junit.Test
 
 class ExifGroupContractTest {
     @Test
-    fun donorGroupsAndTitlesStayStable() {
+    fun donorGroupsStayStableWhileLabelsLiveInResources() {
         assertEquals(
-            listOf("Posizione GPS", "Date e orari EXIF", "Dispositivo e autore", "Commenti EXIF"),
-            ExifGroup.entries.map { it.title },
+            listOf("LOCATION", "DATES", "DEVICE", "COMMENTS"),
+            ExifGroup.entries.map { it.name },
         )
         assertTrue("GPSLatitude" in ExifGroup.LOCATION.tags)
         assertTrue("DateTimeOriginal" in ExifGroup.DATES.tags)
