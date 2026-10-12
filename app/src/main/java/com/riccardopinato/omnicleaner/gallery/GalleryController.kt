@@ -246,7 +246,7 @@ class GalleryController(
                     state.copy(
                         loading = false,
                         loadingNextPage = false,
-                        error = error.message ?: error.javaClass.simpleName,
+                        error = context.getString(R.string.gallery_error_load_failed),
                     ),
                 )
             }
@@ -288,7 +288,7 @@ class GalleryController(
                 update(
                     state.copy(
                         loadingNextPage = false,
-                        error = error.message ?: error.javaClass.simpleName,
+                        error = context.getString(R.string.gallery_error_load_failed),
                     ),
                 )
             }
