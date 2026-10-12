@@ -316,4 +316,5 @@
     <string name="consent_error_generic">Não foi possível atualizar as escolhas de privacidade. Tente novamente mais tarde.</string>
     <string name="safe_trash_persistent_note">O Safe Trash é armazenado no armazenamento partilhado para que os ficheiros verificados não sejam apagados apenas pela desinstalação da aplicação.</string>
     <string name="safe_trash_storage_unavailable">O armazenamento do Safe Trash está indisponível. Nenhum novo ficheiro será movido para lá.</string>
+    <string name="maintenance_files_count">%1$d ficheiros</string>
 </resources>
