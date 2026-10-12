@@ -324,15 +324,3 @@ private fun ModuleScreen(
         item { Spacer(Modifier.height(10.dp)) }
     }
 }
-
-private fun formatBytes(bytes: Long): String {
-    if (bytes < 1024L) return "$bytes B"
-    val units = arrayOf("KB", "MB", "GB", "TB")
-    var value = bytes.toDouble()
-    var unit = -1
-    while (value >= 1024.0 && unit < units.lastIndex) {
-        value /= 1024.0
-        unit++
-    }
-    return String.format(Locale.getDefault(), "%.1f %s", value, units[unit])
-}
