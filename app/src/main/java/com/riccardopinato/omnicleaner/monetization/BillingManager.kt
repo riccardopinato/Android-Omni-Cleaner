@@ -78,14 +78,18 @@ class BillingManager(
                     restoreAfterConnect = false
                     queryPurchases(userInitiated = restoring)
                     queryProductDetails()
-                } else if (restoreAfterConnect) {
-                    restoreAfterConnect = false
-                    _state.value = _state.value.copy(restoreInProgress = false)
+                } else {
+                    PremiumEntitlementStore.markProviderUnavailable()
+                    if (restoreAfterConnect) {
+                        restoreAfterConnect = false
+                        _state.value = _state.value.copy(restoreInProgress = false)
+                    }
                 }
             }
 
             override fun onBillingServiceDisconnected() {
                 connectionInProgress = false
+                PremiumEntitlementStore.markProviderUnavailable()
                 _state.value = _state.value.copy(connected = false)
             }
         })
@@ -132,6 +136,7 @@ class BillingManager(
 
         billingClient.queryPurchasesAsync(params) { result, purchases ->
             if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                PremiumEntitlementStore.markProviderUnavailable()
                 _state.value = _state.value.copy(
                     restoreInProgress = false,
                     error = errorFor(result),
