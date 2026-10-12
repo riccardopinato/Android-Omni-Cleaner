@@ -11,6 +11,14 @@ the storage safety model.
 
 ## Performance changes
 
+### Shared storage inventory
+- Overview, folders, large files, duplicates and Smart Categories share a 120-second read-only inventory snapshot;
+- Pro Batch reuses the same snapshot instead of initiating independent full-device traversals for each compatible module;
+- cleanup completion invalidates the snapshot immediately;
+- each snapshot records elapsed scan time and cache-hit state;
+- mutation safety still relies on fresh per-file revalidation, never on the cache alone;
+- quantitative contracts are defined in `PERFORMANCE_BUDGETS.md`.
+
 ### Duplicate scan
 - same-size files receive a 64 KiB prefix + 64 KiB suffix fingerprint first;
 - only sample collisions advance to full SHA-256;
@@ -78,8 +86,13 @@ Network and Upgrade remain outside this step.
 
 ## Version
 
+Step 9 engine baseline:
 - `0.10.0-recovery`
 - versionCode `10`
+
+Post-audit hardening continues in Step 9.5:
+- `0.11.0-recovery`
+- versionCode `11`
 
 ## Exit gate
 
@@ -96,4 +109,6 @@ Step 9 is COMPLETE only when the exact-head artifact has:
 
 Physical low-end-device and OEM behavior remains a Step 10 certification requirement.
 
-Current validation state: **BLOCKED** until GitHub-hosted runners can be assigned again. No pre-run quota/budget rejection may be reported as a test failure or PASS.
+Current validation state: **DEFERRED / BLOCKED BY GITHUB-HOSTED RUNNER AVAILABILITY**. No pre-run quota/budget rejection may be reported as a test failure or PASS.
+
+See `STEP9_5_AUDIT_HARDENING.md` for the P1/P2/P3 source-hardening pass performed after this engine baseline.
