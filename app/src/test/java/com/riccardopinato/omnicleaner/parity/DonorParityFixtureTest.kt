@@ -65,7 +65,7 @@ class DonorParityFixtureTest {
             assertEquals(6, inventory.files.size)
             assertEquals(116L, inventory.files.sumOf { it.size })
 
-            val overview = SpaceOverviewScanner(inventoryScanner).scan(root)
+            val overview = SpaceOverviewScanner().fromInventory(root, inventory)
             assertEquals(6, overview.files)
             assertEquals(116L, overview.logicalBytes)
             assertEquals(64L, overview.largest.first().size)
