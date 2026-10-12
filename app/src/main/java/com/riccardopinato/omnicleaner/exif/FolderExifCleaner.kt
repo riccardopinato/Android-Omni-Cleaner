@@ -149,6 +149,18 @@ class FolderExifCleaner(
                     }
                 } ?: error("Documento non leggibile")
 
+                // Re-open the source independently after the copy. This catches
+                // provider truncation or a source mutation that would otherwise make
+                // the streaming copy digest and the temporary-file digest agree.
+                val sourceDigestAfterCopy = resolver.openInputStream(candidate.uri)?.use { input ->
+                    digestCancellable(input)
+                } ?: error("Documento sorgente non rileggibile")
+                if (!originalDigest.contentEquals(sourceDigestAfterCopy)) {
+                    incomplete += candidate.name
+                    onIncomplete(candidate.name)
+                    error("Sorgente cambiata durante la copia")
+                }
+
                 val tempDigest = FileInputStream(workingFile).use { input ->
                     digestCancellable(input)
                 }
