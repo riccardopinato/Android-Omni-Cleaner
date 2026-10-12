@@ -5,19 +5,19 @@ import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 
-enum class GalleryMediaFilter(val label: String) {
-    ALL("Tutti"),
-    IMAGES("Solo Foto"),
-    VIDEOS("Solo Video"),
+enum class GalleryMediaFilter {
+    ALL,
+    IMAGES,
+    VIDEOS,
 }
 
-enum class GallerySortOrder(val label: String) {
-    DATE_DESC("Più recenti"),
-    DATE_ASC("Meno recenti"),
-    SIZE_DESC("Più grandi"),
-    SIZE_ASC("Più piccoli"),
-    NAME_ASC("Nome A-Z"),
-    ALBUM("Per Album"),
+enum class GallerySortOrder {
+    DATE_DESC,
+    DATE_ASC,
+    SIZE_DESC,
+    SIZE_ASC,
+    NAME_ASC,
+    ALBUM,
 }
 
 enum class SwipeDirection {
@@ -44,7 +44,7 @@ data class GalleryMediaItem(
         get() = if (dateTaken > 0L) {
             DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(dateTaken))
         } else {
-            "Data sconosciuta"
+            ""
         }
 
     val formattedDuration: String
