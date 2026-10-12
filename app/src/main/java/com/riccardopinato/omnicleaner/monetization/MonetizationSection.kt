@@ -73,6 +73,17 @@ fun MonetizationSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
+            if (
+                premium &&
+                entitlement.source == PremiumEntitlementSource.OFFLINE_CACHE
+            ) {
+                Text(
+                    stringResource(R.string.pro_offline_cache),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
             if (!billingState.ownershipResolved && !premium) {
                 Text(
                     stringResource(R.string.pro_checking_purchase),
