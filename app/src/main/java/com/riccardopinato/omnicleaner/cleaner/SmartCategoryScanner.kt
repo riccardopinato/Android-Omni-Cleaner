@@ -38,15 +38,13 @@ data class SmartCategoryScan(
             .sumOf { it.sizeBytes }
 }
 
-class SmartCategoryScanner(
-    private val inventoryScanner: FileInventoryScanner = FileInventoryScanner(),
-) {
+class SmartCategoryScanner {
     suspend fun scan(
         root: File,
         nowMillis: Long = System.currentTimeMillis(),
         oldDownloadAgeMillis: Long = DEFAULT_OLD_DOWNLOAD_AGE_MILLIS,
     ): SmartCategoryScan {
-        val inventory = inventoryScanner.collect(root)
+        val inventory = StorageInventoryRepository.snapshot(root).inventory
         return classify(
             root = root,
             files = inventory.files,
