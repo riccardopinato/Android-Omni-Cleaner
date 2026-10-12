@@ -15,89 +15,44 @@ data class PremiumEntitlementState(
     val resolved: Boolean = false,
     val isPremium: Boolean = false,
     val source: PremiumEntitlementSource = PremiumEntitlementSource.UNRESOLVED,
-    val verifiedAtMillis: Long? = null,
-    val graceUntilMillis: Long? = null,
+    val verifiedAt: Long? = null,
+    val graceUntil: Long? = null,
 )
 
-internal data class CachedPremiumRecord(
-    val owned: Boolean,
-    val verifiedAtMillis: Long,
-)
-
-internal fun resolveCachedPremium(
-    record: CachedPremiumRecord?,
-    nowMillis: Long,
-    graceMillis: Long = PremiumEntitlementStore.OFFLINE_PREMIUM_GRACE_MS,
-): PremiumEntitlementState {
-    if (record == null || !record.owned || record.verifiedAtMillis <= 0L) {
-        return PremiumEntitlementState()
-    }
-
-    val safeGrace = graceMillis.coerceAtLeast(0L)
-    val graceUntil = runCatching {
-        Math.addExact(record.verifiedAtMillis, safeGrace)
-    }.getOrDefault(Long.MAX_VALUE)
-
-    if (nowMillis > graceUntil) {
-        return PremiumEntitlementState()
-    }
-
-    return PremiumEntitlementState(
-        resolved = true,
-        isPremium = true,
-        source = PremiumEntitlementSource.OFFLINE_CACHE,
-        verifiedAtMillis = record.verifiedAtMillis,
-        graceUntilMillis = graceUntil,
-    )
-}
-
-/**
- * Provider-agnostic entitlement boundary for the UI.
- *
- * A previously PLAY-verified lifetime purchase is cached for a bounded offline
- * grace period. A cached FREE state is intentionally never used to authorize
- * ad requests: until Play answers, unknown users remain unresolved/no-ads.
- */
 object PremiumEntitlementStore {
-    internal const val OFFLINE_PREMIUM_GRACE_MS: Long =
-        30L * 24L * 60L * 60L * 1000L
-
-    private const val PREFS_NAME = "premium_entitlement"
+    private const val PREFS = "premium_entitlement"
     private const val KEY_OWNED = "owned"
-    private const val KEY_VERIFIED_AT = "verified_at_ms"
+    private const val KEY_VERIFIED_AT = "verified_at"
+    internal const val OFFLINE_GRACE_MS: Long = 7L * 24L * 60L * 60L * 1000L
 
     private val _state = MutableStateFlow(PremiumEntitlementState())
     val state: StateFlow<PremiumEntitlementState> = _state.asStateFlow()
 
     @Volatile
-    private var initialized = false
-    private var preferences: android.content.SharedPreferences? = null
+    private var appContext: Context? = null
 
-    @Synchronized
-    fun initialize(
-        context: Context,
-        nowMillis: Long = System.currentTimeMillis(),
-    ) {
-        if (initialized) return
+    fun initialize(context: Context, now: Long = System.currentTimeMillis()) {
+        val application = context.applicationContext
+        appContext = application
+        val preferences = application.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val owned = preferences.getBoolean(KEY_OWNED, false)
+        val verifiedAt = preferences.getLong(KEY_VERIFIED_AT, 0L).takeIf { it > 0L }
 
-        val prefs = context.applicationContext.getSharedPreferences(
-            PREFS_NAME,
-            Context.MODE_PRIVATE,
-        )
-        preferences = prefs
-
-        val verifiedAt = prefs.getLong(KEY_VERIFIED_AT, 0L)
-        val record = if (prefs.contains(KEY_OWNED) && verifiedAt > 0L) {
-            CachedPremiumRecord(
-                owned = prefs.getBoolean(KEY_OWNED, false),
-                verifiedAtMillis = verifiedAt,
+        _state.value = if (
+            owned &&
+            verifiedAt != null &&
+            isOfflineEntitlementFresh(verifiedAt, now, OFFLINE_GRACE_MS)
+        ) {
+            PremiumEntitlementState(
+                resolved = true,
+                isPremium = true,
+                source = PremiumEntitlementSource.OFFLINE_CACHE,
+                verifiedAt = verifiedAt,
+                graceUntil = verifiedAt + OFFLINE_GRACE_MS,
             )
         } else {
-            null
+            PremiumEntitlementState()
         }
-
-        _state.value = resolveCachedPremium(record, nowMillis)
-        initialized = true
     }
 
     fun update(owned: Boolean) {
@@ -106,41 +61,56 @@ object PremiumEntitlementStore {
 
     fun updateFromPlay(
         owned: Boolean,
-        nowMillis: Long = System.currentTimeMillis(),
+        verifiedAt: Long = System.currentTimeMillis(),
     ) {
-        preferences?.edit()
+        appContext?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            ?.edit()
             ?.putBoolean(KEY_OWNED, owned)
-            ?.putLong(KEY_VERIFIED_AT, nowMillis)
+            ?.putLong(KEY_VERIFIED_AT, verifiedAt)
             ?.apply()
 
         _state.value = PremiumEntitlementState(
             resolved = true,
             isPremium = owned,
             source = PremiumEntitlementSource.PLAY,
-            verifiedAtMillis = nowMillis,
-            graceUntilMillis = if (owned) {
-                runCatching { Math.addExact(nowMillis, OFFLINE_PREMIUM_GRACE_MS) }
-                    .getOrDefault(Long.MAX_VALUE)
-            } else {
-                null
-            },
+            verifiedAt = verifiedAt,
+            graceUntil = if (owned) verifiedAt + OFFLINE_GRACE_MS else null,
         )
     }
 
     /**
-     * Provider temporarily unknown. Keep only a still-valid premium cache; never
-     * downgrade a previously verified lifetime user merely because Play is
-     * offline, and never authorize ads from a cached FREE result.
+     * Unknown provider state must not overwrite a still-valid cached lifetime
+     * entitlement. Once the grace expires, the state becomes unresolved and ads
+     * remain disabled until Google Play resolves ownership again.
      */
-    fun markProviderUnknown(nowMillis: Long = System.currentTimeMillis()) {
+    fun markProviderUnavailable(now: Long = System.currentTimeMillis()) {
         val current = _state.value
-        val record = current.verifiedAtMillis?.let {
-            CachedPremiumRecord(current.isPremium, it)
+        val verifiedAt = current.verifiedAt
+        if (
+            current.isPremium &&
+            verifiedAt != null &&
+            isOfflineEntitlementFresh(verifiedAt, now, OFFLINE_GRACE_MS)
+        ) {
+            _state.value = current.copy(
+                resolved = true,
+                source = PremiumEntitlementSource.OFFLINE_CACHE,
+                graceUntil = verifiedAt + OFFLINE_GRACE_MS,
+            )
+        } else {
+            _state.value = PremiumEntitlementState()
         }
-        _state.value = resolveCachedPremium(record, nowMillis)
     }
 
     fun markUnresolved() {
-        markProviderUnknown()
+        _state.value = PremiumEntitlementState()
     }
+}
+
+internal fun isOfflineEntitlementFresh(
+    verifiedAt: Long,
+    now: Long,
+    graceMs: Long,
+): Boolean {
+    if (verifiedAt <= 0L || now < verifiedAt || graceMs <= 0L) return false
+    return now - verifiedAt <= graceMs
 }
