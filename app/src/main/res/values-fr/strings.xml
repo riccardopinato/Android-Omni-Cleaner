@@ -316,4 +316,5 @@
     <string name="consent_error_generic">Les choix de confidentialité n’ont pas pu être actualisés. Réessayez plus tard.</string>
     <string name="safe_trash_persistent_note">Safe Trash est stocké dans l’espace partagé afin que ses fichiers vérifiés ne soient pas supprimés simplement lors de la désinstallation de l’application.</string>
     <string name="safe_trash_storage_unavailable">Le stockage Safe Trash est indisponible. Aucun nouveau fichier n’y sera déplacé.</string>
+    <string name="maintenance_files_count">%1$d fichiers</string>
 </resources>
