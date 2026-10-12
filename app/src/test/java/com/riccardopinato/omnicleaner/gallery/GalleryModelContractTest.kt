@@ -5,11 +5,14 @@ import org.junit.Test
 
 class GalleryModelContractTest {
     @Test
-    fun donorFilterAndSortContractsStayStable() {
-        assertEquals(listOf("Tutti", "Solo Foto", "Solo Video"), GalleryMediaFilter.entries.map { it.label })
+    fun donorFilterAndSortSemanticContractsStayStable() {
         assertEquals(
-            listOf("Più recenti", "Meno recenti", "Più grandi", "Più piccoli", "Nome A-Z", "Per Album"),
-            GallerySortOrder.entries.map { it.label },
+            listOf("ALL", "IMAGES", "VIDEOS"),
+            GalleryMediaFilter.entries.map { it.name },
+        )
+        assertEquals(
+            listOf("DATE_DESC", "DATE_ASC", "SIZE_DESC", "SIZE_ASC", "NAME_ASC", "ALBUM"),
+            GallerySortOrder.entries.map { it.name },
         )
         assertEquals(listOf(SwipeDirection.KEEP, SwipeDirection.TRASH), SwipeDirection.entries)
     }
