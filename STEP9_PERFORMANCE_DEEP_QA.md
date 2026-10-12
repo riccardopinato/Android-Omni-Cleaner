@@ -1,6 +1,6 @@
 # MAXI STEP 9 — Performance & Deep QA
 
-Factory baseline: `a4a97ca79e85d2faebcdcc9a3ae4a9644f5caf03`  
+Factory baseline: `fa3c0679de393f1cb13c2fed2be314d1a1269353`  
 App baseline entering Step 9: `379cbae5e332bd44ce5f78833c61a56da3faa923`
 
 ## Goal
@@ -31,6 +31,8 @@ are duplicates.
 
 ### EXIF
 - source digest is computed while copying to the temporary file;
+- the source URI is independently re-opened and re-hashed after the copy to detect provider truncation/source mutation;
+- the temporary file is independently hashed before EXIF mutation;
 - cleaned digest is computed while writing the exported copy;
 - the provider output is still re-opened and hashed after writing;
 - cancellation is propagated rather than converted into a failed item;
@@ -51,6 +53,14 @@ The Step 9 runtime lane adds a deterministic synthetic library under
 
 The fixture is intentionally modest in bytes but high enough in file count and
 same-size candidates to exercise inventory, duplicate prefiltering and UI scans.
+
+## CI / AppLab gate hardening
+
+- feature work runs one PR gate instead of duplicate push + PR lanes;
+- PR workflows check out `github.event.pull_request.head.sha`, not the synthetic merge ref;
+- source-branch detection uses `github.head_ref` / explicit `OMNI_SOURCE_BRANCH`;
+- Step 9 therefore selects FULL on pull-request runs as well as manual branch runs;
+- GitHub Actions quota/budget exhaustion is classified as BLOCKED when a job terminates before runner assignment.
 
 ## AppLab Step 9 mode
 
@@ -85,3 +95,5 @@ Step 9 is COMPLETE only when the exact-head artifact has:
 9. exact-head Step 9 APK prerelease + SHA-256 sidecar.
 
 Physical low-end-device and OEM behavior remains a Step 10 certification requirement.
+
+Current validation state: **BLOCKED** until GitHub-hosted runners can be assigned again. No pre-run quota/budget rejection may be reported as a test failure or PASS.
