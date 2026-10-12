@@ -37,7 +37,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -94,7 +93,6 @@ private enum class OmniDestination(
 @Composable
 fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val controller = viewModel.cleanerController
     val monetizationRuntime = rememberMonetizationRuntime()
     val entitlement by PremiumEntitlementStore.state.collectAsState()
