@@ -300,4 +300,11 @@
     <string name="pro_resolve_residues">%1$d residuos se conservaron para revisión porque la visibilidad de paquetes puede estar limitada</string>
     <string name="pro_system_trash_confirmed">Papelera de Android confirmada (no se cuenta como espacio ya liberado)</string>
     <string name="pro_system_trash_cancelled">Papelera de Android cancelada</string>
+
+    <string name="safe_trash_persistent_notice">Safe Trash se guarda en el almacenamiento compartido para que pueda sobrevivir a la desinstalación de la app. Reinstala Omni Cleaner y vuelve a activar Limpieza profunda para restaurar estos archivos.</string>
+    <string name="safe_trash_unavailable">El almacenamiento de Safe Trash no está disponible. Los archivos no se modificarán.</string>
+    <string name="gallery_error_load_failed">No se pudieron cargar los elementos de la Galería. Inténtalo de nuevo.</string>
+    <string name="smart_categories_scan_failed">No se pudo completar el análisis de Categorías inteligentes.</string>
+    <string name="pro_scan_failed">No se pudo completar el análisis Pro.</string>
+    <string name="pro_offline_cache">Premium está disponible temporalmente gracias a una verificación reciente de Google Play. La propiedad se comprobará de nuevo cuando Play esté disponible.</string>
 </resources>
