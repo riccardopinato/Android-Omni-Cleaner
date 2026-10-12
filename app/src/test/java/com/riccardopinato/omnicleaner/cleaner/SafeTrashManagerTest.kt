@@ -149,6 +149,44 @@ class SafeTrashManagerTest {
     }
 
     @Test
+    fun legacyPrivateTrashMigratesToPersistentTrash() {
+        val root = createTempDirectory("omni-trash-migrate-").toFile()
+        val legacy = File(root, "legacy-trash")
+        val persistent = File(root, "persistent-trash")
+        val restoreRoot = root
+        val original = File(root, "migrated.txt")
+        val entryDir = File(legacy, UUID.randomUUID().toString()).apply { mkdirs() }
+        val payload = File(entryDir, "payload").apply { writeText("migrate-me") }
+        val metadata = File(entryDir, "original.properties")
+        Properties().apply {
+            setProperty("originalPath", original.canonicalPath)
+            setProperty("originalName", original.name)
+            setProperty("sizeBytes", payload.length().toString())
+            setProperty("lastModified", "0")
+        }.also { properties ->
+            metadata.outputStream().use { output -> properties.store(output, "legacy") }
+        }
+
+        try {
+            val manager = SafeTrashManager.forTests(
+                trashDirectory = persistent,
+                restoreRoot = restoreRoot,
+                legacyTrashDirectory = legacy,
+            )
+
+            val migrated = manager.listEntries().single()
+            assertFalse(File(legacy, migrated.id).exists())
+            assertTrue(File(persistent, migrated.id).isDirectory)
+
+            val result = manager.restore(migrated.id)
+            assertEquals(SafeTrashRestoreStatus.RESTORED, result.status)
+            assertEquals("migrate-me", original.readText())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun mediaIsNotMovedIntoPrivateTrash() {
         val root = createTempDirectory("omni-media-trash-").toFile()
         val source = File(root, "photo.jpg").apply { writeBytes(byteArrayOf(1, 2, 3)) }
