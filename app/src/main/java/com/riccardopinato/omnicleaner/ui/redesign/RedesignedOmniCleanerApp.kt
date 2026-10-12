@@ -62,6 +62,7 @@ import com.riccardopinato.omnicleaner.monetization.AdManager
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
 import com.riccardopinato.omnicleaner.monetization.MonetizationSection
 import com.riccardopinato.omnicleaner.monetization.PremiumEntitlementStore
+import com.riccardopinato.omnicleaner.monetization.ProBatchController
 import com.riccardopinato.omnicleaner.monetization.findActivity
 import com.riccardopinato.omnicleaner.monetization.rememberMonetizationRuntime
 import com.riccardopinato.omnicleaner.ui.CleanerController
