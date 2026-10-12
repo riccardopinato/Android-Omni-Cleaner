@@ -24,10 +24,13 @@ private object MonetizationRuntimeStore {
     fun get(context: Context): MonetizationRuntime {
         val appContext = context.applicationContext
         return instance ?: synchronized(this) {
-            instance ?: MonetizationRuntime(
-                billing = BillingManager(appContext),
-                consent = ConsentManager(appContext),
-            ).also { instance = it }
+            instance ?: run {
+                PremiumEntitlementStore.initialize(appContext)
+                MonetizationRuntime(
+                    billing = BillingManager(appContext),
+                    consent = ConsentManager(appContext),
+                )
+            }.also { instance = it }
         }
     }
 }
