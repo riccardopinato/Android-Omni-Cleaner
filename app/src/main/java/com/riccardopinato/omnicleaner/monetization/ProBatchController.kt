@@ -121,10 +121,10 @@ class ProBatchController(
                 )
             } catch (error: CancellationException) {
                 state = state.copy(running = false)
-            } catch (error: Throwable) {
+            } catch (_: Throwable) {
                 state = state.copy(
                     running = false,
-                    error = error.message ?: error.javaClass.simpleName,
+                    error = context.getString(R.string.pro_scan_failed),
                 )
             }
         }
@@ -262,11 +262,11 @@ class ProBatchController(
                 }
             } catch (error: CancellationException) {
                 state = state.copy(resolving = false)
-            } catch (error: Throwable) {
+            } catch (_: Throwable) {
                 state = state.copy(
                     resolving = false,
                     awaitingSystemTrash = false,
-                    error = error.message ?: error.javaClass.simpleName,
+                    error = context.getString(R.string.pro_scan_failed),
                 )
             }
         }
