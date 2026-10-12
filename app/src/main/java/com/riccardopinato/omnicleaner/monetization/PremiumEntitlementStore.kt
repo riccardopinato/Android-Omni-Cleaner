@@ -23,7 +23,7 @@ object PremiumEntitlementStore {
     private const val PREFS = "premium_entitlement"
     private const val KEY_OWNED = "owned"
     private const val KEY_VERIFIED_AT = "verified_at"
-    internal const val OFFLINE_GRACE_MS: Long = 7L * 24L * 60L * 60L * 1000L
+    internal const val OFFLINE_GRACE_MS: Long = 30L * 24L * 60L * 60L * 1000L
 
     private val _state = MutableStateFlow(PremiumEntitlementState())
     val state: StateFlow<PremiumEntitlementState> = _state.asStateFlow()
