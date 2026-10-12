@@ -319,4 +319,5 @@
     <string name="consent_error_generic">Privacy choices could not be refreshed. Try again later.</string>
     <string name="safe_trash_persistent_note">Safe Trash is stored in shared storage so its verified payloads are not erased just because the app is uninstalled.</string>
     <string name="safe_trash_storage_unavailable">Safe Trash storage is currently unavailable. No new file will be moved there.</string>
+    <string name="maintenance_files_count">%1$d files</string>
 </resources>
