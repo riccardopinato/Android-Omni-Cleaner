@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -150,20 +152,28 @@ object AdManager {
             modifier = modifier.fillMaxWidth().wrapContentHeight(),
         ) {
             val adWidthDp = maxWidth.value.toInt().coerceAtLeast(32)
+            val adView = remember(context, adWidthDp, BuildConfig.ADMOB_BANNER_UNIT_ID) {
+                AdView(context).apply {
+                    setAdSize(
+                        AdSize.getCurrentOrientationInlineAdaptiveBannerAdSize(
+                            context,
+                            adWidthDp,
+                        ),
+                    )
+                    adUnitId = BuildConfig.ADMOB_BANNER_UNIT_ID
+                    loadAd(AdRequest.Builder().build())
+                }
+            }
+
+            DisposableEffect(adView) {
+                onDispose {
+                    adView.destroy()
+                }
+            }
+
             AndroidView(
                 modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-                factory = { viewContext ->
-                    AdView(viewContext).apply {
-                        setAdSize(
-                            AdSize.getCurrentOrientationInlineAdaptiveBannerAdSize(
-                                context,
-                                adWidthDp,
-                            ),
-                        )
-                        adUnitId = BuildConfig.ADMOB_BANNER_UNIT_ID
-                        loadAd(AdRequest.Builder().build())
-                    }
-                },
+                factory = { adView },
             )
         }
     }
