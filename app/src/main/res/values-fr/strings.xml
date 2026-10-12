@@ -300,4 +300,11 @@
     <string name="pro_resolve_residues">%1$d résidus conservés pour vérification car la visibilité des paquets peut être limitée</string>
     <string name="pro_system_trash_confirmed">Corbeille Android confirmée (non comptée comme espace déjà libéré)</string>
     <string name="pro_system_trash_cancelled">Corbeille Android annulée</string>
+
+    <string name="safe_trash_persistent_notice">Safe Trash est stocké dans l’espace partagé afin de pouvoir survivre à la désinstallation de l’application. Réinstallez Omni Cleaner et réactivez le Nettoyage approfondi pour restaurer ces fichiers.</string>
+    <string name="safe_trash_unavailable">Le stockage Safe Trash est indisponible. Les fichiers resteront inchangés.</string>
+    <string name="gallery_error_load_failed">Impossible de charger les éléments de la Galerie. Réessayez.</string>
+    <string name="smart_categories_scan_failed">Impossible de terminer l’analyse des Catégories intelligentes.</string>
+    <string name="pro_scan_failed">Impossible de terminer l’analyse Pro.</string>
+    <string name="pro_offline_cache">Premium est temporairement disponible grâce à une vérification récente de Google Play. La propriété sera revérifiée lorsque Play sera accessible.</string>
 </resources>
