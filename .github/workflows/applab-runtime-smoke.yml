@@ -59,6 +59,20 @@ jobs:
         working-directory: target
         run: ./gradlew assembleDebug --stacktrace
 
+      - name: Free runner disk for emulator
+        shell: bash
+        run: |
+          echo "Disk before cleanup:"
+          df -h /
+          for path in "$ANDROID_HOME/ndk" "$ANDROID_HOME/cmake"; do
+            if [[ -d "$path" ]]; then
+              du -sh "$path" || true
+              rm -rf "$path"
+            fi
+          done
+          echo "Disk after cleanup:"
+          df -h /
+
       - name: Install Maestro
         working-directory: .applab
         run: |
