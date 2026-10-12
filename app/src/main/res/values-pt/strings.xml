@@ -300,4 +300,11 @@
     <string name="pro_resolve_residues">%1$d resíduos mantidos para revisão porque a visibilidade dos pacotes pode estar limitada</string>
     <string name="pro_system_trash_confirmed">Lixeira do Android confirmada (não contada como espaço já libertado)</string>
     <string name="pro_system_trash_cancelled">Lixeira do Android cancelada</string>
+
+    <string name="safe_trash_persistent_notice">O Safe Trash é guardado no armazenamento partilhado para poder sobreviver à desinstalação da aplicação. Reinstale o Omni Cleaner e reative a Limpeza profunda para restaurar estes ficheiros.</string>
+    <string name="safe_trash_unavailable">O armazenamento do Safe Trash não está disponível. Os ficheiros permanecerão inalterados.</string>
+    <string name="gallery_error_load_failed">Não foi possível carregar os itens da Galeria. Tente novamente.</string>
+    <string name="smart_categories_scan_failed">Não foi possível concluir a análise das Categorias inteligentes.</string>
+    <string name="pro_scan_failed">Não foi possível concluir a análise Pro.</string>
+    <string name="pro_offline_cache">O Premium está temporariamente disponível graças a uma verificação recente do Google Play. A propriedade será verificada novamente quando o Play estiver acessível.</string>
 </resources>
