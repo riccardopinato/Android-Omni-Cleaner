@@ -14,7 +14,7 @@ Resolved in source:
 - new Safe Trash location: hidden app-managed shared storage under `.OmniCleaner/SafeTrash`;
 - new reversible payloads no longer depend on `context.filesDir`;
 - Safe Trash is excluded/protected from general cleaner traversal;
-- old app-private recovery entries are migrated only after copied metadata/payload pass integrity parsing;
+- old app-private recovery entries are migrated only after metadata parsing plus source/target payload SHA-256 and size verification;
 - failed migration leaves the legacy source untouched;
 - restore/permanent-delete operations fail closed if the persistent trash root is unavailable or unsafe;
 - UI discloses that Safe Trash survives uninstall and still occupies storage.
@@ -75,7 +75,8 @@ Resolved in source:
 - UI no longer exposes raw `Throwable.message` for Cleaner, Gallery, Smart Categories or Pro Batch failures;
 - failure copy is routed through localized resource bundles;
 - Gallery / EXIF / Pro domain enums no longer carry Italian UI labels;
-- user-facing labels remain in EN/IT/ES/FR/PT resources.
+- user-facing labels remain in EN/IT/ES/FR/PT resources;
+- hardened locale bundles retain exact **297-key** and format-placeholder parity.
 
 ### AdView lifecycle
 
