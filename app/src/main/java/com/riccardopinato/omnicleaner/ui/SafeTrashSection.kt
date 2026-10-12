@@ -47,16 +47,22 @@ fun SafeTrashSection() {
     var entries by remember { mutableStateOf<List<SafeTrashEntry>>(emptyList()) }
     var trashBytes by remember { mutableStateOf(0L) }
     var loading by remember { mutableStateOf(true) }
+    var persistentAvailable by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<SafeTrashMessage?>(null) }
     var confirmEmpty by remember { mutableStateOf(false) }
     val canRestore = StorageAccess.hasBroadAccess(context)
 
     suspend fun reload() {
         val snapshot = withContext(Dispatchers.IO) {
-            manager.listEntries() to manager.getTrashSize()
+            Triple(
+                manager.listEntries(),
+                manager.getTrashSize(),
+                manager.isPersistentTrashAvailable(),
+            )
         }
         entries = snapshot.first
         trashBytes = snapshot.second
+        persistentAvailable = snapshot.third
         loading = false
     }
 
@@ -82,6 +88,18 @@ fun SafeTrashSection() {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Text(
+                stringResource(R.string.safe_trash_persistent_notice),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (!loading && !persistentAvailable) {
+                Text(
+                    stringResource(R.string.safe_trash_unavailable),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
 
             if (loading) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
