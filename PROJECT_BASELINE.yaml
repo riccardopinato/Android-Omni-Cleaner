@@ -65,7 +65,7 @@ physical_validation:
   status: blocked_until_real_device_execution
 
 release:
-  ci: blocked_current_head_actions_quota
+  ci: public_repo_runner_available_validation_in_progress
   signing: policy_defined_identity_not_provisioned
   physical_validation: blocked
   distribution_validation: parity_prerelease_only
@@ -151,7 +151,7 @@ localization_accessibility:
     - pt
   manual_language_selector: true
   system_language_fallback: true
-  locale_key_parity: pass_297_each
+  locale_key_parity: pass_304_each
   locale_placeholder_parity: pass
   android_locale_config: true
   talkback_toggle_rows: true
@@ -169,6 +169,14 @@ performance_deep_qa:
   duplicate_sample_prefilter_bytes_per_edge: 65536
   duplicate_full_sha256_retained: true
   duplicate_byte_verification_retained: true
+  duplicate_io_buffer_bytes: 262144
+  duplicate_progress_visible: true
+  file_extension_filter:
+    enabled: true
+    extension_prefilter: true
+    applies_to:
+      - duplicates
+      - large_files
   media_store_query_cancellation: true
   gallery_bounded_review_window: true
   gallery_max_undo_history: 50
