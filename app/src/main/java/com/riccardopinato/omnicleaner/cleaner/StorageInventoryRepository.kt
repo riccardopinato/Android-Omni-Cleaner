@@ -3,6 +3,7 @@ package com.riccardopinato.omnicleaner.cleaner
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
+import java.util.concurrent.atomic.AtomicLong
 
 data class StorageInventorySnapshot(
     val rootPath: String,
@@ -27,8 +28,7 @@ object StorageInventoryRepository {
     @Volatile
     private var cached: StorageInventorySnapshot? = null
 
-    @Volatile
-    private var invalidationGeneration: Long = 0L
+    private val invalidationGeneration = AtomicLong(0L)
 
     suspend fun snapshot(
         root: File,
@@ -54,7 +54,7 @@ object StorageInventoryRepository {
                     lockedNow - current.createdAtMillis <= CACHE_TTL_MS
             }?.let { return@withLock it.copy(cacheHit = true) }
 
-            val scanGeneration = invalidationGeneration
+            val scanGeneration = invalidationGeneration.get()
             val started = nowMillis()
             val inventory = scanner.collect(root, onProgress)
             val finished = nowMillis()
@@ -65,7 +65,7 @@ object StorageInventoryRepository {
                 scanElapsedMillis = (finished - started).coerceAtLeast(0L),
                 cacheHit = false,
             ).also { snapshot ->
-                if (isInventoryGenerationCurrent(scanGeneration, invalidationGeneration)) {
+                if (isInventoryGenerationCurrent(scanGeneration, invalidationGeneration.get())) {
                     cached = snapshot
                 }
             }
@@ -73,7 +73,7 @@ object StorageInventoryRepository {
     }
 
     fun invalidate() {
-        invalidationGeneration++
+        invalidationGeneration.incrementAndGet()
         cached = null
     }
 
