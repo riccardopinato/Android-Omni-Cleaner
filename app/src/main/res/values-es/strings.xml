@@ -315,4 +315,12 @@
     <string name="safe_trash_persistent_note">Safe Trash se guarda en el almacenamiento compartido para que sus archivos verificados no se borren solo por desinstalar la app.</string>
     <string name="safe_trash_storage_unavailable">El almacenamiento de Safe Trash no está disponible. No se moverán nuevos archivos allí.</string>
     <string name="maintenance_files_count">%1$d archivos</string>
+
+    <string name="file_type_filter_title">Tipo de archivo</string>
+    <string name="file_type_filter_all">Todos los tipos de archivo</string>
+    <string name="file_type_filter_hint">El filtro se aplica a los archivos grandes y limita el hash de duplicados a la extensión seleccionada.</string>
+    <string name="duplicate_filter_requires_rescan">Vuelve a ejecutar el análisis de duplicados para aplicar el tipo de archivo seleccionado.</string>
+    <string name="duplicate_scan_progress">Comprobando candidatos duplicados: %1$d / %2$d</string>
+    <string name="scan_indexing_files_count">Indexando archivos: %1$d comprobados</string>
+    <string name="duplicates_none_found">No se encontraron duplicados para %1$s.</string>
 </resources>
