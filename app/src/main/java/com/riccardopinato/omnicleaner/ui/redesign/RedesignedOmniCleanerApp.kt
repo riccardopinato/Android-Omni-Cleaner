@@ -33,7 +33,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -100,7 +99,7 @@ fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
     val state = controller.state
     val activity = remember(context) { context.findActivity() }
 
-    SideEffect {
+    LaunchedEffect(context) {
         viewModel.updateUiContext(context)
     }
 
