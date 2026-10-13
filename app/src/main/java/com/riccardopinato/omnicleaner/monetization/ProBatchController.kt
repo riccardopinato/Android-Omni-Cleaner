@@ -22,6 +22,13 @@ class ProBatchController(
     private val cleanupEngine: StorageCleanupEngine = StorageCleanupEngine(context),
     private val thumbnailCleanup: ThumbnailFileCleanup = ThumbnailFileCleanup(),
 ) {
+    private var uiContext: Context = context
+
+    fun updateUiContext(localizedContext: Context) {
+        uiContext = localizedContext
+        state = state.copy(message = null, error = null)
+    }
+
     var state by androidx.compose.runtime.mutableStateOf(ProBatchState())
         private set
 
@@ -30,11 +37,11 @@ class ProBatchController(
 
     fun scan(selectedTypes: Set<ProScanType>) {
         if (!StorageAccess.hasBroadAccess(context)) {
-            state = state.copy(error = context.getString(R.string.pro_error_access_required))
+            state = state.copy(error = uiContext.getString(R.string.pro_error_access_required))
             return
         }
         if (selectedTypes.isEmpty()) {
-            state = state.copy(error = context.getString(R.string.pro_error_select_category))
+            state = state.copy(error = uiContext.getString(R.string.pro_error_select_category))
             return
         }
 
@@ -124,7 +131,7 @@ class ProBatchController(
             } catch (_: Throwable) {
                 state = state.copy(
                     running = false,
-                    error = context.getString(R.string.pro_scan_failed),
+                    error = uiContext.getString(R.string.pro_scan_failed),
                 )
             }
         }
@@ -199,13 +206,13 @@ class ProBatchController(
 
                 val mediaRequest = cleanupEngine.createSystemTrashRequest(preparation.mediaUris)
                 val summaryParts = mutableListOf<String>()
-                summaryParts += context.getString(
+                summaryParts += uiContext.getString(
                     R.string.pro_resolve_empty_folders,
                     folderResult.removed,
                 )
                 summaryParts += buildString {
                     append(
-                        context.getString(
+                        uiContext.getString(
                             R.string.pro_resolve_thumbnails,
                             thumbnailRemoved,
                         ),
@@ -213,37 +220,37 @@ class ProBatchController(
                     if (thumbnailRemovedBytes > 0L) {
                         append(" ")
                         append(
-                            context.getString(
+                            uiContext.getString(
                                 R.string.pro_resolve_thumbnail_bytes,
                                 thumbnailRemovedBytes,
                             ),
                         )
                     }
                 }
-                summaryParts += context.getString(
+                summaryParts += uiContext.getString(
                     R.string.pro_resolve_safe_trash,
                     safeTrash.moved,
                 )
                 if (thumbnailRejected > 0) {
-                    summaryParts += context.getString(
+                    summaryParts += uiContext.getString(
                         R.string.pro_resolve_thumbnail_rejected,
                         thumbnailRejected,
                     )
                 }
                 if (preparation.staleFiles.isNotEmpty()) {
-                    summaryParts += context.getString(
+                    summaryParts += uiContext.getString(
                         R.string.pro_resolve_stale,
                         preparation.staleFiles.size,
                     )
                 }
                 if (preparation.blockedFiles.isNotEmpty()) {
-                    summaryParts += context.getString(
+                    summaryParts += uiContext.getString(
                         R.string.pro_resolve_blocked,
                         preparation.blockedFiles.size,
                     )
                 }
                 if (state.residues.isNotEmpty()) {
-                    summaryParts += context.getString(
+                    summaryParts += uiContext.getString(
                         R.string.pro_resolve_residues,
                         state.residues.size,
                     )
@@ -266,7 +273,7 @@ class ProBatchController(
                 state = state.copy(
                     resolving = false,
                     awaitingSystemTrash = false,
-                    error = context.getString(R.string.pro_scan_failed),
+                    error = uiContext.getString(R.string.pro_scan_failed),
                 )
             }
         }
@@ -281,7 +288,7 @@ class ProBatchController(
                 append(state.message.orEmpty())
                 if (isNotEmpty()) append(" · ")
                 append(
-                    context.getString(
+                    uiContext.getString(
                         if (success) R.string.pro_system_trash_confirmed
                         else R.string.pro_system_trash_cancelled,
                     ),
