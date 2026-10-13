@@ -16,10 +16,8 @@ data class IndexedFile(
     val size: Long,
     val modified: Long,
     val revision: StrongFileRevision? = null,
-) {
-    val physicalIdentity: PhysicalFileIdentity?
-        get() = revision?.physicalIdentity
-}
+    val physicalIdentity: PhysicalFileIdentity? = revision?.physicalIdentity,
+)
 
 data class FileInventory(
     val files: List<IndexedFile>,
