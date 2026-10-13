@@ -90,14 +90,17 @@ class FileInventoryScanner {
         onProgress: ((processed: Int, total: Int) -> Unit)? = null,
     ): List<DuplicateGroup> {
         val inventory = collect(root)
-        return duplicatesProgressive(inventory.files, onProgress)
+        return duplicatesProgressive(
+            files = inventory.files,
+            onProgress = onProgress,
+        )
     }
 
     suspend fun duplicatesProgressive(
         files: List<IndexedFile>,
-        onProgress: ((processed: Int, total: Int) -> Unit)? = null,
         hashCache: DuplicateHashCache? = null,
         parallelism: Int = boundedHashWorkerCount(),
+        onProgress: ((processed: Int, total: Int) -> Unit)? = null,
     ): List<DuplicateGroup> = withContext(Dispatchers.IO) {
         val bySize = files
             .asSequence()
