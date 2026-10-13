@@ -81,6 +81,7 @@ class FileInventoryScanner {
                         size = metadata.sizeBytes,
                         modified = metadata.modifiedMillis,
                         revision = metadata.revision,
+                        physicalIdentity = metadata.physicalIdentity,
                     )
                 }
             }
