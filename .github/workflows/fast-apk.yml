@@ -3,18 +3,6 @@ name: Fast APK
 # FAST_DEVELOPMENT_MODE: minimal installable build, certification deferred. Post-audit P1/P2/P3 source pass.
 
 on:
-  push:
-    branches:
-      - step-9-performance-deep-qa
-    paths:
-      - "app/**"
-      - "gradle/**"
-      - "gradlew"
-      - "gradlew.bat"
-      - "settings.gradle.kts"
-      - "build.gradle.kts"
-      - "gradle.properties"
-      - ".github/workflows/fast-apk.yml"
   workflow_dispatch:
 
 permissions:
