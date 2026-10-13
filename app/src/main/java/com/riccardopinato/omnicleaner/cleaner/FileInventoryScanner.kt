@@ -145,6 +145,9 @@ class FileInventoryScanner {
                     }?.also { computed ->
                         if (unchanged(item)) {
                             hashCache?.putSampleHash(item, computed)
+                            if (sampleCoversWholeFile(item.size)) {
+                                hashCache?.putFullHash(item, computed)
+                            }
                         }
                     }
 
@@ -170,7 +173,15 @@ class FileInventoryScanner {
                     if (!unchanged(item)) return@boundedHashFiles null
 
                     val cached = hashCache?.fullHash(item)
-                    val hash = cached ?: nullableUnlessCancelled {
+                    val sampleAsFull = if (
+                        cached == null &&
+                        sampleCoversWholeFile(item.size)
+                    ) {
+                        hashCache?.sampleHash(item)
+                    } else {
+                        null
+                    }
+                    val hash = cached ?: sampleAsFull ?: nullableUnlessCancelled {
                         digestCancellable(item.file)
                     }?.also { computed ->
                         if (unchanged(item)) {
@@ -357,6 +368,9 @@ class FileInventoryScanner {
         }
         return md.digest().joinToString("") { "%02x".format(it) }
     }
+
+    private fun sampleCoversWholeFile(sizeBytes: Long): Boolean =
+        sizeBytes <= DUPLICATE_SAMPLE_BYTES * 2L
 
     private companion object {
         const val DUPLICATE_SAMPLE_BYTES: Long = 64L * 1024L
