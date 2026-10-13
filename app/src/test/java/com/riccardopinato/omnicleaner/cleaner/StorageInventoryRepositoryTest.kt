@@ -38,4 +38,10 @@ class StorageInventoryRepositoryTest {
             root.deleteRecursively()
         }
     }
+    @Test
+    fun staleGenerationCannotInstallInventory() {
+        assertTrue(isInventoryGenerationCurrent(scanGeneration = 4L, currentGeneration = 4L))
+        assertFalse(isInventoryGenerationCurrent(scanGeneration = 4L, currentGeneration = 5L))
+    }
 }
+
