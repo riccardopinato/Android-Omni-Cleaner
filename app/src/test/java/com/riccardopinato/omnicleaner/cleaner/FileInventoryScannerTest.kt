@@ -134,6 +134,71 @@ class FileInventoryScannerTest {
     }
 
     @Test
+    fun boundedHashWorkerPolicyCapsConcurrency() {
+        assertEquals(1, boundedHashWorkerCount(1))
+        assertEquals(2, boundedHashWorkerCount(2))
+        assertEquals(2, boundedHashWorkerCount(4))
+        assertEquals(3, boundedHashWorkerCount(6))
+        assertEquals(4, boundedHashWorkerCount(8))
+        assertEquals(4, boundedHashWorkerCount(32))
+    }
+
+    @Test
+    fun duplicateScanReusesRevisionBoundHashes() = runBlocking {
+        val root = createTempDirectory("omni-hash-cache-").toFile()
+        try {
+            val first = File(root, "first.bin").apply { writeText("same-content") }
+            val second = File(root, "second.bin").apply { writeText("same-content") }
+            val scanner = FileInventoryScanner()
+            val inventory = scanner.collect(root)
+            val digest = scanner.digest(first)
+
+            class FakeCache : DuplicateHashCache {
+                var sampleGets = 0
+                var fullGets = 0
+                var samplePuts = 0
+                var fullPuts = 0
+
+                override fun sampleHash(item: IndexedFile): String? {
+                    sampleGets++
+                    return digest
+                }
+
+                override fun fullHash(item: IndexedFile): String? {
+                    fullGets++
+                    return digest
+                }
+
+                override fun putSampleHash(item: IndexedFile, hash: String) {
+                    samplePuts++
+                }
+
+                override fun putFullHash(item: IndexedFile, hash: String) {
+                    fullPuts++
+                }
+            }
+
+            val cache = FakeCache()
+            val groups = scanner.duplicatesProgressive(
+                files = inventory.files,
+                hashCache = cache,
+                parallelism = 2,
+            )
+
+            assertEquals(1, groups.size)
+            assertEquals(2, groups.single().files.size)
+            assertTrue(cache.sampleGets >= 2)
+            assertTrue(cache.fullGets >= 2)
+            assertEquals(0, cache.samplePuts)
+            assertEquals(0, cache.fullPuts)
+            assertTrue(first.isFile)
+            assertTrue(second.isFile)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun nullableUnlessCancelledRethrowsCancellation() = runBlocking {
         var propagated = false
         try {
