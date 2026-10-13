@@ -235,13 +235,13 @@ class FileInventoryScannerTest {
             val items = (0 until 200).map { index ->
                 IndexedFile(File(root, "file-$index.bin"), 1L, 1L)
             }
-            var maxInFlight = 0
+            val maxInFlight = java.util.concurrent.atomic.AtomicInteger(0)
 
             boundedHashFiles(
                 items = items,
                 parallelism = 3,
                 onInFlightChanged = { active ->
-                    if (active > maxInFlight) maxInFlight = active
+                    maxInFlight.getAndUpdate { current -> maxOf(current, active) }
                 },
             ) { item ->
                 kotlinx.coroutines.delay(1)
@@ -249,7 +249,7 @@ class FileInventoryScannerTest {
             }
 
             assertEquals(3, boundedHashWorkerLaunchCount(items.size, 3))
-            assertTrue(maxInFlight <= 3)
+            assertTrue(maxInFlight.get() <= 3)
             assertEquals(4, boundedHashWorkerLaunchCount(10_000, 4))
         } finally {
             root.deleteRecursively()
