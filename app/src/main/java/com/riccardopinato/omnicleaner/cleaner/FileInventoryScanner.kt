@@ -63,12 +63,24 @@ class FileInventoryScanner {
                 coroutineContext.ensureActive()
                 checked++
                 if (checked % 128 == 0) onProgress?.invoke(checked, child.absolutePath)
+
+                val metadata = FileSystemIdentity.read(child)
+                if (metadata == null) {
+                    unreadable++
+                    continue
+                }
+                if (metadata.isSymlink) {
+                    excluded++
+                    continue
+                }
+
                 when {
-                    child.isDirectory -> stack.add(child)
-                    child.isFile -> files += IndexedFile(
+                    metadata.isDirectory -> stack.add(child)
+                    metadata.isRegularFile -> files += IndexedFile(
                         file = child,
-                        size = child.length().coerceAtLeast(0L),
-                        modified = child.lastModified().coerceAtLeast(0L),
+                        size = metadata.sizeBytes,
+                        modified = metadata.modifiedMillis,
+                        revision = metadata.revision,
                     )
                 }
             }
@@ -105,6 +117,11 @@ class FileInventoryScanner {
         val bySize = files
             .asSequence()
             .filter { it.size > 0L }
+            .distinctBy { item ->
+                item.physicalIdentity?.let { identity ->
+                    "physical:${identity.deviceId}:${identity.inode}"
+                } ?: "path:${item.file.absolutePath}"
+            }
             .groupBy { it.size }
             .values
             .filter { it.size > 1 }
@@ -296,10 +313,14 @@ class FileInventoryScanner {
         }
     }
 
-    fun unchanged(item: IndexedFile): Boolean =
-        item.file.isFile &&
-            item.file.length() == item.size &&
-            item.file.lastModified() == item.modified
+    fun unchanged(item: IndexedFile): Boolean {
+        val current = FileSystemIdentity.read(item.file) ?: return false
+        if (!current.isRegularFile || current.isSymlink) return false
+        if (current.sizeBytes != item.size || current.modifiedMillis != item.modified) return false
+
+        val expectedRevision = item.revision
+        return expectedRevision == null || current.revision == expectedRevision
+    }
 
     private suspend fun sampleFingerprintCancellable(
         file: File,
