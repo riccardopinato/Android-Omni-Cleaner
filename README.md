@@ -141,9 +141,9 @@ remains a separate gate and is never inferred from emulator PASS.
 
 ### Fast APK
 
-During fast-development mode, feature work uses a minimal APK lane:
-- debug APK only;
-- no AppLab/emulator requirement;
-- no full lint/test certification gate;
-- APK is bound to the exact source SHA and published as a prerelease with SHA-256;
+During fast-development mode, pull requests use one exact-head lane:
+- locale parity + JVM tests + debug APK assembly;
+- the same successful job publishes the SHA-bound prerelease APK + SHA-256;
+- no duplicate automatic Fast APK runner;
+- AppLab/full release certification remains deferred;
 - development/testing artifact only, not Store Ready.
