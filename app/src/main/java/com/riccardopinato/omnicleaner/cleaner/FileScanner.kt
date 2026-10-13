@@ -55,11 +55,44 @@ class FileScanner(
         }
         .toList()
 
-    suspend fun findDuplicates(root: File): List<DuplicateGroup> =
-        findDuplicates(StorageInventoryRepository.snapshot(root).inventory)
+    suspend fun findDuplicates(
+        root: File,
+        extensionFilter: String? = null,
+        onInventoryProgress: ((checked: Int, currentPath: String) -> Unit)? = null,
+        onDuplicateProgress: ((processed: Int, total: Int) -> Unit)? = null,
+    ): List<DuplicateGroup> {
+        val inventory = StorageInventoryRepository.snapshot(
+            root = root,
+            onProgress = onInventoryProgress,
+        ).inventory
+        return findDuplicates(
+            inventory = inventory,
+            extensionFilter = extensionFilter,
+            onProgress = onDuplicateProgress,
+        )
+    }
 
-    suspend fun findDuplicates(inventory: FileInventory): List<DuplicateGroup> =
-        inventoryScanner.duplicates(inventory.files)
+    suspend fun findDuplicates(
+        inventory: FileInventory,
+        extensionFilter: String? = null,
+        onProgress: ((processed: Int, total: Int) -> Unit)? = null,
+    ): List<DuplicateGroup> {
+        val normalizedExtension = extensionFilter
+            ?.trim()
+            ?.removePrefix(".")
+            ?.lowercase(Locale.ROOT)
+            ?.takeIf { it.isNotBlank() }
+
+        val candidates = if (normalizedExtension == null) {
+            inventory.files
+        } else {
+            inventory.files.filter { item ->
+                item.file.extension.lowercase(Locale.ROOT) == normalizedExtension
+            }
+        }
+
+        return inventoryScanner.duplicatesProgressive(candidates, onProgress)
+    }
 
     suspend fun scanFolders(
         root: File,
