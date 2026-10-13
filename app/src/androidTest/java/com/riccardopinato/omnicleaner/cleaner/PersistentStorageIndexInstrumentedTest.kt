@@ -21,7 +21,13 @@ class PersistentStorageIndexInstrumentedTest {
         }
 
         try {
-            val firstItem = IndexedFile(file, file.length(), file.lastModified())
+            val firstMetadata = requireNotNull(FileSystemIdentity.read(file))
+            val firstItem = IndexedFile(
+                file = file,
+                size = firstMetadata.sizeBytes,
+                modified = firstMetadata.modifiedMillis,
+                revision = requireNotNull(firstMetadata.revision),
+            )
             val firstInventory = FileInventory(
                 files = listOf(firstItem),
                 unreadable = 0,
@@ -46,7 +52,13 @@ class PersistentStorageIndexInstrumentedTest {
 
             file.writeText("version-two-is-different")
             file.setLastModified(2_000L)
-            val changedItem = IndexedFile(file, file.length(), file.lastModified())
+            val changedMetadata = requireNotNull(FileSystemIdentity.read(file))
+            val changedItem = IndexedFile(
+                file = file,
+                size = changedMetadata.sizeBytes,
+                modified = changedMetadata.modifiedMillis,
+                revision = requireNotNull(changedMetadata.revision),
+            )
             restarted.reconcileFull(
                 root = root,
                 inventory = FileInventory(listOf(changedItem), 0, 0),
