@@ -48,6 +48,13 @@ class GalleryController(
     private val scope: CoroutineScope,
     private val preferences: GalleryPreferencesManager = GalleryPreferencesManager(context),
 ) {
+    private var uiContext: Context = context
+
+    fun updateUiContext(localizedContext: Context) {
+        uiContext = localizedContext
+        update(state.copy(error = null))
+    }
+
     var state: GalleryUiState = GalleryUiState()
         private set
 
@@ -131,7 +138,7 @@ class GalleryController(
             GalleryMediaFilter.VIDEOS -> state.accessHealth.canReadVideos
         }
         if (!allowed) {
-            update(state.copy(error = context.getString(R.string.gallery_error_type_unavailable)))
+            update(state.copy(error = uiContext.getString(R.string.gallery_error_type_unavailable)))
             return
         }
         loadJob?.cancel()
@@ -186,7 +193,7 @@ class GalleryController(
 
     fun load(pageSize: Int = DEFAULT_PAGE_SIZE) {
         if (!state.hasAccess) {
-            update(state.copy(error = context.getString(R.string.gallery_error_permission_required)))
+            update(state.copy(error = uiContext.getString(R.string.gallery_error_permission_required)))
             return
         }
         loadJob?.cancel()
@@ -246,7 +253,7 @@ class GalleryController(
                     state.copy(
                         loading = false,
                         loadingNextPage = false,
-                        error = context.getString(R.string.gallery_error_load_failed),
+                        error = uiContext.getString(R.string.gallery_error_load_failed),
                     ),
                 )
             }
@@ -293,7 +300,7 @@ class GalleryController(
                 update(
                     state.copy(
                         loadingNextPage = false,
-                        error = context.getString(R.string.gallery_error_load_failed),
+                        error = uiContext.getString(R.string.gallery_error_load_failed),
                     ),
                 )
             }
@@ -330,12 +337,12 @@ class GalleryController(
     fun createTrashRequest(): PendingIntent? {
         val uris = state.selectedForTrash.map { it.uri }
         if (uris.isEmpty()) {
-            update(state.copy(error = context.getString(R.string.gallery_error_no_selection)))
+            update(state.copy(error = uiContext.getString(R.string.gallery_error_no_selection)))
             return null
         }
         val pendingIntent = MediaStoreHelper.trashMediaFiles(context.contentResolver, uris)
         if (pendingIntent == null) {
-            update(state.copy(error = context.getString(R.string.gallery_error_trash_android11)))
+            update(state.copy(error = uiContext.getString(R.string.gallery_error_trash_android11)))
         }
         return pendingIntent
     }
