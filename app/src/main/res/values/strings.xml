@@ -326,4 +326,5 @@
     <string name="duplicate_scan_progress">Checking duplicate candidates: %1$d / %2$d</string>
     <string name="scan_indexing_files_count">Indexing files: %1$d checked</string>
     <string name="duplicates_none_found">No duplicates found for %1$s.</string>
+    <string name="refresh_storage_index">Refresh storage index</string>
 </resources>
