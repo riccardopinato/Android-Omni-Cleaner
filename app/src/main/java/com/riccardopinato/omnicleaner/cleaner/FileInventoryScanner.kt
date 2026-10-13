@@ -2,12 +2,16 @@ package com.riccardopinato.omnicleaner.cleaner
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.RandomAccessFile
 import java.security.MessageDigest
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.coroutineContext
 
 class FileInventoryScanner {
@@ -92,6 +96,8 @@ class FileInventoryScanner {
     suspend fun duplicatesProgressive(
         files: List<IndexedFile>,
         onProgress: ((processed: Int, total: Int) -> Unit)? = null,
+        hashCache: DuplicateHashCache? = null,
+        parallelism: Int = boundedHashWorkerCount(),
     ): List<DuplicateGroup> = withContext(Dispatchers.IO) {
         val bySize = files
             .asSequence()
@@ -101,30 +107,13 @@ class FileInventoryScanner {
             .filter { it.size > 1 }
 
         val totalCandidates = bySize.sumOf { it.size }
-        var processed = 0
         val result = ArrayList<DuplicateGroup>()
+        val progressLock = Any()
+        var processed = 0
         onProgress?.invoke(0, totalCandidates)
 
-        for (sameSize in bySize) {
-            coroutineContext.ensureActive()
-
-            // A cheap prefix/suffix fingerprint avoids reading every same-size
-            // file in full. Identical files necessarily share this fingerprint;
-            // collisions are still verified later with full SHA-256 and a
-            // byte-for-byte comparison, so correctness is unchanged.
-            val bySample = linkedMapOf<String, MutableList<IndexedFile>>()
-            for (item in sameSize) {
-                coroutineContext.ensureActive()
-
-                if (unchanged(item)) {
-                    val sample = nullableUnlessCancelled {
-                        sampleFingerprintCancellable(item.file, item.size)
-                    }
-                    if (sample != null && unchanged(item)) {
-                        bySample.getOrPut(sample) { ArrayList() }.add(item)
-                    }
-                }
-
+        fun reportProcessed() {
+            synchronized(progressLock) {
                 processed++
                 if (
                     processed == totalCandidates ||
@@ -133,85 +122,130 @@ class FileInventoryScanner {
                     onProgress?.invoke(processed, totalCandidates)
                 }
             }
+        }
+
+        val workerCount = parallelism.coerceAtLeast(1)
+
+        for (sameSize in bySize) {
+            coroutineContext.ensureActive()
+
+            // A cheap prefix/suffix fingerprint avoids full reads for most
+            // same-size files. Sample hashes are revision-bound in the
+            // persistent index and may be reused across sessions.
+            val sampled = boundedHashFiles(
+                items = sameSize,
+                parallelism = workerCount,
+            ) { item ->
+                try {
+                    if (!unchanged(item)) return@boundedHashFiles null
+
+                    val cached = hashCache?.sampleHash(item)
+                    val sample = cached ?: nullableUnlessCancelled {
+                        sampleFingerprintCancellable(item.file, item.size)
+                    }?.also { computed ->
+                        if (unchanged(item)) {
+                            hashCache?.putSampleHash(item, computed)
+                        }
+                    }
+
+                    sample?.takeIf { unchanged(item) }
+                } finally {
+                    reportProcessed()
+                }
+            }
+
+            val bySample = linkedMapOf<String, MutableList<IndexedFile>>()
+            for (sampledItem in sampled) {
+                bySample.getOrPut(sampledItem.hash) { ArrayList() }.add(sampledItem.item)
+            }
 
             for (sampleMatches in bySample.values) {
                 coroutineContext.ensureActive()
                 if (sampleMatches.size <= 1) continue
 
-                val byHash = linkedMapOf<String, MutableList<IndexedFile>>()
-                for (item in sampleMatches) {
-                    coroutineContext.ensureActive()
-                    if (!unchanged(item)) continue
+                val hashed = boundedHashFiles(
+                    items = sampleMatches,
+                    parallelism = workerCount,
+                ) { item ->
+                    if (!unchanged(item)) return@boundedHashFiles null
 
-                    val hash = nullableUnlessCancelled {
+                    val cached = hashCache?.fullHash(item)
+                    val hash = cached ?: nullableUnlessCancelled {
                         digestCancellable(item.file)
-                    }
-                    if (hash != null && unchanged(item)) {
-                        byHash.getOrPut(hash) { ArrayList() }.add(item)
-                    }
-                }
-
-                for ((hash, hashes) in byHash) {
-                coroutineContext.ensureActive()
-                if (hashes.size <= 1) continue
-
-                // SHA-256 is used to reduce the candidate set, but a hash match
-                // is not accepted as proof of identical content. The donor APK
-                // also exposed an explicit identical() verification stage.
-                val verifiedClusters = ArrayList<MutableList<IndexedFile>>()
-
-                for (candidate in hashes) {
-                    coroutineContext.ensureActive()
-                    if (!unchanged(candidate)) continue
-
-                    var matched: MutableList<IndexedFile>? = null
-                    for (cluster in verifiedClusters) {
-                        val representative = cluster.firstOrNull() ?: continue
-                        if (
-                            unchanged(representative) &&
-                            identical(representative.file, candidate.file) &&
-                            unchanged(representative) &&
-                            unchanged(candidate)
-                        ) {
-                            matched = cluster
-                            break
+                    }?.also { computed ->
+                        if (unchanged(item)) {
+                            hashCache?.putFullHash(item, computed)
                         }
                     }
 
-                    if (matched != null) {
-                        matched.add(candidate)
-                    } else {
-                        verifiedClusters += arrayListOf(candidate)
+                    hash?.takeIf { unchanged(item) }
+                }
+
+                val byHash = linkedMapOf<String, MutableList<IndexedFile>>()
+                for (hashedItem in hashed) {
+                    byHash.getOrPut(hashedItem.hash) { ArrayList() }.add(hashedItem.item)
+                }
+
+                for ((hash, hashes) in byHash) {
+                    coroutineContext.ensureActive()
+                    if (hashes.size <= 1) continue
+
+                    // SHA-256 reduces the candidate set, but destructive
+                    // duplicate decisions still require byte-for-byte identity.
+                    val verifiedClusters = ArrayList<MutableList<IndexedFile>>()
+
+                    for (candidate in hashes) {
+                        coroutineContext.ensureActive()
+                        if (!unchanged(candidate)) continue
+
+                        var matched: MutableList<IndexedFile>? = null
+                        for (cluster in verifiedClusters) {
+                            val representative = cluster.firstOrNull() ?: continue
+                            if (
+                                unchanged(representative) &&
+                                identical(representative.file, candidate.file) &&
+                                unchanged(representative) &&
+                                unchanged(candidate)
+                            ) {
+                                matched = cluster
+                                break
+                            }
+                        }
+
+                        if (matched != null) {
+                            matched.add(candidate)
+                        } else {
+                            verifiedClusters += arrayListOf(candidate)
+                        }
                     }
-                }
 
-                for (verified in verifiedClusters) {
-                    if (verified.size <= 1) continue
+                    for (verified in verifiedClusters) {
+                        if (verified.size <= 1) continue
 
-                    val sorted = verified.sortedWith(
-                        compareBy<IndexedFile> { it.modified }
-                            .thenBy { it.file.absolutePath },
-                    )
+                        val sorted = verified.sortedWith(
+                            compareBy<IndexedFile> { it.modified }
+                                .thenBy { it.file.absolutePath },
+                        )
 
-                    if (sorted.any { !unchanged(it) }) continue
+                        if (sorted.any { !unchanged(it) }) continue
 
-                    result += DuplicateGroup(
-                        hash = hash,
-                        sizeBytes = sorted.first().size,
-                        files = sorted.map { item ->
-                            val path = item.file.absolutePath
-                            DuplicateFile(
-                                file = item.file,
-                                name = item.file.name,
-                                path = path,
-                                displayPath = path,
-                                sizeBytes = item.size,
-                                lastModified = item.modified,
-                                extension = item.file.extension.lowercase(),
-                            )
-                        },
-                    )
-                }
+                        result += DuplicateGroup(
+                            hash = hash,
+                            sizeBytes = sorted.first().size,
+                            files = sorted.map { item ->
+                                val path = item.file.absolutePath
+                                DuplicateFile(
+                                    file = item.file,
+                                    name = item.file.name,
+                                    path = path,
+                                    displayPath = path,
+                                    sizeBytes = item.size,
+                                    lastModified = item.modified,
+                                    extension = item.file.extension.lowercase(),
+                                )
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -331,6 +365,56 @@ class FileInventoryScanner {
     }
 }
 
+
+
+private data class IndexedHashResult(
+    val index: Int,
+    val item: IndexedFile,
+    val hash: String,
+)
+
+private suspend fun boundedHashFiles(
+    items: List<IndexedFile>,
+    parallelism: Int,
+    transform: suspend (IndexedFile) -> String?,
+): List<IndexedHashResult> = coroutineScope {
+    if (items.isEmpty()) return@coroutineScope emptyList()
+
+    val nextIndex = AtomicInteger(0)
+    val results = ArrayList<IndexedHashResult>()
+    val resultLock = Any()
+    val workers = minOf(parallelism.coerceAtLeast(1), items.size)
+
+    List(workers) {
+        launch(Dispatchers.IO) {
+            while (true) {
+                ensureActive()
+                val index = nextIndex.getAndIncrement()
+                if (index >= items.size) break
+
+                val item = items[index]
+                val hash = transform(item)
+                if (hash != null) {
+                    synchronized(resultLock) {
+                        results += IndexedHashResult(index, item, hash)
+                    }
+                }
+            }
+        }
+    }.joinAll()
+
+    results.sortedBy { it.index }
+}
+
+internal fun boundedHashWorkerCount(
+    availableProcessors: Int = Runtime.getRuntime().availableProcessors(),
+): Int = when {
+    availableProcessors <= 1 -> 1
+    availableProcessors <= 3 -> 2
+    availableProcessors <= 5 -> 2
+    availableProcessors <= 7 -> 3
+    else -> 4
+}
 
 internal suspend fun <T> nullableUnlessCancelled(
     block: suspend () -> T,
