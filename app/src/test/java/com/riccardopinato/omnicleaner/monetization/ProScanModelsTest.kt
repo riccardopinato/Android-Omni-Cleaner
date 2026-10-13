@@ -14,15 +14,6 @@ class ProScanModelsTest {
     }
 
     @Test
-    fun donorBatchLabelsArePreserved() {
-        assertEquals("Cartelle vuote e piccole", ProScanType.EMPTY_FOLDERS.label)
-        assertEquals("File duplicati", ProScanType.DUPLICATES.label)
-        assertEquals("Grandi file", ProScanType.LARGE_FILES.label)
-        assertEquals("Cache e miniature", ProScanType.THUMBNAIL_CACHE.label)
-        assertEquals("Residui accessibili", ProScanType.APP_RESIDUES.label)
-    }
-
-    @Test
     fun donorPremiumProductIdIsPreserved() {
         assertEquals("premium_unlock", BillingManager.PREMIUM_PRODUCT_ID)
     }

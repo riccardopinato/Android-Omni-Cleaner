@@ -32,6 +32,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun MonetizationSection(
     runtime: MonetizationRuntime,
+    batch: ProBatchController,
 ) {
     val context = LocalContext.current
     val activity = context.findActivity()
@@ -46,8 +47,6 @@ fun MonetizationSection(
     val billing = runtime.billing
     val consent = runtime.consent
     val preferences = remember(appContext) { ProPreferencesManager(appContext) }
-    val batch = remember(context, scope) { ProBatchController(context, scope) }
-
     val billingState by billing.state.collectAsState()
     val consentState by consent.state.collectAsState()
     val selectedTypes by preferences.selectedTypesFlow.collectAsState(
@@ -73,6 +72,17 @@ fun MonetizationSection(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            if (
+                premium &&
+                entitlement.source == PremiumEntitlementSource.OFFLINE_CACHE
+            ) {
+                Text(
+                    stringResource(R.string.pro_offline_cache),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             if (!billingState.ownershipResolved && !premium) {
                 Text(
@@ -181,6 +191,7 @@ fun MonetizationSection(
                 } else {
                     Button(
                         onClick = { batch.scan(selectedTypes) },
+                        enabled = !batchState.resolving && !batchState.awaitingSystemTrash,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(stringResource(R.string.pro_batch_scan))

@@ -84,7 +84,7 @@ class ThumbnailFileCleanup {
                 continue
             }
 
-            val currentHash = runCatching { hash(current) }.getOrNull()
+            val currentHash = nullableUnlessCancelled { hash(current) }
             if (currentHash == null || currentHash != expected.sha256) {
                 rejected++
                 continue
@@ -106,13 +106,13 @@ class ThumbnailFileCleanup {
             }
         }
 
-        root.walkBottomUp()
-            .filter { it != root && it.isDirectory && !PathSafety.isSymlink(it) }
-            .forEach { dir ->
-                runCatching {
-                    if (dir.listFiles()?.isEmpty() == true) dir.delete()
-                }
+        for (dir in root.walkBottomUp()) {
+            coroutineContext.ensureActive()
+            if (dir == root || !dir.isDirectory || PathSafety.isSymlink(dir)) continue
+            runCatching {
+                if (dir.listFiles()?.isEmpty() == true) dir.delete()
             }
+        }
 
         ThumbnailCleanupResult(removed, rejected, removedBytes)
     }
@@ -121,7 +121,7 @@ class ThumbnailFileCleanup {
         file.canonicalFile == file.absoluteFile && file.isFile && file.canRead()
     }.getOrDefault(false)
 
-    private fun stamp(file: File): ThumbnailFileStamp? {
+    private suspend fun stamp(file: File): ThumbnailFileStamp? {
         if (!regular(file)) return null
         val beforeBytes = file.length().coerceAtLeast(0L)
         val beforeModified = file.lastModified().coerceAtLeast(0L)
@@ -130,11 +130,12 @@ class ThumbnailFileCleanup {
         return ThumbnailFileStamp(file, beforeBytes, beforeModified, digest)
     }
 
-    private fun hash(file: File): String {
+    private suspend fun hash(file: File): String {
         val digest = MessageDigest.getInstance("SHA-256")
         FileInputStream(file).use { input ->
             val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
             while (true) {
+                coroutineContext.ensureActive()
                 val count = input.read(buffer)
                 if (count <= 0) break
                 digest.update(buffer, 0, count)

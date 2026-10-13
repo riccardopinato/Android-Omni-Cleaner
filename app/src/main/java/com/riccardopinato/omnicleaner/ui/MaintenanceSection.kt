@@ -32,6 +32,7 @@ import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.ThumbnailCacheItem
 import com.riccardopinato.omnicleaner.cleaner.ThumbnailFileCleanup
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -78,6 +79,7 @@ private class MaintenanceController(
         private set
 
     private var job: Job? = null
+    private var operationGeneration = 0L
 
     fun scanThumbnails(label: String, accessRequired: String) = run(label, accessRequired) {
         state = state.copy(
@@ -126,15 +128,20 @@ private class MaintenanceController(
             return
         }
         job?.cancel()
+        val generation = ++operationGeneration
         job = scope.launch {
             state = state.copy(running = true, operation = label, message = null)
-            runCatching { block() }
-                .onFailure { error ->
-                    if (error !is kotlinx.coroutines.CancellationException) {
-                        state = state.copy(message = error.message ?: error.javaClass.simpleName)
-                    }
+            try {
+                block()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                state = state.copy(message = context.getString(R.string.maintenance_operation_failed))
+            } finally {
+                if (generation == operationGeneration) {
+                    state = state.copy(running = false, operation = null)
                 }
-            state = state.copy(running = false, operation = null)
+            }
         }
     }
 }
@@ -215,7 +222,8 @@ fun MaintenanceSection() {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(item.displayPath, style = MaterialTheme.typography.bodyMedium)
                     Text(
-                        "${item.formattedSize()} · ${item.fileCount} file",
+                        "${item.formattedSize()} · " +
+                            stringResource(R.string.maintenance_files_count, item.fileCount),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -236,7 +244,8 @@ fun MaintenanceSection() {
                 }
                 state.visibleResidues.take(10).forEach { item ->
                     Text(
-                        "${item.name} · ${item.formattedSize()} · ${item.fileCount} file",
+                        "${item.name} · ${item.formattedSize()} · " +
+                            stringResource(R.string.maintenance_files_count, item.fileCount),
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }

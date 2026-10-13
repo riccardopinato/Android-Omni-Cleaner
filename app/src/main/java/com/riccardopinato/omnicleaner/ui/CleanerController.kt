@@ -16,10 +16,21 @@ import com.riccardopinato.omnicleaner.cleaner.SpaceOverviewScanner
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.StorageCapabilityHealth
 import com.riccardopinato.omnicleaner.cleaner.StorageInfo
+import com.riccardopinato.omnicleaner.cleaner.StorageInventoryRepository
 import com.riccardopinato.omnicleaner.cleaner.ThresholdUnit
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+
+internal val COMMON_FILE_EXTENSION_FILTERS: List<String> = listOf(
+    "apk", "pdf", "zip", "rar", "7z",
+    "jpg", "jpeg", "png", "webp",
+    "mp4", "mkv", "mov",
+    "mp3", "flac",
+    "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+    "txt", "csv",
+)
 
 internal data class CleanerUiState(
     val hasBroadAccess: Boolean = false,
@@ -42,6 +53,12 @@ internal data class CleanerUiState(
     val folderSearchQuery: String = "",
     val bigFileSearchQuery: String = "",
     val duplicateSearchQuery: String = "",
+    val fileExtensionFilter: String? = null,
+    val duplicateScanExtension: String? = null,
+    val bigFilesScanExtension: String? = null,
+    val duplicateProgressProcessed: Int = 0,
+    val duplicateProgressTotal: Int = 0,
+    val indexedFilesChecked: Int = 0,
     val bigFileSizeFilter: BigFileSizeFilter = BigFileSizeFilter.SIZE_100MB,
     val thresholdValue: String = "10",
     val thresholdUnit: ThresholdUnit = ThresholdUnit.MB,
@@ -51,7 +68,9 @@ internal data class CleanerUiState(
         get() = folders.filterByQuery(folderSearchQuery) { listOf(it.name, it.path) }
 
     val visibleBigFiles: List<BigFileItem>
-        get() = bigFiles.filterByQuery(bigFileSearchQuery) { listOf(it.name, it.path, it.extension) }
+        get() = bigFiles
+            .filterByExtension(fileExtensionFilter) { it.extension }
+            .filterByQuery(bigFileSearchQuery) { listOf(it.name, it.path, it.extension) }
 
     val folderThresholdBytes: Long
         get() = (thresholdValue.toLongOrNull() ?: 0L)
@@ -64,8 +83,12 @@ internal data class CleanerUiState(
     val visibleDuplicates: List<DuplicateGroup>
         get() {
             val normalized = duplicateSearchQuery.trim().lowercase()
-            if (normalized.isBlank()) return duplicates
-            return duplicates.filter { group ->
+            val extensionFiltered = duplicates.filter { group ->
+                fileExtensionFilter == null ||
+                    group.files.any { it.extension.equals(fileExtensionFilter, ignoreCase = true) }
+            }
+            if (normalized.isBlank()) return extensionFiltered
+            return extensionFiltered.filter { group ->
                 group.files.any { file ->
                     file.name.lowercase().contains(normalized) ||
                         file.path.lowercase().contains(normalized) ||
@@ -73,6 +96,15 @@ internal data class CleanerUiState(
                 }
             }
         }
+}
+
+private inline fun <T> List<T>.filterByExtension(
+    extension: String?,
+    extensionOf: (T) -> String,
+): List<T> {
+    val normalized = extension?.trim()?.removePrefix(".")?.lowercase()
+    if (normalized.isNullOrBlank()) return this
+    return filter { item -> extensionOf(item).lowercase() == normalized }
 }
 
 private inline fun <T> List<T>.filterByQuery(
@@ -94,10 +126,18 @@ internal class CleanerController(
     private val fileScanner: FileScanner = FileScanner(),
     private val overviewScanner: SpaceOverviewScanner = SpaceOverviewScanner(),
 ) {
+    private var uiContext: Context = context
+
+    fun updateUiContext(localizedContext: Context) {
+        uiContext = localizedContext
+        state = state.copy(currentOperation = null, error = null)
+    }
+
     var state by mutableStateOf(CleanerUiState())
         private set
 
     private var scanJob: Job? = null
+    private var scanGeneration = 0L
 
     init {
         refreshAccessAndStorage()
@@ -121,12 +161,32 @@ internal class CleanerController(
         )
     }
 
-    fun scanOverview() = runScan(context.getString(R.string.module_storage_overview)) {
+    fun scanOverview() = runScan(uiContext.getString(R.string.module_storage_overview)) {
         val overview = overviewScanner.scan(StorageAccess.primaryRoot())
         state = state.copy(overview = overview)
     }
 
-    fun scanFolders() = runScan(context.getString(R.string.module_folders)) {
+    fun refreshPersistentIndex() =
+        runScan(uiContext.getString(R.string.refresh_storage_index)) {
+            val root = StorageAccess.primaryRoot()
+            StorageInventoryRepository.snapshot(
+                root = root,
+                forceRefresh = true,
+                onProgress = { checked, _ ->
+                    if (checked % 512 == 0) {
+                        scope.launch {
+                            if (state.scanning) {
+                                state = state.copy(indexedFilesChecked = checked)
+                            }
+                        }
+                    }
+                },
+            )
+            val overview = overviewScanner.scan(root)
+            state = state.copy(overview = overview)
+        }
+
+    fun scanFolders() = runScan(uiContext.getString(R.string.module_folders)) {
         val folders = fileScanner.scanFolders(
             root = StorageAccess.primaryRoot(),
             smallFolderThresholdBytes = state.folderThresholdBytes,
@@ -145,9 +205,18 @@ internal class CleanerController(
 
     fun scanBigFiles(
         minimumBytes: Long = state.bigFileSizeFilter.minimumBytes,
-    ) = runScan(context.getString(R.string.module_large_files)) {
-        val files = fileScanner.findBigFiles(StorageAccess.primaryRoot(), minimumBytes)
-        state = state.copy(bigFiles = files, bigFilesScanned = true)
+    ) = runScan(uiContext.getString(R.string.module_large_files)) {
+        val selectedExtension = state.fileExtensionFilter
+        val files = fileScanner.findBigFiles(
+            root = StorageAccess.primaryRoot(),
+            minimumBytes = minimumBytes,
+            extensionFilter = selectedExtension,
+        )
+        state = state.copy(
+            bigFiles = files,
+            bigFilesScanned = true,
+            bigFilesScanExtension = selectedExtension,
+        )
     }
 
     fun updateFolderSearchQuery(query: String) {
@@ -162,17 +231,79 @@ internal class CleanerController(
         state = state.copy(duplicateSearchQuery = query)
     }
 
+    fun updateFileExtensionFilter(extension: String?) {
+        val normalized = extension
+            ?.trim()
+            ?.removePrefix(".")
+            ?.lowercase()
+            ?.takeIf { it.isNotBlank() }
+
+        val duplicateScopeChanged =
+            state.duplicatesScanned &&
+                state.duplicateScanExtension != normalized
+        val bigFileScopeChanged =
+            state.bigFilesScanned &&
+                state.bigFilesScanExtension != normalized
+
+        state = state.copy(
+            fileExtensionFilter = normalized,
+            duplicates = if (duplicateScopeChanged) emptyList() else state.duplicates,
+            duplicatesScanned = if (duplicateScopeChanged) false else state.duplicatesScanned,
+            bigFiles = if (bigFileScopeChanged) emptyList() else state.bigFiles,
+            bigFilesScanned = if (bigFileScopeChanged) false else state.bigFilesScanned,
+            duplicateProgressProcessed = 0,
+            duplicateProgressTotal = 0,
+        )
+    }
+
     fun updateBigFileSizeFilter(filter: BigFileSizeFilter) {
         state = state.copy(bigFileSizeFilter = filter)
         if (state.hasBroadAccess) scanBigFiles(filter.minimumBytes)
     }
 
-    fun scanDuplicates() = runScan(context.getString(R.string.module_duplicates)) {
-        val groups = fileScanner.findDuplicates(StorageAccess.primaryRoot())
-        state = state.copy(duplicates = groups, duplicatesScanned = true)
+    fun scanDuplicates() = runScan(uiContext.getString(R.string.module_duplicates)) {
+        val selectedExtension = state.fileExtensionFilter
+        state = state.copy(
+            duplicateProgressProcessed = 0,
+            duplicateProgressTotal = 0,
+            indexedFilesChecked = 0,
+            duplicatesScanned = false,
+            duplicateScanExtension = selectedExtension,
+        )
+
+        val groups = fileScanner.findDuplicates(
+            root = StorageAccess.primaryRoot(),
+            extensionFilter = selectedExtension,
+            onInventoryProgress = { checked, _ ->
+                if (checked % 512 == 0) {
+                    scope.launch {
+                        if (state.scanning) {
+                            state = state.copy(indexedFilesChecked = checked)
+                        }
+                    }
+                }
+            },
+            onDuplicateProgress = { processed, total ->
+                scope.launch {
+                    if (state.scanning) {
+                        state = state.copy(
+                            duplicateProgressProcessed = processed,
+                            duplicateProgressTotal = total,
+                        )
+                    }
+                }
+            },
+        )
+
+        state = state.copy(
+            duplicates = groups,
+            duplicatesScanned = true,
+            duplicateProgressProcessed = state.duplicateProgressTotal,
+        )
     }
 
     fun cancelScan() {
+        scanGeneration++
         scanJob?.cancel()
         scanJob = null
         state = state.copy(scanning = false, currentOperation = null)
@@ -180,19 +311,31 @@ internal class CleanerController(
 
     private fun runScan(label: String, block: suspend () -> Unit) {
         if (!state.hasBroadAccess) {
-            state = state.copy(error = context.getString(R.string.deep_cleaning_access_required))
+            state = state.copy(error = uiContext.getString(R.string.deep_cleaning_access_required))
             return
         }
         scanJob?.cancel()
+        val generation = ++scanGeneration
         scanJob = scope.launch {
-            state = state.copy(scanning = true, currentOperation = label, error = null)
-            runCatching { block() }
-                .onFailure { error ->
-                    if (error !is kotlinx.coroutines.CancellationException) {
-                        state = state.copy(error = error.message ?: error.javaClass.simpleName)
-                    }
+            state = state.copy(
+                scanning = true,
+                currentOperation = label,
+                duplicateProgressProcessed = 0,
+                duplicateProgressTotal = 0,
+                indexedFilesChecked = 0,
+                error = null,
+            )
+            try {
+                block()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                state = state.copy(error = uiContext.getString(R.string.scan_error))
+            } finally {
+                if (generation == scanGeneration) {
+                    state = state.copy(scanning = false, currentOperation = null)
                 }
-            state = state.copy(scanning = false, currentOperation = null)
+            }
         }
     }
 }

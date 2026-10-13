@@ -57,6 +57,9 @@ class StorageCleanupEngine(
             if (folder.delete()) removed++ else rejected++
         }
 
+        if (removed > 0) {
+            StorageInventoryRepository.invalidate()
+        }
         EmptyFolderCleanupResult(removed, rejected)
     }
 
@@ -238,6 +241,9 @@ class StorageCleanupEngine(
             }
         }
 
+        if (moved > 0) {
+            StorageInventoryRepository.invalidate()
+        }
         SafeTrashExecutionResult(moved, rejected, movedBytes)
     }
 

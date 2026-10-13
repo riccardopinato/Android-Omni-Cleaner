@@ -5,12 +5,15 @@ import android.content.Intent
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import androidx.exifinterface.media.ExifInterface
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.InputStream
+import java.io.OutputStream
 import java.security.MessageDigest
 import kotlin.coroutines.coroutineContext
 
@@ -129,18 +132,38 @@ class FolderExifCleaner(
             coroutineContext.ensureActive()
             onProgress(index, scan.candidates.size)
 
-            val temp = File.createTempFile("omni-exif-", ".jpg", context.cacheDir)
+            var temp: File? = null
+            var unverifiedOutput: DocumentFile? = null
             try {
-                resolver.openInputStream(candidate.uri)?.use { input ->
-                    FileOutputStream(temp).use { output ->
-                        input.copyTo(output)
+                val workingFile = File.createTempFile(
+                    "omni-exif-",
+                    ".jpg",
+                    context.cacheDir,
+                ).also { temp = it }
+
+                val originalDigest = resolver.openInputStream(candidate.uri)?.use { input ->
+                    FileOutputStream(workingFile).use { output ->
+                        val digest = copyWithDigest(input, output)
                         output.fd.sync()
+                        digest
                     }
                 } ?: error("Documento non leggibile")
 
-                val originalDigest = resolver.openInputStream(candidate.uri)?.use(::digest)
-                    ?: error("Documento non leggibile")
-                val tempDigest = FileInputStream(temp).use(::digest)
+                // Re-open the source independently after the copy. This catches
+                // provider truncation or a source mutation that would otherwise make
+                // the streaming copy digest and the temporary-file digest agree.
+                val sourceDigestAfterCopy = resolver.openInputStream(candidate.uri)?.use { input ->
+                    digestCancellable(input)
+                } ?: error("Documento sorgente non rileggibile")
+                if (!originalDigest.contentEquals(sourceDigestAfterCopy)) {
+                    incomplete += candidate.name
+                    onIncomplete(candidate.name)
+                    error("Sorgente cambiata durante la copia")
+                }
+
+                val tempDigest = FileInputStream(workingFile).use { input ->
+                    digestCancellable(input)
+                }
                 if (!originalDigest.contentEquals(tempDigest)) {
                     incomplete += candidate.name
                     onIncomplete(candidate.name)
@@ -148,7 +171,7 @@ class FolderExifCleaner(
                 }
 
                 JpegExifEditor.cleanTemporaryCopy(
-                    file = temp,
+                    file = workingFile,
                     groups = scan.groups,
                     checkpoint = { coroutineContext.ensureActive() },
                 )
@@ -156,30 +179,38 @@ class FolderExifCleaner(
                 val outputName = cleanedName(candidate.name)
                 val output = createUniqueJpeg(destinationRoot, outputName)
                     ?: error("Impossibile creare il file di destinazione")
+                unverifiedOutput = output
 
-                resolver.openOutputStream(output.uri, "w")?.use { target ->
-                    FileInputStream(temp).use { source ->
-                        source.copyTo(target)
+                val cleanedDigest = resolver.openOutputStream(output.uri, "w")?.use { target ->
+                    FileInputStream(workingFile).use { source ->
+                        copyWithDigest(source, target)
                     }
                 } ?: error("Impossibile scrivere la destinazione")
 
-                val exportedDigest = resolver.openInputStream(output.uri)?.use(::digest)
-                    ?: error("Copia esportata non leggibile")
-                val cleanedDigest = FileInputStream(temp).use(::digest)
+                // Re-open the provider output: the write-stream digest proves
+                // what was sent, while this second digest proves what Android
+                // actually persisted.
+                val exportedDigest = resolver.openInputStream(output.uri)?.use { input ->
+                    digestCancellable(input)
+                } ?: error("Copia esportata non leggibile")
 
                 if (!exportedDigest.contentEquals(cleanedDigest)) {
                     incomplete += candidate.name
                     onIncomplete(candidate.name)
-                    runCatching { output.delete() }
                     error("Copia esportata incompleta")
                 }
 
+                unverifiedOutput = null
                 created++
+            } catch (error: CancellationException) {
+                runCatching { unverifiedOutput?.delete() }
+                throw error
             } catch (error: Throwable) {
+                runCatching { unverifiedOutput?.delete() }
                 failed++
                 errors += "${candidate.name}: ${error.message ?: error.javaClass.simpleName}"
             } finally {
-                temp.delete()
+                temp?.delete()
             }
         }
 
@@ -250,10 +281,28 @@ class FolderExifCleaner(
         return null
     }
 
-    private fun digest(input: java.io.InputStream): ByteArray {
+    private suspend fun copyWithDigest(
+        input: InputStream,
+        output: OutputStream,
+    ): ByteArray {
         val md = MessageDigest.getInstance("SHA-256")
         val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
         while (true) {
+            coroutineContext.ensureActive()
+            val read = input.read(buffer)
+            if (read <= 0) break
+            output.write(buffer, 0, read)
+            md.update(buffer, 0, read)
+        }
+        output.flush()
+        return md.digest()
+    }
+
+    private suspend fun digestCancellable(input: InputStream): ByteArray {
+        val md = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (true) {
+            coroutineContext.ensureActive()
             val read = input.read(buffer)
             if (read <= 0) break
             md.update(buffer, 0, read)

@@ -70,6 +70,8 @@ fun SmartCategoriesSection(
         stringResource(R.string.smart_categories_no_selection)
     val trashUnavailableMessage =
         stringResource(R.string.smart_categories_trash_unavailable)
+    val scanFailedMessage =
+        stringResource(R.string.smart_categories_scan_failed)
 
     val androidTrashConfirmedMessage = stringResource(R.string.cleanup_android_trash_confirmed)
     val movedTemplate = stringResource(R.string.cleanup_safe_trash_moved)
@@ -88,8 +90,8 @@ fun SmartCategoriesSection(
             }.onSuccess { scan ->
                 result = scan
                 selectedPaths = emptySet()
-            }.onFailure { error ->
-                message = error.message ?: error.javaClass.simpleName
+            }.onFailure {
+                message = context.getString(R.string.smart_categories_scan_failed)
             }
             scanning = false
         }

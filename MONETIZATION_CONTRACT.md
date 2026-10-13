@@ -29,7 +29,10 @@ a separate product decision.
 - PURCHASED grants Premium;
 - unacknowledged PURCHASED items are acknowledged;
 - ITEM_ALREADY_OWNED triggers an authoritative ownership query;
-- purchase cancellation is not shown as an error.
+- purchase cancellation is not shown as an error;
+- last PLAY-verified lifetime Premium ownership is cached locally for a 30-day offline grace;
+- cached FREE state never authorizes ads;
+- expired/unknown entitlement returns to unresolved/no-ads until Play answers again.
 
 Current verification is client-side Play Billing ownership. Google recommends
 server-side verification for stronger anti-fraud protection. This is a known
@@ -46,7 +49,7 @@ security trade-off, not hidden certification evidence.
 - release ads remain disabled unless all three production AdMob IDs are supplied;
 - store-bound builds can enforce configuration using
   `OMNI_REQUIRE_PRODUCTION_MONETIZATION=true`;
-- banner uses an inline adaptive size suitable for scrollable content;
+- banner uses an inline adaptive size suitable for scrollable content and destroys its AdView when the composable leaves composition;
 - donor interstitial cadence remains 3 completed cleanup actions + minimum 180 s.
 
 ## Free / Premium boundary
@@ -67,3 +70,11 @@ security trade-off, not hidden certification evidence.
 - no ad requests.
 
 Safety features are never paywalled.
+
+
+Production privacy/readiness artifacts:
+- `PRIVACY_POLICY.md`
+- `DATA_SAFETY.md`
+- `APP_ADS_SETUP.md`
+
+Provider IDs/URLs remain external release inputs and are never guessed in source.

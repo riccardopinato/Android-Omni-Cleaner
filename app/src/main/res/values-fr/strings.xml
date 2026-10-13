@@ -300,4 +300,28 @@
     <string name="pro_resolve_residues">%1$d résidus conservés pour vérification car la visibilité des paquets peut être limitée</string>
     <string name="pro_system_trash_confirmed">Corbeille Android confirmée (non comptée comme espace déjà libéré)</string>
     <string name="pro_system_trash_cancelled">Corbeille Android annulée</string>
+
+    <string name="safe_trash_persistent_notice">Safe Trash est stocké dans l’espace partagé afin de pouvoir survivre à la désinstallation de l’application. Réinstallez Omni Cleaner et réactivez le Nettoyage approfondi pour restaurer ces fichiers.</string>
+    <string name="safe_trash_unavailable">Le stockage Safe Trash est indisponible. Les fichiers resteront inchangés.</string>
+    <string name="gallery_error_load_failed">Impossible de charger les éléments de la Galerie. Réessayez.</string>
+    <string name="smart_categories_scan_failed">Impossible de terminer l’analyse des Catégories intelligentes.</string>
+    <string name="pro_scan_failed">Impossible de terminer l’analyse Pro.</string>
+    <string name="pro_offline_cache">Premium est temporairement disponible grâce à une vérification récente de Google Play. La propriété sera revérifiée lorsque Play sera accessible.</string>
+
+    <string name="generic_operation_failed">L’opération n’a pas pu être effectuée. Réessayez.</string>
+    <string name="pro_operation_failed">L’opération Pro n’a pas pu être effectuée. Réessayez.</string>
+    <string name="maintenance_operation_failed">L’opération de maintenance n’a pas pu être effectuée.</string>
+    <string name="consent_error_generic">Les choix de confidentialité n’ont pas pu être actualisés. Réessayez plus tard.</string>
+    <string name="safe_trash_persistent_note">Safe Trash est stocké dans l’espace partagé afin que ses fichiers vérifiés ne soient pas supprimés simplement lors de la désinstallation de l’application.</string>
+    <string name="safe_trash_storage_unavailable">Le stockage Safe Trash est indisponible. Aucun nouveau fichier n’y sera déplacé.</string>
+    <string name="maintenance_files_count">%1$d fichiers</string>
+
+    <string name="file_type_filter_title">Type de fichier</string>
+    <string name="file_type_filter_all">Tous les types de fichiers</string>
+    <string name="file_type_filter_hint">Le filtre s’applique aux fichiers volumineux et limite le hachage des doublons à l’extension sélectionnée.</string>
+    <string name="duplicate_filter_requires_rescan">Relancez l’analyse des doublons pour appliquer le type de fichier sélectionné.</string>
+    <string name="duplicate_scan_progress">Vérification des candidats en double : %1$d / %2$d</string>
+    <string name="scan_indexing_files_count">Indexation des fichiers : %1$d vérifiés</string>
+    <string name="duplicates_none_found">Aucun doublon trouvé pour %1$s.</string>
+    <string name="refresh_storage_index">Actualiser l’index du stockage</string>
 </resources>

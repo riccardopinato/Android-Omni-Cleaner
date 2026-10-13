@@ -1,36 +1,29 @@
 name: AppLab Runtime Smoke
 
 on:
-  push:
-    branches:
-      - "recovery/**"
-      - "audit/**"
-      - "hardening/**"
-      - "monetization/**"
-      - "redesign/**"
-      - "step-7-product-expansion"
-      - "step-8-localization-accessibility"
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
   contents: write
 
+env:
+  OMNI_SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
+  OMNI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
 concurrency:
-  group: applab-runtime-smoke-${{ github.ref }}
+  group: applab-runtime-smoke-${{ github.event.pull_request.head.ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
   runtime-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
 
     steps:
-      - name: Checkout Android Omni Cleaner
+      - name: Checkout exact Android Omni Cleaner source head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          ref: ${{ env.OMNI_SOURCE_SHA }}
           path: target
           persist-credentials: false
 
@@ -38,7 +31,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: riccardopinato/AppLab
-          ref: dc826264c31dd79fc7617ab7a4a8aee61f9b5aba
+          ref: 494f9b4c4a386429b2e49ce907dea87bf05e2cd3
           path: .applab
           persist-credentials: false
 
@@ -58,6 +51,20 @@ jobs:
         working-directory: target
         run: ./gradlew assembleDebug --stacktrace
 
+      - name: Free runner disk for emulator
+        shell: bash
+        run: |
+          echo "Disk before cleanup:"
+          df -h /
+          for path in "$ANDROID_HOME/ndk" "$ANDROID_HOME/cmake"; do
+            if [[ -d "$path" ]]; then
+              du -sh "$path" || true
+              rm -rf "$path"
+            fi
+          done
+          echo "Disk after cleanup:"
+          df -h /
+
       - name: Install Maestro
         working-directory: .applab
         run: |
@@ -72,7 +79,24 @@ jobs:
 
       - name: Prepare bounded AppLab plan
         run: |
-          cat > "$RUNNER_TEMP/applab-fast-plan.json" <<'JSON'
+          if [[ "$OMNI_SOURCE_BRANCH" == "step-9-performance-deep-qa" ]]; then
+            cat > "$RUNNER_TEMP/applab-fast-plan.json" <<'JSON'
+          {
+            "selected_labs": {
+              "system": true,
+              "performance": true,
+              "network": false,
+              "persistence": true,
+              "configuration": true,
+              "resource_pressure": true,
+              "background": true,
+              "storage": true,
+              "upgrade": false
+            }
+          }
+          JSON
+          else
+            cat > "$RUNNER_TEMP/applab-fast-plan.json" <<'JSON'
           {
             "selected_labs": {
               "system": true,
@@ -87,6 +111,7 @@ jobs:
             }
           }
           JSON
+          fi
 
       - name: Run AppLab emulator smoke
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
@@ -99,6 +124,7 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_7_pro
+          disk-size: 2048M
           disable-animations: true
           script: bash "$GITHUB_WORKSPACE/target/.github/scripts/applab-runtime-smoke.sh"
       - name: Publish non-trusted runtime evidence
@@ -124,7 +150,7 @@ jobs:
             echo
             echo "**Authority:** NON_TRUSTED_SMOKE — useful runtime evidence, not certification."
             echo
-            echo "**Target:** $GITHUB_SHA"
+            echo "**Target:** $OMNI_SOURCE_SHA"
             echo
             if [[ -s "$GITHUB_WORKSPACE/applab-runtime-smoke/summary.md" ]]; then
               cat "$GITHUB_WORKSPACE/applab-runtime-smoke/summary.md"
@@ -132,7 +158,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish exact parity APK prerelease
-        if: success() && github.ref == 'refs/heads/audit/maxi-step-3-apk-parity'
+        if: success() && env.OMNI_SOURCE_BRANCH == 'audit/maxi-step-3-apk-parity'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -141,7 +167,7 @@ jobs:
           APK="$GITHUB_WORKSPACE/target/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
 
-          SHORT_SHA="${GITHUB_SHA:0:12}"
+          SHORT_SHA="${OMNI_SOURCE_SHA:0:12}"
           TAG="step3-parity-$SHORT_SHA"
           ASSET="Android-Omni-Cleaner-Step3-$SHORT_SHA-debug.apk"
           HASH_FILE="$ASSET.sha256"
@@ -154,7 +180,7 @@ jobs:
           {
             echo "# Android Omni Cleaner — Step 3 parity APK"
             echo
-            printf '%s\n' "- Source SHA: \`$GITHUB_SHA\`"
+            printf '%s\n' "- Source SHA: \`$OMNI_SOURCE_SHA\`"
             printf '%s\n' "- APK SHA-256: \`$APK_SHA256\`"
             echo "- Runtime lane: AppLab v4.5 NON_TRUSTED_SMOKE PASS in this workflow"
             echo "- Purpose: physical/manual parity testing"
@@ -164,14 +190,14 @@ jobs:
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG"               "$RUNNER_TEMP/$ASSET"               "$RUNNER_TEMP/$HASH_FILE"               --clobber               --repo "$GITHUB_REPOSITORY"
           else
-            gh release create "$TAG"               "$RUNNER_TEMP/$ASSET"               "$RUNNER_TEMP/$HASH_FILE"               --repo "$GITHUB_REPOSITORY"               --target "$GITHUB_SHA"               --title "Step 3 parity APK · $SHORT_SHA"               --notes-file "$NOTES"               --prerelease
+            gh release create "$TAG"               "$RUNNER_TEMP/$ASSET"               "$RUNNER_TEMP/$HASH_FILE"               --repo "$GITHUB_REPOSITORY"               --target "$OMNI_SOURCE_SHA"               --title "Step 3 parity APK · $SHORT_SHA"               --notes-file "$NOTES"               --prerelease
           fi
 
           echo "Parity APK SHA-256: $APK_SHA256" >> "$GITHUB_STEP_SUMMARY"
           echo "Release tag: $TAG" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish Step 4 hardened APK prerelease
-        if: success() && github.ref == 'refs/heads/hardening/maxi-step-4-safety-storage'
+        if: success() && env.OMNI_SOURCE_BRANCH == 'hardening/maxi-step-4-safety-storage'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -180,7 +206,7 @@ jobs:
           APK="$GITHUB_WORKSPACE/target/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
 
-          SHORT_SHA="${GITHUB_SHA:0:12}"
+          SHORT_SHA="${OMNI_SOURCE_SHA:0:12}"
           TAG="step4-hardening-$SHORT_SHA"
           ASSET="Android-Omni-Cleaner-Step4-$SHORT_SHA-debug.apk"
           HASH_FILE="$ASSET.sha256"
@@ -193,7 +219,7 @@ jobs:
           {
             echo "# Android Omni Cleaner — Step 4 hardened APK"
             echo
-            printf '%s\n' "- Source SHA: \`$GITHUB_SHA\`"
+            printf '%s\n' "- Source SHA: \`$OMNI_SOURCE_SHA\`"
             printf '%s\n' "- APK SHA-256: \`$APK_SHA256\`"
             echo "- Version: 0.5.0-recovery / code 5"
             echo "- Runtime lane: AppLab v4.5 NON_TRUSTED_SMOKE PASS"
@@ -204,7 +230,7 @@ jobs:
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --clobber --repo "$GITHUB_REPOSITORY"
           else
-            gh release create "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Step 4 hardened APK · $SHORT_SHA" --notes-file "$NOTES" --prerelease
+            gh release create "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --repo "$GITHUB_REPOSITORY" --target "$OMNI_SOURCE_SHA" --title "Step 4 hardened APK · $SHORT_SHA" --notes-file "$NOTES" --prerelease
           fi
 
           echo "Step 4 APK SHA-256: $APK_SHA256" >> "$GITHUB_STEP_SUMMARY"
@@ -212,7 +238,7 @@ jobs:
 
 
       - name: Publish Step 5 monetization APK prerelease
-        if: success() && github.ref == 'refs/heads/monetization/maxi-step-5-productization-clean'
+        if: success() && env.OMNI_SOURCE_BRANCH == 'monetization/maxi-step-5-productization-clean'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -221,7 +247,7 @@ jobs:
           APK="$GITHUB_WORKSPACE/target/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
 
-          SHORT_SHA="${GITHUB_SHA:0:12}"
+          SHORT_SHA="${OMNI_SOURCE_SHA:0:12}"
           TAG="step5-monetization-$SHORT_SHA"
           ASSET="Android-Omni-Cleaner-Step5-$SHORT_SHA-debug.apk"
           HASH_FILE="$ASSET.sha256"
@@ -233,7 +259,7 @@ jobs:
           NOTES="$RUNNER_TEMP/step5-release-notes.md"
           {
             echo "# Android Omni Cleaner — Step 5 monetization APK"
-            echo "- Source SHA: $GITHUB_SHA"
+            echo "- Source SHA: $OMNI_SOURCE_SHA"
             echo "- APK SHA-256: $APK_SHA256"
             echo "- Version: 0.6.0-recovery / code 6"
             echo "- Google demo ads only"
@@ -245,14 +271,14 @@ jobs:
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --clobber --repo "$GITHUB_REPOSITORY"
           else
-            gh release create "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Step 5 monetization APK · $SHORT_SHA" --notes-file "$NOTES" --prerelease
+            gh release create "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --repo "$GITHUB_REPOSITORY" --target "$OMNI_SOURCE_SHA" --title "Step 5 monetization APK · $SHORT_SHA" --notes-file "$NOTES" --prerelease
           fi
 
           echo "Step 5 APK SHA-256: $APK_SHA256" >> "$GITHUB_STEP_SUMMARY"
           echo "Release tag: $TAG" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish Step 6 redesign APK prerelease
-        if: success() && startsWith(github.ref, 'refs/heads/redesign/maxi-step-6-ui-ux')
+        if: success() && startsWith(env.OMNI_SOURCE_BRANCH, 'redesign/maxi-step-6-ui-ux')
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -261,7 +287,7 @@ jobs:
           APK="$GITHUB_WORKSPACE/target/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
 
-          SHORT_SHA="${GITHUB_SHA:0:12}"
+          SHORT_SHA="${OMNI_SOURCE_SHA:0:12}"
           TAG="step6-redesign-$SHORT_SHA"
           ASSET="Android-Omni-Cleaner-Step6-$SHORT_SHA-debug.apk"
           HASH_FILE="$ASSET.sha256"
@@ -273,7 +299,7 @@ jobs:
           NOTES="$RUNNER_TEMP/step6-release-notes.md"
           {
             echo "# Android Omni Cleaner — Step 6 redesign APK"
-            echo "- Source SHA: $GITHUB_SHA"
+            echo "- Source SHA: $OMNI_SOURCE_SHA"
             echo "- APK SHA-256: $APK_SHA256"
             echo "- Version: 0.7.0-recovery / code 7"
             echo "- Five-surface redesigned shell"
@@ -285,7 +311,7 @@ jobs:
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --clobber --repo "$GITHUB_REPOSITORY"
           else
-            gh release create "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Step 6 redesign APK · $SHORT_SHA" --notes-file "$NOTES" --prerelease
+            gh release create "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --repo "$GITHUB_REPOSITORY" --target "$OMNI_SOURCE_SHA" --title "Step 6 redesign APK · $SHORT_SHA" --notes-file "$NOTES" --prerelease
           fi
 
           echo "Step 6 APK SHA-256: $APK_SHA256" >> "$GITHUB_STEP_SUMMARY"
@@ -293,7 +319,7 @@ jobs:
 
 
       - name: Publish Step 7 product expansion APK prerelease
-        if: success() && github.ref == 'refs/heads/step-7-product-expansion'
+        if: success() && env.OMNI_SOURCE_BRANCH == 'step-7-product-expansion'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -302,7 +328,7 @@ jobs:
           APK="$GITHUB_WORKSPACE/target/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
 
-          SHORT_SHA="${GITHUB_SHA:0:12}"
+          SHORT_SHA="${OMNI_SOURCE_SHA:0:12}"
           TAG="step7-product-$SHORT_SHA"
           ASSET="Android-Omni-Cleaner-Step7-$SHORT_SHA-debug.apk"
           HASH_FILE="$ASSET.sha256"
@@ -314,7 +340,7 @@ jobs:
           NOTES="$RUNNER_TEMP/step7-release-notes.md"
           {
             echo "# Android Omni Cleaner — Step 7 product expansion APK"
-            echo "- Source SHA: $GITHUB_SHA"
+            echo "- Source SHA: $OMNI_SOURCE_SHA"
             echo "- APK SHA-256: $APK_SHA256"
             echo "- Version: 0.8.0-recovery / code 8"
             echo "- Smart Categories: old downloads, installers, archives, screenshots"
@@ -327,7 +353,7 @@ jobs:
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --clobber --repo "$GITHUB_REPOSITORY"
           else
-            gh release create "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Step 7 product expansion APK · $SHORT_SHA" --notes-file "$NOTES" --prerelease
+            gh release create "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --repo "$GITHUB_REPOSITORY" --target "$OMNI_SOURCE_SHA" --title "Step 7 product expansion APK · $SHORT_SHA" --notes-file "$NOTES" --prerelease
           fi
 
           echo "Step 7 APK SHA-256: $APK_SHA256" >> "$GITHUB_STEP_SUMMARY"
@@ -335,7 +361,7 @@ jobs:
 
 
       - name: Publish Step 8 localization accessibility APK prerelease
-        if: success() && github.ref == 'refs/heads/step-8-localization-accessibility'
+        if: success() && env.OMNI_SOURCE_BRANCH == 'step-8-localization-accessibility'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -344,7 +370,7 @@ jobs:
           APK="$GITHUB_WORKSPACE/target/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
 
-          SHORT_SHA="${GITHUB_SHA:0:12}"
+          SHORT_SHA="${OMNI_SOURCE_SHA:0:12}"
           TAG="step8-accessibility-$SHORT_SHA"
           ASSET="Android-Omni-Cleaner-Step8-$SHORT_SHA-debug.apk"
           HASH_FILE="$ASSET.sha256"
@@ -356,7 +382,7 @@ jobs:
           NOTES="$RUNNER_TEMP/step8-release-notes.md"
           {
             echo "# Android Omni Cleaner — Step 8 localization & accessibility APK"
-            echo "- Source SHA: $GITHUB_SHA"
+            echo "- Source SHA: $OMNI_SOURCE_SHA"
             echo "- APK SHA-256: $APK_SHA256"
             echo "- Version: 0.9.0-recovery / code 9"
             echo "- Locales: en / it / es / fr / pt with manual language selector"
@@ -369,8 +395,51 @@ jobs:
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --clobber --repo "$GITHUB_REPOSITORY"
           else
-            gh release create "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Step 8 localization & accessibility APK · $SHORT_SHA" --notes-file "$NOTES" --prerelease
+            gh release create "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --repo "$GITHUB_REPOSITORY" --target "$OMNI_SOURCE_SHA" --title "Step 8 localization & accessibility APK · $SHORT_SHA" --notes-file "$NOTES" --prerelease
           fi
 
           echo "Step 8 APK SHA-256: $APK_SHA256" >> "$GITHUB_STEP_SUMMARY"
+          echo "Release tag: $TAG" >> "$GITHUB_STEP_SUMMARY"
+
+
+      - name: Publish Step 9 performance deep-QA APK prerelease
+        if: success() && env.OMNI_SOURCE_BRANCH == 'step-9-performance-deep-qa'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          APK="$GITHUB_WORKSPACE/target/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+
+          SHORT_SHA="${OMNI_SOURCE_SHA:0:12}"
+          TAG="step9-performance-$SHORT_SHA"
+          ASSET="Android-Omni-Cleaner-Step9-$SHORT_SHA-debug.apk"
+          HASH_FILE="$ASSET.sha256"
+
+          cp "$APK" "$RUNNER_TEMP/$ASSET"
+          APK_SHA256="$(sha256sum "$RUNNER_TEMP/$ASSET" | awk '{print $1}')"
+          printf '%s  %s\n' "$APK_SHA256" "$ASSET" > "$RUNNER_TEMP/$HASH_FILE"
+
+          NOTES="$RUNNER_TEMP/step9-release-notes.md"
+          {
+            echo "# Android Omni Cleaner — Step 9 performance & deep QA APK"
+            echo "- Source SHA: $OMNI_SOURCE_SHA"
+            echo "- APK SHA-256: $APK_SHA256"
+            echo "- Version: 0.10.0-recovery / code 10"
+            echo "- Large-library duplicate prefilter + cancellable full verification"
+            echo "- Bounded Gallery review memory + cancellable MediaStore queries"
+            echo "- Reduced-I/O EXIF export with end-to-end verification retained"
+            echo "- AppLab FULL: performance/lifecycle/process-death/background/storage enabled"
+            echo "- Runtime dataset: deterministic 1,253-file fixture"
+            echo "- Not a store release and not physical-device certified"
+          } > "$NOTES"
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" "$RUNNER_TEMP/$ASSET" "$RUNNER_TEMP/$HASH_FILE" --repo "$GITHUB_REPOSITORY" --target "$OMNI_SOURCE_SHA" --title "Step 9 performance & deep QA APK · $SHORT_SHA" --notes-file "$NOTES" --prerelease
+          fi
+
+          echo "Step 9 APK SHA-256: $APK_SHA256" >> "$GITHUB_STEP_SUMMARY"
           echo "Release tag: $TAG" >> "$GITHUB_STEP_SUMMARY"

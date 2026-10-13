@@ -303,4 +303,28 @@
     <string name="pro_system_trash_confirmed">Android Trash confirmed (not counted as space already reclaimed)</string>
     <string name="pro_system_trash_cancelled">Android Trash cancelled</string>
 
+
+    <string name="safe_trash_persistent_notice">Safe Trash is stored in shared storage so it can survive app uninstall. Reinstall Omni Cleaner and re-enable Deep Cleaning to restore these files.</string>
+    <string name="safe_trash_unavailable">Safe Trash storage is unavailable. Files will remain unchanged.</string>
+    <string name="gallery_error_load_failed">Gallery media could not be loaded. Try again.</string>
+    <string name="smart_categories_scan_failed">Smart Categories scan could not be completed.</string>
+    <string name="pro_scan_failed">The Pro scan could not be completed.</string>
+    <string name="pro_offline_cache">Premium is temporarily available from a recent Google Play verification. Ownership will be checked again when Play is reachable.</string>
+
+    <string name="generic_operation_failed">The operation could not be completed. Try again.</string>
+    <string name="pro_operation_failed">The Pro operation could not be completed. Try again.</string>
+    <string name="maintenance_operation_failed">The maintenance operation could not be completed.</string>
+    <string name="consent_error_generic">Privacy choices could not be refreshed. Try again later.</string>
+    <string name="safe_trash_persistent_note">Safe Trash is stored in shared storage so its verified payloads are not erased just because the app is uninstalled.</string>
+    <string name="safe_trash_storage_unavailable">Safe Trash storage is currently unavailable. No new file will be moved there.</string>
+    <string name="maintenance_files_count">%1$d files</string>
+
+    <string name="file_type_filter_title">File type</string>
+    <string name="file_type_filter_all">All file types</string>
+    <string name="file_type_filter_hint">The filter applies to large-file results and limits duplicate hashing to the selected extension.</string>
+    <string name="duplicate_filter_requires_rescan">Run the duplicate scan again to apply the selected file type.</string>
+    <string name="duplicate_scan_progress">Checking duplicate candidates: %1$d / %2$d</string>
+    <string name="scan_indexing_files_count">Indexing files: %1$d checked</string>
+    <string name="duplicates_none_found">No duplicates found for %1$s.</string>
+    <string name="refresh_storage_index">Refresh storage index</string>
 </resources>

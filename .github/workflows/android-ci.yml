@@ -4,22 +4,19 @@ on:
   push:
     branches:
       - main
-      - "recovery/**"
-      - "audit/**"
-      - "hardening/**"
-      - "monetization/**"
-      - "redesign/**"
-      - "step-7-product-expansion"
-      - "step-8-localization-accessibility"
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+env:
+  OMNI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 concurrency:
-  group: android-ci-${{ github.workflow }}-${{ github.ref }}
+  group: android-ci-${{ github.event.pull_request.head.ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -28,17 +25,20 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - name: Checkout exact source head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.OMNI_SOURCE_SHA }}
+          persist-credentials: false
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with:
           cache-provider: basic
           add-job-summary: on-failure
@@ -49,5 +49,40 @@ jobs:
       - name: Verify locale resource parity
         run: python3 .github/scripts/check-locales.py
 
-      - name: Static analysis, tests and builds
-        run: ./gradlew lintDebug testDebugUnitTest assembleDebug assembleRelease --stacktrace
+      - name: Fast pull-request verification
+        if: github.event_name == 'pull_request'
+        run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest --stacktrace
+
+      - name: Full main/manual verification
+        if: github.event_name != 'pull_request'
+        run: ./gradlew lintDebug testDebugUnitTest assembleDebug assembleDebugAndroidTest assembleRelease --stacktrace
+
+      - name: Publish exact-head development APK
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          SRC="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$SRC"
+          SHORT_SHA="${OMNI_SOURCE_SHA:0:12}"
+          TAG="fast-apk-$SHORT_SHA"
+          APK="Android-Omni-Cleaner-$SHORT_SHA-debug.apk"
+          SUM="$APK.sha256"
+          cp "$SRC" "$RUNNER_TEMP/$APK"
+          sha256sum "$RUNNER_TEMP/$APK" | sed "s#  .*/#  #" > "$RUNNER_TEMP/$SUM"
+          NOTES="$RUNNER_TEMP/notes.md"
+          {
+            echo "# Android Omni Cleaner — development APK"
+            echo
+            echo "- Source SHA: $OMNI_SOURCE_SHA"
+            echo "- Variant: debug"
+            echo "- Automatic PR verification: unit tests + debug APK + androidTest APK compilation"
+            echo "- AppLab / Store certification: deferred"
+          } > "$NOTES"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$RUNNER_TEMP/$APK" "$RUNNER_TEMP/$SUM" --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" "$RUNNER_TEMP/$APK" "$RUNNER_TEMP/$SUM"               --repo "$GITHUB_REPOSITORY" --target "$OMNI_SOURCE_SHA"               --title "Development APK · $SHORT_SHA" --notes-file "$NOTES" --prerelease
+          fi

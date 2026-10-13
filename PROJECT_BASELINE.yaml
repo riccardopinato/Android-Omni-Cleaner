@@ -1,20 +1,27 @@
 project:
   repository: riccardopinato/Android-Omni-Cleaner
-  status: LOCALIZATION_ACCESSIBILITY_COMPLETE
+  status: PERSISTENT_INDEX_BOUNDED_HASHING_IMPLEMENTED_FAST_CI_PASS
   recovery_started_at: 2026-10-09
-  current_maxi_step: 8
+  current_maxi_step: "9.6"
 
 factory:
   repository: riccardopinato/App-Factory-Core
-  commit_sha: a4a97ca79e85d2faebcdcc9a3ae4a9644f5caf03
-  master_version: "25.1"
-  golden_index_version: 10
+  commit_sha: 7b408dd8b14ea7785e923c6eed624eb41c193698
+  master_version: "26.3"
+  golden_index_version: 14
   golden_registry_version: 2
+  candidate_golden_pr: 9
+  candidate_golden_head: 79503fa5cc3b34686c46cc93f3df42086912f6f9
+  selected_candidate_goldens:
+    - incremental_persistent_indexing_v1_draft
+    - bounded_parallel_hashing_v1_draft
 
 applab:
   repository: riccardopinato/AppLab
   version: "4.5"
   commit_sha: dc826264c31dd79fc7617ab7a4a8aee61f9b5aba
+  runtime_commit_sha: 494f9b4c4a386429b2e49ce907dea87bf05e2cd3
+  runtime_pin_reason: journey_crawler_pid_grace
   static_intelligence: pass
   bounded_runtime_parity: pass
   final_step3_runtime_run: 38076397823
@@ -25,7 +32,7 @@ applab:
 
 product:
   working_name: Android Omni Cleaner
-  final_name: null
+  final_name: Android Omni Cleaner
   platform: android
   monetizable: true
   planned_visual_redesign: true
@@ -36,8 +43,8 @@ identity:
   debug_application_id: com.riccardopinato.omnicleaner.debug
   legacy_application_id: com.aistudio.foldercleaner.zjijip
   donor_apk_sha256: c77f48bbbac1d8e5e16ee44dab67346f3caa0f846bd117e5b05d2cb3b2a88310
-  recovery_version_name: "0.9.0-recovery"
-  recovery_version_code: 9
+  recovery_version_name: "0.12.0-recovery"
+  recovery_version_code: 12
   signing_lane: internal_pending
 
 parity:
@@ -63,10 +70,10 @@ physical_validation:
   status: blocked_until_real_device_execution
 
 release:
-  ci: pass
+  ci: fast_exact_head_pass
   signing: policy_defined_identity_not_provisioned
   physical_validation: blocked
-  distribution_validation: parity_prerelease_only
+  distribution_validation: exact_head_debug_prerelease_pass
   billing_play_test: blocked
   production_ads_configured: false
   store_ready: false
@@ -135,7 +142,7 @@ product_expansion:
     snapshot_revalidation: true
     media_android_trash: true
     non_media_safe_trash_when_supported: true
-  similar_photo_detection: deferred_performance_step
+  similar_photo_detection: deferred_v1_1_product_expansion_2
   shizuku_root_expansion: deferred
 
 
@@ -149,10 +156,134 @@ localization_accessibility:
     - pt
   manual_language_selector: true
   system_language_fallback: true
-  locale_key_parity: pass_284_each
+  locale_key_parity: pass_305_each
   locale_placeholder_parity: pass
   android_locale_config: true
   talkback_toggle_rows: true
   decorative_glyphs_hidden_from_semantics: true
   storage_progress_semantics: true
   large_font_layout_hardening: true
+
+
+performance_deep_qa:
+  status: implementation_complete_validation_deferred_fast_mode
+  exact_head_checkout: true
+  feature_ci_trigger: pull_request_fast_exact_head_full_gates_manual
+  duplicate_push_pr_runs_removed: true
+  actions_runner_blocker_observed: true
+  duplicate_sample_prefilter_bytes_per_edge: 65536
+  duplicate_full_sha256_retained: true
+  duplicate_byte_verification_retained: true
+  duplicate_io_buffer_bytes: 262144
+  duplicate_progress_visible: true
+  file_extension_filter:
+    enabled: true
+    extension_prefilter: true
+    applies_to:
+      - duplicates
+      - large_files
+  media_store_query_cancellation: true
+  gallery_bounded_review_window: true
+  gallery_max_undo_history: 50
+  exif_reduced_io_passes: true
+  exif_cancellation_propagated: true
+  thumbnail_hash_cancellation: true
+  runtime_fixture_files: 1253
+  applab_mode: full
+  deep_labs:
+    performance: true
+    persistence_restart: true
+    configuration_lifecycle: true
+    resource_pressure_process_death: true
+    background_recovery: true
+    storage_integrity: true
+
+
+post_audit_hardening:
+  status: source_complete_validation_deferred
+  final_codex_review_findings_resolved: true
+  automatic_pr_gate_restored: true
+  pr_gate_publishes_development_apk: true
+  safe_trash:
+    uninstall_persistent_shared_storage: true
+    legacy_private_migration_verified_before_delete: true
+    general_cleaner_exclusion: true
+  premium:
+    offline_cache_source: play_verified_only
+    offline_grace_days: 30
+    cached_free_authorizes_ads: false
+  branding:
+    launcher_icon: intentional_vector
+    adaptive_icon: true
+    monochrome_icon: true
+    physical_launcher_review: pending
+  performance:
+    shared_inventory_cache: true
+    inventory_cache_ttl_ms: 120000
+    cleanup_invalidates_inventory: true
+    quantitative_budget_doc: PERFORMANCE_BUDGETS.md
+  lifecycle:
+    retained_controllers_viewmodel: true
+    cleaner: true
+    gallery: true
+    pro_batch: true
+  localization:
+    raw_throwable_message_in_primary_ui: false
+    domain_labels_resource_driven: true
+  ads:
+    banner_adview_disposed: true
+  android_instrumentation:
+    baseline_contract_tests_added: true
+    executed_on_current_head: false
+  store_docs:
+    privacy_policy_draft: PRIVACY_POLICY.md
+    data_safety_draft: DATA_SAFETY.md
+    app_ads_setup: APP_ADS_SETUP.md
+    external_values_pending: true
+  maintainability:
+    shell_split: true
+    cleaner_screens_file: app/src/main/java/com/riccardopinato/omnicleaner/ui/redesign/CleanerScreens.kt
+
+
+persistent_indexing_bounded_hashing:
+  status: implemented_fast_exact_head_ci_pass
+  version_name: "0.12.0-recovery"
+  version_code: 12
+  exact_head: aa5f6e9951237fcfafaa1c361c4aa643c439ad63
+  android_ci_run: 38484281905
+  debug_apk_release: fast-apk-aa5f6e995123
+  persistent_index:
+    storage: sqlite
+    schema_version: 1
+    in_memory_ttl_ms: 120000
+    persistent_reuse_ttl_ms: 21600000
+    restat_known_paths_before_reuse: true
+    mediastore_generation_guard: true
+    app_owned_mutation_invalidates: true
+    manual_full_refresh: true
+    destructive_authority: false
+  revision_identity:
+    physical_identity: device_id_plus_inode
+    strong_hash_revision_api27_plus: high_resolution_ctime
+    legacy_hash_cache_without_strong_revision: disabled
+  bounded_hashing:
+    worker_min: 1
+    worker_max: 4
+    task_per_file_fanout: false
+    io_buffer_bytes: 262144
+    sample_bytes_per_edge: 65536
+    physical_alias_collapse: true
+    full_sha256: true
+    final_byte_verification: true
+    deterministic_output: true
+  tests:
+    jvm: pass
+    android_instrumentation_sources_compile: pass
+    instrumentation_runtime: pending_physical_execution
+    locale_parity: pass_305_each
+  remaining_evidence:
+    - cold_vs_warm_real_library_benchmark
+    - worker_1_2_4_benchmark
+    - low_end_thermal_battery
+    - physical_instrumentation_execution
+    - full_applab_certification

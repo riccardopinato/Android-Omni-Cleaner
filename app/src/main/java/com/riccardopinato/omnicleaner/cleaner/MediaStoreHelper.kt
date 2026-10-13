@@ -13,10 +13,13 @@ import com.riccardopinato.omnicleaner.gallery.GalleryMediaFilter
 import com.riccardopinato.omnicleaner.gallery.GalleryMediaItem
 import com.riccardopinato.omnicleaner.gallery.GallerySortOrder
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import java.util.Locale
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 object MediaStoreHelper {
     private val imageExtensions = setOf(
@@ -243,14 +246,30 @@ object MediaStoreHelper {
         limit: Int = 300,
         offset: Int = 0,
     ): List<GalleryMediaItem> = withContext(Dispatchers.IO) {
-        loadGalleryMedia(
-            context = context,
-            filter = filter,
-            sortOrder = sortOrder,
-            limit = limit,
-            offset = offset,
-            cancellationSignal = CancellationSignal(),
-        )
+        suspendCancellableCoroutine { continuation ->
+            val cancellationSignal = CancellationSignal()
+            continuation.invokeOnCancellation {
+                cancellationSignal.cancel()
+            }
+
+            try {
+                val result = loadGalleryMedia(
+                    context = context,
+                    filter = filter,
+                    sortOrder = sortOrder,
+                    limit = limit,
+                    offset = offset,
+                    cancellationSignal = cancellationSignal,
+                )
+                if (continuation.isActive) {
+                    continuation.resume(result)
+                }
+            } catch (error: Throwable) {
+                if (continuation.isActive) {
+                    continuation.resumeWithException(error)
+                }
+            }
+        }
     }
 
     fun trashMediaFiles(

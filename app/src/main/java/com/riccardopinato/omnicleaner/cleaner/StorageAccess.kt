@@ -12,7 +12,18 @@ import android.provider.Settings
 import java.io.File
 
 object StorageAccess {
+    internal const val APP_MANAGED_DIRECTORY = ".OmniCleaner"
+    internal const val SAFE_TRASH_DIRECTORY = "SafeTrash"
     fun primaryRoot(): File = Environment.getExternalStorageDirectory()
+
+    /**
+     * User-owned reversible trash must survive application uninstall. Keep the
+     * payload outside app-private filesDir, under a hidden app-managed folder in
+     * primary shared storage. Deep Cleaning access is required to mutate/restore
+     * entries on Android versions that enforce scoped storage.
+     */
+    fun safeTrashRoot(root: File = primaryRoot()): File =
+        File(File(root, APP_MANAGED_DIRECTORY), SAFE_TRASH_DIRECTORY)
 
     fun capabilityHealth(context: Context): StorageCapabilityHealth {
         val mounted = Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED

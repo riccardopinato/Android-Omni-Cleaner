@@ -300,4 +300,28 @@
     <string name="pro_resolve_residues">%1$d resíduos mantidos para revisão porque a visibilidade dos pacotes pode estar limitada</string>
     <string name="pro_system_trash_confirmed">Lixeira do Android confirmada (não contada como espaço já libertado)</string>
     <string name="pro_system_trash_cancelled">Lixeira do Android cancelada</string>
+
+    <string name="safe_trash_persistent_notice">O Safe Trash é guardado no armazenamento partilhado para poder sobreviver à desinstalação da aplicação. Reinstale o Omni Cleaner e reative a Limpeza profunda para restaurar estes ficheiros.</string>
+    <string name="safe_trash_unavailable">O armazenamento do Safe Trash não está disponível. Os ficheiros permanecerão inalterados.</string>
+    <string name="gallery_error_load_failed">Não foi possível carregar os itens da Galeria. Tente novamente.</string>
+    <string name="smart_categories_scan_failed">Não foi possível concluir a análise das Categorias inteligentes.</string>
+    <string name="pro_scan_failed">Não foi possível concluir a análise Pro.</string>
+    <string name="pro_offline_cache">O Premium está temporariamente disponível graças a uma verificação recente do Google Play. A propriedade será verificada novamente quando o Play estiver acessível.</string>
+
+    <string name="generic_operation_failed">Não foi possível concluir a operação. Tente novamente.</string>
+    <string name="pro_operation_failed">Não foi possível concluir a operação Pro. Tente novamente.</string>
+    <string name="maintenance_operation_failed">Não foi possível concluir a operação de manutenção.</string>
+    <string name="consent_error_generic">Não foi possível atualizar as escolhas de privacidade. Tente novamente mais tarde.</string>
+    <string name="safe_trash_persistent_note">O Safe Trash é armazenado no armazenamento partilhado para que os ficheiros verificados não sejam apagados apenas pela desinstalação da aplicação.</string>
+    <string name="safe_trash_storage_unavailable">O armazenamento do Safe Trash está indisponível. Nenhum novo ficheiro será movido para lá.</string>
+    <string name="maintenance_files_count">%1$d ficheiros</string>
+
+    <string name="file_type_filter_title">Tipo de ficheiro</string>
+    <string name="file_type_filter_all">Todos os tipos de ficheiro</string>
+    <string name="file_type_filter_hint">O filtro aplica-se aos ficheiros grandes e limita o hashing de duplicados à extensão selecionada.</string>
+    <string name="duplicate_filter_requires_rescan">Execute novamente a análise de duplicados para aplicar o tipo de ficheiro selecionado.</string>
+    <string name="duplicate_scan_progress">A verificar candidatos duplicados: %1$d / %2$d</string>
+    <string name="scan_indexing_files_count">A indexar ficheiros: %1$d verificados</string>
+    <string name="duplicates_none_found">Não foram encontrados duplicados para %1$s.</string>
+    <string name="refresh_storage_index">Atualizar índice de armazenamento</string>
 </resources>

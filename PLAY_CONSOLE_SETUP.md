@@ -23,9 +23,11 @@ Before production:
 6. verify PENDING -> PURCHASED;
 7. verify PENDING -> cancelled;
 8. verify restore after reinstall;
-9. verify already-owned flow;
-10. verify refund/revocation behavior;
-11. verify acknowledgement.
+9. verify Premium offline grace after a prior verified purchase;
+10. verify grace expiry returns to unresolved/no-ads until Play answers;
+11. verify already-owned flow;
+12. verify refund/revocation behavior;
+13. verify acknowledgement.
 
 Google recommends server-side purchase verification for stronger security. The
 current v1 implementation is intentionally client-side and this limitation must
@@ -58,10 +60,11 @@ The privacy-options entry point is exposed when UMP reports it as required.
 
 ## app-ads.txt
 
-Before monetized production:
+Follow `APP_ADS_SETUP.md`. Before monetized production:
 - publish a developer website in the Play listing;
-- publish the AdMob app-ads.txt line at the website root;
-- wait for AdMob verification.
+- publish the real AdMob app-ads.txt line at the website root;
+- wait for AdMob verification;
+- do not invent publisher IDs in source.
 
 ## Testing rule
 
@@ -75,3 +78,13 @@ AdMob-configured test app/device.
 - production AdMob IDs not supplied;
 - UMP provider-side message not verifiable from source;
 - app-ads.txt depends on the final developer website/store listing.
+
+
+## Privacy / Data Safety source package
+
+Use the source-aligned drafts as the starting point for provider/store configuration:
+- `PRIVACY_POLICY.md`
+- `DATA_SAFETY.md`
+- `APP_ADS_SETUP.md`
+
+The final public URL, legal/developer identity, contact email, AdMob publisher ID and final Play declarations remain external inputs.

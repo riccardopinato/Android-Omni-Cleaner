@@ -47,20 +47,30 @@ fun SafeTrashSection() {
     var entries by remember { mutableStateOf<List<SafeTrashEntry>>(emptyList()) }
     var trashBytes by remember { mutableStateOf(0L) }
     var loading by remember { mutableStateOf(true) }
+    var persistentAvailable by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<SafeTrashMessage?>(null) }
     var confirmEmpty by remember { mutableStateOf(false) }
     val canRestore = StorageAccess.hasBroadAccess(context)
+    val persistentTrashAvailable = manager.isPersistentTrashAvailable()
 
     suspend fun reload() {
         val snapshot = withContext(Dispatchers.IO) {
-            manager.listEntries() to manager.getTrashSize()
+            Triple(
+                manager.listEntries(),
+                manager.getTrashSize(),
+                manager.isPersistentTrashAvailable(),
+            )
         }
         entries = snapshot.first
         trashBytes = snapshot.second
+        persistentAvailable = snapshot.third
         loading = false
     }
 
     LaunchedEffect(manager) {
+        withContext(Dispatchers.IO) {
+            manager.migrateLegacyTrashIfNeeded()
+        }
         reload()
         CleanupEventBus.events.collectLatest {
             reload()
@@ -82,6 +92,33 @@ fun SafeTrashSection() {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Text(
+                stringResource(
+                    if (persistentTrashAvailable) {
+                        R.string.safe_trash_persistent_note
+                    } else {
+                        R.string.safe_trash_storage_unavailable
+                    },
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (persistentTrashAvailable) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.error
+                },
+            )
+            Text(
+                stringResource(R.string.safe_trash_persistent_notice),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (!loading && !persistentAvailable) {
+                Text(
+                    stringResource(R.string.safe_trash_unavailable),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
 
             if (loading) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())

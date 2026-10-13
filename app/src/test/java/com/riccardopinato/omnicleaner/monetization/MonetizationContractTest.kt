@@ -55,10 +55,12 @@ class MonetizationContractTest {
     }
 
     @Test
-    fun appResidueProCopy_isReviewOnly() {
-        val copy = ProScanType.APP_RESIDUES.description.lowercase()
-
-        assertTrue("verificare" in copy || "verifica" in copy)
-        assertFalse("elimina" in copy)
+    fun appResiduesRemainReviewOnlyInBatchState() {
+        assertTrue(ProScanType.APP_RESIDUES in ProScanType.entries)
+        assertFalse(
+            ProBatchState::class.java.declaredFields.any { field ->
+                field.name.contains("selectedResidue", ignoreCase = true)
+            },
+        )
     }
 }

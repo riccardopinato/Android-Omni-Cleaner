@@ -45,4 +45,33 @@ class PathSafetyTest {
             root.deleteRecursively()
         }
     }
+    @Test
+    fun appManagedPersistentTrashIsNeverAGeneralCleanupCandidate() {
+        val root = createTempDirectory("omni-managed-").toFile()
+        try {
+            val managed = StorageAccess.safeTrashRoot(root).apply { mkdirs() }
+            val payload = File(managed, "payload").apply { writeText("user-data") }
+
+            assertTrue(PathSafety.isDangerousPath(managed))
+            assertTrue(PathSafety.isDangerousPath(payload))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun rejectsAppManagedPersistentTrash() {
+        val root = createTempDirectory("omni-managed-").toFile()
+        try {
+            val managed = File(root, StorageAccess.APP_MANAGED_DIRECTORY)
+            val trash = File(managed, StorageAccess.SAFE_TRASH_DIRECTORY)
+            trash.mkdirs()
+            assertTrue(PathSafety.isDangerousPath(managed))
+            assertTrue(PathSafety.isDangerousPath(trash))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
 }
+

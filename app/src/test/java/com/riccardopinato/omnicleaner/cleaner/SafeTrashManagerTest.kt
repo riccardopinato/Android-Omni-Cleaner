@@ -149,6 +149,160 @@ class SafeTrashManagerTest {
     }
 
     @Test
+    fun legacyPrivateTrashMigratesToPersistentTrash() {
+        val root = createTempDirectory("omni-trash-migrate-").toFile()
+        val legacy = File(root, "legacy-trash")
+        val persistent = File(root, "persistent-trash")
+        val restoreRoot = root
+        val original = File(root, "migrated.txt")
+        val entryDir = File(legacy, UUID.randomUUID().toString()).apply { mkdirs() }
+        val payload = File(entryDir, "payload").apply { writeText("migrate-me") }
+        val metadata = File(entryDir, "original.properties")
+        Properties().apply {
+            setProperty("originalPath", original.canonicalPath)
+            setProperty("originalName", original.name)
+            setProperty("sizeBytes", payload.length().toString())
+            setProperty("lastModified", "0")
+        }.also { properties ->
+            metadata.outputStream().use { output -> properties.store(output, "legacy") }
+        }
+
+        try {
+            val manager = SafeTrashManager.forTests(
+                trashDirectory = persistent,
+                restoreRoot = restoreRoot,
+                legacyTrashDirectory = legacy,
+            )
+            manager.migrateLegacyTrashIfNeeded()
+
+            val migrated = manager.listEntries().single()
+            assertFalse(File(legacy, migrated.id).exists())
+            assertTrue(File(persistent, migrated.id).isDirectory)
+
+            val result = manager.restore(migrated.id)
+            assertEquals(SafeTrashRestoreStatus.RESTORED, result.status)
+            assertEquals("migrate-me", original.readText())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun failedLegacyMigrationKeepsSourceUntouched() {
+        val root = createTempDirectory("omni-trash-migrate-fail-").toFile()
+        val legacy = File(root, "legacy-trash")
+        val persistent = File(root, "persistent-trash")
+        val destination = File(root, "destination.txt")
+        val entryDir = File(legacy, UUID.randomUUID().toString()).apply { mkdirs() }
+        val payload = File(entryDir, "payload").apply { writeText("original-bytes") }
+        val metadata = File(entryDir, "original.properties")
+        Properties().apply {
+            setProperty("originalPath", destination.canonicalPath)
+            setProperty("originalName", destination.name)
+            setProperty("sizeBytes", payload.length().toString())
+            setProperty("lastModified", "0")
+            setProperty("sha256", "0".repeat(64))
+        }.also { properties ->
+            metadata.outputStream().use { output -> properties.store(output, "tampered") }
+        }
+
+        try {
+            val manager = SafeTrashManager.forTests(
+                trashDirectory = persistent,
+                restoreRoot = root,
+                legacyTrashDirectory = legacy,
+            )
+            manager.migrateLegacyTrashIfNeeded()
+
+            assertTrue(entryDir.isDirectory)
+            assertTrue(payload.isFile)
+            assertTrue(manager.listEntries().isEmpty())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun constructorDoesNotRunLegacyMigrationSynchronously() {
+        val root = createTempDirectory("omni-trash-deferred-").toFile()
+        val legacy = File(root, "legacy-trash")
+        val persistent = File(root, "persistent-trash")
+        val entryId = UUID.randomUUID().toString()
+        val legacyEntry = File(legacy, entryId).apply { mkdirs() }
+        val payload = File(legacyEntry, "payload").apply { writeText("deferred") }
+        val metadata = File(legacyEntry, "original.properties")
+        Properties().apply {
+            setProperty("originalPath", File(root, "restore.txt").canonicalPath)
+            setProperty("originalName", "restore.txt")
+            setProperty("sizeBytes", payload.length().toString())
+            setProperty("lastModified", "0")
+        }.also { properties ->
+            metadata.outputStream().use { output -> properties.store(output, "legacy") }
+        }
+
+        try {
+            val manager = SafeTrashManager.forTests(
+                trashDirectory = persistent,
+                restoreRoot = root,
+                legacyTrashDirectory = legacy,
+            )
+
+            assertTrue(legacyEntry.isDirectory)
+            assertTrue(manager.listEntries().isEmpty())
+
+            manager.migrateLegacyTrashIfNeeded()
+
+            assertFalse(legacyEntry.exists())
+            assertEquals(1, manager.listEntries().size)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun interruptedLegacyMigrationIsRepairedAndResumed() {
+        val root = createTempDirectory("omni-trash-resume-").toFile()
+        val legacy = File(root, "legacy-trash")
+        val persistent = File(root, "persistent-trash")
+        val entryId = UUID.randomUUID().toString()
+        val original = File(root, "resume.txt")
+        val legacyEntry = File(legacy, entryId).apply { mkdirs() }
+        val legacyPayload = File(legacyEntry, "payload").apply { writeText("complete-payload") }
+        val legacyMetadata = File(legacyEntry, "original.properties")
+        Properties().apply {
+            setProperty("originalPath", original.canonicalPath)
+            setProperty("originalName", original.name)
+            setProperty("sizeBytes", legacyPayload.length().toString())
+            setProperty("lastModified", "0")
+        }.also { properties ->
+            legacyMetadata.outputStream().use { output -> properties.store(output, "legacy") }
+        }
+
+        val partialTarget = File(persistent, entryId).apply { mkdirs() }
+        File(partialTarget, "original.properties").writeText("partial")
+        File(partialTarget, "payload").writeText("cut")
+
+        try {
+            val manager = SafeTrashManager.forTests(
+                trashDirectory = persistent,
+                restoreRoot = root,
+                legacyTrashDirectory = legacy,
+            )
+            manager.migrateLegacyTrashIfNeeded()
+
+            assertFalse(legacyEntry.exists())
+            val migrated = manager.listEntries().single()
+            assertEquals(entryId, migrated.id)
+            assertEquals(
+                "complete-payload",
+                File(File(persistent, entryId), "payload").readText(),
+            )
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun mediaIsNotMovedIntoPrivateTrash() {
         val root = createTempDirectory("omni-media-trash-").toFile()
         val source = File(root, "photo.jpg").apply { writeBytes(byteArrayOf(1, 2, 3)) }
@@ -163,4 +317,58 @@ class SafeTrashManagerTest {
             root.deleteRecursively()
         }
     }
+    @Test
+    fun persistentTrashPathLivesOutsideAppPrivateStorageShape() {
+        val root = createTempDirectory("omni-shared-root-").toFile()
+        try {
+            val trash = StorageAccess.safeTrashRoot(root)
+            assertTrue(trash.path.contains(StorageAccess.APP_MANAGED_DIRECTORY))
+            assertTrue(trash.path.endsWith(StorageAccess.SAFE_TRASH_DIRECTORY))
+            assertTrue(PathSafety.isWithinRoot(trash, root))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun migratesLegacyPrivateEntryOnlyAfterIntegrityValidation() {
+        val root = createTempDirectory("omni-trash-migrate-").toFile()
+        val legacy = File(root, "legacy-trash")
+        val persistent = File(root, ".OmniCleaner/SafeTrash")
+        val original = File(root, "restore-me.txt")
+        val entryId = UUID.randomUUID().toString()
+        val legacyEntry = File(legacy, entryId).apply { mkdirs() }
+        val payload = File(legacyEntry, "payload").apply { writeText("survive-uninstall") }
+        val metadata = File(legacyEntry, "original.properties")
+
+        Properties().apply {
+            setProperty("originalPath", original.canonicalPath)
+            setProperty("originalName", original.name)
+            setProperty("sizeBytes", payload.length().toString())
+            setProperty("lastModified", "0")
+        }.also { properties ->
+            metadata.outputStream().use { output -> properties.store(output, "legacy") }
+        }
+
+        try {
+            val manager = SafeTrashManager.forTests(
+                trashDirectory = persistent,
+                restoreRoot = root,
+                legacyTrashDirectory = legacy,
+            )
+            manager.migrateLegacyTrashIfNeeded()
+
+            assertTrue(manager.isPersistentTrashAvailable())
+            assertFalse(legacyEntry.exists())
+            assertEquals(1, manager.listEntries().size)
+            assertEquals(
+                SafeTrashRestoreStatus.RESTORED,
+                manager.restore(entryId).status,
+            )
+            assertEquals("survive-uninstall", original.readText())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
 }

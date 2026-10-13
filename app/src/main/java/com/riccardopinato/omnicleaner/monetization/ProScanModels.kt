@@ -1,17 +1,18 @@
 package com.riccardopinato.omnicleaner.monetization
 
+import android.app.PendingIntent
 import com.riccardopinato.omnicleaner.cleaner.AppResidueItem
 import com.riccardopinato.omnicleaner.cleaner.BigFileItem
 import com.riccardopinato.omnicleaner.cleaner.DuplicateGroup
 import com.riccardopinato.omnicleaner.cleaner.FolderItem
 import com.riccardopinato.omnicleaner.cleaner.ThumbnailCacheItem
 
-enum class ProScanType(val label: String, val description: String) {
-    EMPTY_FOLDERS("Cartelle vuote e piccole", "Elimina cartelle orfane o prive di contenuti"),
-    DUPLICATES("File duplicati", "Sposta i cloni nel cestino salvaguardando gli originali"),
-    LARGE_FILES("Grandi file", "Isola file voluminosi che saturano la memoria"),
-    THUMBNAIL_CACHE("Cache e miniature", "Pulisce cache temporanee e miniature obsolete"),
-    APP_RESIDUES("Residui accessibili", "Individua cartelle candidate in Android/media da verificare manualmente"),
+enum class ProScanType {
+    EMPTY_FOLDERS,
+    DUPLICATES,
+    LARGE_FILES,
+    THUMBNAIL_CACHE,
+    APP_RESIDUES,
 }
 
 data class ProScanSelection(
@@ -34,6 +35,7 @@ data class ProBatchState(
     val running: Boolean = false,
     val resolving: Boolean = false,
     val awaitingSystemTrash: Boolean = false,
+    val pendingSystemTrashRequest: PendingIntent? = null,
     val completedTypes: Set<ProScanType> = emptySet(),
     val results: List<ProBatchResult> = emptyList(),
     val emptyFolders: List<FolderItem> = emptyList(),

@@ -11,7 +11,13 @@ data class StorageInfo(
     val usedPercent: Float get() = if (totalBytes <= 0L) 0f else usedBytes.toFloat() / totalBytes.toFloat()
 }
 
-data class IndexedFile(val file: File, val size: Long, val modified: Long)
+data class IndexedFile(
+    val file: File,
+    val size: Long,
+    val modified: Long,
+    val revision: StrongFileRevision? = null,
+    val physicalIdentity: PhysicalFileIdentity? = revision?.physicalIdentity,
+)
 
 data class FileInventory(
     val files: List<IndexedFile>,

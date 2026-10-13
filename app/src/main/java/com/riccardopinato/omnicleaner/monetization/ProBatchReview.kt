@@ -21,6 +21,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +47,15 @@ fun ProBatchReview(
         contract = ActivityResultContracts.StartIntentSenderForResult(),
     ) { result ->
         controller.onSystemTrashResult(result.resultCode == Activity.RESULT_OK)
+    }
+
+    LaunchedEffect(state.pendingSystemTrashRequest) {
+        state.pendingSystemTrashRequest?.let { pendingIntent ->
+            controller.markSystemTrashLaunched()
+            systemTrashLauncher.launch(
+                IntentSenderRequest.Builder(pendingIntent.intentSender).build(),
+            )
+        }
     }
 
     Column(
@@ -177,11 +187,7 @@ fun ProBatchReview(
                 TextButton(
                     onClick = {
                         showResolveConfirmation = false
-                        controller.resolve { pendingIntent ->
-                            systemTrashLauncher.launch(
-                                IntentSenderRequest.Builder(pendingIntent.intentSender).build(),
-                            )
-                        }
+                        controller.resolve()
                     },
                 ) {
                     Text(stringResource(R.string.action_continue))

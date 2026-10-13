@@ -13,15 +13,46 @@ class FileScanner(
     private val thumbnailCleanup: ThumbnailFileCleanup = ThumbnailFileCleanup(),
     private val residueScanner: AppResidueScanner = AppResidueScanner(),
 ) {
-    suspend fun collectFileInventory(root: File): FileInventory = inventoryScanner.collect(root)
+    suspend fun collectFileInventory(
+        root: File,
+        forceRefresh: Boolean = false,
+    ): FileInventory =
+        StorageInventoryRepository.snapshot(root, forceRefresh = forceRefresh).inventory
 
     suspend fun findBigFiles(
         root: File,
         minimumBytes: Long = BigFileSizeFilter.SIZE_100MB.minimumBytes,
         limit: Int = 500,
-    ): List<BigFileItem> = inventoryScanner.collect(root).files
+        extensionFilter: String? = null,
+    ): List<BigFileItem> =
+        findBigFiles(
+            inventory = StorageInventoryRepository.snapshot(root).inventory,
+            minimumBytes = minimumBytes,
+            limit = limit,
+            extensionFilter = extensionFilter,
+        )
+
+    fun findBigFiles(
+        inventory: FileInventory,
+        minimumBytes: Long = BigFileSizeFilter.SIZE_100MB.minimumBytes,
+        limit: Int = 500,
+        extensionFilter: String? = null,
+    ): List<BigFileItem> {
+        val normalizedExtension = extensionFilter
+            ?.trim()
+            ?.removePrefix(".")
+            ?.lowercase(Locale.ROOT)
+            ?.takeIf { it.isNotBlank() }
+
+        return inventory.files
         .asSequence()
-        .filter { it.size >= minimumBytes }
+        .filter { item ->
+            item.size >= minimumBytes &&
+                (
+                    normalizedExtension == null ||
+                        item.file.extension.lowercase(Locale.ROOT) == normalizedExtension
+                )
+        }
         .sortedByDescending { it.size }
         .take(limit)
         .map { item ->
@@ -39,20 +70,103 @@ class FileScanner(
             )
         }
         .toList()
+    }
 
-    suspend fun findDuplicates(root: File): List<DuplicateGroup> = inventoryScanner.duplicates(root)
+    suspend fun findDuplicates(
+        root: File,
+        extensionFilter: String? = null,
+        onInventoryProgress: ((checked: Int, currentPath: String) -> Unit)? = null,
+        onDuplicateProgress: ((processed: Int, total: Int) -> Unit)? = null,
+    ): List<DuplicateGroup> {
+        val inventory = StorageInventoryRepository.snapshot(
+            root = root,
+            onProgress = onInventoryProgress,
+        ).inventory
+        return findDuplicates(
+            inventory = inventory,
+            extensionFilter = extensionFilter,
+            onProgress = onDuplicateProgress,
+        )
+    }
+
+    suspend fun findDuplicates(
+        inventory: FileInventory,
+        extensionFilter: String? = null,
+        onProgress: ((processed: Int, total: Int) -> Unit)? = null,
+    ): List<DuplicateGroup> {
+        val normalizedExtension = extensionFilter
+            ?.trim()
+            ?.removePrefix(".")
+            ?.lowercase(Locale.ROOT)
+            ?.takeIf { it.isNotBlank() }
+
+        val candidates = if (normalizedExtension == null) {
+            inventory.files
+        } else {
+            inventory.files.filter { item ->
+                item.file.extension.lowercase(Locale.ROOT) == normalizedExtension
+            }
+        }
+
+        return inventoryScanner.duplicatesProgressive(
+            files = candidates,
+            onProgress = onProgress,
+            hashCache = StorageInventoryRepository.duplicateHashCache(),
+        )
+    }
 
     suspend fun scanFolders(
         root: File,
         smallFolderThresholdBytes: Long = 10L * 1024L * 1024L,
-    ): List<FolderItem> = withContext(Dispatchers.IO) {
+    ): List<FolderItem> = withContext(Dispatchers.Default) {
+        val inventory = StorageInventoryRepository.snapshot(root).inventory
+        val rootPath = canonicalPath(root).trimEnd(File.separatorChar)
+        val rootPrefix = rootPath + File.separator
+
+        val indexedByTopLevel = inventory.files.groupBy { item ->
+            val path = canonicalPath(item.file)
+            path.removePrefix(rootPrefix).substringBefore(File.separatorChar)
+        }
+
         val children = runCatching { root.listFiles() }.getOrNull()
             ?.filter { it.isDirectory && !FileInventoryPolicy.shouldIgnore(root, it) }
             .orEmpty()
 
         children.mapNotNull { directory ->
             coroutineContext.ensureActive()
-            collectFolderCandidate(directory, smallFolderThresholdBytes)
+            val key = canonicalPath(directory)
+                .removePrefix(rootPrefix)
+                .substringBefore(File.separatorChar)
+            val files = indexedByTopLevel[key].orEmpty()
+
+            // If traversal reported unreadable directories, do not label an
+            // otherwise empty top-level folder as completely empty from partial
+            // evidence. Deletion has its own final emptiness/path validation.
+            if (files.isEmpty() && inventory.unreadable > 0) {
+                return@mapNotNull null
+            }
+
+            val total = files.sumOf { it.size }
+            val status = when {
+                files.isEmpty() -> FolderStatus.COMPLETELY_EMPTY
+                total <= smallFolderThresholdBytes -> FolderStatus.BELOW_THRESHOLD
+                else -> return@mapNotNull null
+            }
+
+            val directChildren = runCatching { directory.listFiles() }.getOrNull()
+            val subfolders = directChildren?.count { it.isDirectory } ?: 0
+            val path = directory.absolutePath
+
+            FolderItem(
+                file = directory,
+                name = directory.name.ifBlank { path },
+                path = path,
+                displayPath = path,
+                sizeBytes = total,
+                status = status,
+                fileCount = files.size,
+                subfolderCount = subfolders,
+            )
         }.sortedWith(
             compareByDescending<FolderItem> { it.status == FolderStatus.COMPLETELY_EMPTY }
                 .thenBy { it.sizeBytes },
@@ -102,37 +216,8 @@ class FileScanner(
             (normalized.contains("/android/media/") && normalized.endsWith("/.thumbnails"))
     }
 
-    private suspend fun collectFolderCandidate(
-        folder: File,
-        thresholdBytes: Long,
-    ): FolderItem? {
-        if (!folder.exists() || !folder.isDirectory) return null
-
-        val inventory = inventoryScanner.collect(folder)
-        if (inventory.unreadable > 0 && inventory.files.isEmpty()) return null
-
-        val subfolders = runCatching { folder.listFiles()?.count { it.isDirectory } }
-            .getOrNull() ?: 0
-        val total = inventory.files.sumOf { it.size }
-
-        val status = when {
-            inventory.files.isEmpty() -> FolderStatus.COMPLETELY_EMPTY
-            total <= thresholdBytes -> FolderStatus.BELOW_THRESHOLD
-            else -> return null
-        }
-
-        val path = folder.absolutePath
-        return FolderItem(
-            file = folder,
-            name = folder.name.ifBlank { path },
-            path = path,
-            displayPath = path,
-            sizeBytes = total,
-            status = status,
-            fileCount = inventory.files.size,
-            subfolderCount = subfolders,
-        )
-    }
+    private fun canonicalPath(file: File): String =
+        runCatching { file.canonicalPath }.getOrElse { file.absolutePath }
 
     private companion object {
         val IMAGE_OR_VIDEO_EXTENSIONS = setOf(

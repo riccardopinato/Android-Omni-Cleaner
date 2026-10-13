@@ -1,6 +1,5 @@
 package com.riccardopinato.omnicleaner.monetization
 
-import android.app.PendingIntent
 import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -9,6 +8,7 @@ import com.riccardopinato.omnicleaner.cleaner.FileScanner
 import com.riccardopinato.omnicleaner.cleaner.FolderStatus
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.StorageCleanupEngine
+import com.riccardopinato.omnicleaner.cleaner.StorageInventoryRepository
 import com.riccardopinato.omnicleaner.cleaner.ThumbnailFileCleanup
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -22,6 +22,13 @@ class ProBatchController(
     private val cleanupEngine: StorageCleanupEngine = StorageCleanupEngine(context),
     private val thumbnailCleanup: ThumbnailFileCleanup = ThumbnailFileCleanup(),
 ) {
+    private var uiContext: Context = context
+
+    fun updateUiContext(localizedContext: Context) {
+        uiContext = localizedContext
+        state = state.copy(message = null, error = null)
+    }
+
     var state by androidx.compose.runtime.mutableStateOf(ProBatchState())
         private set
 
@@ -29,12 +36,13 @@ class ProBatchController(
     private var cleanupChangedAnything: Boolean = false
 
     fun scan(selectedTypes: Set<ProScanType>) {
+        if (state.resolving || state.awaitingSystemTrash) return
         if (!StorageAccess.hasBroadAccess(context)) {
-            state = state.copy(error = context.getString(R.string.pro_error_access_required))
+            state = state.copy(error = uiContext.getString(R.string.pro_error_access_required))
             return
         }
         if (selectedTypes.isEmpty()) {
-            state = state.copy(error = context.getString(R.string.pro_error_select_category))
+            state = state.copy(error = uiContext.getString(R.string.pro_error_select_category))
             return
         }
 
@@ -121,10 +129,10 @@ class ProBatchController(
                 )
             } catch (error: CancellationException) {
                 state = state.copy(running = false)
-            } catch (error: Throwable) {
+            } catch (_: Throwable) {
                 state = state.copy(
                     running = false,
-                    error = error.message ?: error.javaClass.simpleName,
+                    error = uiContext.getString(R.string.pro_scan_failed),
                 )
             }
         }
@@ -158,7 +166,7 @@ class ProBatchController(
         )
     }
 
-    fun resolve(onSystemTrashRequired: (PendingIntent) -> Unit) {
+    fun resolve() {
         if (state.resolving || state.awaitingSystemTrash) return
 
         job?.cancel()
@@ -182,7 +190,10 @@ class ProBatchController(
                     thumbnailRemovedBytes += result.removedBytes
                     thumbnailRejected += result.rejected
                 }
-                if (thumbnailRemoved > 0) cleanupChangedAnything = true
+                if (thumbnailRemoved > 0) {
+                    cleanupChangedAnything = true
+                    StorageInventoryRepository.invalidate()
+                }
 
                 val duplicateFiles = cleanupEngine.protectedDuplicateSnapshots(
                     state.duplicateGroups,
@@ -199,13 +210,13 @@ class ProBatchController(
 
                 val mediaRequest = cleanupEngine.createSystemTrashRequest(preparation.mediaUris)
                 val summaryParts = mutableListOf<String>()
-                summaryParts += context.getString(
+                summaryParts += uiContext.getString(
                     R.string.pro_resolve_empty_folders,
                     folderResult.removed,
                 )
                 summaryParts += buildString {
                     append(
-                        context.getString(
+                        uiContext.getString(
                             R.string.pro_resolve_thumbnails,
                             thumbnailRemoved,
                         ),
@@ -213,37 +224,37 @@ class ProBatchController(
                     if (thumbnailRemovedBytes > 0L) {
                         append(" ")
                         append(
-                            context.getString(
+                            uiContext.getString(
                                 R.string.pro_resolve_thumbnail_bytes,
                                 thumbnailRemovedBytes,
                             ),
                         )
                     }
                 }
-                summaryParts += context.getString(
+                summaryParts += uiContext.getString(
                     R.string.pro_resolve_safe_trash,
                     safeTrash.moved,
                 )
                 if (thumbnailRejected > 0) {
-                    summaryParts += context.getString(
+                    summaryParts += uiContext.getString(
                         R.string.pro_resolve_thumbnail_rejected,
                         thumbnailRejected,
                     )
                 }
                 if (preparation.staleFiles.isNotEmpty()) {
-                    summaryParts += context.getString(
+                    summaryParts += uiContext.getString(
                         R.string.pro_resolve_stale,
                         preparation.staleFiles.size,
                     )
                 }
                 if (preparation.blockedFiles.isNotEmpty()) {
-                    summaryParts += context.getString(
+                    summaryParts += uiContext.getString(
                         R.string.pro_resolve_blocked,
                         preparation.blockedFiles.size,
                     )
                 }
                 if (state.residues.isNotEmpty()) {
-                    summaryParts += context.getString(
+                    summaryParts += uiContext.getString(
                         R.string.pro_resolve_residues,
                         state.residues.size,
                     )
@@ -252,24 +263,28 @@ class ProBatchController(
                 state = state.copy(
                     resolving = false,
                     awaitingSystemTrash = mediaRequest != null,
+                    pendingSystemTrashRequest = mediaRequest,
                     message = summaryParts.joinToString(" · "),
                 )
 
-                if (mediaRequest != null) {
-                    onSystemTrashRequired(mediaRequest)
-                } else {
+                if (mediaRequest == null) {
                     finishResolve(systemTrashConfirmed = false)
                 }
             } catch (error: CancellationException) {
                 state = state.copy(resolving = false)
-            } catch (error: Throwable) {
+            } catch (_: Throwable) {
                 state = state.copy(
                     resolving = false,
                     awaitingSystemTrash = false,
-                    error = error.message ?: error.javaClass.simpleName,
+                    error = uiContext.getString(R.string.pro_scan_failed),
                 )
             }
         }
+    }
+
+    fun markSystemTrashLaunched() {
+        if (!state.awaitingSystemTrash) return
+        state = state.copy(pendingSystemTrashRequest = null)
     }
 
     fun onSystemTrashResult(success: Boolean) {
@@ -277,11 +292,12 @@ class ProBatchController(
         if (success) cleanupChangedAnything = true
         state = state.copy(
             awaitingSystemTrash = false,
+            pendingSystemTrashRequest = null,
             message = buildString {
                 append(state.message.orEmpty())
                 if (isNotEmpty()) append(" · ")
                 append(
-                    context.getString(
+                    uiContext.getString(
                         if (success) R.string.pro_system_trash_confirmed
                         else R.string.pro_system_trash_cancelled,
                     ),
@@ -298,7 +314,12 @@ class ProBatchController(
     fun cancel() {
         job?.cancel()
         job = null
-        state = state.copy(running = false, resolving = false)
+        state = state.copy(
+            running = false,
+            resolving = false,
+            awaitingSystemTrash = false,
+            pendingSystemTrashRequest = null,
+        )
     }
 
     private fun finishResolve(systemTrashConfirmed: Boolean) {

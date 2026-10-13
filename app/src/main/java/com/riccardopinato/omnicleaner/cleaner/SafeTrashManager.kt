@@ -36,20 +36,28 @@ data class SafeTrashRestoreResult(
 class SafeTrashManager private constructor(
     private val trashDirectory: File,
     private val restoreRoot: File,
+    private val legacyTrashDirectory: File? = null,
 ) {
     constructor(context: Context) : this(
-        trashDirectory = File(context.filesDir, "trash"),
+        trashDirectory = StorageAccess.safeTrashRoot(),
         restoreRoot = StorageAccess.primaryRoot(),
+        legacyTrashDirectory = File(context.filesDir, "trash"),
     )
 
     init {
-        trashDirectory.mkdirs()
+        preparePersistentTrash()
     }
 
     fun getTrashDirectory(): File = trashDirectory
 
-    fun listEntries(): List<SafeTrashEntry> =
-        trashDirectory.listFiles()
+    fun isPersistentTrashAvailable(): Boolean =
+        trashDirectory.isDirectory &&
+            !PathSafety.isSymlink(trashDirectory) &&
+            PathSafety.isWithinRoot(trashDirectory, restoreRoot)
+
+    fun listEntries(): List<SafeTrashEntry> {
+        if (!isPersistentTrashAvailable()) return emptyList()
+        return trashDirectory.listFiles()
             .orEmpty()
             .asSequence()
             .filter { it.isDirectory }
@@ -58,9 +66,11 @@ class SafeTrashManager private constructor(
                 File(trashDirectory, entry.id).lastModified()
             }
             .toList()
+    }
 
-    fun getTrashSize(): Long =
-        trashDirectory.listFiles()
+    fun getTrashSize(): Long {
+        if (!isPersistentTrashAvailable()) return 0L
+        return trashDirectory.listFiles()
             .orEmpty()
             .sumOf { entry ->
                 File(entry, PAYLOAD_NAME)
@@ -69,6 +79,7 @@ class SafeTrashManager private constructor(
                     ?.coerceAtLeast(0L)
                     ?: 0L
             }
+    }
 
     fun moveToTrash(snapshot: CleanupFileSnapshot): File? {
         if (!CleanupSnapshotValidator.validate(snapshot).valid) return null
@@ -94,6 +105,7 @@ class SafeTrashManager private constructor(
         expectedModified: Long?,
         expectedHash: String?,
     ): File? {
+        if (!isPersistentTrashAvailable()) return null
         if (!file.exists() || !file.isFile) return null
         if (!PathSafety.isWithinRoot(file, restoreRoot)) return null
         if (PathSafety.isDangerousPath(file) || PathSafety.isSymlink(file)) return null
@@ -193,6 +205,9 @@ class SafeTrashManager private constructor(
     }
 
     fun restore(entryId: String): SafeTrashRestoreResult {
+        if (!isPersistentTrashAvailable()) {
+            return SafeTrashRestoreResult(SafeTrashRestoreStatus.DESTINATION_UNAVAILABLE)
+        }
         if (!ENTRY_ID_PATTERN.matches(entryId)) {
             return SafeTrashRestoreResult(SafeTrashRestoreStatus.ENTRY_NOT_FOUND)
         }
@@ -292,6 +307,7 @@ class SafeTrashManager private constructor(
     }
 
     fun permanentlyDelete(file: File): Boolean {
+        if (!isPersistentTrashAvailable()) return false
         val root = runCatching { trashDirectory.canonicalFile }.getOrNull() ?: return false
         val rootPrefix = root.path.trimEnd(File.separatorChar) + File.separator
         val absolute = file.absoluteFile
@@ -309,6 +325,7 @@ class SafeTrashManager private constructor(
     }
 
     fun emptyTrash(): Boolean {
+        if (!isPersistentTrashAvailable()) return false
         val entries = trashDirectory.listFiles() ?: return true
         var allDeleted = true
         for (entry in entries) {
@@ -365,6 +382,95 @@ class SafeTrashManager private constructor(
         }
 
         return canonical.delete()
+    }
+
+    private fun preparePersistentTrash() {
+        val parent = trashDirectory.parentFile ?: return
+        if (PathSafety.isSymlink(parent) || PathSafety.isSymlink(trashDirectory)) return
+        if (!parent.exists() && !parent.mkdirs()) return
+        if (!trashDirectory.exists() && !trashDirectory.mkdirs()) return
+        runCatching { File(parent, ".nomedia").createNewFile() }
+    }
+
+    /**
+     * Recovery builds before 0.11 stored reversible payloads under filesDir.
+     * Copy each verified legacy entry into persistent shared storage first and
+     * delete the legacy copy only after the migrated entry can be parsed and
+     * integrity-checked. A failed migration leaves the original untouched.
+     */
+    fun migrateLegacyTrashIfNeeded() {
+        val legacyRoot = legacyTrashDirectory ?: return
+        if (!legacyRoot.isDirectory || !isPersistentTrashAvailable()) return
+
+        for (legacyEntry in legacyRoot.listFiles().orEmpty()) {
+            if (!legacyEntry.isDirectory || !ENTRY_ID_PATTERN.matches(legacyEntry.name)) continue
+
+            val legacyMetadata = File(legacyEntry, METADATA_NAME)
+            val legacyPayload = File(legacyEntry, PAYLOAD_NAME)
+            if (
+                !legacyMetadata.isFile ||
+                !legacyPayload.isFile ||
+                PathSafety.isSymlink(legacyPayload)
+            ) {
+                continue
+            }
+
+            val target = File(trashDirectory, legacyEntry.name)
+            if (target.exists()) {
+                if (isVerifiedMigrationCopy(legacyPayload, target)) {
+                    legacyEntry.deleteRecursively()
+                    continue
+                }
+                target.deleteRecursively()
+            }
+
+            if (!target.mkdirs()) continue
+
+            val targetMetadata = File(target, METADATA_NAME)
+            val targetPayload = File(target, PAYLOAD_NAME)
+            val copied = runCatching {
+                copyAndSync(legacyMetadata, targetMetadata)
+                copyAndSync(legacyPayload, targetPayload)
+                true
+            }.getOrDefault(false)
+
+            if (!copied || !isVerifiedMigrationCopy(legacyPayload, target)) {
+                target.deleteRecursively()
+                continue
+            }
+
+            legacyEntry.deleteRecursively()
+        }
+
+        runCatching {
+            if (legacyRoot.listFiles().isNullOrEmpty()) legacyRoot.delete()
+        }
+    }
+
+    private fun isVerifiedMigrationCopy(
+        legacyPayload: File,
+        target: File,
+    ): Boolean {
+        if (!legacyPayload.isFile || PathSafety.isSymlink(legacyPayload)) return false
+
+        val migratedEntry = readEntry(target) ?: return false
+        val targetPayload = File(target, PAYLOAD_NAME)
+        if (!targetPayload.isFile || PathSafety.isSymlink(targetPayload)) return false
+        if (targetPayload.length() != legacyPayload.length()) return false
+
+        val sourceHash = runCatching { sha256(legacyPayload) }.getOrNull() ?: return false
+        val targetHash = runCatching { sha256(targetPayload) }.getOrNull() ?: return false
+
+        return targetHash == sourceHash && targetHash == migratedEntry.sha256
+    }
+
+    private fun copyAndSync(source: File, destination: File) {
+        FileInputStream(source).use { input ->
+            FileOutputStream(destination).use { output ->
+                input.copyTo(output)
+                output.fd.sync()
+            }
+        }
     }
 
     private fun readEntry(directory: File): SafeTrashEntry? {
@@ -454,6 +560,11 @@ class SafeTrashManager private constructor(
         internal fun forTests(
             trashDirectory: File,
             restoreRoot: File = trashDirectory.parentFile ?: trashDirectory,
-        ): SafeTrashManager = SafeTrashManager(trashDirectory, restoreRoot)
+            legacyTrashDirectory: File? = null,
+        ): SafeTrashManager = SafeTrashManager(
+            trashDirectory = trashDirectory,
+            restoreRoot = restoreRoot,
+            legacyTrashDirectory = legacyTrashDirectory,
+        )
     }
 }
