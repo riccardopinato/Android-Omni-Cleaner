@@ -89,17 +89,24 @@ internal class PersistentStorageIndex(
             val ctimeSecondsIndex = cursor.getColumnIndexOrThrow(COL_CTIME_SECONDS)
             val ctimeNanosIndex = cursor.getColumnIndexOrThrow(COL_CTIME_NANOS)
             while (cursor.moveToNext()) {
-                val revision = if (
+                val physicalIdentity = if (
                     !cursor.isNull(deviceIndex) &&
-                    !cursor.isNull(inodeIndex) &&
+                    !cursor.isNull(inodeIndex)
+                ) {
+                    PhysicalFileIdentity(
+                        deviceId = cursor.getLong(deviceIndex),
+                        inode = cursor.getLong(inodeIndex),
+                    )
+                } else {
+                    null
+                }
+                val revision = if (
+                    physicalIdentity != null &&
                     !cursor.isNull(ctimeSecondsIndex) &&
                     !cursor.isNull(ctimeNanosIndex)
                 ) {
                     StrongFileRevision(
-                        physicalIdentity = PhysicalFileIdentity(
-                            deviceId = cursor.getLong(deviceIndex),
-                            inode = cursor.getLong(inodeIndex),
-                        ),
+                        physicalIdentity = physicalIdentity,
                         changeTimeSeconds = cursor.getLong(ctimeSecondsIndex),
                         changeTimeNanos = cursor.getLong(ctimeNanosIndex),
                     )
@@ -112,6 +119,7 @@ internal class PersistentStorageIndex(
                     size = cursor.getLong(sizeIndex).coerceAtLeast(0L),
                     modified = cursor.getLong(modifiedIndex).coerceAtLeast(0L),
                     revision = revision,
+                    physicalIdentity = physicalIdentity,
                 )
             }
         }
@@ -179,14 +187,18 @@ internal class PersistentStorageIndex(
                         put(COL_SIZE, item.size)
                         put(COL_MODIFIED, item.modified)
                         put(COL_EXTENSION, extension)
-                        if (revision != null) {
-                            put(COL_DEVICE_ID, revision.physicalIdentity.deviceId)
-                            put(COL_INODE, revision.physicalIdentity.inode)
-                            put(COL_CTIME_SECONDS, revision.changeTimeSeconds)
-                            put(COL_CTIME_NANOS, revision.changeTimeNanos)
+                        val physicalIdentity = item.physicalIdentity
+                        if (physicalIdentity != null) {
+                            put(COL_DEVICE_ID, physicalIdentity.deviceId)
+                            put(COL_INODE, physicalIdentity.inode)
                         } else {
                             putNull(COL_DEVICE_ID)
                             putNull(COL_INODE)
+                        }
+                        if (revision != null) {
+                            put(COL_CTIME_SECONDS, revision.changeTimeSeconds)
+                            put(COL_CTIME_NANOS, revision.changeTimeNanos)
+                        } else {
                             putNull(COL_CTIME_SECONDS)
                             putNull(COL_CTIME_NANOS)
                         }
