@@ -561,6 +561,12 @@ private fun CleanActionsCard(
                 OutlinedButton(onClick = controller::scanDuplicates, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.scan_duplicates))
                 }
+                OutlinedButton(
+                    onClick = controller::refreshPersistentIndex,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.refresh_storage_index))
+                }
             }
         }
     }
