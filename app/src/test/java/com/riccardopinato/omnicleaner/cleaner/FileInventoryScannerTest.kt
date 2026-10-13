@@ -54,6 +54,62 @@ class FileInventoryScannerTest {
     }
 
     @Test
+    fun duplicateScanCanBeRestrictedByExtensionBeforeHashing() = runBlocking {
+        val root = createTempDirectory("omni-extension-duplicates-").toFile()
+        try {
+            File(root, "one.pdf").writeText("same-pdf")
+            File(root, "two.pdf").writeText("same-pdf")
+            File(root, "one.apk").writeText("same-apk")
+            File(root, "two.apk").writeText("same-apk")
+
+            val inventory = FileInventoryScanner().collect(root)
+            val scanner = FileScanner()
+
+            val pdfGroups = scanner.findDuplicates(
+                inventory = inventory,
+                extensionFilter = "pdf",
+            )
+            val apkGroups = scanner.findDuplicates(
+                inventory = inventory,
+                extensionFilter = ".apk",
+            )
+
+            assertEquals(1, pdfGroups.size)
+            assertEquals(setOf("one.pdf", "two.pdf"), pdfGroups.single().files.map { it.name }.toSet())
+
+            assertEquals(1, apkGroups.size)
+            assertEquals(setOf("one.apk", "two.apk"), apkGroups.single().files.map { it.name }.toSet())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun duplicateScanProgressStartsAtZeroAndEndsAtTotal() = runBlocking {
+        val root = createTempDirectory("omni-duplicate-progress-boundary-").toFile()
+        try {
+            repeat(20) { index ->
+                File(root, "copy-$index.bin").writeText("identical")
+            }
+
+            val inventory = FileInventoryScanner().collect(root)
+            val progress = mutableListOf<Pair<Int, Int>>()
+
+            val groups = FileInventoryScanner().duplicatesProgressive(inventory.files) { processed, total ->
+                progress += processed to total
+            }
+
+            assertEquals(1, groups.size)
+            assertTrue(progress.isNotEmpty())
+            assertEquals(0, progress.first().first)
+            assertEquals(progress.first().second, progress.last().second)
+            assertEquals(progress.last().second, progress.last().first)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun nullableUnlessCancelledRethrowsCancellation() = runBlocking {
         var propagated = false
         try {
