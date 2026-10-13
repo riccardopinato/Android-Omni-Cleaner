@@ -108,7 +108,11 @@ class FileScanner(
             }
         }
 
-        return inventoryScanner.duplicatesProgressive(candidates, onProgress)
+        return inventoryScanner.duplicatesProgressive(
+            files = candidates,
+            onProgress = onProgress,
+            hashCache = StorageInventoryRepository.duplicateHashCache(),
+        )
     }
 
     suspend fun scanFolders(
