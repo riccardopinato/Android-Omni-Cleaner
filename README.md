@@ -14,7 +14,8 @@ Recovery and productization of the lost-source Android cleaner APK.
 **MAXI STEP 7 — Product Expansion: COMPLETE**  
 **MAXI STEP 8 — Localization & Accessibility: COMPLETE**  
 **MAXI STEP 9 — Performance & Deep QA: IMPLEMENTATION COMPLETE (validation deferred)**  
-**MAXI STEP 9.5 — Post-Audit P1/P2/P3 Hardening: SOURCE COMPLETE (validation deferred)**
+**MAXI STEP 9.5 — Post-Audit P1/P2/P3 Hardening: SOURCE COMPLETE**  
+**MAXI STEP 9.6 — Persistent Indexing & Bounded Hashing: IMPLEMENTED (fast exact-head CI PASS)**
 
 The recovered cleaner, safety model, monetization architecture, redesigned shell, Smart Categories and localization/accessibility layer are complete through Step 8. Play/AdMob provider validation and physical-device certification remain separate release gates.
 
@@ -33,7 +34,7 @@ The recovered cleaner, safety model, monetization architecture, redesigned shell
 ## Current recovery version
 
 - applicationId: `com.riccardopinato.omnicleaner`
-- version: `0.11.0-recovery` / code 11
+- version: `0.12.0-recovery` / code 12
 - minSdk 24
 - targetSdk 36
 - compileSdk 37
@@ -89,9 +90,11 @@ See `STEP8_LOCALIZATION_ACCESSIBILITY.md`.
 
 ## Performance & deep QA
 
-Step 9 hardens large-library behavior with duplicate candidate prefiltering, 256 KiB hashing/comparison buffers, reduced canonical-path filesystem overhead, cancellable hashing/MediaStore queries, a bounded Gallery review window, source-revalidated EXIF export and a deterministic large-library runtime fixture. The Clean workspace also includes an extension dropdown that can restrict expensive duplicate hashing before it starts. AppLab runs the performance, lifecycle, process-death, background and storage labs explicitly for this step. PR gates now test the immutable source head, select FULL correctly on the Step 9 branch, and avoid duplicate feature push + PR runs.
+Step 9 hardens large-library behavior with duplicate candidate prefiltering, 256 KiB hashing/comparison buffers, reduced canonical-path filesystem overhead, cancellable hashing/MediaStore queries, a bounded Gallery review window, source-revalidated EXIF export and a deterministic large-library runtime fixture. The Clean workspace also includes an extension dropdown that can restrict expensive duplicate hashing before it starts.
 
-See `STEP9_PERFORMANCE_DEEP_QA.md`, `STEP9_5_AUDIT_HARDENING.md` and `PERFORMANCE_BUDGETS.md`.
+Step 9.6 adds a persistent SQLite storage index and bounded CPU-aware hashing workers. Persisted sample/full hashes are bound to strong file revisions on supported Android versions, physical aliases are collapsed before duplicate grouping, and destructive cleanup still revalidates live files. A manual full-index refresh remains available.
+
+See `STEP9_PERFORMANCE_DEEP_QA.md`, `STEP9_5_AUDIT_HARDENING.md`, `STEP9_6_PERSISTENT_INDEXING_BOUNDED_HASHING.md` and `PERFORMANCE_BUDGETS.md`.
 
 ## Storage safety model
 
@@ -112,7 +115,7 @@ See `STORAGE_PERMISSION_POLICY.md`.
 ## Quality lanes
 
 ### Android CI
-Lint, unit tests, debug build and release build.
+Pull requests run exact-head locale parity, JVM tests, instrumentation-source compilation and debug APK assembly. Full lint/debug/release verification remains available on main/manual lanes.
 
 ### AppLab Intelligence
 Pinned to AppLab v4.5 at
@@ -156,3 +159,18 @@ During fast-development mode, pull requests use one exact-head lane:
 - the file-type dropdown includes common extensions such as `.apk`, `.pdf`, archives, images, video, audio and office files;
 - when an extension is selected, duplicate candidates are filtered **before** sample/SHA-256/byte verification;
 - large-file scans apply the same extension filter before sorting and the 500-item result cap.
+
+
+### Persistent indexing & bounded hashing
+
+- app-private SQLite index survives process/app restart;
+- warm reuse re-stats known files instead of blindly trusting persisted rows;
+- MediaStore generation drift invalidates reuse where available;
+- app-owned mutations mark the persistent index stale;
+- sample/full hashes are reused only under trustworthy revision identity;
+- duplicate hashing uses a bounded 1–4 worker policy instead of task-per-file fanout;
+- device/inode aliases are collapsed before duplicate grouping;
+- final duplicate equality still requires byte-for-byte verification;
+- manual full index refresh is exposed in Clean.
+
+Exact-head development evidence for the first implementation: Android CI run `38484281905` PASS on `aa5f6e9951237fcfafaa1c361c4aa643c439ad63`.
