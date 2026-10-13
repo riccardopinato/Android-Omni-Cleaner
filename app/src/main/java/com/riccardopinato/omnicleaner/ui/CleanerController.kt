@@ -95,6 +95,13 @@ internal class CleanerController(
     private val fileScanner: FileScanner = FileScanner(),
     private val overviewScanner: SpaceOverviewScanner = SpaceOverviewScanner(),
 ) {
+    private var uiContext: Context = context
+
+    fun updateUiContext(localizedContext: Context) {
+        uiContext = localizedContext
+        state = state.copy(currentOperation = null, error = null)
+    }
+
     var state by mutableStateOf(CleanerUiState())
         private set
 
@@ -123,12 +130,12 @@ internal class CleanerController(
         )
     }
 
-    fun scanOverview() = runScan(context.getString(R.string.module_storage_overview)) {
+    fun scanOverview() = runScan(uiContext.getString(R.string.module_storage_overview)) {
         val overview = overviewScanner.scan(StorageAccess.primaryRoot())
         state = state.copy(overview = overview)
     }
 
-    fun scanFolders() = runScan(context.getString(R.string.module_folders)) {
+    fun scanFolders() = runScan(uiContext.getString(R.string.module_folders)) {
         val folders = fileScanner.scanFolders(
             root = StorageAccess.primaryRoot(),
             smallFolderThresholdBytes = state.folderThresholdBytes,
@@ -147,7 +154,7 @@ internal class CleanerController(
 
     fun scanBigFiles(
         minimumBytes: Long = state.bigFileSizeFilter.minimumBytes,
-    ) = runScan(context.getString(R.string.module_large_files)) {
+    ) = runScan(uiContext.getString(R.string.module_large_files)) {
         val files = fileScanner.findBigFiles(StorageAccess.primaryRoot(), minimumBytes)
         state = state.copy(bigFiles = files, bigFilesScanned = true)
     }
@@ -169,7 +176,7 @@ internal class CleanerController(
         if (state.hasBroadAccess) scanBigFiles(filter.minimumBytes)
     }
 
-    fun scanDuplicates() = runScan(context.getString(R.string.module_duplicates)) {
+    fun scanDuplicates() = runScan(uiContext.getString(R.string.module_duplicates)) {
         val groups = fileScanner.findDuplicates(StorageAccess.primaryRoot())
         state = state.copy(duplicates = groups, duplicatesScanned = true)
     }
@@ -183,7 +190,7 @@ internal class CleanerController(
 
     private fun runScan(label: String, block: suspend () -> Unit) {
         if (!state.hasBroadAccess) {
-            state = state.copy(error = context.getString(R.string.deep_cleaning_access_required))
+            state = state.copy(error = uiContext.getString(R.string.deep_cleaning_access_required))
             return
         }
         scanJob?.cancel()
@@ -195,7 +202,7 @@ internal class CleanerController(
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Throwable) {
-                state = state.copy(error = context.getString(R.string.scan_error))
+                state = state.copy(error = uiContext.getString(R.string.scan_error))
             } finally {
                 if (generation == scanGeneration) {
                     state = state.copy(scanning = false, currentOperation = null)
