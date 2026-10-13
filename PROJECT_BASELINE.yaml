@@ -6,12 +6,12 @@ project:
 
 factory:
   repository: riccardopinato/App-Factory-Core
-  commit_sha: e183de8f811873a146eaa78bb1daa2617e11f466
-  master_version: "26.2"
-  golden_index_version: 13
+  commit_sha: 7b408dd8b14ea7785e923c6eed624eb41c193698
+  master_version: "26.3"
+  golden_index_version: 14
   golden_registry_version: 2
-  candidate_golden_pr: 7
-  candidate_golden_head: 6494241f5456a692526495bb9f623f94cd1068e3
+  candidate_golden_pr: 9
+  candidate_golden_head: 79503fa5cc3b34686c46cc93f3df42086912f6f9
   selected_candidate_goldens:
     - incremental_persistent_indexing_v1_draft
     - bounded_parallel_hashing_v1_draft
