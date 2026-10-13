@@ -1,15 +1,20 @@
 project:
   repository: riccardopinato/Android-Omni-Cleaner
-  status: POST_AUDIT_HARDENING_IMPLEMENTED_VALIDATION_DEFERRED
+  status: PERSISTENT_INDEX_BOUNDED_HASHING_IMPLEMENTED_FAST_CI_PASS
   recovery_started_at: 2026-10-09
-  current_maxi_step: "9.5"
+  current_maxi_step: "9.6"
 
 factory:
   repository: riccardopinato/App-Factory-Core
-  commit_sha: fa3c0679de393f1cb13c2fed2be314d1a1269353
-  master_version: "25.1"
-  golden_index_version: 10
+  commit_sha: e183de8f811873a146eaa78bb1daa2617e11f466
+  master_version: "26.2"
+  golden_index_version: 13
   golden_registry_version: 2
+  candidate_golden_pr: 7
+  candidate_golden_head: 6494241f5456a692526495bb9f623f94cd1068e3
+  selected_candidate_goldens:
+    - incremental_persistent_indexing_v1_draft
+    - bounded_parallel_hashing_v1_draft
 
 applab:
   repository: riccardopinato/AppLab
@@ -38,8 +43,8 @@ identity:
   debug_application_id: com.riccardopinato.omnicleaner.debug
   legacy_application_id: com.aistudio.foldercleaner.zjijip
   donor_apk_sha256: c77f48bbbac1d8e5e16ee44dab67346f3caa0f846bd117e5b05d2cb3b2a88310
-  recovery_version_name: "0.11.0-recovery"
-  recovery_version_code: 11
+  recovery_version_name: "0.12.0-recovery"
+  recovery_version_code: 12
   signing_lane: internal_pending
 
 parity:
@@ -65,10 +70,10 @@ physical_validation:
   status: blocked_until_real_device_execution
 
 release:
-  ci: public_repo_runner_available_validation_in_progress
+  ci: fast_exact_head_pass
   signing: policy_defined_identity_not_provisioned
   physical_validation: blocked
-  distribution_validation: parity_prerelease_only
+  distribution_validation: exact_head_debug_prerelease_pass
   billing_play_test: blocked
   production_ads_configured: false
   store_ready: false
@@ -151,7 +156,7 @@ localization_accessibility:
     - pt
   manual_language_selector: true
   system_language_fallback: true
-  locale_key_parity: pass_304_each
+  locale_key_parity: pass_305_each
   locale_placeholder_parity: pass
   android_locale_config: true
   talkback_toggle_rows: true
@@ -238,3 +243,47 @@ post_audit_hardening:
   maintainability:
     shell_split: true
     cleaner_screens_file: app/src/main/java/com/riccardopinato/omnicleaner/ui/redesign/CleanerScreens.kt
+
+
+persistent_indexing_bounded_hashing:
+  status: implemented_fast_exact_head_ci_pass
+  version_name: "0.12.0-recovery"
+  version_code: 12
+  exact_head: aa5f6e9951237fcfafaa1c361c4aa643c439ad63
+  android_ci_run: 38484281905
+  debug_apk_release: fast-apk-aa5f6e995123
+  persistent_index:
+    storage: sqlite
+    schema_version: 1
+    in_memory_ttl_ms: 120000
+    persistent_reuse_ttl_ms: 21600000
+    restat_known_paths_before_reuse: true
+    mediastore_generation_guard: true
+    app_owned_mutation_invalidates: true
+    manual_full_refresh: true
+    destructive_authority: false
+  revision_identity:
+    physical_identity: device_id_plus_inode
+    strong_hash_revision_api27_plus: high_resolution_ctime
+    legacy_hash_cache_without_strong_revision: disabled
+  bounded_hashing:
+    worker_min: 1
+    worker_max: 4
+    task_per_file_fanout: false
+    io_buffer_bytes: 262144
+    sample_bytes_per_edge: 65536
+    physical_alias_collapse: true
+    full_sha256: true
+    final_byte_verification: true
+    deterministic_output: true
+  tests:
+    jvm: pass
+    android_instrumentation_sources_compile: pass
+    instrumentation_runtime: pending_physical_execution
+    locale_parity: pass_305_each
+  remaining_evidence:
+    - cold_vs_warm_real_library_benchmark
+    - worker_1_2_4_benchmark
+    - low_end_thermal_battery
+    - physical_instrumentation_execution
+    - full_applab_certification
