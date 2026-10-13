@@ -8,6 +8,7 @@ import com.riccardopinato.omnicleaner.cleaner.FileScanner
 import com.riccardopinato.omnicleaner.cleaner.FolderStatus
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.StorageCleanupEngine
+import com.riccardopinato.omnicleaner.cleaner.StorageInventoryRepository
 import com.riccardopinato.omnicleaner.cleaner.ThumbnailFileCleanup
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -35,6 +36,7 @@ class ProBatchController(
     private var cleanupChangedAnything: Boolean = false
 
     fun scan(selectedTypes: Set<ProScanType>) {
+        if (state.resolving || state.awaitingSystemTrash) return
         if (!StorageAccess.hasBroadAccess(context)) {
             state = state.copy(error = uiContext.getString(R.string.pro_error_access_required))
             return
@@ -188,7 +190,10 @@ class ProBatchController(
                     thumbnailRemovedBytes += result.removedBytes
                     thumbnailRejected += result.rejected
                 }
-                if (thumbnailRemoved > 0) cleanupChangedAnything = true
+                if (thumbnailRemoved > 0) {
+                    cleanupChangedAnything = true
+                    StorageInventoryRepository.invalidate()
+                }
 
                 val duplicateFiles = cleanupEngine.protectedDuplicateSnapshots(
                     state.duplicateGroups,
