@@ -1,6 +1,6 @@
 # Android Omni Cleaner — Recovery & Product Roadmap
 
-Factory baseline: `fa3c0679de393f1cb13c2fed2be314d1a1269353`
+Factory baseline: `e183de8f811873a146eaa78bb1daa2617e11f466` (Master v26.2 / Golden Index v13)
 
 ## MAXI STEP 0 — Forensic Recovery
 **Status: COMPLETE**
@@ -145,7 +145,7 @@ See `STEP7_PRODUCT_EXPANSION.md`.
 
 Implemented:
 - complete EN / IT / ES / FR / PT resource bundles;
-- exact 304-key parity across all five locales;
+- exact 305-key parity across all five locales;
 - exact format-placeholder parity;
 - manual System / EN / IT / ES / FR / PT language selector;
 - lightweight persisted locale override applied at Activity context boundary;
@@ -229,10 +229,47 @@ Final review hardening:
 
 Evidence boundary:
 - source audit: complete;
-- exact-head compile/tests/AppLab: deferred while GitHub-hosted runners are unavailable;
+- exact-head fast compile/tests: PASS; full AppLab remains deferred;
 - physical/storage/provider/store validation: Step 10.
 
 See `STEP9_5_AUDIT_HARDENING.md`.
+
+## MAXI STEP 9.6 — Persistent Indexing & Bounded Parallel Hashing
+**Status: IMPLEMENTED — FAST EXACT-HEAD CI PASS / PHYSICAL PERFORMANCE EVIDENCE PENDING**
+
+Implemented:
+- app-private SQLite persistent file index across process/app restart;
+- 120 s in-memory cache remains first-level, persistent reuse extends warm-start behavior;
+- every persisted known path is re-statted before warm reuse;
+- MediaStore generation mismatch rejects stale persistent snapshots where available;
+- manual full-index refresh exposed in Clean;
+- app-owned cleanup invalidates persistent reuse immediately;
+- sample/full hashes persisted only against trustworthy strong revision identity;
+- Android API 27+ uses device/inode + high-resolution ctime for hash-cache binding;
+- older Android keeps alias identity but refuses persistent derived-hash reuse without a strong revision;
+- physical aliases/hard links collapsed before duplicate grouping;
+- bounded CPU-aware hashing workers capped at 4;
+- no coroutine/task-per-file fanout;
+- deterministic result order and throttled progress;
+- final byte-for-byte duplicate verification retained;
+- version `0.12.0-recovery` / code 12.
+
+Evidence:
+- exact-head Android CI run `38484281905`: PASS;
+- locale parity: 305 keys in EN/IT/ES/FR/PT;
+- JVM regression suite: PASS;
+- Android instrumentation sources compile in PR lane;
+- debug APK generated at exact head `aa5f6e9951237fcfafaa1c361c4aa643c439ad63`;
+- App Factory Golden candidates prepared in Core PR #7.
+
+Pending:
+- instrumentation execution on physical device;
+- cold vs warm real-library timing;
+- 1/2/4-worker throughput benchmark;
+- low-end thermal/battery evidence;
+- full AppLab/certification lane.
+
+See `STEP9_6_PERSISTENT_INDEXING_BOUNDED_HASHING.md`.
 
 ## MAXI STEP 10 — Store & Release Certification
 
@@ -242,7 +279,7 @@ Persistent signing, exact artifact identity, physical evidence, AAB, Internal Te
 
 ## FAST DEVELOPMENT MODE
 
-Temporarily enabled to prioritize implementation and APK delivery while GitHub Actions hosted-runner usage is unavailable.
+Temporarily enabled to prioritize rapid implementation and APK delivery. GitHub-hosted runners are available again; full AppLab/Store certification remains intentionally deferred until the implementation cycle stabilizes.
 
 Rules:
 - Step 9 validation is deferred, not converted to PASS.
