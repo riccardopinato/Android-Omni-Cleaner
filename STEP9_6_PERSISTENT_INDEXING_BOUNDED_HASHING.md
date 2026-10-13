@@ -13,7 +13,7 @@ This step pilots two App Factory Golden candidates:
 - Incremental Persistent Indexing;
 - Bounded Parallel Hashing.
 
-App Factory candidate PR: `riccardopinato/App-Factory-Core#7`.
+App Factory candidate PR: `riccardopinato/App-Factory-Core#9` (Golden Index v15 candidate).
 
 ## Persistent storage index
 
