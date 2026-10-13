@@ -34,12 +34,17 @@ class FileInventoryScanner {
                 continue
             }
 
-            val canonical = runCatching { directory.canonicalPath }.getOrNull()
-            if (canonical == null || !visited.add(canonical)) {
+            val absolute = directory.absoluteFile
+            val canonicalFile = runCatching { directory.canonicalFile }.getOrNull()
+            if (canonicalFile == null) {
                 excluded++
                 continue
             }
-            if (directory != root && PathSafety.isSymlink(directory)) {
+            if (directory != root && canonicalFile != absolute) {
+                excluded++
+                continue
+            }
+            if (!visited.add(canonicalFile.path)) {
                 excluded++
                 continue
             }
@@ -215,8 +220,8 @@ class FileInventoryScanner {
 
         FileInputStream(first).use { left ->
             FileInputStream(second).use { right ->
-                val leftBuffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                val rightBuffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                val leftBuffer = ByteArray(IO_BUFFER_BYTES)
+                val rightBuffer = ByteArray(IO_BUFFER_BYTES)
                 var compared = 0L
 
                 while (true) {
@@ -251,7 +256,7 @@ class FileInventoryScanner {
 
         if (expectedBytes <= DUPLICATE_SAMPLE_BYTES * 2L) {
             FileInputStream(file).use { input ->
-                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                val buffer = ByteArray(IO_BUFFER_BYTES)
                 while (true) {
                     coroutineContext.ensureActive()
                     val read = input.read(buffer)
@@ -261,7 +266,7 @@ class FileInventoryScanner {
             }
         } else {
             RandomAccessFile(file, "r").use { input ->
-                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                val buffer = ByteArray(IO_BUFFER_BYTES)
                 var remaining = sampleBytes
                 while (remaining > 0) {
                     coroutineContext.ensureActive()
@@ -289,7 +294,7 @@ class FileInventoryScanner {
     private suspend fun digestCancellable(file: File): String {
         val md = MessageDigest.getInstance("SHA-256")
         FileInputStream(file).use { input ->
-            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            val buffer = ByteArray(IO_BUFFER_BYTES)
             while (true) {
                 coroutineContext.ensureActive()
                 val read = input.read(buffer)
@@ -303,7 +308,7 @@ class FileInventoryScanner {
     fun digest(file: File): String {
         val md = MessageDigest.getInstance("SHA-256")
         FileInputStream(file).use { input ->
-            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            val buffer = ByteArray(IO_BUFFER_BYTES)
             while (true) {
                 val read = input.read(buffer)
                 if (read <= 0) break
@@ -315,6 +320,7 @@ class FileInventoryScanner {
 
     private companion object {
         const val DUPLICATE_SAMPLE_BYTES: Long = 64L * 1024L
+        const val IO_BUFFER_BYTES: Int = 256 * 1024
     }
 }
 
