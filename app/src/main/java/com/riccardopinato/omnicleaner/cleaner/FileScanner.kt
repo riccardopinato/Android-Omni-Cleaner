@@ -23,20 +23,36 @@ class FileScanner(
         root: File,
         minimumBytes: Long = BigFileSizeFilter.SIZE_100MB.minimumBytes,
         limit: Int = 500,
+        extensionFilter: String? = null,
     ): List<BigFileItem> =
         findBigFiles(
             inventory = StorageInventoryRepository.snapshot(root).inventory,
             minimumBytes = minimumBytes,
             limit = limit,
+            extensionFilter = extensionFilter,
         )
 
     fun findBigFiles(
         inventory: FileInventory,
         minimumBytes: Long = BigFileSizeFilter.SIZE_100MB.minimumBytes,
         limit: Int = 500,
-    ): List<BigFileItem> = inventory.files
+        extensionFilter: String? = null,
+    ): List<BigFileItem> {
+        val normalizedExtension = extensionFilter
+            ?.trim()
+            ?.removePrefix(".")
+            ?.lowercase(Locale.ROOT)
+            ?.takeIf { it.isNotBlank() }
+
+        return inventory.files
         .asSequence()
-        .filter { it.size >= minimumBytes }
+        .filter { item ->
+            item.size >= minimumBytes &&
+                (
+                    normalizedExtension == null ||
+                        item.file.extension.lowercase(Locale.ROOT) == normalizedExtension
+                )
+        }
         .sortedByDescending { it.size }
         .take(limit)
         .map { item ->
