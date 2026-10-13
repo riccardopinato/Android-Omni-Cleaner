@@ -54,6 +54,7 @@ internal data class CleanerUiState(
     val duplicateSearchQuery: String = "",
     val fileExtensionFilter: String? = null,
     val duplicateScanExtension: String? = null,
+    val bigFilesScanExtension: String? = null,
     val duplicateProgressProcessed: Int = 0,
     val duplicateProgressTotal: Int = 0,
     val indexedFilesChecked: Int = 0,
@@ -184,8 +185,17 @@ internal class CleanerController(
     fun scanBigFiles(
         minimumBytes: Long = state.bigFileSizeFilter.minimumBytes,
     ) = runScan(uiContext.getString(R.string.module_large_files)) {
-        val files = fileScanner.findBigFiles(StorageAccess.primaryRoot(), minimumBytes)
-        state = state.copy(bigFiles = files, bigFilesScanned = true)
+        val selectedExtension = state.fileExtensionFilter
+        val files = fileScanner.findBigFiles(
+            root = StorageAccess.primaryRoot(),
+            minimumBytes = minimumBytes,
+            extensionFilter = selectedExtension,
+        )
+        state = state.copy(
+            bigFiles = files,
+            bigFilesScanned = true,
+            bigFilesScanExtension = selectedExtension,
+        )
     }
 
     fun updateFolderSearchQuery(query: String) {
@@ -210,11 +220,16 @@ internal class CleanerController(
         val duplicateScopeChanged =
             state.duplicatesScanned &&
                 state.duplicateScanExtension != normalized
+        val bigFileScopeChanged =
+            state.bigFilesScanned &&
+                state.bigFilesScanExtension != normalized
 
         state = state.copy(
             fileExtensionFilter = normalized,
             duplicates = if (duplicateScopeChanged) emptyList() else state.duplicates,
             duplicatesScanned = if (duplicateScopeChanged) false else state.duplicatesScanned,
+            bigFiles = if (bigFileScopeChanged) emptyList() else state.bigFiles,
+            bigFilesScanned = if (bigFileScopeChanged) false else state.bigFilesScanned,
             duplicateProgressProcessed = 0,
             duplicateProgressTotal = 0,
         )
