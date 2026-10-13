@@ -216,6 +216,13 @@ Resolved in source:
 - domain enums no longer carry Italian presentation labels;
 - version `0.11.0-recovery` / code 11.
 
+Final review hardening:
+- stale in-flight inventory scans cannot repopulate cache after cleanup invalidation;
+- Gallery persists a newly exposed resume anchor immediately after paging;
+- retained controllers resolve UI copy through the currently selected locale without retaining Activity instances;
+- Pro Android Trash requests live in retained controller state and are launched by the current Activity registry;
+- one automatic exact-head PR verification gate is restored and also publishes the development APK when green.
+
 Evidence boundary:
 - source audit: complete;
 - exact-head compile/tests/AppLab: deferred while GitHub-hosted runners are unavailable;
@@ -236,7 +243,8 @@ Temporarily enabled to prioritize implementation and APK delivery while GitHub A
 Rules:
 - Step 9 validation is deferred, not converted to PASS.
 - AppLab Intelligence and AppLab Runtime are manual-only.
-- feature-branch Android CI is deferred; main CI remains available.
-- `Fast APK` is the only automatic feature-branch build lane.
-- Fast APK performs `assembleDebug` only, publishes a SHA-bound prerelease APK and checksum, and does not claim certification.
+- pull requests run one automatic exact-head fast gate: locale parity + JVM tests + `assembleDebug`;
+- the same successful PR job publishes the SHA-bound development APK + SHA-256, avoiding a duplicate runner;
+- full lint + debug/release builds remain on main/manual verification;
+- `Fast APK` remains a manual fallback only and does not claim certification.
 - full Step 9 and Store/Release certification gates must be rerun before any production/store claim.
