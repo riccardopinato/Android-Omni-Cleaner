@@ -16,6 +16,7 @@ import com.riccardopinato.omnicleaner.cleaner.SpaceOverviewScanner
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.StorageCapabilityHealth
 import com.riccardopinato.omnicleaner.cleaner.StorageInfo
+import com.riccardopinato.omnicleaner.cleaner.StorageInventoryRepository
 import com.riccardopinato.omnicleaner.cleaner.ThresholdUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -164,6 +165,26 @@ internal class CleanerController(
         val overview = overviewScanner.scan(StorageAccess.primaryRoot())
         state = state.copy(overview = overview)
     }
+
+    fun refreshPersistentIndex() =
+        runScan(uiContext.getString(R.string.refresh_storage_index)) {
+            val root = StorageAccess.primaryRoot()
+            StorageInventoryRepository.snapshot(
+                root = root,
+                forceRefresh = true,
+                onProgress = { checked, _ ->
+                    if (checked % 512 == 0) {
+                        scope.launch {
+                            if (state.scanning) {
+                                state = state.copy(indexedFilesChecked = checked)
+                            }
+                        }
+                    }
+                },
+            )
+            val overview = overviewScanner.scan(root)
+            state = state.copy(overview = overview)
+        }
 
     fun scanFolders() = runScan(uiContext.getString(R.string.module_folders)) {
         val folders = fileScanner.scanFolders(
