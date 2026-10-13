@@ -22,6 +22,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -65,6 +67,7 @@ import com.riccardopinato.omnicleaner.monetization.PremiumEntitlementStore
 import com.riccardopinato.omnicleaner.monetization.findActivity
 import com.riccardopinato.omnicleaner.monetization.rememberMonetizationRuntime
 import com.riccardopinato.omnicleaner.ui.CleanerController
+import com.riccardopinato.omnicleaner.ui.COMMON_FILE_EXTENSION_FILTERS
 import com.riccardopinato.omnicleaner.ui.OmniCleanerViewModel
 import com.riccardopinato.omnicleaner.ui.CleanerUiState
 import com.riccardopinato.omnicleaner.ui.LanguageSelectorSection
@@ -438,6 +441,24 @@ internal fun CleanScreen(
                 }
             }
 
+            if (
+                state.duplicatesScanned &&
+                state.visibleDuplicates.isEmpty() &&
+                !state.scanning
+            ) {
+                item {
+                    ResultSummaryCard(
+                        title = stringResource(R.string.module_duplicates),
+                        subtitle = stringResource(
+                            R.string.duplicates_none_found,
+                            state.fileExtensionFilter?.let { ".$it" }
+                                ?: stringResource(R.string.file_type_filter_all),
+                        ),
+                        accent = OmniRose,
+                    )
+                }
+            }
+
             if (state.visibleFolders.isNotEmpty()) {
                 item {
                     val empty = state.visibleFolders.count {
@@ -504,6 +525,26 @@ private fun CleanActionsCard(
                     state.currentOperation.orEmpty(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (state.duplicateProgressTotal > 0) {
+                    Text(
+                        stringResource(
+                            R.string.duplicate_scan_progress,
+                            state.duplicateProgressProcessed,
+                            state.duplicateProgressTotal,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else if (state.indexedFilesChecked > 0) {
+                    Text(
+                        stringResource(
+                            R.string.scan_indexing_files_count,
+                            state.indexedFilesChecked,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 OutlinedButton(onClick = controller::cancelScan) {
                     Text(stringResource(R.string.cancel))
                 }
@@ -542,6 +583,61 @@ private fun CleanFiltersCard(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(stringResource(R.string.redesign_filters_title), style = MaterialTheme.typography.titleMedium)
+
+            var extensionMenuExpanded by rememberSaveable { mutableStateOf(false) }
+            Text(
+                stringResource(R.string.file_type_filter_title),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { extensionMenuExpanded = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        state.fileExtensionFilter?.let { ".$it" }
+                            ?: stringResource(R.string.file_type_filter_all),
+                    )
+                }
+                DropdownMenu(
+                    expanded = extensionMenuExpanded,
+                    onDismissRequest = { extensionMenuExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.file_type_filter_all)) },
+                        onClick = {
+                            controller.updateFileExtensionFilter(null)
+                            extensionMenuExpanded = false
+                        },
+                    )
+                    COMMON_FILE_EXTENSION_FILTERS.forEach { extension ->
+                        DropdownMenuItem(
+                            text = { Text(".$extension") },
+                            onClick = {
+                                controller.updateFileExtensionFilter(extension)
+                                extensionMenuExpanded = false
+                            },
+                        )
+                    }
+                }
+            }
+            Text(
+                stringResource(R.string.file_type_filter_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (
+                state.duplicateScanExtension != state.fileExtensionFilter &&
+                !state.duplicatesScanned
+            ) {
+                Text(
+                    stringResource(R.string.duplicate_filter_requires_rescan),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
             OutlinedTextField(
                 value = state.folderSearchQuery,
                 onValueChange = controller::updateFolderSearchQuery,
