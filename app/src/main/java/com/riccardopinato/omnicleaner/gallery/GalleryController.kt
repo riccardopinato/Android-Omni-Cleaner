@@ -282,6 +282,11 @@ class GalleryController(
                         items = state.items + page,
                     ),
                 )
+                // The previous persisted anchor can legitimately be 0 when the
+                // reviewer reached the end of the loaded window before prefetch
+                // completed. Appending a page exposes a new current item, so
+                // persist that anchor immediately for process-death recovery.
+                persistProgress()
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
