@@ -27,6 +27,9 @@ object StorageInventoryRepository {
     @Volatile
     private var cached: StorageInventorySnapshot? = null
 
+    @Volatile
+    private var invalidationGeneration: Long = 0L
+
     suspend fun snapshot(
         root: File,
         forceRefresh: Boolean = false,
@@ -51,6 +54,7 @@ object StorageInventoryRepository {
                     lockedNow - current.createdAtMillis <= CACHE_TTL_MS
             }?.let { return@withLock it.copy(cacheHit = true) }
 
+            val scanGeneration = invalidationGeneration
             val started = nowMillis()
             val inventory = scanner.collect(root, onProgress)
             val finished = nowMillis()
@@ -60,11 +64,16 @@ object StorageInventoryRepository {
                 createdAtMillis = finished,
                 scanElapsedMillis = (finished - started).coerceAtLeast(0L),
                 cacheHit = false,
-            ).also { cached = it }
+            ).also { snapshot ->
+                if (isInventoryGenerationCurrent(scanGeneration, invalidationGeneration)) {
+                    cached = snapshot
+                }
+            }
         }
     }
 
     fun invalidate() {
+        invalidationGeneration++
         cached = null
     }
 
@@ -73,3 +82,8 @@ object StorageInventoryRepository {
     private fun canonical(file: File): String =
         runCatching { file.canonicalPath }.getOrElse { file.absolutePath }
 }
+
+internal fun isInventoryGenerationCurrent(
+    scanGeneration: Long,
+    currentGeneration: Long,
+): Boolean = scanGeneration == currentGeneration
