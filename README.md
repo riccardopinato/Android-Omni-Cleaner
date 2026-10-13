@@ -89,7 +89,7 @@ See `STEP8_LOCALIZATION_ACCESSIBILITY.md`.
 
 ## Performance & deep QA
 
-Step 9 hardens large-library behavior with duplicate candidate prefiltering, cancellable hashing/MediaStore queries, a bounded Gallery review window, source-revalidated EXIF export and a deterministic large-library runtime fixture. AppLab runs the performance, lifecycle, process-death, background and storage labs explicitly for this step. PR gates now test the immutable source head, select FULL correctly on the Step 9 branch, and avoid duplicate feature push + PR runs.
+Step 9 hardens large-library behavior with duplicate candidate prefiltering, 256 KiB hashing/comparison buffers, reduced canonical-path filesystem overhead, cancellable hashing/MediaStore queries, a bounded Gallery review window, source-revalidated EXIF export and a deterministic large-library runtime fixture. The Clean workspace also includes an extension dropdown that can restrict expensive duplicate hashing before it starts. AppLab runs the performance, lifecycle, process-death, background and storage labs explicitly for this step. PR gates now test the immutable source head, select FULL correctly on the Step 9 branch, and avoid duplicate feature push + PR runs.
 
 See `STEP9_PERFORMANCE_DEEP_QA.md`, `STEP9_5_AUDIT_HARDENING.md` and `PERFORMANCE_BUDGETS.md`.
 
@@ -147,3 +147,12 @@ During fast-development mode, pull requests use one exact-head lane:
 - no duplicate automatic Fast APK runner;
 - AppLab/full release certification remains deferred;
 - development/testing artifact only, not Store Ready.
+
+
+### Duplicate scan UX
+
+- duplicate search now reports indexed/candidate progress instead of showing only an indefinite spinner;
+- completed scans explicitly report when no duplicate groups were found;
+- the file-type dropdown includes common extensions such as `.apk`, `.pdf`, archives, images, video, audio and office files;
+- when an extension is selected, duplicate candidates are filtered **before** sample/SHA-256/byte verification;
+- large-file scans apply the same extension filter before sorting and the 500-item result cap.
