@@ -2,6 +2,7 @@ package com.riccardopinato.omnicleaner.ui
 
 import android.app.Application
 import android.content.Context
+import android.content.res.Configuration
 import androidx.lifecycle.AndroidViewModel
 import com.riccardopinato.omnicleaner.gallery.GalleryController
 import com.riccardopinato.omnicleaner.monetization.ProBatchController
@@ -30,9 +31,12 @@ class OmniCleanerViewModel(application: Application) : AndroidViewModel(applicat
         ProBatchController(application.applicationContext, controllerScope)
 
     fun updateUiContext(context: Context) {
-        cleanerController.updateUiContext(context)
-        galleryController.updateUiContext(context)
-        proBatchController.updateUiContext(context)
+        val localizedContext = getApplication<Application>().createConfigurationContext(
+            Configuration(context.resources.configuration),
+        )
+        cleanerController.updateUiContext(localizedContext)
+        galleryController.updateUiContext(localizedContext)
+        proBatchController.updateUiContext(localizedContext)
     }
 
     override fun onCleared() {
