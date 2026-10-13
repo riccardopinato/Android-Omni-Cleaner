@@ -68,6 +68,9 @@ fun SafeTrashSection() {
     }
 
     LaunchedEffect(manager) {
+        withContext(Dispatchers.IO) {
+            manager.migrateLegacyTrashIfNeeded()
+        }
         reload()
         CleanupEventBus.events.collectLatest {
             reload()
