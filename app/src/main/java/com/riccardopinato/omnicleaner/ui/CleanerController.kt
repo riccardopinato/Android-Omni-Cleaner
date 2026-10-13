@@ -281,7 +281,14 @@ internal class CleanerController(
         scanJob?.cancel()
         val generation = ++scanGeneration
         scanJob = scope.launch {
-            state = state.copy(scanning = true, currentOperation = label, error = null)
+            state = state.copy(
+                scanning = true,
+                currentOperation = label,
+                duplicateProgressProcessed = 0,
+                duplicateProgressTotal = 0,
+                indexedFilesChecked = 0,
+                error = null,
+            )
             try {
                 block()
             } catch (error: CancellationException) {
