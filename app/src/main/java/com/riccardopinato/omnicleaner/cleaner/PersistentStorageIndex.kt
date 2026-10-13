@@ -66,7 +66,15 @@ internal class PersistentStorageIndex(
         val files = ArrayList<IndexedFile>()
         db.query(
             TABLE_FILES,
-            arrayOf(COL_PATH, COL_SIZE, COL_MODIFIED),
+            arrayOf(
+                COL_PATH,
+                COL_SIZE,
+                COL_MODIFIED,
+                COL_DEVICE_ID,
+                COL_INODE,
+                COL_CTIME_SECONDS,
+                COL_CTIME_NANOS,
+            ),
             null,
             null,
             null,
@@ -76,11 +84,34 @@ internal class PersistentStorageIndex(
             val pathIndex = cursor.getColumnIndexOrThrow(COL_PATH)
             val sizeIndex = cursor.getColumnIndexOrThrow(COL_SIZE)
             val modifiedIndex = cursor.getColumnIndexOrThrow(COL_MODIFIED)
+            val deviceIndex = cursor.getColumnIndexOrThrow(COL_DEVICE_ID)
+            val inodeIndex = cursor.getColumnIndexOrThrow(COL_INODE)
+            val ctimeSecondsIndex = cursor.getColumnIndexOrThrow(COL_CTIME_SECONDS)
+            val ctimeNanosIndex = cursor.getColumnIndexOrThrow(COL_CTIME_NANOS)
             while (cursor.moveToNext()) {
+                val revision = if (
+                    !cursor.isNull(deviceIndex) &&
+                    !cursor.isNull(inodeIndex) &&
+                    !cursor.isNull(ctimeSecondsIndex) &&
+                    !cursor.isNull(ctimeNanosIndex)
+                ) {
+                    StrongFileRevision(
+                        physicalIdentity = PhysicalFileIdentity(
+                            deviceId = cursor.getLong(deviceIndex),
+                            inode = cursor.getLong(inodeIndex),
+                        ),
+                        changeTimeSeconds = cursor.getLong(ctimeSecondsIndex),
+                        changeTimeNanos = cursor.getLong(ctimeNanosIndex),
+                    )
+                } else {
+                    null
+                }
+
                 files += IndexedFile(
                     file = File(cursor.getString(pathIndex)),
                     size = cursor.getLong(sizeIndex).coerceAtLeast(0L),
                     modified = cursor.getLong(modifiedIndex).coerceAtLeast(0L),
+                    revision = revision,
                 )
             }
         }
@@ -116,16 +147,31 @@ internal class PersistentStorageIndex(
             for (item in inventory.files) {
                 val path = item.file.absolutePath
                 val extension = item.file.extension.lowercase(Locale.ROOT)
+                val revision = item.revision
                 val seenOnly = ContentValues().apply {
                     put(COL_EXTENSION, extension)
                     put(COL_LAST_SEEN_GENERATION, generation)
                 }
-                val unchanged = db.update(
-                    TABLE_FILES,
-                    seenOnly,
-                    "$COL_PATH = ? AND $COL_SIZE = ? AND $COL_MODIFIED = ?",
-                    arrayOf(path, item.size.toString(), item.modified.toString()),
-                )
+                val unchanged = if (revision != null) {
+                    db.update(
+                        TABLE_FILES,
+                        seenOnly,
+                        "$COL_PATH = ? AND $COL_SIZE = ? AND $COL_MODIFIED = ? " +
+                            "AND $COL_DEVICE_ID = ? AND $COL_INODE = ? " +
+                            "AND $COL_CTIME_SECONDS = ? AND $COL_CTIME_NANOS = ?",
+                        arrayOf(
+                            path,
+                            item.size.toString(),
+                            item.modified.toString(),
+                            revision.physicalIdentity.deviceId.toString(),
+                            revision.physicalIdentity.inode.toString(),
+                            revision.changeTimeSeconds.toString(),
+                            revision.changeTimeNanos.toString(),
+                        ),
+                    )
+                } else {
+                    0
+                }
 
                 if (unchanged == 0) {
                     val values = ContentValues().apply {
@@ -133,6 +179,17 @@ internal class PersistentStorageIndex(
                         put(COL_SIZE, item.size)
                         put(COL_MODIFIED, item.modified)
                         put(COL_EXTENSION, extension)
+                        if (revision != null) {
+                            put(COL_DEVICE_ID, revision.physicalIdentity.deviceId)
+                            put(COL_INODE, revision.physicalIdentity.inode)
+                            put(COL_CTIME_SECONDS, revision.changeTimeSeconds)
+                            put(COL_CTIME_NANOS, revision.changeTimeNanos)
+                        } else {
+                            putNull(COL_DEVICE_ID)
+                            putNull(COL_INODE)
+                            putNull(COL_CTIME_SECONDS)
+                            putNull(COL_CTIME_NANOS)
+                        }
                         putNull(COL_SAMPLE_HASH)
                         putNull(COL_FULL_HASH)
                         put(COL_LAST_SEEN_GENERATION, generation)
@@ -188,11 +245,22 @@ internal class PersistentStorageIndex(
     }
 
     private fun boundHash(item: IndexedFile, column: String): String? = synchronized(lock) {
+        val revision = item.revision ?: return@synchronized null
         helper.readableDatabase.query(
             TABLE_FILES,
             arrayOf(column),
-            "$COL_PATH = ? AND $COL_SIZE = ? AND $COL_MODIFIED = ?",
-            arrayOf(item.file.absolutePath, item.size.toString(), item.modified.toString()),
+            "$COL_PATH = ? AND $COL_SIZE = ? AND $COL_MODIFIED = ? " +
+                "AND $COL_DEVICE_ID = ? AND $COL_INODE = ? " +
+                "AND $COL_CTIME_SECONDS = ? AND $COL_CTIME_NANOS = ?",
+            arrayOf(
+                item.file.absolutePath,
+                item.size.toString(),
+                item.modified.toString(),
+                revision.physicalIdentity.deviceId.toString(),
+                revision.physicalIdentity.inode.toString(),
+                revision.changeTimeSeconds.toString(),
+                revision.changeTimeNanos.toString(),
+            ),
             null,
             null,
             null,
@@ -209,6 +277,7 @@ internal class PersistentStorageIndex(
         hash: String,
     ) = synchronized(lock) {
         if (hash.length != 64) return@synchronized
+        val revision = item.revision ?: return@synchronized
         val values = ContentValues().apply {
             put(column, hash)
             put(COL_LAST_VERIFIED_AT, System.currentTimeMillis())
@@ -216,8 +285,18 @@ internal class PersistentStorageIndex(
         helper.writableDatabase.update(
             TABLE_FILES,
             values,
-            "$COL_PATH = ? AND $COL_SIZE = ? AND $COL_MODIFIED = ?",
-            arrayOf(item.file.absolutePath, item.size.toString(), item.modified.toString()),
+            "$COL_PATH = ? AND $COL_SIZE = ? AND $COL_MODIFIED = ? " +
+                "AND $COL_DEVICE_ID = ? AND $COL_INODE = ? " +
+                "AND $COL_CTIME_SECONDS = ? AND $COL_CTIME_NANOS = ?",
+            arrayOf(
+                item.file.absolutePath,
+                item.size.toString(),
+                item.modified.toString(),
+                revision.physicalIdentity.deviceId.toString(),
+                revision.physicalIdentity.inode.toString(),
+                revision.changeTimeSeconds.toString(),
+                revision.changeTimeNanos.toString(),
+            ),
         )
     }
 
@@ -270,6 +349,10 @@ internal class PersistentStorageIndex(
                     $COL_SIZE INTEGER NOT NULL,
                     $COL_MODIFIED INTEGER NOT NULL,
                     $COL_EXTENSION TEXT NOT NULL,
+                    $COL_DEVICE_ID INTEGER,
+                    $COL_INODE INTEGER,
+                    $COL_CTIME_SECONDS INTEGER,
+                    $COL_CTIME_NANOS INTEGER,
                     $COL_SAMPLE_HASH TEXT,
                     $COL_FULL_HASH TEXT,
                     $COL_LAST_SEEN_GENERATION INTEGER NOT NULL,
@@ -317,6 +400,10 @@ internal class PersistentStorageIndex(
         const val COL_SIZE = "size_bytes"
         const val COL_MODIFIED = "modified_at"
         const val COL_EXTENSION = "extension"
+        const val COL_DEVICE_ID = "device_id"
+        const val COL_INODE = "inode"
+        const val COL_CTIME_SECONDS = "ctime_seconds"
+        const val COL_CTIME_NANOS = "ctime_nanos"
         const val COL_SAMPLE_HASH = "sample_hash"
         const val COL_FULL_HASH = "full_hash"
         const val COL_LAST_SEEN_GENERATION = "last_seen_generation"
