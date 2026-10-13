@@ -70,6 +70,7 @@ class FileScanner(
             )
         }
         .toList()
+    }
 
     suspend fun findDuplicates(
         root: File,
