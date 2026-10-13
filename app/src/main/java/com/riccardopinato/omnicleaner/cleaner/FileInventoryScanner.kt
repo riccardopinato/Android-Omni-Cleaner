@@ -407,7 +407,7 @@ internal fun uniquePhysicalFiles(files: List<IndexedFile>): List<IndexedFile> =
         } ?: "path:${item.file.absolutePath}"
     }
 
-private data class IndexedHashResult(
+internal data class IndexedHashResult(
     val index: Int,
     val item: IndexedFile,
     val hash: String,
