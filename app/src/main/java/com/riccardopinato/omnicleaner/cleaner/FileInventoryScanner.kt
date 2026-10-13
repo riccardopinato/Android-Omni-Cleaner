@@ -114,14 +114,9 @@ class FileInventoryScanner {
         parallelism: Int = boundedHashWorkerCount(),
         onProgress: ((processed: Int, total: Int) -> Unit)? = null,
     ): List<DuplicateGroup> = withContext(Dispatchers.IO) {
-        val bySize = files
+        val bySize = uniquePhysicalFiles(files)
             .asSequence()
             .filter { it.size > 0L }
-            .distinctBy { item ->
-                item.physicalIdentity?.let { identity ->
-                    "physical:${identity.deviceId}:${identity.inode}"
-                } ?: "path:${item.file.absolutePath}"
-            }
             .groupBy { it.size }
             .values
             .filter { it.size > 1 }
@@ -405,23 +400,32 @@ class FileInventoryScanner {
 
 
 
+internal fun uniquePhysicalFiles(files: List<IndexedFile>): List<IndexedFile> =
+    files.distinctBy { item ->
+        item.physicalIdentity?.let { identity ->
+            "physical:${identity.deviceId}:${identity.inode}"
+        } ?: "path:${item.file.absolutePath}"
+    }
+
 private data class IndexedHashResult(
     val index: Int,
     val item: IndexedFile,
     val hash: String,
 )
 
-private suspend fun boundedHashFiles(
+internal suspend fun boundedHashFiles(
     items: List<IndexedFile>,
     parallelism: Int,
+    onInFlightChanged: ((Int) -> Unit)? = null,
     transform: suspend (IndexedFile) -> String?,
 ): List<IndexedHashResult> = coroutineScope {
     if (items.isEmpty()) return@coroutineScope emptyList()
 
     val nextIndex = AtomicInteger(0)
+    val inFlight = AtomicInteger(0)
     val results = ArrayList<IndexedHashResult>()
     val resultLock = Any()
-    val workers = minOf(parallelism.coerceAtLeast(1), items.size)
+    val workers = boundedHashWorkerLaunchCount(items.size, parallelism)
 
     List(workers) {
         launch(Dispatchers.IO) {
@@ -431,11 +435,18 @@ private suspend fun boundedHashFiles(
                 if (index >= items.size) break
 
                 val item = items[index]
-                val hash = transform(item)
-                if (hash != null) {
-                    synchronized(resultLock) {
-                        results += IndexedHashResult(index, item, hash)
+                val active = inFlight.incrementAndGet()
+                onInFlightChanged?.invoke(active)
+                try {
+                    val hash = transform(item)
+                    if (hash != null) {
+                        synchronized(resultLock) {
+                            results += IndexedHashResult(index, item, hash)
+                        }
                     }
+                } finally {
+                    val remaining = inFlight.decrementAndGet()
+                    onInFlightChanged?.invoke(remaining)
                 }
             }
         }
@@ -443,6 +454,11 @@ private suspend fun boundedHashFiles(
 
     results.sortedBy { it.index }
 }
+
+internal fun boundedHashWorkerLaunchCount(
+    itemCount: Int,
+    parallelism: Int,
+): Int = minOf(itemCount.coerceAtLeast(0), parallelism.coerceAtLeast(1))
 
 internal fun boundedHashWorkerCount(
     availableProcessors: Int = Runtime.getRuntime().availableProcessors(),
