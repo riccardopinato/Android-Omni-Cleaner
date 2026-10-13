@@ -323,4 +323,5 @@
     <string name="duplicate_scan_progress">Vérification des candidats en double : %1$d / %2$d</string>
     <string name="scan_indexing_files_count">Indexation des fichiers : %1$d vérifiés</string>
     <string name="duplicates_none_found">Aucun doublon trouvé pour %1$s.</string>
+    <string name="refresh_storage_index">Actualiser l’index du stockage</string>
 </resources>
