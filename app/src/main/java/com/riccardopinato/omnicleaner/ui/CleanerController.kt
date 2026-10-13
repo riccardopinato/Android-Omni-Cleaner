@@ -22,6 +22,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
+internal val COMMON_FILE_EXTENSION_FILTERS: List<String> = listOf(
+    "apk", "pdf", "zip", "rar", "7z",
+    "jpg", "jpeg", "png", "webp",
+    "mp4", "mkv", "mov",
+    "mp3", "flac",
+    "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+    "txt", "csv",
+)
+
 internal data class CleanerUiState(
     val hasBroadAccess: Boolean = false,
     val storageCapability: StorageCapabilityHealth = StorageCapabilityHealth(
@@ -43,6 +52,11 @@ internal data class CleanerUiState(
     val folderSearchQuery: String = "",
     val bigFileSearchQuery: String = "",
     val duplicateSearchQuery: String = "",
+    val fileExtensionFilter: String? = null,
+    val duplicateScanExtension: String? = null,
+    val duplicateProgressProcessed: Int = 0,
+    val duplicateProgressTotal: Int = 0,
+    val indexedFilesChecked: Int = 0,
     val bigFileSizeFilter: BigFileSizeFilter = BigFileSizeFilter.SIZE_100MB,
     val thresholdValue: String = "10",
     val thresholdUnit: ThresholdUnit = ThresholdUnit.MB,
@@ -52,7 +66,9 @@ internal data class CleanerUiState(
         get() = folders.filterByQuery(folderSearchQuery) { listOf(it.name, it.path) }
 
     val visibleBigFiles: List<BigFileItem>
-        get() = bigFiles.filterByQuery(bigFileSearchQuery) { listOf(it.name, it.path, it.extension) }
+        get() = bigFiles
+            .filterByExtension(fileExtensionFilter) { it.extension }
+            .filterByQuery(bigFileSearchQuery) { listOf(it.name, it.path, it.extension) }
 
     val folderThresholdBytes: Long
         get() = (thresholdValue.toLongOrNull() ?: 0L)
@@ -65,8 +81,12 @@ internal data class CleanerUiState(
     val visibleDuplicates: List<DuplicateGroup>
         get() {
             val normalized = duplicateSearchQuery.trim().lowercase()
-            if (normalized.isBlank()) return duplicates
-            return duplicates.filter { group ->
+            val extensionFiltered = duplicates.filter { group ->
+                fileExtensionFilter == null ||
+                    group.files.any { it.extension.equals(fileExtensionFilter, ignoreCase = true) }
+            }
+            if (normalized.isBlank()) return extensionFiltered
+            return extensionFiltered.filter { group ->
                 group.files.any { file ->
                     file.name.lowercase().contains(normalized) ||
                         file.path.lowercase().contains(normalized) ||
@@ -74,6 +94,15 @@ internal data class CleanerUiState(
                 }
             }
         }
+}
+
+private inline fun <T> List<T>.filterByExtension(
+    extension: String?,
+    extensionOf: (T) -> String,
+): List<T> {
+    val normalized = extension?.trim()?.removePrefix(".")?.lowercase()
+    if (normalized.isNullOrBlank()) return this
+    return filter { item -> extensionOf(item).lowercase() == normalized }
 }
 
 private inline fun <T> List<T>.filterByQuery(
@@ -171,14 +200,70 @@ internal class CleanerController(
         state = state.copy(duplicateSearchQuery = query)
     }
 
+    fun updateFileExtensionFilter(extension: String?) {
+        val normalized = extension
+            ?.trim()
+            ?.removePrefix(".")
+            ?.lowercase()
+            ?.takeIf { it.isNotBlank() }
+
+        val duplicateScopeChanged =
+            state.duplicatesScanned &&
+                state.duplicateScanExtension != normalized
+
+        state = state.copy(
+            fileExtensionFilter = normalized,
+            duplicates = if (duplicateScopeChanged) emptyList() else state.duplicates,
+            duplicatesScanned = if (duplicateScopeChanged) false else state.duplicatesScanned,
+            duplicateProgressProcessed = 0,
+            duplicateProgressTotal = 0,
+        )
+    }
+
     fun updateBigFileSizeFilter(filter: BigFileSizeFilter) {
         state = state.copy(bigFileSizeFilter = filter)
         if (state.hasBroadAccess) scanBigFiles(filter.minimumBytes)
     }
 
     fun scanDuplicates() = runScan(uiContext.getString(R.string.module_duplicates)) {
-        val groups = fileScanner.findDuplicates(StorageAccess.primaryRoot())
-        state = state.copy(duplicates = groups, duplicatesScanned = true)
+        val selectedExtension = state.fileExtensionFilter
+        state = state.copy(
+            duplicateProgressProcessed = 0,
+            duplicateProgressTotal = 0,
+            indexedFilesChecked = 0,
+            duplicatesScanned = false,
+            duplicateScanExtension = selectedExtension,
+        )
+
+        val groups = fileScanner.findDuplicates(
+            root = StorageAccess.primaryRoot(),
+            extensionFilter = selectedExtension,
+            onInventoryProgress = { checked, _ ->
+                if (checked % 512 == 0) {
+                    scope.launch {
+                        if (state.scanning) {
+                            state = state.copy(indexedFilesChecked = checked)
+                        }
+                    }
+                }
+            },
+            onDuplicateProgress = { processed, total ->
+                scope.launch {
+                    if (state.scanning) {
+                        state = state.copy(
+                            duplicateProgressProcessed = processed,
+                            duplicateProgressTotal = total,
+                        )
+                    }
+                }
+            },
+        )
+
+        state = state.copy(
+            duplicates = groups,
+            duplicatesScanned = true,
+            duplicateProgressProcessed = state.duplicateProgressTotal,
+        )
     }
 
     fun cancelScan() {
