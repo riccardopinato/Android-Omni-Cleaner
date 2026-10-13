@@ -1,6 +1,7 @@
 package com.riccardopinato.omnicleaner.ui
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import com.riccardopinato.omnicleaner.gallery.GalleryController
 import com.riccardopinato.omnicleaner.monetization.ProBatchController
@@ -27,6 +28,12 @@ class OmniCleanerViewModel(application: Application) : AndroidViewModel(applicat
 
     internal val proBatchController =
         ProBatchController(application.applicationContext, controllerScope)
+
+    fun updateUiContext(context: Context) {
+        cleanerController.updateUiContext(context)
+        galleryController.updateUiContext(context)
+        proBatchController.updateUiContext(context)
+    }
 
     override fun onCleared() {
         cleanerController.cancelScan()
