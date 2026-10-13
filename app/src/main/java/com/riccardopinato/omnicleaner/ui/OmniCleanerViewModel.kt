@@ -30,7 +30,12 @@ class OmniCleanerViewModel(application: Application) : AndroidViewModel(applicat
     internal val proBatchController =
         ProBatchController(application.applicationContext, controllerScope)
 
+    private var uiLocaleKey: String? = null
+
     fun updateUiContext(context: Context) {
+        val localeKey = context.resources.configuration.locales.toLanguageTags()
+        if (uiLocaleKey == localeKey) return
+        uiLocaleKey = localeKey
         val localizedContext = getApplication<Application>().createConfigurationContext(
             Configuration(context.resources.configuration),
         )
