@@ -24,11 +24,15 @@ internal data class PersistentInventorySnapshot(
 
 internal class PersistentStorageIndex(
     context: Context,
+    databaseName: String = DATABASE_NAME,
 ) : DuplicateHashCache {
     private val appContext = context.applicationContext
-    private val helper = StorageIndexOpenHelper(appContext)
+    private val helper = StorageIndexOpenHelper(appContext, databaseName)
     private val statePreferences =
-        appContext.getSharedPreferences(INDEX_STATE_PREFERENCES, Context.MODE_PRIVATE)
+        appContext.getSharedPreferences(
+            INDEX_STATE_PREFERENCES_PREFIX + databaseName,
+            Context.MODE_PRIVATE,
+        )
     private val lock = Any()
 
     fun loadReusableSnapshot(
@@ -254,8 +258,10 @@ internal class PersistentStorageIndex(
     private fun canonical(file: File): String =
         runCatching { file.canonicalPath }.getOrElse { file.absolutePath }
 
-    private class StorageIndexOpenHelper(context: Context) :
-        SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+    private class StorageIndexOpenHelper(
+        context: Context,
+        databaseName: String,
+    ) : SQLiteOpenHelper(context, databaseName, null, DATABASE_VERSION) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(
                 """
@@ -301,7 +307,7 @@ internal class PersistentStorageIndex(
     private companion object {
         const val DATABASE_NAME = "storage_index.db"
         const val DATABASE_VERSION = 1
-        const val INDEX_STATE_PREFERENCES = "storage_index_state"
+        const val INDEX_STATE_PREFERENCES_PREFIX = "storage_index_state_"
         const val KEY_DIRTY = "index_dirty"
 
         const val TABLE_FILES = "indexed_files"
