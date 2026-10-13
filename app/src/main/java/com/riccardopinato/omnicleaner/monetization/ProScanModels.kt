@@ -1,5 +1,6 @@
 package com.riccardopinato.omnicleaner.monetization
 
+import android.app.PendingIntent
 import com.riccardopinato.omnicleaner.cleaner.AppResidueItem
 import com.riccardopinato.omnicleaner.cleaner.BigFileItem
 import com.riccardopinato.omnicleaner.cleaner.DuplicateGroup
@@ -34,6 +35,7 @@ data class ProBatchState(
     val running: Boolean = false,
     val resolving: Boolean = false,
     val awaitingSystemTrash: Boolean = false,
+    val pendingSystemTrashRequest: PendingIntent? = null,
     val completedTypes: Set<ProScanType> = emptySet(),
     val results: List<ProBatchResult> = emptyList(),
     val emptyFolders: List<FolderItem> = emptyList(),
