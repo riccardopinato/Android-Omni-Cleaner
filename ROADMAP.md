@@ -1,6 +1,6 @@
 # Android Omni Cleaner — Recovery & Product Roadmap
 
-Factory baseline: `e183de8f811873a146eaa78bb1daa2617e11f466` (Master v26.2 / Golden Index v13)
+Factory baseline: `7b408dd8b14ea7785e923c6eed624eb41c193698` (Master v26.3 / Golden Index v14)
 
 ## MAXI STEP 0 — Forensic Recovery
 **Status: COMPLETE**
@@ -260,7 +260,7 @@ Evidence:
 - JVM regression suite: PASS;
 - Android instrumentation sources compile in PR lane;
 - debug APK generated at exact head `aa5f6e9951237fcfafaa1c361c4aa643c439ad63`;
-- App Factory Golden candidates prepared in Core PR #7.
+- App Factory Golden candidates prepared in Core PR #9 (Golden Index v15 candidate).
 
 Pending:
 - instrumentation execution on physical device;
