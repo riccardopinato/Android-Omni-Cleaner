@@ -309,9 +309,7 @@
     <string name="pro_offline_cache">O Premium está temporariamente disponível graças a uma verificação recente do Google Play. A propriedade será verificada novamente quando o Play estiver acessível.</string>
 
     <string name="generic_operation_failed">Não foi possível concluir a operação. Tente novamente.</string>
-    <string name="gallery_error_load_failed">Não foi possível carregar o conteúdo da galeria. Tente novamente.</string>
     <string name="pro_operation_failed">Não foi possível concluir a operação Pro. Tente novamente.</string>
-    <string name="smart_categories_scan_failed">Não foi possível concluir a análise das categorias inteligentes.</string>
     <string name="maintenance_operation_failed">Não foi possível concluir a operação de manutenção.</string>
     <string name="consent_error_generic">Não foi possível atualizar as escolhas de privacidade. Tente novamente mais tarde.</string>
     <string name="safe_trash_persistent_note">O Safe Trash é armazenado no armazenamento partilhado para que os ficheiros verificados não sejam apagados apenas pela desinstalação da aplicação.</string>
