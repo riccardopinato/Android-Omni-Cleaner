@@ -163,7 +163,7 @@ localization_accessibility:
 performance_deep_qa:
   status: implementation_complete_validation_deferred_fast_mode
   exact_head_checkout: true
-  feature_ci_trigger: fast_apk_push_only_full_gates_manual
+  feature_ci_trigger: pull_request_fast_exact_head_full_gates_manual
   duplicate_push_pr_runs_removed: true
   actions_runner_blocker_observed: true
   duplicate_sample_prefilter_bytes_per_edge: 65536
@@ -188,6 +188,9 @@ performance_deep_qa:
 
 post_audit_hardening:
   status: source_complete_validation_deferred
+  final_codex_review_findings_resolved: true
+  automatic_pr_gate_restored: true
+  pr_gate_publishes_development_apk: true
   safe_trash:
     uninstall_persistent_shared_storage: true
     legacy_private_migration_verified_before_delete: true
