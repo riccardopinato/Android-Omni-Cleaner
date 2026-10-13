@@ -103,6 +103,7 @@ class FileInventoryScanner {
         val totalCandidates = bySize.sumOf { it.size }
         var processed = 0
         val result = ArrayList<DuplicateGroup>()
+        onProgress?.invoke(0, totalCandidates)
 
         for (sameSize in bySize) {
             coroutineContext.ensureActive()
@@ -125,7 +126,12 @@ class FileInventoryScanner {
                 }
 
                 processed++
-                onProgress?.invoke(processed, totalCandidates)
+                if (
+                    processed == totalCandidates ||
+                    processed % DUPLICATE_PROGRESS_INTERVAL == 0
+                ) {
+                    onProgress?.invoke(processed, totalCandidates)
+                }
             }
 
             for (sampleMatches in bySample.values) {
@@ -321,6 +327,7 @@ class FileInventoryScanner {
     private companion object {
         const val DUPLICATE_SAMPLE_BYTES: Long = 64L * 1024L
         const val IO_BUFFER_BYTES: Int = 256 * 1024
+        const val DUPLICATE_PROGRESS_INTERVAL: Int = 16
     }
 }
 
