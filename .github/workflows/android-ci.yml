@@ -51,11 +51,11 @@ jobs:
 
       - name: Fast pull-request verification
         if: github.event_name == 'pull_request'
-        run: ./gradlew testDebugUnitTest assembleDebug --stacktrace
+        run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest --stacktrace
 
       - name: Full main/manual verification
         if: github.event_name != 'pull_request'
-        run: ./gradlew lintDebug testDebugUnitTest assembleDebug assembleRelease --stacktrace
+        run: ./gradlew lintDebug testDebugUnitTest assembleDebug assembleDebugAndroidTest assembleRelease --stacktrace
 
       - name: Publish exact-head development APK
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
@@ -78,7 +78,7 @@ jobs:
             echo
             echo "- Source SHA: $OMNI_SOURCE_SHA"
             echo "- Variant: debug"
-            echo "- Automatic PR verification: unit tests + assembleDebug"
+            echo "- Automatic PR verification: unit tests + debug APK + androidTest APK compilation"
             echo "- AppLab / Store certification: deferred"
           } > "$NOTES"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
