@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.content.res.Configuration
 import androidx.lifecycle.AndroidViewModel
+import com.riccardopinato.omnicleaner.cleaner.StorageInventoryRepository
 import com.riccardopinato.omnicleaner.gallery.GalleryController
 import com.riccardopinato.omnicleaner.monetization.ProBatchController
 import kotlinx.coroutines.CoroutineScope
@@ -18,6 +19,10 @@ import kotlinx.coroutines.cancel
  * storage state instead of pretending an old in-memory snapshot is current.
  */
 class OmniCleanerViewModel(application: Application) : AndroidViewModel(application) {
+    init {
+        StorageInventoryRepository.initialize(application.applicationContext)
+    }
+
     private val controllerScope =
         CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
