@@ -318,4 +318,12 @@
     <string name="safe_trash_persistent_note">Safe Trash is stored in shared storage so its verified payloads are not erased just because the app is uninstalled.</string>
     <string name="safe_trash_storage_unavailable">Safe Trash storage is currently unavailable. No new file will be moved there.</string>
     <string name="maintenance_files_count">%1$d files</string>
+
+    <string name="file_type_filter_title">File type</string>
+    <string name="file_type_filter_all">All file types</string>
+    <string name="file_type_filter_hint">The filter applies to large-file results and limits duplicate hashing to the selected extension.</string>
+    <string name="duplicate_filter_requires_rescan">Run the duplicate scan again to apply the selected file type.</string>
+    <string name="duplicate_scan_progress">Checking duplicate candidates: %1$d / %2$d</string>
+    <string name="scan_indexing_files_count">Indexing files: %1$d checked</string>
+    <string name="duplicates_none_found">No duplicates found for %1$s.</string>
 </resources>
