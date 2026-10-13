@@ -309,9 +309,7 @@
     <string name="pro_offline_cache">Premium está disponible temporalmente gracias a una verificación reciente de Google Play. La propiedad se comprobará de nuevo cuando Play esté disponible.</string>
 
     <string name="generic_operation_failed">No se pudo completar la operación. Inténtalo de nuevo.</string>
-    <string name="gallery_error_load_failed">No se pudo cargar el contenido de la galería. Inténtalo de nuevo.</string>
     <string name="pro_operation_failed">No se pudo completar la operación Pro. Inténtalo de nuevo.</string>
-    <string name="smart_categories_scan_failed">No se pudo completar el análisis de categorías inteligentes.</string>
     <string name="maintenance_operation_failed">No se pudo completar la operación de mantenimiento.</string>
     <string name="consent_error_generic">No se pudieron actualizar las opciones de privacidad. Inténtalo más tarde.</string>
     <string name="safe_trash_persistent_note">Safe Trash se guarda en el almacenamiento compartido para que sus archivos verificados no se borren solo por desinstalar la app.</string>
