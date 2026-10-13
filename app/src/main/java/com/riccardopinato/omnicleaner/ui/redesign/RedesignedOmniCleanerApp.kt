@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -98,6 +99,10 @@ fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
     val entitlement by PremiumEntitlementStore.state.collectAsState()
     val state = controller.state
     val activity = remember(context) { context.findActivity() }
+
+    SideEffect {
+        viewModel.updateUiContext(context)
+    }
 
     var destinationName by rememberSaveable { mutableStateOf(OmniDestination.HOME.name) }
     val destination = OmniDestination.valueOf(destinationName)
