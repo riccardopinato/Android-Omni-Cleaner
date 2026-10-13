@@ -27,6 +27,8 @@ internal class PersistentStorageIndex(
 ) : DuplicateHashCache {
     private val appContext = context.applicationContext
     private val helper = StorageIndexOpenHelper(appContext)
+    private val statePreferences =
+        appContext.getSharedPreferences(INDEX_STATE_PREFERENCES, Context.MODE_PRIVATE)
     private val lock = Any()
 
     fun loadReusableSnapshot(
@@ -34,6 +36,9 @@ internal class PersistentStorageIndex(
         nowMillis: Long,
         maxAgeMillis: Long,
     ): PersistentInventorySnapshot? = synchronized(lock) {
+        if (statePreferences.getBoolean(KEY_DIRTY, false)) {
+            return@synchronized null
+        }
         val db = helper.readableDatabase
         val storedRoot = meta(db, META_ROOT_PATH) ?: return@synchronized null
         val rootPath = canonical(root)
@@ -157,11 +162,11 @@ internal class PersistentStorageIndex(
         } finally {
             db.endTransaction()
         }
+        statePreferences.edit().putBoolean(KEY_DIRTY, false).apply()
     }
 
-    fun markStale() = synchronized(lock) {
-        val db = helper.writableDatabase
-        putMeta(db, META_LAST_COMPLETE_SCAN_AT, "0")
+    fun markStale() {
+        statePreferences.edit().putBoolean(KEY_DIRTY, true).apply()
     }
 
     override fun sampleHash(item: IndexedFile): String? =
@@ -296,6 +301,8 @@ internal class PersistentStorageIndex(
     private companion object {
         const val DATABASE_NAME = "storage_index.db"
         const val DATABASE_VERSION = 1
+        const val INDEX_STATE_PREFERENCES = "storage_index_state"
+        const val KEY_DIRTY = "index_dirty"
 
         const val TABLE_FILES = "indexed_files"
         const val TABLE_META = "index_meta"
