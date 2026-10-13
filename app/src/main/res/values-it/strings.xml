@@ -318,4 +318,12 @@
     <string name="safe_trash_persistent_note">Safe Trash è salvato nella memoria condivisa, quindi i payload verificati non vengono eliminati solo perché l’app viene disinstallata.</string>
     <string name="safe_trash_storage_unavailable">La memoria di Safe Trash non è disponibile. Nessun nuovo file verrà spostato lì.</string>
     <string name="maintenance_files_count">%1$d file</string>
+
+    <string name="file_type_filter_title">Tipo di file</string>
+    <string name="file_type_filter_all">Tutti i tipi di file</string>
+    <string name="file_type_filter_hint">Il filtro si applica ai file grandi e limita l’hashing dei duplicati all’estensione selezionata.</string>
+    <string name="duplicate_filter_requires_rescan">Esegui di nuovo la scansione duplicati per applicare il tipo di file selezionato.</string>
+    <string name="duplicate_scan_progress">Controllo candidati duplicati: %1$d / %2$d</string>
+    <string name="scan_indexing_files_count">Indicizzazione file: %1$d controllati</string>
+    <string name="duplicates_none_found">Nessun duplicato trovato per %1$s.</string>
 </resources>
