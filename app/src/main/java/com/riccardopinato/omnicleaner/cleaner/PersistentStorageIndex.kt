@@ -9,7 +9,7 @@ import android.provider.MediaStore
 import java.io.File
 import java.util.Locale
 
-internal interface DuplicateHashCache {
+interface DuplicateHashCache {
     fun sampleHash(item: IndexedFile): String?
     fun fullHash(item: IndexedFile): String?
     fun putSampleHash(item: IndexedFile, hash: String)
