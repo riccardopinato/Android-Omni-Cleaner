@@ -199,6 +199,64 @@ class FileInventoryScannerTest {
     }
 
     @Test
+    fun physicalAliasesAreCollapsedBeforeDuplicateGrouping() {
+        val root = createTempDirectory("omni-aliases-").toFile()
+        try {
+            val revision = StrongFileRevision(
+                physicalIdentity = PhysicalFileIdentity(deviceId = 7L, inode = 42L),
+                changeTimeSeconds = 100L,
+                changeTimeNanos = 5L,
+            )
+            val first = IndexedFile(File(root, "first.bin"), 100L, 10L, revision)
+            val alias = IndexedFile(File(root, "alias.bin"), 100L, 10L, revision)
+            val other = IndexedFile(
+                File(root, "other.bin"),
+                100L,
+                10L,
+                revision.copy(
+                    physicalIdentity = PhysicalFileIdentity(deviceId = 7L, inode = 43L),
+                ),
+            )
+
+            val unique = uniquePhysicalFiles(listOf(first, alias, other))
+
+            assertEquals(2, unique.size)
+            assertTrue(first in unique)
+            assertTrue(other in unique)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun boundedHashProducerNeverLaunchesTaskPerFile() = runBlocking {
+        val root = createTempDirectory("omni-bounded-workers-").toFile()
+        try {
+            val items = (0 until 200).map { index ->
+                IndexedFile(File(root, "file-$index.bin"), 1L, 1L)
+            }
+            var maxInFlight = 0
+
+            boundedHashFiles(
+                items = items,
+                parallelism = 3,
+                onInFlightChanged = { active ->
+                    if (active > maxInFlight) maxInFlight = active
+                },
+            ) { item ->
+                kotlinx.coroutines.delay(1)
+                item.file.name.padEnd(64, '0').take(64)
+            }
+
+            assertEquals(3, boundedHashWorkerLaunchCount(items.size, 3))
+            assertTrue(maxInFlight <= 3)
+            assertEquals(4, boundedHashWorkerLaunchCount(10_000, 4))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun nullableUnlessCancelledRethrowsCancellation() = runBlocking {
         var propagated = false
         try {
