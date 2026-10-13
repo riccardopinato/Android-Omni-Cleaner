@@ -66,15 +66,7 @@ internal class PersistentStorageIndex(
         val files = ArrayList<IndexedFile>()
         db.query(
             TABLE_FILES,
-            arrayOf(
-                COL_PATH,
-                COL_SIZE,
-                COL_MODIFIED,
-                COL_DEVICE_ID,
-                COL_INODE,
-                COL_CTIME_SECONDS,
-                COL_CTIME_NANOS,
-            ),
+            arrayOf(COL_PATH),
             null,
             null,
             null,
@@ -82,44 +74,22 @@ internal class PersistentStorageIndex(
             null,
         ).use { cursor ->
             val pathIndex = cursor.getColumnIndexOrThrow(COL_PATH)
-            val sizeIndex = cursor.getColumnIndexOrThrow(COL_SIZE)
-            val modifiedIndex = cursor.getColumnIndexOrThrow(COL_MODIFIED)
-            val deviceIndex = cursor.getColumnIndexOrThrow(COL_DEVICE_ID)
-            val inodeIndex = cursor.getColumnIndexOrThrow(COL_INODE)
-            val ctimeSecondsIndex = cursor.getColumnIndexOrThrow(COL_CTIME_SECONDS)
-            val ctimeNanosIndex = cursor.getColumnIndexOrThrow(COL_CTIME_NANOS)
             while (cursor.moveToNext()) {
-                val physicalIdentity = if (
-                    !cursor.isNull(deviceIndex) &&
-                    !cursor.isNull(inodeIndex)
-                ) {
-                    PhysicalFileIdentity(
-                        deviceId = cursor.getLong(deviceIndex),
-                        inode = cursor.getLong(inodeIndex),
-                    )
-                } else {
-                    null
-                }
-                val revision = if (
-                    physicalIdentity != null &&
-                    !cursor.isNull(ctimeSecondsIndex) &&
-                    !cursor.isNull(ctimeNanosIndex)
-                ) {
-                    StrongFileRevision(
-                        physicalIdentity = physicalIdentity,
-                        changeTimeSeconds = cursor.getLong(ctimeSecondsIndex),
-                        changeTimeNanos = cursor.getLong(ctimeNanosIndex),
-                    )
-                } else {
-                    null
-                }
+                val file = File(cursor.getString(pathIndex))
+
+                // Warm reuse avoids walking the directory tree, but it never
+                // blindly trusts the persisted row. Re-stat every known path so
+                // replacements, edits and removals invalidate revision-bound
+                // hashes immediately.
+                val live = FileSystemIdentity.read(file) ?: continue
+                if (!live.isRegularFile || live.isSymlink) continue
 
                 files += IndexedFile(
-                    file = File(cursor.getString(pathIndex)),
-                    size = cursor.getLong(sizeIndex).coerceAtLeast(0L),
-                    modified = cursor.getLong(modifiedIndex).coerceAtLeast(0L),
-                    revision = revision,
-                    physicalIdentity = physicalIdentity,
+                    file = file,
+                    size = live.sizeBytes,
+                    modified = live.modifiedMillis,
+                    revision = live.revision,
+                    physicalIdentity = live.physicalIdentity,
                 )
             }
         }
