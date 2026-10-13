@@ -191,6 +191,7 @@ fun MonetizationSection(
                 } else {
                     Button(
                         onClick = { batch.scan(selectedTypes) },
+                        enabled = !batchState.resolving && !batchState.awaitingSystemTrash,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(stringResource(R.string.pro_batch_scan))
