@@ -83,7 +83,10 @@ object StorageInventoryRepository {
                         maxAgeMillis = PERSISTENT_REUSE_TTL_MS,
                     )
                 }
-                if (persisted != null) {
+                if (
+                    persisted != null &&
+                    isInventoryGenerationCurrent(scanGeneration, invalidationGeneration.get())
+                ) {
                     val snapshot = StorageInventorySnapshot(
                         rootPath = rootPath,
                         inventory = persisted.inventory,
@@ -93,9 +96,7 @@ object StorageInventoryRepository {
                         persistentHit = true,
                         indexAgeMillis = (lockedNow - persisted.createdAtMillis).coerceAtLeast(0L),
                     )
-                    if (isInventoryGenerationCurrent(scanGeneration, invalidationGeneration.get())) {
-                        cached = snapshot
-                    }
+                    cached = snapshot
                     return@withLock snapshot
                 }
             }
