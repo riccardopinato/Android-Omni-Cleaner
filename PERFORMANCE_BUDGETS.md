@@ -15,7 +15,8 @@ Contract:
 - destructive actions never trust the cache alone and retain per-file snapshot/hash revalidation.
 
 Acceptance target:
-- **<= 1 full storage inventory traversal per 120 s interactive session** unless explicitly refreshed/invalidated.
+- **<= 1 full storage inventory traversal per 120 s interactive session** unless explicitly refreshed/invalidated;
+- inventory traversal should perform at most one canonical-path resolution per visited directory in the normal path.
 
 Recorded snapshot metrics:
 - file count;
@@ -25,6 +26,14 @@ Recorded snapshot metrics:
 - cache hit/miss.
 
 ## Duplicate budget
+
+Current optimizations:
+- 64 KiB prefix/suffix candidate fingerprint;
+- **256 KiB sequential IO buffer** for full SHA-256 and byte verification;
+- optional extension filter applied before expensive duplicate stages;
+- throttled progress publication (not one UI event per file);
+- correctness remains SHA-256 + final byte-for-byte verification.
+
 
 - same-size grouping first;
 - prefix + suffix fingerprint: **64 KiB per edge**;
