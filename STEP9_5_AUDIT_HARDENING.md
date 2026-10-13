@@ -138,3 +138,16 @@ When a runner becomes available, rerun:
 6. AppLab FULL;
 7. exact-head APK + SHA-256;
 8. physical/Play Store gates.
+
+
+## Final Codex review closure
+
+The exact-head review after the initial P1/P2/P3 pass raised five additional findings. They are resolved in source:
+
+1. automatic PR verification restored as a single exact-head lane;
+2. inventory cache uses an atomic invalidation generation so pre-cleanup in-flight scans cannot reinstall stale snapshots;
+3. Gallery persists the new current media anchor immediately after a page append;
+4. retained controllers receive an application-scoped context configured from the current Activity locale, and stale transient copy is cleared only when the locale changes;
+5. Pro Android Trash no longer captures an Activity launcher callback inside a retained job: the PendingIntent is retained as controller state and consumed by the currently registered launcher.
+
+The automatic PR lane is deliberately lightweight during FAST DEVELOPMENT MODE (locale parity + JVM tests + debug assembly) and publishes the same exact-head debug APK on success. Full lint/release/AppLab remain deferred certification gates.
