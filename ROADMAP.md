@@ -145,7 +145,7 @@ See `STEP7_PRODUCT_EXPANSION.md`.
 
 Implemented:
 - complete EN / IT / ES / FR / PT resource bundles;
-- exact 297-key parity across all five locales;
+- exact 304-key parity across all five locales;
 - exact format-placeholder parity;
 - manual System / EN / IT / ES / FR / PT language selector;
 - lightweight persisted locale override applied at Activity context boundary;
@@ -207,6 +207,10 @@ Resolved in source:
 - cached FREE/unknown state never authorizes ads;
 - intentional adaptive/monochrome launcher branding installed;
 - shared 120-second storage inventory prevents repeated full scans across core modules;
+- first-pass inventory traversal avoids redundant canonical-path resolution per directory;
+- duplicate hashing uses larger 256 KiB IO buffers while retaining SHA-256 + byte verification;
+- duplicate scans expose real candidate progress instead of an opaque spinner;
+- file-extension dropdown (.apk, .pdf, archives, media and common documents) filters large-file results and duplicate candidates before expensive work;
 - Cleaner, Gallery and Pro Batch controllers retained across configuration changes in an Activity ViewModel;
 - raw runtime exception text removed from user-facing Cleaner/Gallery/Smart Categories/Pro failure states;
 - AdView lifecycle now destroys banner views on composition disposal;
