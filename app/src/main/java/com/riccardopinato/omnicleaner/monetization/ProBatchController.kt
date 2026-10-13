@@ -1,6 +1,5 @@
 package com.riccardopinato.omnicleaner.monetization
 
-import android.app.PendingIntent
 import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -165,7 +164,7 @@ class ProBatchController(
         )
     }
 
-    fun resolve(onSystemTrashRequired: (PendingIntent) -> Unit) {
+    fun resolve() {
         if (state.resolving || state.awaitingSystemTrash) return
 
         job?.cancel()
@@ -259,12 +258,11 @@ class ProBatchController(
                 state = state.copy(
                     resolving = false,
                     awaitingSystemTrash = mediaRequest != null,
+                    pendingSystemTrashRequest = mediaRequest,
                     message = summaryParts.joinToString(" · "),
                 )
 
-                if (mediaRequest != null) {
-                    onSystemTrashRequired(mediaRequest)
-                } else {
+                if (mediaRequest == null) {
                     finishResolve(systemTrashConfirmed = false)
                 }
             } catch (error: CancellationException) {
@@ -279,11 +277,17 @@ class ProBatchController(
         }
     }
 
+    fun markSystemTrashLaunched() {
+        if (!state.awaitingSystemTrash) return
+        state = state.copy(pendingSystemTrashRequest = null)
+    }
+
     fun onSystemTrashResult(success: Boolean) {
         if (!state.awaitingSystemTrash) return
         if (success) cleanupChangedAnything = true
         state = state.copy(
             awaitingSystemTrash = false,
+            pendingSystemTrashRequest = null,
             message = buildString {
                 append(state.message.orEmpty())
                 if (isNotEmpty()) append(" · ")
@@ -305,7 +309,12 @@ class ProBatchController(
     fun cancel() {
         job?.cancel()
         job = null
-        state = state.copy(running = false, resolving = false)
+        state = state.copy(
+            running = false,
+            resolving = false,
+            awaitingSystemTrash = false,
+            pendingSystemTrashRequest = null,
+        )
     }
 
     private fun finishResolve(systemTrashConfirmed: Boolean) {
