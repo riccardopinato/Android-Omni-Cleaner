@@ -315,4 +315,12 @@
     <string name="safe_trash_persistent_note">Safe Trash est stocké dans l’espace partagé afin que ses fichiers vérifiés ne soient pas supprimés simplement lors de la désinstallation de l’application.</string>
     <string name="safe_trash_storage_unavailable">Le stockage Safe Trash est indisponible. Aucun nouveau fichier n’y sera déplacé.</string>
     <string name="maintenance_files_count">%1$d fichiers</string>
+
+    <string name="file_type_filter_title">Type de fichier</string>
+    <string name="file_type_filter_all">Tous les types de fichiers</string>
+    <string name="file_type_filter_hint">Le filtre s’applique aux fichiers volumineux et limite le hachage des doublons à l’extension sélectionnée.</string>
+    <string name="duplicate_filter_requires_rescan">Relancez l’analyse des doublons pour appliquer le type de fichier sélectionné.</string>
+    <string name="duplicate_scan_progress">Vérification des candidats en double : %1$d / %2$d</string>
+    <string name="scan_indexing_files_count">Indexation des fichiers : %1$d vérifiés</string>
+    <string name="duplicates_none_found">Aucun doublon trouvé pour %1$s.</string>
 </resources>
