@@ -46,7 +46,6 @@ class SafeTrashManager private constructor(
 
     init {
         preparePersistentTrash()
-        migrateLegacyTrash()
     }
 
     fun getTrashDirectory(): File = trashDirectory
@@ -399,41 +398,43 @@ class SafeTrashManager private constructor(
      * delete the legacy copy only after the migrated entry can be parsed and
      * integrity-checked. A failed migration leaves the original untouched.
      */
-    private fun migrateLegacyTrash() {
+    fun migrateLegacyTrashIfNeeded() {
         val legacyRoot = legacyTrashDirectory ?: return
         if (!legacyRoot.isDirectory || !isPersistentTrashAvailable()) return
 
         for (legacyEntry in legacyRoot.listFiles().orEmpty()) {
             if (!legacyEntry.isDirectory || !ENTRY_ID_PATTERN.matches(legacyEntry.name)) continue
 
-            val target = File(trashDirectory, legacyEntry.name)
-            if (target.exists()) continue
-
             val legacyMetadata = File(legacyEntry, METADATA_NAME)
             val legacyPayload = File(legacyEntry, PAYLOAD_NAME)
-            if (!legacyMetadata.isFile || !legacyPayload.isFile || PathSafety.isSymlink(legacyPayload)) continue
+            if (
+                !legacyMetadata.isFile ||
+                !legacyPayload.isFile ||
+                PathSafety.isSymlink(legacyPayload)
+            ) {
+                continue
+            }
+
+            val target = File(trashDirectory, legacyEntry.name)
+            if (target.exists()) {
+                if (isVerifiedMigrationCopy(legacyPayload, target)) {
+                    legacyEntry.deleteRecursively()
+                    continue
+                }
+                target.deleteRecursively()
+            }
+
             if (!target.mkdirs()) continue
 
             val targetMetadata = File(target, METADATA_NAME)
             val targetPayload = File(target, PAYLOAD_NAME)
-            val sourcePayloadHash = runCatching { sha256(legacyPayload) }.getOrNull()
-
             val copied = runCatching {
                 copyAndSync(legacyMetadata, targetMetadata)
                 copyAndSync(legacyPayload, targetPayload)
                 true
             }.getOrDefault(false)
 
-            val migratedEntry = if (copied) readEntry(target) else null
-            val copyVerified =
-                sourcePayloadHash != null &&
-                    migratedEntry != null &&
-                    targetPayload.isFile &&
-                    targetPayload.length() == legacyPayload.length() &&
-                    runCatching { sha256(targetPayload) }.getOrNull() == sourcePayloadHash &&
-                    runCatching { sha256(targetPayload) }.getOrNull() == migratedEntry.sha256
-
-            if (!copyVerified) {
+            if (!copied || !isVerifiedMigrationCopy(legacyPayload, target)) {
                 target.deleteRecursively()
                 continue
             }
@@ -444,6 +445,23 @@ class SafeTrashManager private constructor(
         runCatching {
             if (legacyRoot.listFiles().isNullOrEmpty()) legacyRoot.delete()
         }
+    }
+
+    private fun isVerifiedMigrationCopy(
+        legacyPayload: File,
+        target: File,
+    ): Boolean {
+        if (!legacyPayload.isFile || PathSafety.isSymlink(legacyPayload)) return false
+
+        val migratedEntry = readEntry(target) ?: return false
+        val targetPayload = File(target, PAYLOAD_NAME)
+        if (!targetPayload.isFile || PathSafety.isSymlink(targetPayload)) return false
+        if (targetPayload.length() != legacyPayload.length()) return false
+
+        val sourceHash = runCatching { sha256(legacyPayload) }.getOrNull() ?: return false
+        val targetHash = runCatching { sha256(targetPayload) }.getOrNull() ?: return false
+
+        return targetHash == sourceHash && targetHash == migratedEntry.sha256
     }
 
     private fun copyAndSync(source: File, destination: File) {
