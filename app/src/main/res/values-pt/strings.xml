@@ -315,4 +315,12 @@
     <string name="safe_trash_persistent_note">O Safe Trash é armazenado no armazenamento partilhado para que os ficheiros verificados não sejam apagados apenas pela desinstalação da aplicação.</string>
     <string name="safe_trash_storage_unavailable">O armazenamento do Safe Trash está indisponível. Nenhum novo ficheiro será movido para lá.</string>
     <string name="maintenance_files_count">%1$d ficheiros</string>
+
+    <string name="file_type_filter_title">Tipo de ficheiro</string>
+    <string name="file_type_filter_all">Todos os tipos de ficheiro</string>
+    <string name="file_type_filter_hint">O filtro aplica-se aos ficheiros grandes e limita o hashing de duplicados à extensão selecionada.</string>
+    <string name="duplicate_filter_requires_rescan">Execute novamente a análise de duplicados para aplicar o tipo de ficheiro selecionado.</string>
+    <string name="duplicate_scan_progress">A verificar candidatos duplicados: %1$d / %2$d</string>
+    <string name="scan_indexing_files_count">A indexar ficheiros: %1$d verificados</string>
+    <string name="duplicates_none_found">Não foram encontrados duplicados para %1$s.</string>
 </resources>
