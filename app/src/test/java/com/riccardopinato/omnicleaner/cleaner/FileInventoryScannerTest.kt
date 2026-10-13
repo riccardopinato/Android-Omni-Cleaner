@@ -110,6 +110,30 @@ class FileInventoryScannerTest {
     }
 
     @Test
+    fun bigFileFilterRunsBeforeResultLimit() = runBlocking {
+        val root = createTempDirectory("omni-big-extension-").toFile()
+        try {
+            repeat(5) { index ->
+                File(root, "video-$index.mp4").writeBytes(ByteArray(64 + index))
+            }
+            File(root, "package.apk").writeBytes(ByteArray(32))
+
+            val inventory = FileInventoryScanner().collect(root)
+            val results = FileScanner().findBigFiles(
+                inventory = inventory,
+                minimumBytes = 1L,
+                limit = 1,
+                extensionFilter = "apk",
+            )
+
+            assertEquals(1, results.size)
+            assertEquals("package.apk", results.single().name)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun nullableUnlessCancelledRethrowsCancellation() = runBlocking {
         var propagated = false
         try {
