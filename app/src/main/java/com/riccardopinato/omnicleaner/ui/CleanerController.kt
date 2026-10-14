@@ -11,6 +11,8 @@ import com.riccardopinato.omnicleaner.cleaner.DuplicateGroup
 import com.riccardopinato.omnicleaner.cleaner.DeepStorageAccessStatus
 import com.riccardopinato.omnicleaner.cleaner.FileScanner
 import com.riccardopinato.omnicleaner.cleaner.FolderItem
+import com.riccardopinato.omnicleaner.cleaner.PhysicalPerformanceBenchmark
+import com.riccardopinato.omnicleaner.cleaner.PhysicalPerformanceBenchmarkResult
 import com.riccardopinato.omnicleaner.cleaner.SpaceOverview
 import com.riccardopinato.omnicleaner.cleaner.SpaceOverviewScanner
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
@@ -60,6 +62,7 @@ internal data class CleanerUiState(
     val duplicateProgressTotal: Int = 0,
     val indexedFilesChecked: Int = 0,
     val bigFileSizeFilter: BigFileSizeFilter = BigFileSizeFilter.SIZE_100MB,
+    val performanceBenchmark: PhysicalPerformanceBenchmarkResult? = null,
     val thresholdValue: String = "10",
     val thresholdUnit: ThresholdUnit = ThresholdUnit.MB,
     val error: String? = null,
@@ -184,6 +187,16 @@ internal class CleanerController(
             )
             val overview = overviewScanner.scan(root)
             state = state.copy(overview = overview)
+        }
+
+    fun runPhysicalPerformanceBenchmark() =
+        runScan(uiContext.getString(R.string.performance_benchmark_running)) {
+            state = state.copy(performanceBenchmark = null)
+            val benchmark = PhysicalPerformanceBenchmark(context)
+            val result = benchmark.run(
+                root = StorageAccess.primaryRoot(),
+            )
+            state = state.copy(performanceBenchmark = result)
         }
 
     fun scanFolders() = runScan(uiContext.getString(R.string.module_folders)) {
