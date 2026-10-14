@@ -91,7 +91,7 @@ fun SmartCategoriesSection(
                 result = scan
                 selectedPaths = emptySet()
             }.onFailure {
-                message = context.getString(R.string.smart_categories_scan_failed)
+                message = scanFailedMessage
             }
             scanning = false
         }
