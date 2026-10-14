@@ -74,7 +74,9 @@ object AdManager {
                 override fun onAdFailedToLoad(error: com.google.android.gms.ads.LoadAdError) {
                     adLoading = false
                     interstitialAd = null
-                    Log.d(TAG, "Interstitial ad not loaded: ${error.message}")
+                    if (BuildConfig.DEBUG) {
+                        Log.d(TAG, "Interstitial ad not loaded: ${error.message}")
+                    }
                 }
             },
         )
