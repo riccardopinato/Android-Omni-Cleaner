@@ -126,11 +126,26 @@ internal class PersistentStorageIndex(
         if (directoryCount == 0) return@synchronized null
 
         cancellationCheck?.invoke()
+        // Directory fingerprints are the structural invalidation boundary for
+        // persistent reuse. If they are unchanged (and MediaStore generation
+        // did not change), hydrate file metadata directly from SQLite instead
+        // of issuing one filesystem stat per persisted file. Read-only views
+        // may therefore be bounded-stale within the persistent TTL; every
+        // destructive/hash-sensitive path still revalidates the live file
+        // revision before acting.
         val files = ArrayList<IndexedFile>()
         var fileCount = 0
         db.query(
             TABLE_FILES,
-            arrayOf(COL_PATH),
+            arrayOf(
+                COL_PATH,
+                COL_SIZE,
+                COL_MODIFIED,
+                COL_DEVICE_ID,
+                COL_INODE,
+                COL_CTIME_SECONDS,
+                COL_CTIME_NANOS,
+            ),
             null,
             null,
             null,
@@ -138,26 +153,50 @@ internal class PersistentStorageIndex(
             null,
         ).use { cursor ->
             val pathIndex = cursor.getColumnIndexOrThrow(COL_PATH)
+            val sizeIndex = cursor.getColumnIndexOrThrow(COL_SIZE)
+            val modifiedIndex = cursor.getColumnIndexOrThrow(COL_MODIFIED)
+            val deviceIndex = cursor.getColumnIndexOrThrow(COL_DEVICE_ID)
+            val inodeIndex = cursor.getColumnIndexOrThrow(COL_INODE)
+            val ctimeSecondsIndex = cursor.getColumnIndexOrThrow(COL_CTIME_SECONDS)
+            val ctimeNanosIndex = cursor.getColumnIndexOrThrow(COL_CTIME_NANOS)
+
             while (cursor.moveToNext()) {
                 fileCount++
                 if (fileCount % CANCELLATION_CHECK_INTERVAL == 0) {
                     cancellationCheck?.invoke()
                 }
-                val file = File(cursor.getString(pathIndex))
 
-                // Warm reuse avoids walking the directory tree, but it never
-                // blindly trusts the persisted row. Re-stat every known path so
-                // replacements, edits and removals invalidate revision-bound
-                // hashes immediately.
-                val live = FileSystemIdentity.read(file) ?: continue
-                if (!live.isRegularFile || live.isSymlink) continue
+                val physicalIdentity = if (
+                    !cursor.isNull(deviceIndex) &&
+                    !cursor.isNull(inodeIndex)
+                ) {
+                    PhysicalFileIdentity(
+                        deviceId = cursor.getLong(deviceIndex),
+                        inode = cursor.getLong(inodeIndex),
+                    )
+                } else {
+                    null
+                }
+                val revision = if (
+                    physicalIdentity != null &&
+                    !cursor.isNull(ctimeSecondsIndex) &&
+                    !cursor.isNull(ctimeNanosIndex)
+                ) {
+                    StrongFileRevision(
+                        physicalIdentity = physicalIdentity,
+                        changeTimeSeconds = cursor.getLong(ctimeSecondsIndex),
+                        changeTimeNanos = cursor.getLong(ctimeNanosIndex),
+                    )
+                } else {
+                    null
+                }
 
                 files += IndexedFile(
-                    file = file,
-                    size = live.sizeBytes,
-                    modified = live.modifiedMillis,
-                    revision = live.revision,
-                    physicalIdentity = live.physicalIdentity,
+                    file = File(cursor.getString(pathIndex)),
+                    size = cursor.getLong(sizeIndex),
+                    modified = cursor.getLong(modifiedIndex),
+                    revision = revision,
+                    physicalIdentity = physicalIdentity,
                 )
             }
         }
