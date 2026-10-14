@@ -1,6 +1,6 @@
 # MAXI STEP 9.6 — Persistent Indexing & Bounded Parallel Hashing
 
-Status: **IMPLEMENTED — FAST EXACT-HEAD CI PASS / PHYSICAL PERFORMANCE EVIDENCE PENDING**
+Status: **IMPLEMENTED — FAST EXACT-HEAD CI PASS / PRIMARY PHYSICAL PERFORMANCE PASS**
 
 Version: `0.12.0-recovery` / code 12
 
@@ -42,7 +42,7 @@ Persisted global metadata:
 Warm-session behavior:
 - in-memory 120 s cache remains the first layer;
 - persisted snapshots may be reused across process/app restart for up to 6 h;
-- every known persisted path is re-statted before reuse;
+- persisted directory fingerprints and MediaStore generation guard warm reuse; accepted warm snapshots hydrate file metadata from SQLite without re-statting every persisted file;
 - MediaStore generation drift rejects persisted reuse when available;
 - app-owned cleanup invalidates both in-memory and persistent reuse;
 - user can explicitly trigger a full storage-index refresh.
@@ -129,18 +129,34 @@ Regression coverage includes:
 - revision-bound hash-cache reuse;
 - persistent-index restart/hash invalidation instrumentation source.
 
-## Remaining evidence
+## Physical evidence
 
-Not yet claimed:
-- Android instrumentation execution on a real device;
-- cold-vs-warm timing on a representative large real library;
-- 1/2/4-worker benchmark on low/mid/high devices;
-- thermal/battery impact;
-- physical validation of new/external file discovery during the persistence TTL;
+Primary real-device validation from the exact Step 9.7 APK:
+- commit `436e884886dbc7e034547b3a7b7299a9cd649f7b`;
+- Android CI #370: PASS;
+- Xiaomi M2101K6G / SDK 33 / 8 processors;
+- 87,136 files;
+- cold inventory: 61,064 ms;
+- warm persistent HIT: 2,599 ms, 23.50x faster, file-count delta 0;
+- hot-memory HIT: 1 ms;
+- 1 / 2 / 4 worker throughput: 573.99 / 920.86 / 1,267.33 MiB/s;
+- peak in-flight: 1 / 2 / 4 respectively;
+- thermal status: 0 -> 0;
+- battery temperature: 35.3 C -> 37.2 C;
+- destructive actions: false.
+
+The first physical run exposed and justified two measured fixes: the RAM-cache
+TTL now starts when a persisted snapshot is hydrated, and warm reuse no longer
+performs a filesystem stat for every persisted file after directory freshness
+has already been validated.
+
+Still not claimed:
+- second representative lower-end/older physical-device evidence;
+- promotion of the two App Factory Golden candidates beyond DRAFT;
 - production/store certification.
 
-Therefore this step is implemented and build-verified, but not yet a
-Factory-CERTIFIED performance pattern.
+Therefore the implementation has a primary physical-device PASS, but is not yet
+a Factory-promoted performance Golden.
 
 
 ## Directory freshness hardening
