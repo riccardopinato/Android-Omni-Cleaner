@@ -18,7 +18,8 @@ App Factory candidate PR: `riccardopinato/App-Factory-Core#9` (Golden Index v15 
 ## Persistent storage index
 
 The app now maintains an app-private SQLite index for read-only storage
-intelligence.
+intelligence. Step 9.7 hardening upgrades the index schema to v2 with directory
+fingerprints so warm reuse is rejected when the filesystem tree changed.
 
 Persisted per file:
 - path;
@@ -140,3 +141,24 @@ Not yet claimed:
 
 Therefore this step is implemented and build-verified, but not yet a
 Factory-CERTIFIED performance pattern.
+
+
+## Directory freshness hardening
+
+Step 9.7 upgrades the persistent index schema from v1 to v2.
+
+The index now stores fingerprints for directories discovered during a full scan.
+Before a persisted warm snapshot is reused:
+- every indexed directory must still exist;
+- it must still be a real directory and not a symlink;
+- modified time must match;
+- physical identity/revision are compared when available.
+
+Any mismatch rejects warm reuse and triggers a full reconciliation.
+
+A migrated v1 database contains no directory fingerprints, so it is deliberately
+not treated as warm-safe: the next request performs one full reconciliation and
+populates the v2 directory table.
+
+This prevents new/deleted non-media filesystem entries from remaining invisible
+for the persistent-index TTL.
