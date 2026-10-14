@@ -49,6 +49,21 @@ jobs:
       - name: Verify locale resource parity
         run: python3 .github/scripts/check-locales.py
 
+      - name: Parse Windows signing bootstrap
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "tools/bootstrap-release-signing.ps1",
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -ne 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+
       - name: Fast pull-request verification
         if: github.event_name == 'pull_request'
         run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest --stacktrace
