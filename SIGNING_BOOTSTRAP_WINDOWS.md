@@ -48,26 +48,23 @@ nel tuo password manager.
 
 ## 2A. Configurazione GitHub automatica con gh
 
-Se vuoi creare chiave + configurazione GitHub in un solo run e hai gia' deciso
-dove conservare i backup:
+Dopo avere creato **e verificato i due backup** del keystore del punto 1, rilancia
+lo script sulla stessa chiave:
 
 ~~~powershell
-powershell -ExecutionPolicy Bypass -File .\tools\bootstrap-release-signing.ps1 -ConfigureGitHub
+powershell -ExecutionPolicy Bypass -File .\tools\bootstrap-release-signing.ps1 -UseExisting -ConfigureGitHub -RunReleaseCandidate
 ~~~
 
-Per creare chiave, configurare GitHub e avviare subito il primo candidato firmato:
-
-~~~powershell
-powershell -ExecutionPolicy Bypass -File .\tools\bootstrap-release-signing.ps1 -ConfigureGitHub -RunReleaseCandidate
-~~~
+`-UseExisting` impedisce qualsiasi rigenerazione e usa il keystore gia' presente.
+Ti verranno richieste nuovamente le due password per validare/esportare la stessa
+identita'.
 
 `-RunReleaseCandidate` avvia il workflow con
 `require_production_monetization=false`, quindi valida la firma prima di avere
 gli ID AdMob di produzione.
 
-Lo script rifiuta di sovrascrivere un keystore gia' esistente. Se hai eseguito
-prima il punto 1 senza `-ConfigureGitHub`, non rigenerare la chiave: usa i
-valori gia' creati per configurare GitHub manualmente.
+Lo script rifiuta sia di sovrascrivere una chiave esistente senza
+`-UseExisting`, sia di usare `-UseExisting` se il keystore non esiste.
 
 ## 2B. Configurazione GitHub manuale
 

@@ -2,6 +2,7 @@
 param(
     [string]$Repository = "riccardopinato/Android-Omni-Cleaner",
     [string]$Alias = "omni-upload",
+    [switch]$UseExisting,
     [switch]$ConfigureGitHub,
     [switch]$RunReleaseCandidate
 )
@@ -88,12 +89,16 @@ $summaryPath = Join-Path $outputDir "SIGNING_IDENTITY.txt"
 
 New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 
-if (Test-Path $keystorePath) {
-    throw "Esiste gia' un keystore in $keystorePath. Non sovrascriverlo. Verifica se e' gia' la chiave permanente del progetto."
+$keystoreExists = Test-Path $keystorePath
+if ($UseExisting -and -not $keystoreExists) {
+    throw "Hai richiesto -UseExisting ma il keystore non esiste in $keystorePath."
+}
+if (-not $UseExisting -and $keystoreExists) {
+    throw "Esiste gia' un keystore in $keystorePath. Non sovrascriverlo. Usa -UseExisting se e' gia' la chiave permanente del progetto."
 }
 
 Write-Host ""
-Write-Host "Creazione upload key permanente per Android Omni Cleaner."
+Write-Host $(if ($UseExisting) { "Uso upload key esistente per Android Omni Cleaner." } else { "Creazione upload key permanente per Android Omni Cleaner." })
 Write-Host "Il keystore verra' salvato FUORI dal repository:"
 Write-Host "  $keystorePath"
 Write-Host ""
@@ -107,22 +112,24 @@ $env:OMNI_BOOTSTRAP_STORE_PASS = $storePassword
 $env:OMNI_BOOTSTRAP_KEY_PASS = $keyPassword
 
 try {
-    $genArgs = @(
-        "-genkeypair",
-        "-v",
-        "-keystore", $keystorePath,
-        "-storetype", "JKS",
-        "-alias", $Alias,
-        "-keyalg", "RSA",
-        "-keysize", "4096",
-        "-validity", "10000",
-        "-dname", "CN=Omni Cleaner Upload Key, O=Omni Cleaner, C=IT",
-        "-storepass:env", "OMNI_BOOTSTRAP_STORE_PASS",
-        "-keypass:env", "OMNI_BOOTSTRAP_KEY_PASS"
-    )
-    & $keytool.Source @genArgs
-    if ($LASTEXITCODE -ne 0) {
-        throw "keytool -genkeypair e' terminato con codice $LASTEXITCODE."
+    if (-not $UseExisting) {
+        $genArgs = @(
+            "-genkeypair",
+            "-v",
+            "-keystore", $keystorePath,
+            "-storetype", "JKS",
+            "-alias", $Alias,
+            "-keyalg", "RSA",
+            "-keysize", "4096",
+            "-validity", "10000",
+            "-dname", "CN=Omni Cleaner Upload Key, O=Omni Cleaner, C=IT",
+            "-storepass:env", "OMNI_BOOTSTRAP_STORE_PASS",
+            "-keypass:env", "OMNI_BOOTSTRAP_KEY_PASS"
+        )
+        & $keytool.Source @genArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "keytool -genkeypair e' terminato con codice $LASTEXITCODE."
+        }
     }
 
     $exportArgs = @(
@@ -212,7 +219,8 @@ try {
     }
     else {
         Write-Host "GitHub NON e' stato modificato."
-        Write-Host "Dopo avere creato due backup sicuri, configura GitHub manualmente"
+        Write-Host "Dopo avere creato due backup sicuri, rilancia con:"
+        Write-Host "  -UseExisting -ConfigureGitHub -RunReleaseCandidate"
         Write-Host "oppure usa i valori descritti in SIGNING_BOOTSTRAP_WINDOWS.md."
     }
 }
