@@ -10,8 +10,9 @@ Product truth:
 
 Factory baseline for this recovery:
 - riccardopinato/App-Factory-Core
-- SHA fa3c0679de393f1cb13c2fed2be314d1a1269353
-- Master v25.1
+- SHA 03406ef5e511dfc580b67967c67a11ab58e20141
+- Master v26.3
+- Golden Index v15
 
 Do not substitute remembered older Factory rules.
 
