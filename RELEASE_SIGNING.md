@@ -82,8 +82,8 @@ The release workflow:
 - restores the keystore only under `$RUNNER_TEMP`;
 - builds release APK + AAB;
 - locates Android `apksigner`;
-- reads the actual APK certificate SHA-256;
-- normalizes and compares it against `OMNI_EXPECTED_CERT_SHA256`;
+- reads the actual APK and AAB certificate SHA-256 fingerprints;
+- normalizes and compares both against `OMNI_EXPECTED_CERT_SHA256`;
 - fails on mismatch;
 - generates SHA-256 for APK and AAB;
 - records source SHA + workflow run + certificate SHA-256;
@@ -100,6 +100,8 @@ versionCode
 sourceSha
 workflowRun
 certificateSha256
+apkCertificateSha256
+aabCertificateSha256
 apkSha256
 aabSha256
 signingLane=PRODUCTION
