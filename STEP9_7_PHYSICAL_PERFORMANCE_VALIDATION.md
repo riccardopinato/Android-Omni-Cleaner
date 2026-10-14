@@ -1,6 +1,6 @@
 # MAXI STEP 9.7 — Physical Performance Validation
 
-Status: **HARNESS IMPLEMENTED / REAL-DEVICE EVIDENCE PENDING**
+Status: **PHYSICAL PERFORMANCE VALIDATED — PRIMARY DEVICE PASS / SECOND-DEVICE GOLDEN PROMOTION PENDING**
 
 Version: `0.13.0-recovery` / code 13
 
@@ -77,6 +77,7 @@ warm_scan_ms
 warm_persistent_hit
 warm_speedup_x
 hot_memory_scan_ms
+hot_memory_hit
 hash_prewarm_ms
 hash_prewarm_bytes
 hash_1_workers_ms
@@ -131,13 +132,53 @@ Implemented:
 - bounded real-file sample;
 - non-destructive execution.
 
-Pending:
-- real-device report from the exact Step 9.7 APK;
-- analysis of measured worker choice;
-- any optimization justified by those measurements;
-- second-device evidence for promotion of the two DRAFT Goldens.
+Validated on the exact Step 9.7 development APK:
+- commit: `436e884886dbc7e034547b3a7b7299a9cd649f7b`;
+- CI: Android CI #370 — PASS;
+- device: Xiaomi M2101K6G / Android SDK 33 / 8 reported processors;
+- real library: 87,136 files;
+- cold inventory: 61,064 ms (scanner-only 43,167 ms);
+- warm persistent inventory: 2,599 ms, persistent HIT, 23.50x faster than cold;
+- warm file-count delta: 0;
+- hot in-memory inventory: 1 ms, explicit memory HIT;
+- SHA-256 sample: 128 MiB across 5 large real files;
+- 1 worker: 573.99 MiB/s;
+- 2 workers: 920.86 MiB/s;
+- 4 workers: 1,267.33 MiB/s, peak in-flight = 4;
+- battery: 7% -> 6%;
+- battery temperature: 35.3 C -> 37.2 C;
+- Android thermal status: 0 -> 0;
+- observed heap high-water sample: 82,121,544 bytes;
+- emulator signals: false;
+- destructive actions: false.
 
-PHYSICAL BENCHMARK HARNESS IMPLEMENTED != PHYSICAL PERFORMANCE VALIDATED.
+Measured optimization loop:
+- the first physical run exposed a warm-path regression: 240,050 ms warm and
+  244,511 ms nominal hot-memory time on 87,131 files;
+- root cause 1: a persisted snapshot installed in RAM inherited the old
+  persistent-index timestamp, so the 120 s RAM TTL could already be expired
+  immediately after a slow warm validation;
+- root cause 2: warm reuse re-statted every persisted file, making warm reuse
+  slower than a full traversal on this device;
+- fixes start the RAM TTL when the snapshot is hydrated and validate directory
+  freshness before hydrating persisted file metadata directly from SQLite;
+- destructive/hash-sensitive paths still revalidate live file revision before
+  acting, preserving the safety boundary.
+
+Primary-device verdict: **PASS**.
+
+The measured 8-processor device supports the existing 4-worker cap: 4 workers
+delivered the highest throughput with no thermal-status escalation and bounded
+peak in-flight exactly equal to the configured worker count.
+
+Still pending:
+- second representative lower-end/older physical device before promoting the
+  Incremental Persistent Indexing and Bounded Parallel Hashing Goldens beyond
+  DRAFT;
+- Store/production certification remains Step 10 and is not implied by this
+  performance PASS.
+
+PRIMARY DEVICE PERFORMANCE VALIDATED != GOLDEN PROMOTED != STORE CERTIFIED.
 
 
 ## Directory freshness validation
