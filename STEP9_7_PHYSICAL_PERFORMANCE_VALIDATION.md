@@ -134,3 +134,14 @@ Pending:
 - second-device evidence for promotion of the two DRAFT Goldens.
 
 PHYSICAL BENCHMARK HARNESS IMPLEMENTED != PHYSICAL PERFORMANCE VALIDATED.
+
+
+## Directory freshness validation
+
+The benchmark build also includes persistent-index schema v2. A warm snapshot is
+invalidated when an indexed directory fingerprint changes, forcing a full
+reconciliation. This closes the stale-index case where a new non-media file could
+otherwise remain absent from a reused snapshot.
+
+Reports include `emulator_signals_detected`. A benchmark with emulator signals
+is useful for diagnostics but is **not** accepted as physical-device evidence.
