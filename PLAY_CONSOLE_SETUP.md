@@ -103,3 +103,22 @@ An AAB produced by ordinary CI is only a compile gate. Upload to Play Internal
 Testing must use the exact signed AAB from the release-candidate lane.
 
 See `RELEASE_SIGNING.md` and `STEP10_STORE_RELEASE_CERTIFICATION.md`.
+
+
+## Provider re-check — 2026-10-14
+
+Google's current Play Billing test guidance confirms:
+- use license testers throughout development;
+- test tracks are appropriate for pre-distribution validation;
+- non-consumable one-time products must not be purchasable again while owned;
+- purchase acknowledgement must be verified;
+- pending transactions must be tested for both delayed approval and delayed cancellation;
+- refund/revoke can be used to repeat non-consumable test purchases;
+- the account on the device must be configured correctly as the tester/account that acquires the app.
+
+Official test guidance:
+https://developer.android.com/google/play/billing/test
+
+The Step 10 acceptance matrix therefore keeps success, decline, pending->purchased,
+pending->cancelled, acknowledgement, already-owned, restore-after-reinstall and
+refund/revocation as explicit evidence items.
