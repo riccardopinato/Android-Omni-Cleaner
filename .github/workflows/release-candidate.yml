@@ -107,7 +107,7 @@ jobs:
           ORG_GRADLE_PROJECT_OMNI_REQUIRE_PRODUCTION_MONETIZATION: ${{ inputs.require_production_monetization }}
         run: |
           set -Eeuo pipefail
-          ./gradlew             lintDebug             testDebugUnitTest             assembleDebugAndroidTest             assembleRelease             bundleRelease             --stacktrace
+          ./gradlew             lintRelease             testDebugUnitTest             assembleDebugAndroidTest             assembleRelease             bundleRelease             --stacktrace
 
       - name: Verify release signer and collect artifacts
         shell: bash
@@ -123,13 +123,21 @@ jobs:
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -x "$APKSIGNER"
 
-          ACTUAL="$("$APKSIGNER" verify --print-certs "$APK"             | sed -n 's/^Signer #1 certificate SHA-256 digest: //p'             | head -n 1             | tr -d ':[:space:]'             | tr '[:lower:]' '[:upper:]')"
+          APK_CERT="$("$APKSIGNER" verify --print-certs "$APK"             | sed -n 's/^Signer #1 certificate SHA-256 digest: //p'             | head -n 1             | tr -d ':[:space:]'             | tr '[:lower:]' '[:upper:]')"
+          AAB_CERT="$(keytool -printcert -jarfile "$AAB"             | sed -n 's/^[[:space:]]*SHA256: //p'             | head -n 1             | tr -d ':[:space:]'             | tr '[:lower:]' '[:upper:]')"
           EXPECTED="$(printf '%s' "$EXPECTED_CERT_SHA256"             | tr -d ':[:space:]'             | tr '[:lower:]' '[:upper:]')"
 
-          if [ -z "$ACTUAL" ] || [ "$ACTUAL" != "$EXPECTED" ]; then
-            echo "::error::Release certificate mismatch."
+          if [ -z "$APK_CERT" ] || [ "$APK_CERT" != "$EXPECTED" ]; then
+            echo "::error::Release APK certificate mismatch."
             echo "Expected: $EXPECTED"
-            echo "Actual:   $ACTUAL"
+            echo "Actual:   $APK_CERT"
+            exit 1
+          fi
+
+          if [ -z "$AAB_CERT" ] || [ "$AAB_CERT" != "$EXPECTED" ]; then
+            echo "::error::Release AAB certificate mismatch."
+            echo "Expected: $EXPECTED"
+            echo "Actual:   $AAB_CERT"
             exit 1
           fi
 
@@ -141,7 +149,9 @@ jobs:
 
           {
             echo "source_sha=${GITHUB_SHA}"
-            echo "certificate_sha256=$ACTUAL"
+            echo "certificate_sha256=$APK_CERT"
+            echo "apk_certificate_sha256=$APK_CERT"
+            echo "aab_certificate_sha256=$AAB_CERT"
             echo "workflow_run=${GITHUB_RUN_ID}"
             echo "workflow_attempt=${GITHUB_RUN_ATTEMPT}"
           } > "$OUT/RELEASE_IDENTITY.txt"
