@@ -1,6 +1,6 @@
 # Android Omni Cleaner — Performance Budgets
 
-Status: **IN-APP PHYSICAL HARNESS IMPLEMENTED / DEVICE EVIDENCE PENDING**
+Status: **PRIMARY PHYSICAL DEVICE VALIDATED / SECOND-DEVICE GOLDEN EVIDENCE PENDING**
 
 These budgets make Step 9 measurable instead of relying on qualitative statements.
 
@@ -12,7 +12,7 @@ Contract:
 - in-memory cache TTL: **120,000 ms**;
 - persistent warm-index reuse TTL: **6 hours maximum**;
 - Overview, Large Files, Duplicates and Smart Categories reuse the same inventory when valid;
-- warm reuse re-stats known files, verifies persisted directory fingerprints and checks MediaStore generation where available;
+- warm reuse verifies persisted directory fingerprints and MediaStore generation where available, then hydrates persisted file metadata from SQLite without a filesystem stat per known file;
 - cleanup completion marks both in-memory and persistent reuse stale immediately;
 - manual full-index refresh is available;
 - destructive actions never trust the cache/index alone and retain per-file live revalidation.
@@ -60,10 +60,10 @@ Current optimizations:
 
 Deterministic Step 9 fixture: **1,253 files**.
 
-The next executable FULL/physical performance evidence must record:
+Physical evidence records:
 - cold inventory elapsed time;
 - warm persistent-index latency;
-- known-path restat count;
+- warm persistent HIT and cold/warm file-count delta;
 - duplicate-stage candidate counts;
 - hash-cache hits/misses;
 - bytes hashed;
@@ -80,7 +80,10 @@ No wall-clock PASS threshold is fabricated before representative physical measur
 
 Current state:
 - architecture and measurement hooks: implemented;
-- exact-head runtime measurements: deferred;
+- exact-head primary-device runtime measurement: PASS on Xiaomi M2101K6G / SDK 33;
+- 87,136 files: cold 61,064 ms, warm 2,599 ms (23.50x), hot-memory 1 ms;
+- 4-worker hashing was fastest at 1,267.33 MiB/s with thermal status 0 -> 0;
+- second-device evidence remains required for Golden promotion;
 - Store certification: not claimed.
 
 
