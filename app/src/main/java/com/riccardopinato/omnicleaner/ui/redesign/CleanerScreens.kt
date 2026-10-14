@@ -54,6 +54,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.riccardopinato.omnicleaner.BuildConfig
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.BigFileSizeFilter
 import com.riccardopinato.omnicleaner.cleaner.DeepStorageAccessStatus
@@ -359,7 +360,9 @@ internal fun CleanScreen(
             }
         } else {
             item { CleanActionsCard(state = state, controller = controller) }
-            item { PerformanceBenchmarkCard(state = state, controller = controller) }
+            if (BuildConfig.DEBUG) {
+                item { PerformanceBenchmarkCard(state = state, controller = controller) }
+            }
             item { CleanFiltersCard(state = state, controller = controller) }
 
             item {
