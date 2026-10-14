@@ -121,6 +121,7 @@ class PhysicalPerformanceBenchmark(
     suspend fun run(
         root: File,
         onPhase: ((String) -> Unit)? = null,
+        onProgress: ((Int) -> Unit)? = null,
     ): PhysicalPerformanceBenchmarkResult = withContext(Dispatchers.Default) {
         val runtime = Runtime.getRuntime()
         var observedHeapMax = usedHeap(runtime)
@@ -132,6 +133,8 @@ class PhysicalPerformanceBenchmark(
         val cold = StorageInventoryRepository.snapshot(
             root = root,
             forceRefresh = true,
+            onProgress = { checked, _ -> onProgress?.invoke(checked) },
+            onStage = { stage -> onPhase?.invoke("cold_$stage") },
         )
         val coldMillis = elapsedMillisSince(coldStarted)
         observedHeapMax = max(observedHeapMax, usedHeap(runtime))
@@ -139,7 +142,11 @@ class PhysicalPerformanceBenchmark(
         onPhase?.invoke("warm_persistent_inventory")
         StorageInventoryRepository.dropMemoryCacheForBenchmark()
         val warmStarted = SystemClock.elapsedRealtimeNanos()
-        val warm = StorageInventoryRepository.snapshot(root = root)
+        val warm = StorageInventoryRepository.snapshot(
+            root = root,
+            onProgress = { checked, _ -> onProgress?.invoke(checked) },
+            onStage = { stage -> onPhase?.invoke("warm_$stage") },
+        )
         val warmMillis = elapsedMillisSince(warmStarted)
         observedHeapMax = max(observedHeapMax, usedHeap(runtime))
 
@@ -155,12 +162,17 @@ class PhysicalPerformanceBenchmark(
         onPhase?.invoke("hash_prewarm")
         val prewarmStarted = SystemClock.elapsedRealtimeNanos()
         var prewarmBytes = 0L
-        for (item in hashSample) {
+        for ((index, item) in hashSample.withIndex()) {
             coroutineContext.ensureActive()
             if (scanner.unchanged(item)) {
-                scanner.digest(item.file)
-                prewarmBytes += item.size
+                val digest = nullableUnlessCancelled {
+                    scanner.digestCancellable(item.file)
+                }
+                if (digest != null && scanner.unchanged(item)) {
+                    prewarmBytes += item.size
+                }
             }
+            onProgress?.invoke(index + 1)
         }
         val prewarmMillis = elapsedMillisSince(prewarmStarted)
         observedHeapMax = max(observedHeapMax, usedHeap(runtime))
@@ -184,7 +196,9 @@ class PhysicalPerformanceBenchmark(
                 if (!scanner.unchanged(item)) {
                     null
                 } else {
-                    scanner.digest(item.file)
+                    nullableUnlessCancelled {
+                        scanner.digestCancellable(item.file)
+                    }?.takeIf { scanner.unchanged(item) }
                 }
             }
             val elapsed = elapsedMillisSince(started)
