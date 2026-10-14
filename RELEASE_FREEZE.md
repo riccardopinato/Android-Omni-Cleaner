@@ -28,7 +28,7 @@ Checked before RC1:
 - cleaner / Gallery / EXIF core: no TODO/FIXME/debug endpoint residue found;
 - monetization layer: one AdMob diagnostic log found and restricted to debug;
 - Performance Lab: retained for engineering evidence, hidden and blocked in release;
-- release signing: fail-closed, no debug-key fallback;
+- release signing: fail-closed, no debug-key fallback; APK and AAB certificates are independently pinned;
 - release minification/resource shrinking enabled;
 - manifest package/permissions reviewed;
 - targetSdk 36 matches the Google Play submission requirement in force from 31 August 2026;
