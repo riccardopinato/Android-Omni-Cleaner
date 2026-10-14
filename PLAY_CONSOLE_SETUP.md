@@ -88,3 +88,18 @@ Use the source-aligned drafts as the starting point for provider/store configura
 - `APP_ADS_SETUP.md`
 
 The final public URL, legal/developer identity, contact email, AdMob publisher ID and final Play declarations remain external inputs.
+
+
+## Release candidate workflow
+
+Use `.github/workflows/release-candidate.yml` only after the permanent signing
+identity has been created and backed up.
+
+The workflow requires the four standard Android signing secrets plus repository
+variable `OMNI_EXPECTED_CERT_SHA256`. It builds and verifies signed APK/AAB
+artifacts and records their hashes.
+
+An AAB produced by ordinary CI is only a compile gate. Upload to Play Internal
+Testing must use the exact signed AAB from the release-candidate lane.
+
+See `RELEASE_SIGNING.md` and `STEP10_STORE_RELEASE_CERTIFICATION.md`.
