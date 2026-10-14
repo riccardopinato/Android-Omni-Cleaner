@@ -34,6 +34,7 @@ class PhysicalPerformanceBenchmarkTest {
             thermalStart = 0,
             thermalEnd = 1,
             observedHeapMaxBytes = 42L * 1024L * 1024L,
+            emulatorSignalsDetected = false,
         )
 
         val report = result.toReport()
@@ -46,7 +47,7 @@ class PhysicalPerformanceBenchmarkTest {
         assertTrue("hash_1_workers_peak_inflight=1" in report)
         assertTrue("hash_2_workers_peak_inflight=2" in report)
         assertTrue("hash_4_workers_peak_inflight=4" in report)
-        assertTrue("physical_validation=true" in report)
+        assertTrue("emulator_signals_detected=false" in report)
         assertTrue("destructive_actions=false" in report)
     }
 
