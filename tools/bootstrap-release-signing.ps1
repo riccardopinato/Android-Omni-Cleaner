@@ -43,6 +43,41 @@ function Read-ConfirmedPassword {
     }
 }
 
+function Set-GitHubSecretFromValue {
+    param(
+        [string]$GhPath,
+        [string]$RepositoryName,
+        [string]$SecretName,
+        [string]$SecretValue
+    )
+
+    $tempPath = Join-Path ([IO.Path]::GetTempPath()) ([IO.Path]::GetRandomFileName())
+    try {
+        [IO.File]::WriteAllText(
+            $tempPath,
+            $SecretValue,
+            [Text.UTF8Encoding]::new($false)
+        )
+
+        $startArgs = @{
+            FilePath = $GhPath
+            ArgumentList = @("secret", "set", $SecretName, "--repo", $RepositoryName)
+            RedirectStandardInput = $tempPath
+            NoNewWindow = $true
+            Wait = $true
+            PassThru = $true
+        }
+        $process = Start-Process @startArgs
+
+        if ($process.ExitCode -ne 0) {
+            throw "Impostazione $SecretName fallita con codice $($process.ExitCode)."
+        }
+    }
+    finally {
+        Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
+    }
+}
+
 $keytool = Get-Command keytool -ErrorAction Stop
 $userHome = [Environment]::GetFolderPath("UserProfile")
 $outputDir = Join-Path $userHome "OmniCleanerSigning"
@@ -156,17 +191,10 @@ try {
             throw "GitHub CLI non autenticato. Esegui 'gh auth login' e rilancia con -ConfigureGitHub."
         }
 
-        $base64 | & $gh.Source secret set ANDROID_KEYSTORE_BASE64 --repo $Repository
-        if ($LASTEXITCODE -ne 0) { throw "Impostazione ANDROID_KEYSTORE_BASE64 fallita." }
-
-        $storePassword | & $gh.Source secret set ANDROID_KEYSTORE_PASSWORD --repo $Repository
-        if ($LASTEXITCODE -ne 0) { throw "Impostazione ANDROID_KEYSTORE_PASSWORD fallita." }
-
-        $Alias | & $gh.Source secret set ANDROID_KEY_ALIAS --repo $Repository
-        if ($LASTEXITCODE -ne 0) { throw "Impostazione ANDROID_KEY_ALIAS fallita." }
-
-        $keyPassword | & $gh.Source secret set ANDROID_KEY_PASSWORD --repo $Repository
-        if ($LASTEXITCODE -ne 0) { throw "Impostazione ANDROID_KEY_PASSWORD fallita." }
+        Set-GitHubSecretFromValue $gh.Source $Repository "ANDROID_KEYSTORE_BASE64" $base64
+        Set-GitHubSecretFromValue $gh.Source $Repository "ANDROID_KEYSTORE_PASSWORD" $storePassword
+        Set-GitHubSecretFromValue $gh.Source $Repository "ANDROID_KEY_ALIAS" $Alias
+        Set-GitHubSecretFromValue $gh.Source $Repository "ANDROID_KEY_PASSWORD" $keyPassword
 
         & $gh.Source variable set OMNI_EXPECTED_CERT_SHA256 --repo $Repository --body $fingerprint
         if ($LASTEXITCODE -ne 0) { throw "Impostazione OMNI_EXPECTED_CERT_SHA256 fallita." }
