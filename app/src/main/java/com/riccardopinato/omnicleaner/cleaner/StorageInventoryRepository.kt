@@ -137,6 +137,10 @@ object StorageInventoryRepository {
         persistentIndex?.markStale()
     }
 
+    internal fun dropMemoryCacheForBenchmark() {
+        cached = null
+    }
+
     internal fun duplicateHashCache(): DuplicateHashCache? = persistentIndex
 
     internal fun currentForTests(): StorageInventorySnapshot? = cached
