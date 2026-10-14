@@ -46,6 +46,8 @@ data class PhysicalPerformanceBenchmarkResult(
     val hotMemoryScanMillis: Long,
     val benchmarkFiles: Int,
     val benchmarkBytes: Long,
+    val hashPrewarmMillis: Long,
+    val hashPrewarmBytes: Long,
     val hashRuns: List<HashWorkerBenchmark>,
     val batteryStartPercent: Int?,
     val batteryEndPercent: Int?,
@@ -81,6 +83,8 @@ data class PhysicalPerformanceBenchmarkResult(
         appendLine("hot_memory_scan_ms=$hotMemoryScanMillis")
         appendLine("hash_sample_files=$benchmarkFiles")
         appendLine("hash_sample_bytes=$benchmarkBytes")
+        appendLine("hash_prewarm_ms=$hashPrewarmMillis")
+        appendLine("hash_prewarm_bytes=$hashPrewarmBytes")
         hashRuns.sortedBy { it.workers }.forEach { run ->
             appendLine("hash_${run.workers}_workers_ms=${run.elapsedMillis}")
             appendLine("hash_${run.workers}_workers_files=${run.filesHashed}")
@@ -147,8 +151,21 @@ class PhysicalPerformanceBenchmark(
 
         val hashSample = selectHashSample(cold.inventory.files)
         val scanner = FileInventoryScanner()
-        val hashRuns = ArrayList<HashWorkerBenchmark>()
 
+        onPhase?.invoke("hash_prewarm")
+        val prewarmStarted = SystemClock.elapsedRealtimeNanos()
+        var prewarmBytes = 0L
+        for (item in hashSample) {
+            coroutineContext.ensureActive()
+            if (scanner.unchanged(item)) {
+                scanner.digest(item.file)
+                prewarmBytes += item.size
+            }
+        }
+        val prewarmMillis = elapsedMillisSince(prewarmStarted)
+        observedHeapMax = max(observedHeapMax, usedHeap(runtime))
+
+        val hashRuns = ArrayList<HashWorkerBenchmark>()
         for (workers in BENCHMARK_WORKERS) {
             coroutineContext.ensureActive()
             onPhase?.invoke("hash_${workers}_workers")
@@ -209,6 +226,8 @@ class PhysicalPerformanceBenchmark(
             hotMemoryScanMillis = hotMillis,
             benchmarkFiles = hashSample.size,
             benchmarkBytes = hashSample.sumOf { it.size },
+            hashPrewarmMillis = prewarmMillis,
+            hashPrewarmBytes = prewarmBytes,
             hashRuns = hashRuns,
             batteryStartPercent = batteryStart.percent,
             batteryEndPercent = batteryEnd.percent,
