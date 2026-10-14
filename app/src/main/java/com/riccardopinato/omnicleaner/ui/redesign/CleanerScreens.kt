@@ -1,6 +1,8 @@
 package com.riccardopinato.omnicleaner.ui.redesign
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
@@ -56,6 +58,7 @@ import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.BigFileSizeFilter
 import com.riccardopinato.omnicleaner.cleaner.DeepStorageAccessStatus
 import com.riccardopinato.omnicleaner.cleaner.FolderStatus
+import com.riccardopinato.omnicleaner.cleaner.PhysicalPerformanceBenchmarkResult
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.ThresholdUnit
 import com.riccardopinato.omnicleaner.exif.ExifCleanerSection
@@ -356,6 +359,7 @@ internal fun CleanScreen(
             }
         } else {
             item { CleanActionsCard(state = state, controller = controller) }
+            item { PerformanceBenchmarkCard(state = state, controller = controller) }
             item { CleanFiltersCard(state = state, controller = controller) }
 
             item {
@@ -569,6 +573,141 @@ private fun CleanActionsCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PerformanceBenchmarkCard(
+    state: CleanerUiState,
+    controller: CleanerController,
+) {
+    val context = LocalContext.current
+    var reportCopied by remember { mutableStateOf(false) }
+    val result = state.performanceBenchmark
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp),
+        ) {
+            Text(
+                stringResource(R.string.performance_lab_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                stringResource(R.string.performance_lab_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+            Text(
+                stringResource(R.string.performance_lab_warning),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+
+            OutlinedButton(
+                onClick = {
+                    reportCopied = false
+                    controller.runPhysicalPerformanceBenchmark()
+                },
+                enabled = !state.scanning,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.performance_benchmark_run))
+            }
+
+            if (result != null) {
+                PerformanceBenchmarkResultBody(result)
+
+                OutlinedButton(
+                    onClick = {
+                        val clipboard = context.getSystemService(ClipboardManager::class.java)
+                        clipboard?.setPrimaryClip(
+                            ClipData.newPlainText(
+                                "Omni Cleaner performance report",
+                                result.toReport(),
+                            ),
+                        )
+                        reportCopied = true
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.performance_benchmark_copy_report))
+                }
+
+                if (reportCopied) {
+                    Text(
+                        stringResource(R.string.performance_benchmark_report_copied),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PerformanceBenchmarkResultBody(
+    result: PhysicalPerformanceBenchmarkResult,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Text(
+            stringResource(
+                R.string.performance_benchmark_summary,
+                result.coldScanMillis,
+                result.warmScanMillis,
+                result.hotMemoryScanMillis,
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            stringResource(
+                R.string.performance_benchmark_files,
+                result.filesTotal,
+                formatCleanerBytes(result.benchmarkBytes),
+            ),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Text(
+            stringResource(
+                R.string.performance_benchmark_persistent_hit,
+                if (result.warmPersistentHit) {
+                    stringResource(R.string.performance_benchmark_hit)
+                } else {
+                    stringResource(R.string.performance_benchmark_miss)
+                },
+            ),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        result.hashRuns.sortedBy { it.workers }.forEach { run ->
+            Text(
+                stringResource(
+                    R.string.performance_benchmark_hash_summary,
+                    run.workers,
+                    run.elapsedMillis,
+                    run.mebibytesPerSecond,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        Text(
+            stringResource(
+                R.string.performance_benchmark_device_summary,
+                result.device,
+                result.sdk,
+                result.availableProcessors,
+            ),
+            style = MaterialTheme.typography.bodySmall,
+        )
     }
 }
 
