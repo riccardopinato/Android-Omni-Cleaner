@@ -12,7 +12,7 @@ Contract:
 - in-memory cache TTL: **120,000 ms**;
 - persistent warm-index reuse TTL: **6 hours maximum**;
 - Overview, Large Files, Duplicates and Smart Categories reuse the same inventory when valid;
-- warm reuse re-stats known files and checks MediaStore generation where available;
+- warm reuse re-stats known files, verifies persisted directory fingerprints and checks MediaStore generation where available;
 - cleanup completion marks both in-memory and persistent reuse stale immediately;
 - manual full-index refresh is available;
 - destructive actions never trust the cache/index alone and retain per-file live revalidation.
