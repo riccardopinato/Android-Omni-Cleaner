@@ -13,11 +13,13 @@ Recovery and productization of the lost-source Android cleaner APK.
 **MAXI STEP 6 — UI/UX Redesign: COMPLETE**  
 **MAXI STEP 7 — Product Expansion: COMPLETE**  
 **MAXI STEP 8 — Localization & Accessibility: COMPLETE**  
-**MAXI STEP 9 — Performance & Deep QA: IMPLEMENTATION COMPLETE (validation deferred)**  
+**MAXI STEP 9 — Performance & Deep QA: IMPLEMENTATION COMPLETE**  
 **MAXI STEP 9.5 — Post-Audit P1/P2/P3 Hardening: SOURCE COMPLETE**  
-**MAXI STEP 9.6 — Persistent Indexing & Bounded Hashing: IMPLEMENTED (fast exact-head CI PASS)**
+**MAXI STEP 9.6 — Persistent Indexing & Bounded Hashing: IMPLEMENTED (CI + PRIMARY PHYSICAL PASS)**  
+**MAXI STEP 9.7 — Physical Performance Validation: PRIMARY PHYSICAL DEVICE PASS**  
+**MAXI STEP 10 — Store & Release Certification: PIPELINE PREPARED (external gates blocked)**
 
-The recovered cleaner, safety model, monetization architecture, redesigned shell, Smart Categories and localization/accessibility layer are complete through Step 8. Play/AdMob provider validation and physical-device certification remain separate release gates.
+The recovered cleaner, safety model, monetization architecture, redesigned shell, Smart Categories, localization/accessibility layer and primary-device performance validation are complete through Step 9.7. Play/AdMob provider validation and release-artifact certification remain separate Step 10 gates.
 
 ## Product direction
 
@@ -34,7 +36,7 @@ The recovered cleaner, safety model, monetization architecture, redesigned shell
 ## Current recovery version
 
 - applicationId: `com.riccardopinato.omnicleaner`
-- version: `0.12.0-recovery` / code 12
+- version: `0.13.0-recovery` / code 13
 - minSdk 24
 - targetSdk 36
 - compileSdk 37
@@ -94,7 +96,7 @@ Step 9 hardens large-library behavior with duplicate candidate prefiltering, 256
 
 Step 9.6 adds a persistent SQLite storage index and bounded CPU-aware hashing workers. Persisted sample/full hashes are bound to strong file revisions on supported Android versions, physical aliases are collapsed before duplicate grouping, and destructive cleanup still revalidates live files. A manual full-index refresh remains available.
 
-See `STEP9_PERFORMANCE_DEEP_QA.md`, `STEP9_5_AUDIT_HARDENING.md`, `STEP9_6_PERSISTENT_INDEXING_BOUNDED_HASHING.md` and `PERFORMANCE_BUDGETS.md`.
+See `STEP9_PERFORMANCE_DEEP_QA.md`, `STEP9_5_AUDIT_HARDENING.md`, `STEP9_6_PERSISTENT_INDEXING_BOUNDED_HASHING.md`, `STEP9_7_PHYSICAL_PERFORMANCE_VALIDATION.md` and `PERFORMANCE_BUDGETS.md`.
 
 ## Storage safety model
 
@@ -164,7 +166,8 @@ During fast-development mode, pull requests use one exact-head lane:
 ### Persistent indexing & bounded hashing
 
 - app-private SQLite index survives process/app restart;
-- warm reuse re-stats known files instead of blindly trusting persisted rows;
+- directory fingerprints invalidate warm reuse when the filesystem tree changed;
+- warm reuse validates directory fingerprints and MediaStore generation, then hydrates persisted file metadata from SQLite without a per-file filesystem stat;
 - MediaStore generation drift invalidates reuse where available;
 - app-owned mutations mark the persistent index stale;
 - sample/full hashes are reused only under trustworthy revision identity;
@@ -174,3 +177,22 @@ During fast-development mode, pull requests use one exact-head lane:
 - manual full index refresh is exposed in Clean.
 
 Exact-head development evidence for the first implementation: Android CI run `38484281905` PASS on `aa5f6e9951237fcfafaa1c361c4aa643c439ad63`.
+
+
+## Step 9.7 Performance Lab
+
+The Clean workspace includes a read-only on-device benchmark that measures:
+- cold full storage traversal;
+- persistent warm reuse after dropping only the in-memory cache;
+- hot in-memory reuse;
+- real-file SHA-256 throughput with 1, 2 and 4 bounded workers;
+- peak in-flight workers;
+- battery/temperature/thermal state when Android exposes them.
+
+The generated `OMNI_PERF_V1` report can be copied directly into the project chat for evidence-driven tuning. Primary-device validation on Xiaomi M2101K6G / SDK 33 passed with 87,136 files: cold 61,064 ms, warm persistent 2,599 ms (23.50x), hot memory 1 ms, and 4-worker SHA-256 throughput 1,267.33 MiB/s with no thermal-status escalation.
+
+## Step 10 release candidate
+
+A dedicated manual `Android Release Candidate` workflow now exists. It requires persistent release signing secrets and a pinned expected certificate SHA-256, builds signed release APK + AAB, verifies the signer, generates SHA-256 evidence and fails closed when signing or required production AdMob configuration is missing.
+
+See `RELEASE_SIGNING.md` and `STEP10_STORE_RELEASE_CERTIFICATION.md`.

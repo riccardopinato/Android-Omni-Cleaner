@@ -11,8 +11,8 @@ android {
         applicationId = "com.riccardopinato.omnicleaner"
         minSdk = 24
         targetSdk = 36
-        versionCode = 12
-        versionName = "0.12.0-recovery"
+        versionCode = 13
+        versionName = "0.13.0-recovery"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -43,6 +43,41 @@ android {
 
     fun quoted(value: String): String = "\"$value\""
 
+    val releaseStoreFilePath = providers.environmentVariable("OMNI_RELEASE_STORE_FILE").orNull
+    val releaseStorePassword = providers.environmentVariable("OMNI_RELEASE_STORE_PASSWORD").orNull
+    val releaseKeyAlias = providers.environmentVariable("OMNI_RELEASE_KEY_ALIAS").orNull
+    val releaseKeyPassword = providers.environmentVariable("OMNI_RELEASE_KEY_PASSWORD").orNull
+    val releaseSigningConfigured = listOf(
+        releaseStoreFilePath,
+        releaseStorePassword,
+        releaseKeyAlias,
+        releaseKeyPassword,
+    ).all { !it.isNullOrBlank() }
+    val requireReleaseSigning =
+        providers.environmentVariable("OMNI_REQUIRE_RELEASE_SIGNING")
+            .orNull
+            ?.toBooleanStrictOrNull()
+            ?: false
+
+    if (requireReleaseSigning && !releaseSigningConfigured) {
+        throw GradleException(
+            "Production signing requested, but OMNI_RELEASE_STORE_FILE, " +
+                "OMNI_RELEASE_STORE_PASSWORD, OMNI_RELEASE_KEY_ALIAS and " +
+                "OMNI_RELEASE_KEY_PASSWORD are not all configured.",
+        )
+    }
+
+    signingConfigs {
+        if (releaseSigningConfigured) {
+            create("release") {
+                storeFile = file(releaseStoreFilePath!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
@@ -57,6 +92,9 @@ android {
 
         release {
             isDebuggable = false
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             manifestPlaceholders["admobAppId"] = releaseAdmobAppId ?: testAdmobAppId

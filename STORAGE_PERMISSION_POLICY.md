@@ -1,6 +1,6 @@
 # Storage permission policy — MAXI STEP 4
 
-Reviewed: 2026-10-11
+Reviewed: 2026-10-14
 
 ## Product decision
 
@@ -98,3 +98,22 @@ must never disguise a rejected/unapproved permission path.
 
 This document records the product justification; it does not claim that Google
 Play has approved the app.
+
+
+## Policy re-check 2026-10-14
+
+Current Google Play policy still treats `MANAGE_EXTERNAL_STORAGE` as a
+high-risk/sensitive permission. The permission should be removed when broad
+access is not necessary, and apps that retain it must submit the Play permission
+declaration and pass review.
+
+The current permitted-use guidance includes **file management** when the core
+purpose is viewing, editing or managing — explicitly including maintenance — of
+files/folders outside app-specific storage.
+
+Omni Cleaner therefore keeps the permission isolated to the explicit Deep
+Cleaning lane and keeps MediaStore/SAF-capable features scoped. This is a
+policy-eligibility rationale, not an approval claim.
+
+Official policy:
+https://support.google.com/googleplay/android-developer/answer/10467955

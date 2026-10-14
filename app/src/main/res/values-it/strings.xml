@@ -327,4 +327,19 @@
     <string name="scan_indexing_files_count">Indicizzazione file: %1$d controllati</string>
     <string name="duplicates_none_found">Nessun duplicato trovato per %1$s.</string>
     <string name="refresh_storage_index">Aggiorna indice memoria</string>
+
+    <string name="performance_lab_title">Performance Lab</string>
+    <string name="performance_lab_body">Misura scansione a freddo, riuso persistente a caldo e throughput SHA-256 con 1/2/4 worker su questo dispositivo.</string>
+    <string name="performance_lab_warning">Benchmark in sola lettura. Esegue una scansione completa e hashing ripetuto di un campione limitato, quindi il telefono può scaldarsi brevemente.</string>
+    <string name="performance_benchmark_running">Benchmark prestazioni fisiche in corso</string>
+    <string name="performance_benchmark_run">Avvia benchmark fisico</string>
+    <string name="performance_benchmark_summary">Cold %1$d ms · Warm %2$d ms · Hot %3$d ms</string>
+    <string name="performance_benchmark_files">%1$d file indicizzati · campione hash %2$s</string>
+    <string name="performance_benchmark_persistent_hit">Indice persistente warm: %1$s</string>
+    <string name="performance_benchmark_hit">HIT</string>
+    <string name="performance_benchmark_miss">MISS</string>
+    <string name="performance_benchmark_hash_summary">%1$d worker: %2$d ms · %3$.1f MiB/s</string>
+    <string name="performance_benchmark_device_summary">%1$s · Android %2$d · %3$d thread CPU</string>
+    <string name="performance_benchmark_copy_report">Copia report benchmark</string>
+    <string name="performance_benchmark_report_copied">Report copiato. Incollalo nella chat del progetto per l’analisi.</string>
 </resources>

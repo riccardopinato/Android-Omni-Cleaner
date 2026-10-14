@@ -1,6 +1,6 @@
 # Android Omni Cleaner — Recovery & Product Roadmap
 
-Factory baseline: `7b408dd8b14ea7785e923c6eed624eb41c193698` (Master v26.3 / Golden Index v14)
+Factory baseline: `03406ef5e511dfc580b67967c67a11ab58e20141` (Master v26.3 / Golden Index v15)
 
 ## MAXI STEP 0 — Forensic Recovery
 **Status: COMPLETE**
@@ -145,7 +145,7 @@ See `STEP7_PRODUCT_EXPANSION.md`.
 
 Implemented:
 - complete EN / IT / ES / FR / PT resource bundles;
-- exact 305-key parity across all five locales;
+- exact 319-key parity across all five locales;
 - exact format-placeholder parity;
 - manual System / EN / IT / ES / FR / PT language selector;
 - lightweight persisted locale override applied at Activity context boundary;
@@ -235,14 +235,15 @@ Evidence boundary:
 See `STEP9_5_AUDIT_HARDENING.md`.
 
 ## MAXI STEP 9.6 — Persistent Indexing & Bounded Parallel Hashing
-**Status: IMPLEMENTED — FAST EXACT-HEAD CI PASS / PHYSICAL PERFORMANCE EVIDENCE PENDING**
+**Status: IMPLEMENTED — FAST EXACT-HEAD CI PASS / PRIMARY PHYSICAL PERFORMANCE PASS**
 
 Implemented:
 - app-private SQLite persistent file index across process/app restart;
 - 120 s in-memory cache remains first-level, persistent reuse extends warm-start behavior;
-- every persisted known path is re-statted before warm reuse;
+- warm reuse validates directory fingerprints / MediaStore generation and hydrates persisted file metadata from SQLite without a per-file filesystem stat;
 - MediaStore generation mismatch rejects stale persistent snapshots where available;
 - manual full-index refresh exposed in Clean;
+- directory fingerprints reject stale warm snapshots and force reconciliation after tree changes;
 - app-owned cleanup invalidates persistent reuse immediately;
 - sample/full hashes persisted only against trustworthy strong revision identity;
 - Android API 27+ uses device/inode + high-resolution ctime for hash-cache binding;
@@ -256,25 +257,90 @@ Implemented:
 
 Evidence:
 - exact-head Android CI run `38484281905`: PASS;
-- locale parity: 305 keys in EN/IT/ES/FR/PT;
+- locale parity: 319 keys in EN/IT/ES/FR/PT;
 - JVM regression suite: PASS;
 - Android instrumentation sources compile in PR lane;
 - debug APK generated at exact head `aa5f6e9951237fcfafaa1c361c4aa643c439ad63`;
 - App Factory Golden candidates prepared in Core PR #9 (Golden Index v15 candidate).
 
+Physical evidence:
+- exact Step 9.7 APK on Xiaomi M2101K6G / SDK 33 / 8 processors;
+- 87,136-file library;
+- cold inventory 61,064 ms;
+- warm persistent HIT 2,599 ms, 23.50x speedup, file-count delta 0;
+- hot-memory HIT 1 ms;
+- hashing: 1 worker 573.99 MiB/s, 2 workers 920.86 MiB/s, 4 workers 1,267.33 MiB/s;
+- thermal status 0 -> 0, battery temperature 35.3 C -> 37.2 C;
+- bounded peak in-flight respected exactly.
+
 Pending:
-- instrumentation execution on physical device;
-- cold vs warm real-library timing;
-- 1/2/4-worker throughput benchmark;
-- low-end thermal/battery evidence;
+- second representative lower-end/older physical device for Golden promotion;
 - full AppLab/certification lane.
 
 See `STEP9_6_PERSISTENT_INDEXING_BOUNDED_HASHING.md`.
 
-## MAXI STEP 10 — Store & Release Certification
+## MAXI STEP 9.7 — Physical Performance Validation
+**Status: PRIMARY PHYSICAL DEVICE PASS — SECOND-DEVICE GOLDEN PROMOTION EVIDENCE PENDING**
 
-Persistent signing, exact artifact identity, physical evidence, AAB, Internal Testing and final
-`CERTIFIED / NOT CERTIFIED / BLOCKED` verdict.
+Implemented:
+- in-app Performance Lab in Clean;
+- one forced cold full inventory measurement;
+- persistent warm reuse measured after dropping only the memory cache;
+- immediate hot in-memory measurement;
+- deterministic real-file SHA-256 benchmark with 1 / 2 / 4 workers;
+- bounded sample: max 200 files / 128 MiB / 4 KiB–32 MiB per file;
+- peak in-flight worker measurement;
+- battery %, battery temperature and Android thermal-state capture when available;
+- copyable `OMNI_PERF_V1` report for evidence;
+- benchmark is read-only and never authorizes cleanup;
+- version `0.13.0-recovery` / code 13.
+
+Validated physical evidence:
+- exact head `436e884886dbc7e034547b3a7b7299a9cd649f7b`;
+- Android CI #370 PASS;
+- Xiaomi M2101K6G / SDK 33 / 8 processors;
+- 87,136 files;
+- cold 61,064 ms;
+- warm persistent 2,599 ms / HIT / 23.50x / file-count delta 0;
+- hot memory 1 ms / explicit HIT;
+- 4 workers fastest at 1,267.33 MiB/s with no thermal-status escalation;
+- benchmark remained non-destructive.
+
+Remaining:
+- second representative lower-end/older device before promoting the two performance Goldens beyond DRAFT.
+
+See `STEP9_7_PHYSICAL_PERFORMANCE_VALIDATION.md`.
+
+## MAXI STEP 10 — Store & Release Certification
+**Status: RELEASE PIPELINE PREPARED — EXTERNAL GATES BLOCKED**
+
+Implemented in source:
+- full CI compiles release APK + AAB;
+- production signing configuration is fail-closed;
+- dedicated manual `Android Release Candidate` workflow;
+- persistent signing secrets required;
+- expected public certificate SHA-256 required;
+- signer mismatch fails the workflow;
+- signed APK/AAB SHA-256 evidence generated;
+- production AdMob IDs required when production monetization is enabled;
+- no debug-signing fallback;
+- no fabricated provider IDs.
+
+External/user-action gates:
+- generate and securely back up permanent release/upload keystore;
+- configure GitHub signing secrets + expected certificate fingerprint;
+- provision Play Console app and Play App Signing;
+- upload exact signed AAB to Internal Testing;
+- activate/test `premium_unlock`;
+- provision production AdMob / UMP / app-ads.txt;
+- publish final privacy-policy URL;
+- complete physical storage / SAF / MediaStore / Billing validation;
+- reconcile Data Safety and MANAGE_EXTERNAL_STORAGE declarations against the exact release artifact.
+
+Current certification verdict:
+**BLOCKED** until those external gates are evidenced.
+
+See `STEP10_STORE_RELEASE_CERTIFICATION.md`.
 
 
 ## FAST DEVELOPMENT MODE

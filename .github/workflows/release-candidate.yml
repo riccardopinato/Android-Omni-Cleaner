@@ -1,0 +1,178 @@
+name: Android Release Candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      require_production_monetization:
+        description: Require production AdMob configuration
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-release-candidate
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout exact source head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
+        with:
+          cache-provider: basic
+          add-job-summary: on-failure
+
+      - name: Require persistent signing identity
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          EXPECTED_CERT_SHA256: ${{ vars.OMNI_EXPECTED_CERT_SHA256 }}
+        run: |
+          set -Eeuo pipefail
+          missing=()
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD EXPECTED_CERT_SHA256; do
+            if [ -z "${!name:-}" ]; then
+              missing+=("$name")
+            fi
+          done
+          if [ "${#missing[@]}" -ne 0 ]; then
+            echo "::error::Release signing gate blocked. Missing: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Require production monetization when requested
+        if: inputs.require_production_monetization
+        shell: bash
+        env:
+          OMNI_ADMOB_APP_ID: ${{ secrets.OMNI_ADMOB_APP_ID }}
+          OMNI_ADMOB_BANNER_ID: ${{ secrets.OMNI_ADMOB_BANNER_ID }}
+          OMNI_ADMOB_INTERSTITIAL_ID: ${{ secrets.OMNI_ADMOB_INTERSTITIAL_ID }}
+        run: |
+          set -Eeuo pipefail
+          missing=()
+          for name in OMNI_ADMOB_APP_ID OMNI_ADMOB_BANNER_ID OMNI_ADMOB_INTERSTITIAL_ID; do
+            if [ -z "${!name:-}" ]; then
+              missing+=("$name")
+            fi
+          done
+          if [ "${#missing[@]}" -ne 0 ]; then
+            echo "::error::Production monetization gate blocked. Missing: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Restore temporary release keystore
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -Eeuo pipefail
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/omni-release.jks"
+          test -s "$RUNNER_TEMP/omni-release.jks"
+
+      - name: Verify locale resource parity
+        run: python3 .github/scripts/check-locales.py
+
+      - name: Build signed release candidate
+        shell: bash
+        env:
+          OMNI_RELEASE_STORE_FILE: ${{ runner.temp }}/omni-release.jks
+          OMNI_RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          OMNI_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          OMNI_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          OMNI_REQUIRE_RELEASE_SIGNING: "true"
+          ORG_GRADLE_PROJECT_OMNI_ADMOB_APP_ID: ${{ secrets.OMNI_ADMOB_APP_ID }}
+          ORG_GRADLE_PROJECT_OMNI_ADMOB_BANNER_ID: ${{ secrets.OMNI_ADMOB_BANNER_ID }}
+          ORG_GRADLE_PROJECT_OMNI_ADMOB_INTERSTITIAL_ID: ${{ secrets.OMNI_ADMOB_INTERSTITIAL_ID }}
+          ORG_GRADLE_PROJECT_OMNI_REQUIRE_PRODUCTION_MONETIZATION: ${{ inputs.require_production_monetization }}
+        run: |
+          set -Eeuo pipefail
+          ./gradlew             lintDebug             testDebugUnitTest             assembleDebugAndroidTest             assembleRelease             bundleRelease             --stacktrace
+
+      - name: Verify release signer and collect artifacts
+        shell: bash
+        env:
+          EXPECTED_CERT_SHA256: ${{ vars.OMNI_EXPECTED_CERT_SHA256 }}
+        run: |
+          set -Eeuo pipefail
+          APK="app/build/outputs/apk/release/app-release.apk"
+          AAB="app/build/outputs/bundle/release/app-release.aab"
+          test -s "$APK"
+          test -s "$AAB"
+
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "$APKSIGNER"
+
+          ACTUAL="$("$APKSIGNER" verify --print-certs "$APK"             | sed -n 's/^Signer #1 certificate SHA-256 digest: //p'             | head -n 1             | tr -d ':[:space:]'             | tr '[:lower:]' '[:upper:]')"
+          EXPECTED="$(printf '%s' "$EXPECTED_CERT_SHA256"             | tr -d ':[:space:]'             | tr '[:lower:]' '[:upper:]')"
+
+          if [ -z "$ACTUAL" ] || [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::Release certificate mismatch."
+            echo "Expected: $EXPECTED"
+            echo "Actual:   $ACTUAL"
+            exit 1
+          fi
+
+          OUT="$RUNNER_TEMP/release-candidate"
+          mkdir -p "$OUT"
+          cp "$APK" "$OUT/Android-Omni-Cleaner-release.apk"
+          cp "$AAB" "$OUT/Android-Omni-Cleaner-release.aab"
+          sha256sum "$OUT"/*.apk "$OUT"/*.aab > "$OUT/SHA256SUMS.txt"
+
+          {
+            echo "source_sha=${GITHUB_SHA}"
+            echo "certificate_sha256=$ACTUAL"
+            echo "workflow_run=${GITHUB_RUN_ID}"
+            echo "workflow_attempt=${GITHUB_RUN_ATTEMPT}"
+          } > "$OUT/RELEASE_IDENTITY.txt"
+
+      - name: Upload signed APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: omni-cleaner-release-apk
+          path: ${{ runner.temp }}/release-candidate/Android-Omni-Cleaner-release.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Play AAB
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: omni-cleaner-release-aab
+          path: ${{ runner.temp }}/release-candidate/Android-Omni-Cleaner-release.aab
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload release identity report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: omni-cleaner-release-identity
+          path: |
+            ${{ runner.temp }}/release-candidate/SHA256SUMS.txt
+            ${{ runner.temp }}/release-candidate/RELEASE_IDENTITY.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Remove temporary keystore
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/omni-release.jks"

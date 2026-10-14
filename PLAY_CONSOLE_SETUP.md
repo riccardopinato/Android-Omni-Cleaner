@@ -88,3 +88,37 @@ Use the source-aligned drafts as the starting point for provider/store configura
 - `APP_ADS_SETUP.md`
 
 The final public URL, legal/developer identity, contact email, AdMob publisher ID and final Play declarations remain external inputs.
+
+
+## Release candidate workflow
+
+Use `.github/workflows/release-candidate.yml` only after the permanent signing
+identity has been created and backed up.
+
+The workflow requires the four standard Android signing secrets plus repository
+variable `OMNI_EXPECTED_CERT_SHA256`. It builds and verifies signed APK/AAB
+artifacts and records their hashes.
+
+An AAB produced by ordinary CI is only a compile gate. Upload to Play Internal
+Testing must use the exact signed AAB from the release-candidate lane.
+
+See `RELEASE_SIGNING.md` and `STEP10_STORE_RELEASE_CERTIFICATION.md`.
+
+
+## Provider re-check — 2026-10-14
+
+Google's current Play Billing test guidance confirms:
+- use license testers throughout development;
+- test tracks are appropriate for pre-distribution validation;
+- non-consumable one-time products must not be purchasable again while owned;
+- purchase acknowledgement must be verified;
+- pending transactions must be tested for both delayed approval and delayed cancellation;
+- refund/revoke can be used to repeat non-consumable test purchases;
+- the account on the device must be configured correctly as the tester/account that acquires the app.
+
+Official test guidance:
+https://developer.android.com/google/play/billing/test
+
+The Step 10 acceptance matrix therefore keeps success, decline, pending->purchased,
+pending->cancelled, acknowledgement, already-owned, restore-after-reinstall and
+refund/revocation as explicit evidence items.

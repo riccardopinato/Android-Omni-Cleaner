@@ -24,6 +24,7 @@ class FileInventoryScanner {
         val stack = ArrayDeque<File>()
         val visited = HashSet<String>()
         val files = ArrayList<IndexedFile>()
+        val directories = ArrayList<IndexedDirectory>()
         var unreadable = 0
         var excluded = 0
         var checked = 0
@@ -52,6 +53,22 @@ class FileInventoryScanner {
                 excluded++
                 continue
             }
+
+            val directoryMetadata = FileSystemIdentity.read(directory)
+            if (
+                directoryMetadata == null ||
+                !directoryMetadata.isDirectory ||
+                directoryMetadata.isSymlink
+            ) {
+                unreadable++
+                continue
+            }
+            directories += IndexedDirectory(
+                file = directory,
+                modified = directoryMetadata.modifiedMillis,
+                physicalIdentity = directoryMetadata.physicalIdentity,
+                revision = directoryMetadata.revision,
+            )
 
             val children = runCatching { directory.listFiles() }.getOrNull()
             if (children == null) {
@@ -87,7 +104,7 @@ class FileInventoryScanner {
             }
         }
 
-        FileInventory(files, unreadable, excluded)
+        FileInventory(files, unreadable, excluded, directories)
     }
 
     suspend fun duplicates(root: File): List<DuplicateGroup> {
@@ -362,7 +379,7 @@ class FileInventoryScanner {
         return md.digest().joinToString("") { "%02x".format(it) }
     }
 
-    private suspend fun digestCancellable(file: File): String {
+    internal suspend fun digestCancellable(file: File): String {
         val md = MessageDigest.getInstance("SHA-256")
         FileInputStream(file).use { input ->
             val buffer = ByteArray(IO_BUFFER_BYTES)

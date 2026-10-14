@@ -39,7 +39,9 @@ internal class PersistentStorageIndex(
         root: File,
         nowMillis: Long,
         maxAgeMillis: Long,
+        cancellationCheck: (() -> Unit)? = null,
     ): PersistentInventorySnapshot? = synchronized(lock) {
+        cancellationCheck?.invoke()
         if (statePreferences.getBoolean(KEY_DIRTY, false)) {
             return@synchronized null
         }
@@ -63,10 +65,17 @@ internal class PersistentStorageIndex(
             return@synchronized null
         }
 
-        val files = ArrayList<IndexedFile>()
+        var directoryCount = 0
         db.query(
-            TABLE_FILES,
-            arrayOf(COL_PATH),
+            TABLE_DIRECTORIES,
+            arrayOf(
+                COL_PATH,
+                COL_MODIFIED,
+                COL_DEVICE_ID,
+                COL_INODE,
+                COL_CTIME_SECONDS,
+                COL_CTIME_NANOS,
+            ),
             null,
             null,
             null,
@@ -74,22 +83,120 @@ internal class PersistentStorageIndex(
             null,
         ).use { cursor ->
             val pathIndex = cursor.getColumnIndexOrThrow(COL_PATH)
-            while (cursor.moveToNext()) {
-                val file = File(cursor.getString(pathIndex))
+            val modifiedIndex = cursor.getColumnIndexOrThrow(COL_MODIFIED)
+            val deviceIndex = cursor.getColumnIndexOrThrow(COL_DEVICE_ID)
+            val inodeIndex = cursor.getColumnIndexOrThrow(COL_INODE)
+            val ctimeSecondsIndex = cursor.getColumnIndexOrThrow(COL_CTIME_SECONDS)
+            val ctimeNanosIndex = cursor.getColumnIndexOrThrow(COL_CTIME_NANOS)
 
-                // Warm reuse avoids walking the directory tree, but it never
-                // blindly trusts the persisted row. Re-stat every known path so
-                // replacements, edits and removals invalidate revision-bound
-                // hashes immediately.
-                val live = FileSystemIdentity.read(file) ?: continue
-                if (!live.isRegularFile || live.isSymlink) continue
+            while (cursor.moveToNext()) {
+                directoryCount++
+                if (directoryCount % CANCELLATION_CHECK_INTERVAL == 0) {
+                    cancellationCheck?.invoke()
+                }
+                val directory = File(cursor.getString(pathIndex))
+                val live = FileSystemIdentity.read(directory) ?: return@synchronized null
+                if (!live.isDirectory || live.isSymlink) return@synchronized null
+                if (live.modifiedMillis != cursor.getLong(modifiedIndex)) {
+                    return@synchronized null
+                }
+
+                if (!cursor.isNull(deviceIndex) && !cursor.isNull(inodeIndex)) {
+                    val expectedIdentity = PhysicalFileIdentity(
+                        deviceId = cursor.getLong(deviceIndex),
+                        inode = cursor.getLong(inodeIndex),
+                    )
+                    if (live.physicalIdentity != expectedIdentity) {
+                        return@synchronized null
+                    }
+                }
+
+                if (!cursor.isNull(ctimeSecondsIndex) && !cursor.isNull(ctimeNanosIndex)) {
+                    val expectedRevision = StrongFileRevision(
+                        physicalIdentity = live.physicalIdentity ?: return@synchronized null,
+                        changeTimeSeconds = cursor.getLong(ctimeSecondsIndex),
+                        changeTimeNanos = cursor.getLong(ctimeNanosIndex),
+                    )
+                    if (live.revision != expectedRevision) {
+                        return@synchronized null
+                    }
+                }
+            }
+        }
+        if (directoryCount == 0) return@synchronized null
+
+        cancellationCheck?.invoke()
+        // Directory fingerprints are the structural invalidation boundary for
+        // persistent reuse. If they are unchanged (and MediaStore generation
+        // did not change), hydrate file metadata directly from SQLite instead
+        // of issuing one filesystem stat per persisted file. Read-only views
+        // may therefore be bounded-stale within the persistent TTL; every
+        // destructive/hash-sensitive path still revalidates the live file
+        // revision before acting.
+        val files = ArrayList<IndexedFile>()
+        var fileCount = 0
+        db.query(
+            TABLE_FILES,
+            arrayOf(
+                COL_PATH,
+                COL_SIZE,
+                COL_MODIFIED,
+                COL_DEVICE_ID,
+                COL_INODE,
+                COL_CTIME_SECONDS,
+                COL_CTIME_NANOS,
+            ),
+            null,
+            null,
+            null,
+            null,
+            null,
+        ).use { cursor ->
+            val pathIndex = cursor.getColumnIndexOrThrow(COL_PATH)
+            val sizeIndex = cursor.getColumnIndexOrThrow(COL_SIZE)
+            val modifiedIndex = cursor.getColumnIndexOrThrow(COL_MODIFIED)
+            val deviceIndex = cursor.getColumnIndexOrThrow(COL_DEVICE_ID)
+            val inodeIndex = cursor.getColumnIndexOrThrow(COL_INODE)
+            val ctimeSecondsIndex = cursor.getColumnIndexOrThrow(COL_CTIME_SECONDS)
+            val ctimeNanosIndex = cursor.getColumnIndexOrThrow(COL_CTIME_NANOS)
+
+            while (cursor.moveToNext()) {
+                fileCount++
+                if (fileCount % CANCELLATION_CHECK_INTERVAL == 0) {
+                    cancellationCheck?.invoke()
+                }
+
+                val physicalIdentity = if (
+                    !cursor.isNull(deviceIndex) &&
+                    !cursor.isNull(inodeIndex)
+                ) {
+                    PhysicalFileIdentity(
+                        deviceId = cursor.getLong(deviceIndex),
+                        inode = cursor.getLong(inodeIndex),
+                    )
+                } else {
+                    null
+                }
+                val revision = if (
+                    physicalIdentity != null &&
+                    !cursor.isNull(ctimeSecondsIndex) &&
+                    !cursor.isNull(ctimeNanosIndex)
+                ) {
+                    StrongFileRevision(
+                        physicalIdentity = physicalIdentity,
+                        changeTimeSeconds = cursor.getLong(ctimeSecondsIndex),
+                        changeTimeNanos = cursor.getLong(ctimeNanosIndex),
+                    )
+                } else {
+                    null
+                }
 
                 files += IndexedFile(
-                    file = file,
-                    size = live.sizeBytes,
-                    modified = live.modifiedMillis,
-                    revision = live.revision,
-                    physicalIdentity = live.physicalIdentity,
+                    file = File(cursor.getString(pathIndex)),
+                    size = cursor.getLong(sizeIndex),
+                    modified = cursor.getLong(modifiedIndex),
+                    revision = revision,
+                    physicalIdentity = physicalIdentity,
                 )
             }
         }
@@ -110,7 +217,9 @@ internal class PersistentStorageIndex(
         root: File,
         inventory: FileInventory,
         completedAtMillis: Long,
+        cancellationCheck: (() -> Unit)? = null,
     ) = synchronized(lock) {
+        cancellationCheck?.invoke()
         val db = helper.writableDatabase
         val rootPath = canonical(root)
         db.beginTransaction()
@@ -118,11 +227,15 @@ internal class PersistentStorageIndex(
             val previousRoot = meta(db, META_ROOT_PATH)
             if (previousRoot != null && previousRoot != rootPath) {
                 db.delete(TABLE_FILES, null, null)
+                db.delete(TABLE_DIRECTORIES, null, null)
             }
 
             val generation = (meta(db, META_SCAN_GENERATION)?.toLongOrNull() ?: 0L) + 1L
 
-            for (item in inventory.files) {
+            for ((fileIndex, item) in inventory.files.withIndex()) {
+                if (fileIndex % CANCELLATION_CHECK_INTERVAL == 0) {
+                    cancellationCheck?.invoke()
+                }
                 val path = item.file.absolutePath
                 val extension = item.file.extension.lowercase(Locale.ROOT)
                 val revision = item.revision
@@ -185,6 +298,45 @@ internal class PersistentStorageIndex(
                     )
                 }
             }
+
+            for ((directoryIndex, directory) in inventory.directories.withIndex()) {
+                if (directoryIndex % CANCELLATION_CHECK_INTERVAL == 0) {
+                    cancellationCheck?.invoke()
+                }
+                val identity = directory.physicalIdentity
+                val revision = directory.revision
+                val values = ContentValues().apply {
+                    put(COL_PATH, directory.file.absolutePath)
+                    put(COL_MODIFIED, directory.modified)
+                    if (identity != null) {
+                        put(COL_DEVICE_ID, identity.deviceId)
+                        put(COL_INODE, identity.inode)
+                    } else {
+                        putNull(COL_DEVICE_ID)
+                        putNull(COL_INODE)
+                    }
+                    if (revision != null) {
+                        put(COL_CTIME_SECONDS, revision.changeTimeSeconds)
+                        put(COL_CTIME_NANOS, revision.changeTimeNanos)
+                    } else {
+                        putNull(COL_CTIME_SECONDS)
+                        putNull(COL_CTIME_NANOS)
+                    }
+                    put(COL_LAST_SEEN_GENERATION, generation)
+                }
+                db.insertWithOnConflict(
+                    TABLE_DIRECTORIES,
+                    null,
+                    values,
+                    SQLiteDatabase.CONFLICT_REPLACE,
+                )
+            }
+
+            db.delete(
+                TABLE_DIRECTORIES,
+                "$COL_LAST_SEEN_GENERATION != ?",
+                arrayOf(generation.toString()),
+            )
 
             db.delete(
                 TABLE_FILES,
@@ -356,26 +508,48 @@ internal class PersistentStorageIndex(
             db.execSQL(
                 "CREATE INDEX idx_storage_files_extension ON $TABLE_FILES($COL_EXTENSION)",
             )
+            createDirectoriesTable(db)
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            // v1 is the initial persistent-index schema. Future versions must
-            // add explicit migrations rather than silently deleting the index.
-            if (oldVersion != newVersion) {
+            var version = oldVersion
+            if (version < 2) {
+                createDirectoriesTable(db)
+                version = 2
+            }
+            if (version != newVersion) {
                 throw IllegalStateException(
                     "Storage index migration required: $oldVersion -> $newVersion",
                 )
             }
         }
+
+        private fun createDirectoriesTable(db: SQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS $TABLE_DIRECTORIES (
+                    $COL_PATH TEXT PRIMARY KEY NOT NULL,
+                    $COL_MODIFIED INTEGER NOT NULL,
+                    $COL_DEVICE_ID INTEGER,
+                    $COL_INODE INTEGER,
+                    $COL_CTIME_SECONDS INTEGER,
+                    $COL_CTIME_NANOS INTEGER,
+                    $COL_LAST_SEEN_GENERATION INTEGER NOT NULL
+                )
+                """.trimIndent(),
+            )
+        }
     }
 
     private companion object {
         const val DATABASE_NAME = "storage_index.db"
-        const val DATABASE_VERSION = 1
+        const val DATABASE_VERSION = 2
         const val INDEX_STATE_PREFERENCES_PREFIX = "storage_index_state_"
         const val KEY_DIRTY = "index_dirty"
+        const val CANCELLATION_CHECK_INTERVAL = 128
 
         const val TABLE_FILES = "indexed_files"
+        const val TABLE_DIRECTORIES = "indexed_directories"
         const val TABLE_META = "index_meta"
 
         const val COL_PATH = "path"

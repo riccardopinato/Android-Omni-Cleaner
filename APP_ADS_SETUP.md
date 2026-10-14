@@ -56,3 +56,25 @@ Do **not** commit or publish a guessed publisher ID.
 - [ ] physical banner placement checked away from accidental-click zones.
 
 Production advertising remains **BLOCKED** until these external items are evidenced.
+
+
+## Provider re-check — 2026-10-14
+
+Current AdMob guidance:
+- app-ads.txt discovery is based on the developer website listed for the app in
+  the Store;
+- the file is expected at the developer-domain root path;
+- the AdMob-provided personalized publisher line must be used, not a guessed ID;
+- AdMob scanning/verification can take up to 24 hours after setup or listing changes;
+- new AdMob apps require app-ads.txt verification before full ad serving.
+
+Current UMP guidance:
+- call `requestConsentInfoUpdate()` before relying on consent state;
+- `canRequestAds()` remains false until that update has been requested;
+- ad request work must avoid duplicate requests when consent checks complete
+  through more than one callback/path;
+- privacy options must be surfaced when UMP reports that they are required.
+
+Official guidance:
+https://support.google.com/admob/answer/9363762
+https://developers.google.com/admob/android/privacy

@@ -54,3 +54,21 @@ Safe Trash stores reversible local file copies in hidden shared storage so they 
 - [ ] retain screenshots/export of submitted declarations in release evidence.
 
 No unverified yes/no Data Safety answer is asserted in this draft.
+
+
+## Provider re-check — 2026-10-14
+
+Google Play's current Data Safety guidance keeps the developer responsible for
+declaring collection/sharing performed by third-party SDK code included in the
+app. Therefore final Data Safety answers cannot be inferred only from Omni
+Cleaner's own local-first code.
+
+Before production submission, reconcile the exact release artifact and enabled
+configuration for:
+- Google Mobile Ads;
+- UMP;
+- Google Play Billing;
+- any dependency added after this audit.
+
+Official guidance:
+https://support.google.com/googleplay/android-developer/answer/10787469

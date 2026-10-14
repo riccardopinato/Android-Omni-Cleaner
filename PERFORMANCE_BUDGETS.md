@@ -1,6 +1,6 @@
 # Android Omni Cleaner — Performance Budgets
 
-Status: **INSTRUMENTED / RUNTIME EVIDENCE DEFERRED**
+Status: **PRIMARY PHYSICAL DEVICE VALIDATED / SECOND-DEVICE GOLDEN EVIDENCE PENDING**
 
 These budgets make Step 9 measurable instead of relying on qualitative statements.
 
@@ -12,7 +12,7 @@ Contract:
 - in-memory cache TTL: **120,000 ms**;
 - persistent warm-index reuse TTL: **6 hours maximum**;
 - Overview, Large Files, Duplicates and Smart Categories reuse the same inventory when valid;
-- warm reuse re-stats known files and checks MediaStore generation where available;
+- warm reuse verifies persisted directory fingerprints and MediaStore generation where available, then hydrates persisted file metadata from SQLite without a filesystem stat per known file;
 - cleanup completion marks both in-memory and persistent reuse stale immediately;
 - manual full-index refresh is available;
 - destructive actions never trust the cache/index alone and retain per-file live revalidation.
@@ -60,10 +60,10 @@ Current optimizations:
 
 Deterministic Step 9 fixture: **1,253 files**.
 
-The next executable FULL/physical performance evidence must record:
+Physical evidence records:
 - cold inventory elapsed time;
 - warm persistent-index latency;
-- known-path restat count;
+- warm persistent HIT and cold/warm file-count delta;
 - duplicate-stage candidate counts;
 - hash-cache hits/misses;
 - bytes hashed;
@@ -80,5 +80,41 @@ No wall-clock PASS threshold is fabricated before representative physical measur
 
 Current state:
 - architecture and measurement hooks: implemented;
-- exact-head runtime measurements: deferred;
+- exact-head primary-device runtime measurement: PASS on Xiaomi M2101K6G / SDK 33;
+- 87,136 files: cold 61,064 ms, warm 2,599 ms (23.50x), hot-memory 1 ms;
+- 4-worker hashing was fastest at 1,267.33 MiB/s with thermal status 0 -> 0;
+- second-device evidence remains required for Golden promotion;
 - Store certification: not claimed.
+
+
+## Step 9.7 on-device benchmark
+
+The production code now contains a read-only Performance Lab.
+
+One run captures:
+- cold wall-clock storage traversal + index reconciliation;
+- scanner-only cold traversal time;
+- warm persistent-index request after memory-cache eviction;
+- hot in-memory request;
+- total file count;
+- deterministic real-file hash sample;
+- serial first-pass pre-warm I/O time;
+- 1/2/4-worker elapsed time and MiB/s on the same warmed sample;
+- peak in-flight worker count;
+- device/SDK/CPU-thread metadata;
+- battery %, battery temperature and Android thermal status when available;
+- observed app heap across benchmark phase boundaries.
+
+Hash sample bounds:
+- max 200 files;
+- max 128 MiB total;
+- each file 4 KiB–32 MiB;
+- persistent hash cache bypassed for worker comparison fairness.
+
+Decision rules:
+- do not assume 4 workers is best;
+- prefer the lowest worker count whose throughput is effectively tied with the best result when it reduces heat;
+- investigate any warm persistent MISS or unexpected cold/warm file-count delta;
+- peak in-flight MUST NOT exceed configured workers.
+
+No benchmark result is accepted until copied from an exact APK running on a physical device.
