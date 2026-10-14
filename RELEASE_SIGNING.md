@@ -9,9 +9,9 @@ Canonical applicationId:
 
 `com.riccardopinato.omnicleaner`
 
-Current recovery version:
-- versionName: `0.13.0-recovery`;
-- versionCode: `13`.
+Current release candidate:
+- versionName: `1.0.0-rc1`;
+- versionCode: `14`.
 
 The APK recovery identity `com.aistudio.foldercleaner.zjijip` is forensic-only
 and is not reused.
@@ -113,4 +113,4 @@ Then validate:
 CI GREEN != PRODUCTION SIGNING VERIFIED.  
 PRODUCTION SIGNING VERIFIED != STORE READY.
 
-Current production signing verdict: **BLOCKED — permanent key/secrets/fingerprint not yet provisioned.**
+Current production signing verdict: **BLOCKED — RC1 source is prepared, but the permanent key/secrets/fingerprint are not yet provisioned.**
