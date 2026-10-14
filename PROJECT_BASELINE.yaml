@@ -1,8 +1,8 @@
 project:
   repository: riccardopinato/Android-Omni-Cleaner
-  status: STEP9_7_HARNESS_IMPLEMENTED_STEP10_RELEASE_PIPELINE_PREPARED
+  status: STEP9_7_PRIMARY_PHYSICAL_PASS_STEP10_RELEASE_PIPELINE_PREPARED
   recovery_started_at: 2026-10-09
-  current_maxi_step: "9.7"
+  current_maxi_step: "10"
 
 factory:
   repository: riccardopinato/App-Factory-Core
@@ -66,7 +66,7 @@ physical_validation:
     - storage
     - file_picker
     - billing
-  status: blocked_until_real_device_execution
+  status: primary_performance_device_pass_release_candidate_capabilities_pending
 
 release:
   ci: full_main_pass_before_step9_7_branch
@@ -74,7 +74,7 @@ release:
   signed_release_workflow: .github/workflows/release-candidate.yml
   signing: fail_closed_lane_prepared_identity_not_provisioned
   expected_certificate_fingerprint_required: true
-  physical_validation: blocked_pending_step9_7_device_report
+  physical_validation: primary_performance_pass_release_candidate_validation_pending
   distribution_validation: debug_prerelease_only
   billing_play_test: blocked_pending_internal_testing
   production_ads_configured: false
@@ -248,7 +248,7 @@ post_audit_hardening:
 
 
 persistent_indexing_bounded_hashing:
-  status: implemented_fast_exact_head_ci_pass
+  status: implemented_primary_physical_performance_pass
   version_name: "0.12.0-recovery"
   version_code: 12
   exact_head: aa5f6e9951237fcfafaa1c361c4aa643c439ad63
@@ -259,7 +259,7 @@ persistent_indexing_bounded_hashing:
     schema_version: 2
     in_memory_ttl_ms: 120000
     persistent_reuse_ttl_ms: 21600000
-    restat_known_paths_before_reuse: true
+    restat_known_paths_before_reuse: false
     mediastore_generation_guard: true
     app_owned_mutation_invalidates: true
     manual_full_refresh: true
@@ -286,15 +286,13 @@ persistent_indexing_bounded_hashing:
     instrumentation_runtime: pending_physical_execution
     locale_parity: pass_305_each
   remaining_evidence:
-    - cold_vs_warm_real_library_benchmark
-    - worker_1_2_4_benchmark
-    - low_end_thermal_battery
+    - second_lower_end_device_for_golden_promotion
     - physical_instrumentation_execution
     - full_applab_certification
 
 
 physical_performance_validation:
-  status: harness_implemented_device_evidence_pending
+  status: primary_physical_device_pass
   version_name: "0.13.0-recovery"
   version_code: 13
   report_format: OMNI_PERF_V1
@@ -314,7 +312,26 @@ physical_performance_validation:
   battery_temperature_measured_when_available: true
   thermal_status_measured_when_available: true
   destructive_actions: false
-  device_evidence: pending
+  device_evidence:
+    source_sha: 436e884886dbc7e034547b3a7b7299a9cd649f7b
+    android_ci_run: 38572476513
+    device: Xiaomi_M2101K6G
+    sdk: 33
+    available_processors: 8
+    files_total: 87136
+    cold_scan_ms: 61064
+    cold_scanner_only_ms: 43167
+    warm_scan_ms: 2599
+    warm_persistent_hit: true
+    warm_speedup_x: 23.50
+    hot_memory_scan_ms: 1
+    hot_memory_hit: true
+    hash_1_workers_mib_s: 573.99
+    hash_2_workers_mib_s: 920.86
+    hash_4_workers_mib_s: 1267.33
+    thermal_start: 0
+    thermal_end: 0
+    destructive_actions: false
 
 step10_store_release:
   status: pipeline_prepared_external_gates_blocked
