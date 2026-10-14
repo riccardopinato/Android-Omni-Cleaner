@@ -256,13 +256,15 @@ persistent_indexing_bounded_hashing:
   debug_apk_release: fast-apk-aa5f6e995123
   persistent_index:
     storage: sqlite
-    schema_version: 1
+    schema_version: 2
     in_memory_ttl_ms: 120000
     persistent_reuse_ttl_ms: 21600000
     restat_known_paths_before_reuse: true
     mediastore_generation_guard: true
     app_owned_mutation_invalidates: true
     manual_full_refresh: true
+    directory_fingerprint_invalidation: true
+    migrated_v1_without_directory_fingerprints_forces_full_reconciliation: true
     destructive_authority: false
   revision_identity:
     physical_identity: device_id_plus_inode
