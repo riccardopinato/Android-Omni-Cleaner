@@ -189,15 +189,36 @@ internal class CleanerController(
             state = state.copy(overview = overview)
         }
 
-    fun runPhysicalPerformanceBenchmark() =
-        runScan(uiContext.getString(R.string.performance_benchmark_running)) {
+    fun runPhysicalPerformanceBenchmark() {
+        val benchmarkLabel = uiContext.getString(R.string.performance_benchmark_running)
+        runScan(benchmarkLabel) {
             state = state.copy(performanceBenchmark = null)
             val benchmark = PhysicalPerformanceBenchmark(context)
             val result = benchmark.run(
                 root = StorageAccess.primaryRoot(),
+                onPhase = { phase ->
+                    scope.launch {
+                        if (state.scanning) {
+                            state = state.copy(
+                                currentOperation = benchmarkLabel + " · " + phase.replace('_', ' '),
+                                indexedFilesChecked = 0,
+                            )
+                        }
+                    }
+                },
+                onProgress = { checked ->
+                    if (checked == 1 || checked % 128 == 0) {
+                        scope.launch {
+                            if (state.scanning) {
+                                state = state.copy(indexedFilesChecked = checked)
+                            }
+                        }
+                    }
+                },
             )
             state = state.copy(performanceBenchmark = result)
         }
+    }
 
     fun scanFolders() = runScan(uiContext.getString(R.string.module_folders)) {
         val folders = fileScanner.scanFolders(
