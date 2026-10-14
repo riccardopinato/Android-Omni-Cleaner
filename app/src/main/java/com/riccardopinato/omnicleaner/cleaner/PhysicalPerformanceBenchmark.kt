@@ -44,6 +44,7 @@ data class PhysicalPerformanceBenchmarkResult(
     val warmPersistentHit: Boolean,
     val warmFilesTotal: Int,
     val hotMemoryScanMillis: Long,
+    val hotMemoryHit: Boolean,
     val benchmarkFiles: Int,
     val benchmarkBytes: Long,
     val hashPrewarmMillis: Long,
@@ -81,6 +82,7 @@ data class PhysicalPerformanceBenchmarkResult(
         appendLine("warm_file_count_delta=${warmFilesTotal - filesTotal}")
         appendLine("warm_speedup_x=${warmSpeedup?.let { String.format(Locale.US, "%.2f", it) } ?: "n/a"}")
         appendLine("hot_memory_scan_ms=$hotMemoryScanMillis")
+        appendLine("hot_memory_hit=$hotMemoryHit")
         appendLine("hash_sample_files=$benchmarkFiles")
         appendLine("hash_sample_bytes=$benchmarkBytes")
         appendLine("hash_prewarm_ms=$hashPrewarmMillis")
@@ -151,11 +153,20 @@ class PhysicalPerformanceBenchmark(
         observedHeapMax = max(observedHeapMax, usedHeap(runtime))
 
         onPhase?.invoke("hot_memory_inventory")
+        var hotStageObserved = false
         val hotStarted = SystemClock.elapsedRealtimeNanos()
-        StorageInventoryRepository.snapshot(root = root)
+        StorageInventoryRepository.snapshot(
+            root = root,
+            onStage = { stage ->
+                hotStageObserved = true
+                onPhase?.invoke("hot_$stage")
+            },
+        )
         val hotMillis = elapsedMillisSince(hotStarted)
+        val hotMemoryHit = !hotStageObserved
         observedHeapMax = max(observedHeapMax, usedHeap(runtime))
 
+        onPhase?.invoke("select_hash_sample")
         val hashSample = selectHashSample(cold.inventory.files)
         val scanner = FileInventoryScanner()
 
@@ -238,6 +249,7 @@ class PhysicalPerformanceBenchmark(
             warmPersistentHit = warm.persistentHit,
             warmFilesTotal = warm.inventory.files.size,
             hotMemoryScanMillis = hotMillis,
+            hotMemoryHit = hotMemoryHit,
             benchmarkFiles = hashSample.size,
             benchmarkBytes = hashSample.sumOf { it.size },
             hashPrewarmMillis = prewarmMillis,
