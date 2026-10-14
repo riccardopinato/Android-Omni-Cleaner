@@ -1,6 +1,6 @@
 # Android Omni Cleaner — Recovery & Product Roadmap
 
-Factory baseline: `7b408dd8b14ea7785e923c6eed624eb41c193698` (Master v26.3 / Golden Index v14)
+Factory baseline: `03406ef5e511dfc580b67967c67a11ab58e20141` (Master v26.3 / Golden Index v15)
 
 ## MAXI STEP 0 — Forensic Recovery
 **Status: COMPLETE**
@@ -145,7 +145,7 @@ See `STEP7_PRODUCT_EXPANSION.md`.
 
 Implemented:
 - complete EN / IT / ES / FR / PT resource bundles;
-- exact 305-key parity across all five locales;
+- exact 319-key parity across all five locales;
 - exact format-placeholder parity;
 - manual System / EN / IT / ES / FR / PT language selector;
 - lightweight persisted locale override applied at Activity context boundary;
@@ -256,7 +256,7 @@ Implemented:
 
 Evidence:
 - exact-head Android CI run `38484281905`: PASS;
-- locale parity: 305 keys in EN/IT/ES/FR/PT;
+- locale parity: 319 keys in EN/IT/ES/FR/PT;
 - JVM regression suite: PASS;
 - Android instrumentation sources compile in PR lane;
 - debug APK generated at exact head `aa5f6e9951237fcfafaa1c361c4aa643c439ad63`;
@@ -271,10 +271,62 @@ Pending:
 
 See `STEP9_6_PERSISTENT_INDEXING_BOUNDED_HASHING.md`.
 
-## MAXI STEP 10 — Store & Release Certification
+## MAXI STEP 9.7 — Physical Performance Validation
+**Status: HARNESS IMPLEMENTED — REAL-DEVICE EVIDENCE PENDING**
 
-Persistent signing, exact artifact identity, physical evidence, AAB, Internal Testing and final
-`CERTIFIED / NOT CERTIFIED / BLOCKED` verdict.
+Implemented:
+- in-app Performance Lab in Clean;
+- one forced cold full inventory measurement;
+- persistent warm reuse measured after dropping only the memory cache;
+- immediate hot in-memory measurement;
+- deterministic real-file SHA-256 benchmark with 1 / 2 / 4 workers;
+- bounded sample: max 200 files / 128 MiB / 4 KiB–32 MiB per file;
+- peak in-flight worker measurement;
+- battery %, battery temperature and Android thermal-state capture when available;
+- copyable `OMNI_PERF_V1` report for evidence;
+- benchmark is read-only and never authorizes cleanup;
+- version `0.13.0-recovery` / code 13.
+
+Pending physical evidence:
+- run the exact Step 9.7 APK on a real device;
+- compare cold vs warm index latency;
+- compare 1 / 2 / 4 worker throughput;
+- evaluate thermal/battery effect;
+- apply only optimizations justified by measured evidence;
+- second representative device required before promoting the two performance Goldens beyond DRAFT.
+
+See `STEP9_7_PHYSICAL_PERFORMANCE_VALIDATION.md`.
+
+## MAXI STEP 10 — Store & Release Certification
+**Status: RELEASE PIPELINE PREPARED — EXTERNAL GATES BLOCKED**
+
+Implemented in source:
+- full CI compiles release APK + AAB;
+- production signing configuration is fail-closed;
+- dedicated manual `Android Release Candidate` workflow;
+- persistent signing secrets required;
+- expected public certificate SHA-256 required;
+- signer mismatch fails the workflow;
+- signed APK/AAB SHA-256 evidence generated;
+- production AdMob IDs required when production monetization is enabled;
+- no debug-signing fallback;
+- no fabricated provider IDs.
+
+External/user-action gates:
+- generate and securely back up permanent release/upload keystore;
+- configure GitHub signing secrets + expected certificate fingerprint;
+- provision Play Console app and Play App Signing;
+- upload exact signed AAB to Internal Testing;
+- activate/test `premium_unlock`;
+- provision production AdMob / UMP / app-ads.txt;
+- publish final privacy-policy URL;
+- complete physical storage / SAF / MediaStore / Billing validation;
+- reconcile Data Safety and MANAGE_EXTERNAL_STORAGE declarations against the exact release artifact.
+
+Current certification verdict:
+**BLOCKED** until those external gates are evidenced.
+
+See `STEP10_STORE_RELEASE_CERTIFICATION.md`.
 
 
 ## FAST DEVELOPMENT MODE
