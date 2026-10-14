@@ -47,10 +47,10 @@ GitHub Secrets:
 The workflow:
 1. refuses to run without persistent signing identity;
 2. restores the keystore only in the runner temp directory;
-3. runs locale parity, lint, JVM tests and androidTest compilation;
+3. runs locale parity, release lint, JVM tests and androidTest compilation;
 4. builds release APK + AAB;
-5. verifies the APK signer;
-6. compares actual certificate SHA-256 with the expected pinned fingerprint;
+5. verifies both APK and AAB signers;
+6. compares both certificate SHA-256 fingerprints with the expected pinned fingerprint;
 7. generates artifact SHA-256;
 8. uploads signed APK, AAB and release-identity evidence;
 9. removes the temporary keystore.
