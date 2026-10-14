@@ -42,6 +42,8 @@ One run measures:
 
 4. **bounded hashing benchmark**
    - chooses a deterministic, bounded real-file sample;
+   - performs one untimed-for-worker-choice serial pre-warm pass and records its elapsed I/O cost separately;
+   - compares 1 / 2 / 4 workers only after that pre-warm, reducing page-cache order bias;
    - individual file size: 4 KiB–32 MiB;
    - at most 200 files;
    - at most 128 MiB total;
@@ -75,6 +77,8 @@ warm_scan_ms
 warm_persistent_hit
 warm_speedup_x
 hot_memory_scan_ms
+hash_prewarm_ms
+hash_prewarm_bytes
 hash_1_workers_ms
 hash_2_workers_ms
 hash_4_workers_ms
