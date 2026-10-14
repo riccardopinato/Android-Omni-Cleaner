@@ -56,6 +56,17 @@ Required repository Actions variable:
 The expected certificate SHA-256 is public identity metadata; the private key and
 passwords are secrets.
 
+## Windows bootstrap helper
+
+For the Windows development machine, use:
+- `SIGNING_BOOTSTRAP_WINDOWS.md`;
+- `tools/bootstrap-release-signing.ps1`.
+
+The helper creates the upload keystore outside the repository, exports the public
+certificate/fingerprint, prepares the Base64 GitHub secret value and can
+optionally configure GitHub through an authenticated `gh` session. Private
+key material and passwords never belong in chat or source control.
+
 ## One-time key gate
 
 Before the first production release candidate:
