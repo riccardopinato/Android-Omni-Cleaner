@@ -235,12 +235,12 @@ Evidence boundary:
 See `STEP9_5_AUDIT_HARDENING.md`.
 
 ## MAXI STEP 9.6 — Persistent Indexing & Bounded Parallel Hashing
-**Status: IMPLEMENTED — FAST EXACT-HEAD CI PASS / PHYSICAL PERFORMANCE EVIDENCE PENDING**
+**Status: IMPLEMENTED — FAST EXACT-HEAD CI PASS / PRIMARY PHYSICAL PERFORMANCE PASS**
 
 Implemented:
 - app-private SQLite persistent file index across process/app restart;
 - 120 s in-memory cache remains first-level, persistent reuse extends warm-start behavior;
-- every persisted known path is re-statted before warm reuse;
+- warm reuse validates directory fingerprints / MediaStore generation and hydrates persisted file metadata from SQLite without a per-file filesystem stat;
 - MediaStore generation mismatch rejects stale persistent snapshots where available;
 - manual full-index refresh exposed in Clean;
 - directory fingerprints reject stale warm snapshots and force reconciliation after tree changes;
@@ -263,17 +263,24 @@ Evidence:
 - debug APK generated at exact head `aa5f6e9951237fcfafaa1c361c4aa643c439ad63`;
 - App Factory Golden candidates prepared in Core PR #9 (Golden Index v15 candidate).
 
+Physical evidence:
+- exact Step 9.7 APK on Xiaomi M2101K6G / SDK 33 / 8 processors;
+- 87,136-file library;
+- cold inventory 61,064 ms;
+- warm persistent HIT 2,599 ms, 23.50x speedup, file-count delta 0;
+- hot-memory HIT 1 ms;
+- hashing: 1 worker 573.99 MiB/s, 2 workers 920.86 MiB/s, 4 workers 1,267.33 MiB/s;
+- thermal status 0 -> 0, battery temperature 35.3 C -> 37.2 C;
+- bounded peak in-flight respected exactly.
+
 Pending:
-- instrumentation execution on physical device;
-- cold vs warm real-library timing;
-- 1/2/4-worker throughput benchmark;
-- low-end thermal/battery evidence;
+- second representative lower-end/older physical device for Golden promotion;
 - full AppLab/certification lane.
 
 See `STEP9_6_PERSISTENT_INDEXING_BOUNDED_HASHING.md`.
 
 ## MAXI STEP 9.7 — Physical Performance Validation
-**Status: HARNESS IMPLEMENTED — REAL-DEVICE EVIDENCE PENDING**
+**Status: PRIMARY PHYSICAL DEVICE PASS — SECOND-DEVICE GOLDEN PROMOTION EVIDENCE PENDING**
 
 Implemented:
 - in-app Performance Lab in Clean;
@@ -288,13 +295,19 @@ Implemented:
 - benchmark is read-only and never authorizes cleanup;
 - version `0.13.0-recovery` / code 13.
 
-Pending physical evidence:
-- run the exact Step 9.7 APK on a real device;
-- compare cold vs warm index latency;
-- compare 1 / 2 / 4 worker throughput;
-- evaluate thermal/battery effect;
-- apply only optimizations justified by measured evidence;
-- second representative device required before promoting the two performance Goldens beyond DRAFT.
+Validated physical evidence:
+- exact head `436e884886dbc7e034547b3a7b7299a9cd649f7b`;
+- Android CI #370 PASS;
+- Xiaomi M2101K6G / SDK 33 / 8 processors;
+- 87,136 files;
+- cold 61,064 ms;
+- warm persistent 2,599 ms / HIT / 23.50x / file-count delta 0;
+- hot memory 1 ms / explicit HIT;
+- 4 workers fastest at 1,267.33 MiB/s with no thermal-status escalation;
+- benchmark remained non-destructive.
+
+Remaining:
+- second representative lower-end/older device before promoting the two performance Goldens beyond DRAFT.
 
 See `STEP9_7_PHYSICAL_PERFORMANCE_VALIDATION.md`.
 
