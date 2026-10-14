@@ -20,6 +20,7 @@ class PhysicalPerformanceBenchmarkTest {
             warmPersistentHit = true,
             warmFilesTotal = 10_000,
             hotMemoryScanMillis = 2L,
+            hotMemoryHit = true,
             benchmarkFiles = 20,
             benchmarkBytes = 64L * 1024L * 1024L,
             hashPrewarmMillis = 1_200L,
@@ -46,6 +47,7 @@ class PhysicalPerformanceBenchmarkTest {
         assertTrue("warm_scan_ms=1000" in report)
         assertTrue("warm_persistent_hit=true" in report)
         assertTrue("warm_speedup_x=4.00" in report)
+        assertTrue("hot_memory_hit=true" in report)
         assertTrue("hash_prewarm_ms=1200" in report)
         assertTrue("hash_prewarm_bytes=67108864" in report)
         assertTrue("hash_1_workers_peak_inflight=1" in report)
