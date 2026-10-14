@@ -19,10 +19,18 @@ data class IndexedFile(
     val physicalIdentity: PhysicalFileIdentity? = revision?.physicalIdentity,
 )
 
+data class IndexedDirectory(
+    val file: File,
+    val modified: Long,
+    val physicalIdentity: PhysicalFileIdentity? = null,
+    val revision: StrongFileRevision? = null,
+)
+
 data class FileInventory(
     val files: List<IndexedFile>,
     val unreadable: Int,
     val excludedDirectories: Int,
+    val directories: List<IndexedDirectory> = emptyList(),
 )
 
 enum class FolderStatus { COMPLETELY_EMPTY, BELOW_THRESHOLD }
