@@ -1,6 +1,6 @@
 # Android Omni Cleaner — Performance Budgets
 
-Status: **INSTRUMENTED / RUNTIME EVIDENCE DEFERRED**
+Status: **IN-APP PHYSICAL HARNESS IMPLEMENTED / DEVICE EVIDENCE PENDING**
 
 These budgets make Step 9 measurable instead of relying on qualitative statements.
 
@@ -82,3 +82,35 @@ Current state:
 - architecture and measurement hooks: implemented;
 - exact-head runtime measurements: deferred;
 - Store certification: not claimed.
+
+
+## Step 9.7 on-device benchmark
+
+The production code now contains a read-only Performance Lab.
+
+One run captures:
+- cold wall-clock storage traversal + index reconciliation;
+- scanner-only cold traversal time;
+- warm persistent-index request after memory-cache eviction;
+- hot in-memory request;
+- total file count;
+- deterministic real-file hash sample;
+- 1/2/4-worker elapsed time and MiB/s;
+- peak in-flight worker count;
+- device/SDK/CPU-thread metadata;
+- battery %, battery temperature and Android thermal status when available;
+- observed app heap across benchmark phase boundaries.
+
+Hash sample bounds:
+- max 200 files;
+- max 128 MiB total;
+- each file 4 KiB–32 MiB;
+- persistent hash cache bypassed for worker comparison fairness.
+
+Decision rules:
+- do not assume 4 workers is best;
+- prefer the lowest worker count whose throughput is effectively tied with the best result when it reduces heat;
+- investigate any warm persistent MISS or unexpected cold/warm file-count delta;
+- peak in-flight MUST NOT exceed configured workers.
+
+No benchmark result is accepted until copied from an exact APK running on a physical device.
