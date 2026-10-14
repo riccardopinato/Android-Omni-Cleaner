@@ -1,17 +1,16 @@
 project:
   repository: riccardopinato/Android-Omni-Cleaner
-  status: PERSISTENT_INDEX_BOUNDED_HASHING_IMPLEMENTED_FAST_CI_PASS
+  status: STEP9_7_HARNESS_IMPLEMENTED_STEP10_RELEASE_PIPELINE_PREPARED
   recovery_started_at: 2026-10-09
-  current_maxi_step: "9.6"
+  current_maxi_step: "9.7"
 
 factory:
   repository: riccardopinato/App-Factory-Core
-  commit_sha: 7b408dd8b14ea7785e923c6eed624eb41c193698
+  commit_sha: 03406ef5e511dfc580b67967c67a11ab58e20141
   master_version: "26.3"
-  golden_index_version: 14
+  golden_index_version: 15
   golden_registry_version: 2
-  candidate_golden_pr: 9
-  candidate_golden_head: 79503fa5cc3b34686c46cc93f3df42086912f6f9
+  performance_goldens_merged: true
   selected_candidate_goldens:
     - incremental_persistent_indexing_v1_draft
     - bounded_parallel_hashing_v1_draft
@@ -43,8 +42,8 @@ identity:
   debug_application_id: com.riccardopinato.omnicleaner.debug
   legacy_application_id: com.aistudio.foldercleaner.zjijip
   donor_apk_sha256: c77f48bbbac1d8e5e16ee44dab67346f3caa0f846bd117e5b05d2cb3b2a88310
-  recovery_version_name: "0.12.0-recovery"
-  recovery_version_code: 12
+  recovery_version_name: "0.13.0-recovery"
+  recovery_version_code: 13
   signing_lane: internal_pending
 
 parity:
@@ -70,11 +69,14 @@ physical_validation:
   status: blocked_until_real_device_execution
 
 release:
-  ci: fast_exact_head_pass
-  signing: policy_defined_identity_not_provisioned
-  physical_validation: blocked
-  distribution_validation: exact_head_debug_prerelease_pass
-  billing_play_test: blocked
+  ci: full_main_pass_before_step9_7_branch
+  unsigned_aab_compile_gate: enabled
+  signed_release_workflow: .github/workflows/release-candidate.yml
+  signing: fail_closed_lane_prepared_identity_not_provisioned
+  expected_certificate_fingerprint_required: true
+  physical_validation: blocked_pending_step9_7_device_report
+  distribution_validation: debug_prerelease_only
+  billing_play_test: blocked_pending_internal_testing
   production_ads_configured: false
   store_ready: false
 
@@ -156,7 +158,7 @@ localization_accessibility:
     - pt
   manual_language_selector: true
   system_language_fallback: true
-  locale_key_parity: pass_305_each
+  locale_key_parity: pass_319_each
   locale_placeholder_parity: pass
   android_locale_config: true
   talkback_toggle_rows: true
@@ -287,3 +289,49 @@ persistent_indexing_bounded_hashing:
     - low_end_thermal_battery
     - physical_instrumentation_execution
     - full_applab_certification
+
+
+physical_performance_validation:
+  status: harness_implemented_device_evidence_pending
+  version_name: "0.13.0-recovery"
+  version_code: 13
+  report_format: OMNI_PERF_V1
+  cold_full_inventory: true
+  warm_persistent_inventory: true
+  hot_memory_inventory: true
+  hash_worker_benchmarks:
+    - 1
+    - 2
+    - 4
+  hash_sample_max_files: 200
+  hash_sample_max_bytes: 134217728
+  hash_sample_min_file_bytes: 4096
+  hash_sample_max_file_bytes: 33554432
+  peak_inflight_measured: true
+  battery_percent_measured_when_available: true
+  battery_temperature_measured_when_available: true
+  thermal_status_measured_when_available: true
+  destructive_actions: false
+  device_evidence: pending
+
+step10_store_release:
+  status: pipeline_prepared_external_gates_blocked
+  release_candidate_workflow: .github/workflows/release-candidate.yml
+  release_signing_required: true
+  signing_secrets:
+    - ANDROID_KEYSTORE_BASE64
+    - ANDROID_KEYSTORE_PASSWORD
+    - ANDROID_KEY_ALIAS
+    - ANDROID_KEY_PASSWORD
+  expected_cert_repository_variable: OMNI_EXPECTED_CERT_SHA256
+  signed_apk: pending
+  signed_aab: pending
+  artifact_sha256: pending
+  play_internal_testing: pending
+  premium_unlock_provider_validation: pending
+  admob_production_ids: pending
+  ump_provider_configuration: pending
+  app_ads_txt_verification: pending
+  privacy_policy_public_url: pending
+  data_safety_final: pending
+  final_verdict: BLOCKED
