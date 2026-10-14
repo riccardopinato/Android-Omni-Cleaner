@@ -96,7 +96,11 @@ object StorageInventoryRepository {
                     val snapshot = StorageInventorySnapshot(
                         rootPath = rootPath,
                         inventory = persisted.inventory,
-                        createdAtMillis = persisted.createdAtMillis,
+                        // The RAM-cache TTL starts when the persisted snapshot is
+                        // hydrated, not when the underlying index was created.
+                        // Otherwise a slow warm validation can make the freshly
+                        // installed memory snapshot expire before this call ends.
+                        createdAtMillis = lockedNow,
                         scanElapsedMillis = 0L,
                         cacheHit = true,
                         persistentHit = true,
