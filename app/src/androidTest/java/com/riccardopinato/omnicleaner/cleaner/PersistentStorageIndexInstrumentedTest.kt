@@ -173,7 +173,7 @@ class PersistentStorageIndexInstrumentedTest {
                     sample_hash, full_hash, last_seen_generation, last_verified_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """.trimIndent(),
-                arrayOf(
+                arrayOf<Any?>(
                     file.absolutePath,
                     metadata.sizeBytes,
                     metadata.modifiedMillis,
