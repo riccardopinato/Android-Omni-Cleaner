@@ -2,11 +2,13 @@ package com.riccardopinato.omnicleaner.cleaner
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.coroutines.coroutineContext
 
 data class StorageInventorySnapshot(
     val rootPath: String,
@@ -52,8 +54,10 @@ object StorageInventoryRepository {
         root: File,
         forceRefresh: Boolean = false,
         onProgress: ((checked: Int, currentPath: String) -> Unit)? = null,
+        onStage: ((String) -> Unit)? = null,
         nowMillis: () -> Long = System::currentTimeMillis,
     ): StorageInventorySnapshot {
+        val operationContext = coroutineContext
         val rootPath = canonical(root)
         val now = nowMillis()
         cached?.takeIf { current ->
@@ -76,11 +80,13 @@ object StorageInventoryRepository {
             val index = persistentIndex
 
             if (!forceRefresh && index != null) {
+                onStage?.invoke("persistent_validate")
                 val persisted = withContext(Dispatchers.IO) {
                     index.loadReusableSnapshot(
                         root = root,
                         nowMillis = lockedNow,
                         maxAgeMillis = PERSISTENT_REUSE_TTL_MS,
+                        cancellationCheck = { operationContext.ensureActive() },
                     )
                 }
                 if (
@@ -101,6 +107,7 @@ object StorageInventoryRepository {
                 }
             }
 
+            onStage?.invoke("filesystem_scan")
             val started = nowMillis()
             val inventory = scanner.collect(root, onProgress)
             val finished = nowMillis()
@@ -116,11 +123,13 @@ object StorageInventoryRepository {
 
             if (isInventoryGenerationCurrent(scanGeneration, invalidationGeneration.get())) {
                 if (index != null) {
+                    onStage?.invoke("index_reconcile")
                     withContext(Dispatchers.IO) {
                         index.reconcileFull(
                             root = root,
                             inventory = inventory,
                             completedAtMillis = finished,
+                            cancellationCheck = { operationContext.ensureActive() },
                         )
                     }
                 }
