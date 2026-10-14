@@ -166,6 +166,7 @@ During fast-development mode, pull requests use one exact-head lane:
 ### Persistent indexing & bounded hashing
 
 - app-private SQLite index survives process/app restart;
+- directory fingerprints invalidate warm reuse when the filesystem tree changed;
 - warm reuse re-stats known files instead of blindly trusting persisted rows;
 - MediaStore generation drift invalidates reuse where available;
 - app-owned mutations mark the persistent index stale;
