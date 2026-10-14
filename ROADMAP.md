@@ -312,7 +312,13 @@ Remaining:
 See `STEP9_7_PHYSICAL_PERFORMANCE_VALIDATION.md`.
 
 ## MAXI STEP 10 — Store & Release Certification
-**Status: RELEASE PIPELINE PREPARED — EXTERNAL GATES BLOCKED**
+**Status: RC1 SOURCE FREEZE — SIGNING / PROVIDER / PLAY GATES BLOCKED**
+
+RC1 source freeze:
+- version `1.0.0-rc1` / code 14;
+- Performance Lab is debug-only and hard-blocked in release;
+- release diagnostics are debug-only;
+- no new product features accepted before v1.0 unless required to clear a release blocker.
 
 Implemented in source:
 - full CI compiles release APK + AAB;
