@@ -39,7 +39,9 @@ internal class PersistentStorageIndex(
         root: File,
         nowMillis: Long,
         maxAgeMillis: Long,
+        cancellationCheck: (() -> Unit)? = null,
     ): PersistentInventorySnapshot? = synchronized(lock) {
+        cancellationCheck?.invoke()
         if (statePreferences.getBoolean(KEY_DIRTY, false)) {
             return@synchronized null
         }
@@ -89,6 +91,9 @@ internal class PersistentStorageIndex(
 
             while (cursor.moveToNext()) {
                 directoryCount++
+                if (directoryCount % CANCELLATION_CHECK_INTERVAL == 0) {
+                    cancellationCheck?.invoke()
+                }
                 val directory = File(cursor.getString(pathIndex))
                 val live = FileSystemIdentity.read(directory) ?: return@synchronized null
                 if (!live.isDirectory || live.isSymlink) return@synchronized null
@@ -120,7 +125,9 @@ internal class PersistentStorageIndex(
         }
         if (directoryCount == 0) return@synchronized null
 
+        cancellationCheck?.invoke()
         val files = ArrayList<IndexedFile>()
+        var fileCount = 0
         db.query(
             TABLE_FILES,
             arrayOf(COL_PATH),
@@ -132,6 +139,10 @@ internal class PersistentStorageIndex(
         ).use { cursor ->
             val pathIndex = cursor.getColumnIndexOrThrow(COL_PATH)
             while (cursor.moveToNext()) {
+                fileCount++
+                if (fileCount % CANCELLATION_CHECK_INTERVAL == 0) {
+                    cancellationCheck?.invoke()
+                }
                 val file = File(cursor.getString(pathIndex))
 
                 // Warm reuse avoids walking the directory tree, but it never
@@ -167,7 +178,9 @@ internal class PersistentStorageIndex(
         root: File,
         inventory: FileInventory,
         completedAtMillis: Long,
+        cancellationCheck: (() -> Unit)? = null,
     ) = synchronized(lock) {
+        cancellationCheck?.invoke()
         val db = helper.writableDatabase
         val rootPath = canonical(root)
         db.beginTransaction()
@@ -180,7 +193,10 @@ internal class PersistentStorageIndex(
 
             val generation = (meta(db, META_SCAN_GENERATION)?.toLongOrNull() ?: 0L) + 1L
 
-            for (item in inventory.files) {
+            for ((fileIndex, item) in inventory.files.withIndex()) {
+                if (fileIndex % CANCELLATION_CHECK_INTERVAL == 0) {
+                    cancellationCheck?.invoke()
+                }
                 val path = item.file.absolutePath
                 val extension = item.file.extension.lowercase(Locale.ROOT)
                 val revision = item.revision
@@ -244,7 +260,10 @@ internal class PersistentStorageIndex(
                 }
             }
 
-            for (directory in inventory.directories) {
+            for ((directoryIndex, directory) in inventory.directories.withIndex()) {
+                if (directoryIndex % CANCELLATION_CHECK_INTERVAL == 0) {
+                    cancellationCheck?.invoke()
+                }
                 val identity = directory.physicalIdentity
                 val revision = directory.revision
                 val values = ContentValues().apply {
@@ -488,6 +507,7 @@ internal class PersistentStorageIndex(
         const val DATABASE_VERSION = 2
         const val INDEX_STATE_PREFERENCES_PREFIX = "storage_index_state_"
         const val KEY_DIRTY = "index_dirty"
+        const val CANCELLATION_CHECK_INTERVAL = 128
 
         const val TABLE_FILES = "indexed_files"
         const val TABLE_DIRECTORIES = "indexed_directories"
