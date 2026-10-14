@@ -379,7 +379,7 @@ class FileInventoryScanner {
         return md.digest().joinToString("") { "%02x".format(it) }
     }
 
-    private suspend fun digestCancellable(file: File): String {
+    internal suspend fun digestCancellable(file: File): String {
         val md = MessageDigest.getInstance("SHA-256")
         FileInputStream(file).use { input ->
             val buffer = ByteArray(IO_BUFFER_BYTES)
