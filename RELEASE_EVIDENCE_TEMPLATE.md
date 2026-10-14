@@ -54,6 +54,7 @@ cold_scan_ms=
 warm_scan_ms=
 warm_persistent_hit=
 warm_speedup_x=
+hash_prewarm_ms=
 hash_1_workers_mib_s=
 hash_2_workers_mib_s=
 hash_4_workers_mib_s=
