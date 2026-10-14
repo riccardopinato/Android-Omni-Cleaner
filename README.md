@@ -17,7 +17,7 @@ Recovery and productization of the lost-source Android cleaner APK.
 **MAXI STEP 9.5 — Post-Audit P1/P2/P3 Hardening: SOURCE COMPLETE**  
 **MAXI STEP 9.6 — Persistent Indexing & Bounded Hashing: IMPLEMENTED (CI + PRIMARY PHYSICAL PASS)**  
 **MAXI STEP 9.7 — Physical Performance Validation: PRIMARY PHYSICAL DEVICE PASS**  
-**MAXI STEP 10 — Store & Release Certification: PIPELINE PREPARED (external gates blocked)**
+**MAXI STEP 10 — Store & Release Certification: RC1 SOURCE FREEZE (signing/provider gates pending)**
 
 The recovered cleaner, safety model, monetization architecture, redesigned shell, Smart Categories, localization/accessibility layer and primary-device performance validation are complete through Step 9.7. Play/AdMob provider validation and release-artifact certification remain separate Step 10 gates.
 
@@ -33,10 +33,10 @@ The recovered cleaner, safety model, monetization architecture, redesigned shell
 - colorful five-surface UI shell with later visual refinement supported
 - no fake booster/antivirus claims
 
-## Current recovery version
+## Current release-candidate version
 
 - applicationId: `com.riccardopinato.omnicleaner`
-- version: `0.13.0-recovery` / code 13
+- version: `1.0.0-rc1` / code 14
 - minSdk 24
 - targetSdk 36
 - compileSdk 37
@@ -181,7 +181,7 @@ Exact-head development evidence for the first implementation: Android CI run `38
 
 ## Step 9.7 Performance Lab
 
-The Clean workspace includes a read-only on-device benchmark that measures:
+Debug builds include a read-only on-device Performance Lab that measures:
 - cold full storage traversal;
 - persistent warm reuse after dropping only the in-memory cache;
 - hot in-memory reuse;
@@ -189,7 +189,7 @@ The Clean workspace includes a read-only on-device benchmark that measures:
 - peak in-flight workers;
 - battery/temperature/thermal state when Android exposes them.
 
-The generated `OMNI_PERF_V1` report can be copied directly into the project chat for evidence-driven tuning. Primary-device validation on Xiaomi M2101K6G / SDK 33 passed with 87,136 files: cold 61,064 ms, warm persistent 2,599 ms (23.50x), hot memory 1 ms, and 4-worker SHA-256 throughput 1,267.33 MiB/s with no thermal-status escalation.
+The generated `OMNI_PERF_V1` report can be copied directly into the project chat for evidence-driven tuning. The Performance Lab is hidden and blocked in release builds. Primary-device validation on Xiaomi M2101K6G / SDK 33 passed with 87,136 files: cold 61,064 ms, warm persistent 2,599 ms (23.50x), hot memory 1 ms, and 4-worker SHA-256 throughput 1,267.33 MiB/s with no thermal-status escalation.
 
 ## Step 10 release candidate
 
