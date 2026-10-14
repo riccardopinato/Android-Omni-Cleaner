@@ -9,9 +9,9 @@ Canonical applicationId:
 
 `com.riccardopinato.omnicleaner`
 
-Current recovery version:
-- versionName: `0.13.0-recovery`;
-- versionCode: `13`.
+Current release candidate:
+- versionName: `1.0.0-rc1`;
+- versionCode: `14`.
 
 The APK recovery identity `com.aistudio.foldercleaner.zjijip` is forensic-only
 and is not reused.
@@ -82,8 +82,8 @@ The release workflow:
 - restores the keystore only under `$RUNNER_TEMP`;
 - builds release APK + AAB;
 - locates Android `apksigner`;
-- reads the actual APK certificate SHA-256;
-- normalizes and compares it against `OMNI_EXPECTED_CERT_SHA256`;
+- reads the actual APK and AAB certificate SHA-256 fingerprints;
+- normalizes and compares both against `OMNI_EXPECTED_CERT_SHA256`;
 - fails on mismatch;
 - generates SHA-256 for APK and AAB;
 - records source SHA + workflow run + certificate SHA-256;
@@ -100,6 +100,8 @@ versionCode
 sourceSha
 workflowRun
 certificateSha256
+apkCertificateSha256
+aabCertificateSha256
 apkSha256
 aabSha256
 signingLane=PRODUCTION
@@ -113,4 +115,4 @@ Then validate:
 CI GREEN != PRODUCTION SIGNING VERIFIED.  
 PRODUCTION SIGNING VERIFIED != STORE READY.
 
-Current production signing verdict: **BLOCKED — permanent key/secrets/fingerprint not yet provisioned.**
+Current production signing verdict: **BLOCKED — RC1 source is prepared, but the permanent key/secrets/fingerprint are not yet provisioned.**

@@ -6,8 +6,8 @@ Verdict: `BLOCKED | NOT CERTIFIED | CERTIFIED`
 
 ```text
 applicationId=com.riccardopinato.omnicleaner
-versionName=
-versionCode=
+versionName=1.0.0-rc1
+versionCode=14
 sourceSha=
 factoryBaseline=03406ef5e511dfc580b67967c67a11ab58e20141
 factoryMaster=26.3
@@ -19,6 +19,8 @@ factoryGoldenIndex=15
 ```text
 signingLane=PRODUCTION
 certificateSha256=
+apkCertificateSha256=
+aabCertificateSha256=
 releaseWorkflowRun=
 apkSha256=
 aabSha256=
@@ -30,7 +32,8 @@ Evidence:
 - [ ] second secure backup;
 - [ ] backup verified readable;
 - [ ] expected certificate fingerprint pinned;
-- [ ] actual signer fingerprint matches;
+- [ ] APK signer fingerprint matches;
+- [ ] AAB signer fingerprint matches;
 - [ ] secrets absent from logs/artifacts.
 
 ## Build gates
@@ -41,7 +44,8 @@ Evidence:
 - [ ] androidTest APK compilation;
 - [ ] release APK;
 - [ ] release AAB;
-- [ ] signer verification;
+- [ ] APK signer verification;
+- [ ] AAB signer verification;
 - [ ] SHA-256 evidence.
 
 ## Step 9.7 physical performance
@@ -54,6 +58,8 @@ cold_scan_ms=
 warm_scan_ms=
 warm_persistent_hit=
 warm_speedup_x=
+hot_memory_scan_ms=
+hot_memory_hit=
 hash_prewarm_ms=
 hash_1_workers_mib_s=
 hash_2_workers_mib_s=

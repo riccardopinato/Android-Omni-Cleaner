@@ -9,7 +9,7 @@ class PhysicalPerformanceBenchmarkTest {
     fun reportContainsStableEvidenceKeys() {
         val result = PhysicalPerformanceBenchmarkResult(
             capturedAtMillis = 123L,
-            appVersion = "0.13.0-recovery-debug",
+            appVersion = "1.0.0-rc1-debug",
             device = "Example Phone",
             sdk = 36,
             availableProcessors = 8,

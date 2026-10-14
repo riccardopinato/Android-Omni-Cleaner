@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.riccardopinato.omnicleaner.BuildConfig
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.BigFileItem
 import com.riccardopinato.omnicleaner.cleaner.BigFileSizeFilter
@@ -190,6 +191,7 @@ internal class CleanerController(
         }
 
     fun runPhysicalPerformanceBenchmark() {
+        if (!BuildConfig.DEBUG) return
         val benchmarkLabel = uiContext.getString(R.string.performance_benchmark_running)
         runScan(benchmarkLabel) {
             state = state.copy(performanceBenchmark = null)

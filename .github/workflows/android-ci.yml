@@ -55,7 +55,7 @@ jobs:
 
       - name: Full main/manual verification
         if: github.event_name != 'pull_request'
-        run: ./gradlew lintDebug testDebugUnitTest assembleDebug assembleDebugAndroidTest assembleRelease bundleRelease --stacktrace
+        run: ./gradlew lintDebug lintRelease testDebugUnitTest assembleDebug assembleDebugAndroidTest assembleRelease bundleRelease --stacktrace
 
       - name: Publish exact-head development APK
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository

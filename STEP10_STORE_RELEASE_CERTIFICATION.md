@@ -1,6 +1,8 @@
 # MAXI STEP 10 — Store & Release Certification
 
-Status: **RELEASE PIPELINE PREPARED / EXTERNAL GATES BLOCKED**
+Status: **RC1 SOURCE FREEZE PREPARED / SIGNING + EXTERNAL GATES BLOCKED**
+
+Current source freeze: `1.0.0-rc1` / versionCode 14.
 
 This step converts a source-complete app into an artifact-bound, production
 identity that can be tested through Google Play and eventually declared Store
@@ -45,15 +47,23 @@ GitHub Secrets:
 The workflow:
 1. refuses to run without persistent signing identity;
 2. restores the keystore only in the runner temp directory;
-3. runs locale parity, lint, JVM tests and androidTest compilation;
+3. runs locale parity, release lint, JVM tests and androidTest compilation;
 4. builds release APK + AAB;
-5. verifies the APK signer;
-6. compares actual certificate SHA-256 with the expected pinned fingerprint;
+5. verifies both APK and AAB signers;
+6. compares both certificate SHA-256 fingerprints with the expected pinned fingerprint;
 7. generates artifact SHA-256;
 8. uploads signed APK, AAB and release-identity evidence;
 9. removes the temporary keystore.
 
 No debug-signing fallback exists.
+
+## RC1 source-freeze hardening
+
+- production version identity moved off the recovery line;
+- Performance Lab remains available in debug builds but is hidden and hard-blocked in release builds;
+- AdMob load diagnostics are debug-only;
+- targetSdk 36 satisfies the Google Play target-API requirement in force for new apps after 31 August 2026;
+- release scope is frozen: only blocker/regression/policy/signing/provider fixes are accepted before v1.0.
 
 ## One-time user action gate — production key
 
