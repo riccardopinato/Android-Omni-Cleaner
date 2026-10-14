@@ -144,7 +144,7 @@ class FileInventoryScannerTest {
     }
 
     @Test
-    fun duplicateScanReusesRevisionBoundHashes() = runBlocking {
+    fun duplicateScanDoesNotTrustPersistedHashesWithoutStrongRevision() = runBlocking {
         val root = createTempDirectory("omni-hash-cache-").toFile()
         try {
             val first = File(root, "first.bin").apply { writeText("same-content") }
@@ -161,20 +161,20 @@ class FileInventoryScannerTest {
 
                 override fun sampleHash(item: IndexedFile): String? {
                     sampleGets++
-                    return digest
+                    return digest.takeIf { item.revision != null }
                 }
 
                 override fun fullHash(item: IndexedFile): String? {
                     fullGets++
-                    return digest
+                    return digest.takeIf { item.revision != null }
                 }
 
                 override fun putSampleHash(item: IndexedFile, hash: String) {
-                    samplePuts++
+                    if (item.revision != null) samplePuts++
                 }
 
                 override fun putFullHash(item: IndexedFile, hash: String) {
-                    fullPuts++
+                    if (item.revision != null) fullPuts++
                 }
             }
 
