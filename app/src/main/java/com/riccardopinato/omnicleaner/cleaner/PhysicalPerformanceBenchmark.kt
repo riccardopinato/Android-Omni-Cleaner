@@ -54,6 +54,7 @@ data class PhysicalPerformanceBenchmarkResult(
     val thermalStart: Int?,
     val thermalEnd: Int?,
     val observedHeapMaxBytes: Long,
+    val emulatorSignalsDetected: Boolean,
 ) {
     val warmSpeedup: Double?
         get() = if (warmScanMillis > 0L && coldScanMillis > 0L) {
@@ -103,7 +104,7 @@ data class PhysicalPerformanceBenchmarkResult(
         appendLine("thermal_start=${thermalStart ?: "n/a"}")
         appendLine("thermal_end=${thermalEnd ?: "n/a"}")
         appendLine("observed_heap_max_bytes=$observedHeapMaxBytes")
-        appendLine("physical_validation=true")
+        appendLine("emulator_signals_detected=$emulatorSignalsDetected")
         appendLine("destructive_actions=false")
     }
 }
@@ -216,6 +217,7 @@ class PhysicalPerformanceBenchmark(
             thermalStart = thermalStart,
             thermalEnd = thermalEnd,
             observedHeapMaxBytes = observedHeapMax,
+            emulatorSignalsDetected = emulatorSignalsDetected(),
         )
     }
 
@@ -263,6 +265,24 @@ class PhysicalPerformanceBenchmark(
             null
         }
         return BatterySnapshot(percent, temperature)
+    }
+
+    private fun emulatorSignalsDetected(): Boolean {
+        val fingerprint = Build.FINGERPRINT.lowercase(Locale.ROOT)
+        val model = Build.MODEL.lowercase(Locale.ROOT)
+        val manufacturer = Build.MANUFACTURER.lowercase(Locale.ROOT)
+        val product = Build.PRODUCT.lowercase(Locale.ROOT)
+        val hardware = Build.HARDWARE.lowercase(Locale.ROOT)
+
+        return fingerprint.startsWith("generic") ||
+            fingerprint.contains("emulator") ||
+            model.contains("emulator") ||
+            model.contains("android sdk built for") ||
+            manufacturer.contains("genymotion") ||
+            product.contains("sdk") ||
+            product.contains("emulator") ||
+            hardware.contains("goldfish") ||
+            hardware.contains("ranchu")
     }
 
     private fun thermalStatus(): Int? {
