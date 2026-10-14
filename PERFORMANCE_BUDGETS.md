@@ -95,7 +95,8 @@ One run captures:
 - hot in-memory request;
 - total file count;
 - deterministic real-file hash sample;
-- 1/2/4-worker elapsed time and MiB/s;
+- serial first-pass pre-warm I/O time;
+- 1/2/4-worker elapsed time and MiB/s on the same warmed sample;
 - peak in-flight worker count;
 - device/SDK/CPU-thread metadata;
 - battery %, battery temperature and Android thermal status when available;
