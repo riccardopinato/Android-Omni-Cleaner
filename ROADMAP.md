@@ -243,6 +243,7 @@ Implemented:
 - every persisted known path is re-statted before warm reuse;
 - MediaStore generation mismatch rejects stale persistent snapshots where available;
 - manual full-index refresh exposed in Clean;
+- directory fingerprints reject stale warm snapshots and force reconciliation after tree changes;
 - app-owned cleanup invalidates persistent reuse immediately;
 - sample/full hashes persisted only against trustworthy strong revision identity;
 - Android API 27+ uses device/inode + high-resolution ctime for hash-cache binding;
