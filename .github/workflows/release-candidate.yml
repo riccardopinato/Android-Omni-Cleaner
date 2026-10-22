@@ -90,6 +90,34 @@ jobs:
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/omni-release.jks"
           test -s "$RUNNER_TEMP/omni-release.jks"
 
+      - name: Verify restored signing identity
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          EXPECTED_CERT_SHA256: ${{ vars.OMNI_EXPECTED_CERT_SHA256 }}
+        run: |
+          set -Eeuo pipefail
+          export OMNI_VERIFY_STORE_PASS="$ANDROID_KEYSTORE_PASSWORD"
+          KEY_OUTPUT="$(keytool -list -v \
+            -keystore "$RUNNER_TEMP/omni-release.jks" \
+            -alias "$ANDROID_KEY_ALIAS" \
+            -storepass:env OMNI_VERIFY_STORE_PASS \
+            -J-Duser.language=en \
+            -J-Duser.country=US)"
+          KEY_CERT="$(printf '%s\n' "$KEY_OUTPUT" \
+            | awk 'BEGIN { IGNORECASE=1 } /^[[:space:]]*SHA256:/ { line=$0; sub(/^[^:]*:[[:space:]]*/, "", line); gsub(/[^0-9A-Fa-f]/, "", line); print toupper(line); exit }')"
+          EXPECTED="$(printf '%s' "$EXPECTED_CERT_SHA256" \
+            | tr -d ':[:space:]' \
+            | tr '[:lower:]' '[:upper:]')"
+
+          if [ -z "$KEY_CERT" ] || [ "$KEY_CERT" != "$EXPECTED" ]; then
+            echo "::error::Restored release keystore certificate mismatch."
+            echo "Expected: $EXPECTED"
+            echo "Actual:   $KEY_CERT"
+            exit 1
+          fi
+
       - name: Verify locale resource parity
         run: python3 .github/scripts/check-locales.py
 
@@ -123,18 +151,34 @@ jobs:
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -x "$APKSIGNER"
 
-          APK_CERT="$("$APKSIGNER" verify --print-certs "$APK"             | sed -n 's/^Signer #1 certificate SHA-256 digest: //p'             | head -n 1             | tr -d ':[:space:]'             | tr '[:lower:]' '[:upper:]')"
-          AAB_CERT="$(keytool -printcert -jarfile "$AAB"             | sed -n 's/^[[:space:]]*SHA256: //p'             | head -n 1             | tr -d ':[:space:]'             | tr '[:lower:]' '[:upper:]')"
-          EXPECTED="$(printf '%s' "$EXPECTED_CERT_SHA256"             | tr -d ':[:space:]'             | tr '[:lower:]' '[:upper:]')"
+          APK_CERT_OUTPUT="$("$APKSIGNER" verify --verbose --print-certs "$APK" 2>&1)"
+          APK_CERT="$(printf '%s\n' "$APK_CERT_OUTPUT" \
+            | awk 'BEGIN { IGNORECASE=1 } /certificate.*SHA-256.*digest/ { line=$0; sub(/^.*digest:[[:space:]]*/, "", line); gsub(/[^0-9A-Fa-f]/, "", line); print toupper(line); exit }')"
+          AAB_CERT_OUTPUT="$(keytool -printcert -jarfile "$AAB" -J-Duser.language=en -J-Duser.country=US 2>&1)"
+          AAB_CERT="$(printf '%s\n' "$AAB_CERT_OUTPUT" \
+            | awk 'BEGIN { IGNORECASE=1 } /^[[:space:]]*SHA256:/ { line=$0; sub(/^[^:]*:[[:space:]]*/, "", line); gsub(/[^0-9A-Fa-f]/, "", line); print toupper(line); exit }')"
+          EXPECTED="$(printf '%s' "$EXPECTED_CERT_SHA256" \
+            | tr -d ':[:space:]' \
+            | tr '[:lower:]' '[:upper:]')"
 
-          if [ -z "$APK_CERT" ] || [ "$APK_CERT" != "$EXPECTED" ]; then
+          if [ -z "$APK_CERT" ]; then
+            echo "::error::Could not parse the release APK certificate fingerprint."
+            printf '%s\n' "$APK_CERT_OUTPUT"
+            exit 1
+          fi
+          if [ "$APK_CERT" != "$EXPECTED" ]; then
             echo "::error::Release APK certificate mismatch."
             echo "Expected: $EXPECTED"
             echo "Actual:   $APK_CERT"
             exit 1
           fi
 
-          if [ -z "$AAB_CERT" ] || [ "$AAB_CERT" != "$EXPECTED" ]; then
+          if [ -z "$AAB_CERT" ]; then
+            echo "::error::Could not parse the release AAB certificate fingerprint."
+            printf '%s\n' "$AAB_CERT_OUTPUT"
+            exit 1
+          fi
+          if [ "$AAB_CERT" != "$EXPECTED" ]; then
             echo "::error::Release AAB certificate mismatch."
             echo "Expected: $EXPECTED"
             echo "Actual:   $AAB_CERT"
