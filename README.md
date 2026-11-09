@@ -196,3 +196,8 @@ The generated `OMNI_PERF_V1` report can be copied directly into the project chat
 A dedicated manual `Android Release Candidate` workflow now exists. It requires persistent release signing secrets and a pinned expected certificate SHA-256, builds signed release APK + AAB, verifies the signer, generates SHA-256 evidence and fails closed when signing or required production AdMob configuration is missing.
 
 See `RELEASE_SIGNING.md` and `STEP10_STORE_RELEASE_CERTIFICATION.md`.
+
+
+## Template Notion — ricerca
+
+[Apri il catalogo dei template](docs/TEMPLATE_NOTION/README.md): proposte future compatibili con Android Omni Cleaner; non sono contenuti Notion importati.
