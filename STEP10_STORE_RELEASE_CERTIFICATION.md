@@ -1,6 +1,6 @@
 # MAXI STEP 10 — Store & Release Certification
 
-Status: **RC1 SOURCE FREEZE PREPARED / SIGNING + EXTERNAL GATES BLOCKED**
+Status: **RC1 SIGNED ARTIFACT VERIFIED / EXTERNAL GATES BLOCKED**
 
 Current source freeze: `1.0.0-rc1` / versionCode 14.
 
@@ -144,4 +144,4 @@ Before final verdict:
 
 `BLOCKED` while external provider/signing inputs are missing.
 
-Current verdict: **BLOCKED — signing identity, Play Internal Testing, production Ads/UMP and final physical evidence not yet provisioned.**
+Current verdict: **BLOCKED — production signing is verified; Play Internal Testing, Billing, production Ads/UMP, final signed-artifact physical evidence and store declarations remain outstanding.**
