@@ -10,7 +10,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.PathJoin
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
@@ -33,7 +33,7 @@ internal fun OmniNavigationIcon(
     Canvas(modifier = modifier.size(24.dp).clearAndSetSemantics { }) {
         val w = size.width
         val h = size.height
-        val line = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = PathJoin.Round)
+        val line = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
 
         when (symbol) {
             OmniNavigationSymbol.HOME -> {
@@ -94,8 +94,8 @@ internal fun OmniNavigationIcon(
                     moveTo(w * .50f, h * .12f)
                     lineTo(w * .82f, h * .25f)
                     lineTo(w * .78f, h * .61f)
-                    quadraticBezierTo(w * .72f, h * .77f, w * .50f, h * .89f)
-                    quadraticBezierTo(w * .28f, h * .77f, w * .22f, h * .61f)
+                    quadraticTo(w * .72f, h * .77f, w * .50f, h * .89f)
+                    quadraticTo(w * .28f, h * .77f, w * .22f, h * .61f)
                     lineTo(w * .18f, h * .25f)
                     close()
                 }
