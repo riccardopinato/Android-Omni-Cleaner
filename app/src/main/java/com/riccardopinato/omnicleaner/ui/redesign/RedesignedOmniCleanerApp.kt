@@ -81,13 +81,13 @@ import java.util.Locale
 
 private enum class OmniDestination(
     val labelRes: Int,
-    val glyph: String,
+    val icon: OmniNavigationSymbol,
 ) {
-    HOME(R.string.nav_home, "H"),
-    CLEAN(R.string.nav_clean, "C"),
-    GALLERY(R.string.nav_gallery, "G"),
-    PRIVACY(R.string.nav_privacy, "P"),
-    PRO(R.string.nav_pro, "★"),
+    HOME(R.string.nav_home, OmniNavigationSymbol.HOME),
+    CLEAN(R.string.nav_clean, OmniNavigationSymbol.CLEAN),
+    GALLERY(R.string.nav_gallery, OmniNavigationSymbol.GALLERY),
+    PRIVACY(R.string.nav_privacy, OmniNavigationSymbol.PRIVACY),
+    PRO(R.string.nav_pro, OmniNavigationSymbol.PRO),
 }
 
 @Composable
@@ -159,10 +159,9 @@ fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
                         selected = destination == item,
                         onClick = { destinationName = item.name },
                         icon = {
-                            Text(
-                                item.glyph,
-                                fontWeight = FontWeight.Bold,
-                                color = if (destination == item) {
+                            OmniNavigationIcon(
+                                symbol = item.icon,
+                                tint = if (destination == item) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
                                     MaterialTheme.colorScheme.onSurfaceVariant
