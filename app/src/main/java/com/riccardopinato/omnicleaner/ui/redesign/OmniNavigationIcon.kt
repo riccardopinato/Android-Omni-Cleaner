@@ -54,18 +54,26 @@ internal fun OmniNavigationIcon(
                 drawLine(tint, Offset(w * .57f, h * .86f), Offset(w * .57f, h * .62f), strokeWidth = line.width)
             }
             OmniNavigationSymbol.CLEAN -> {
-                val sparkle = Path().apply {
-                    moveTo(w * .49f, h * .10f)
-                    lineTo(w * .60f, h * .39f)
-                    lineTo(w * .89f, h * .50f)
-                    lineTo(w * .60f, h * .61f)
-                    lineTo(w * .49f, h * .90f)
-                    lineTo(w * .38f, h * .61f)
-                    lineTo(w * .09f, h * .50f)
-                    lineTo(w * .38f, h * .39f)
+                // Draw the recognizable broom silhouette from the approved visual language.
+                drawLine(
+                    color = tint,
+                    start = Offset(w * .72f, h * .12f),
+                    end = Offset(w * .43f, h * .58f),
+                    strokeWidth = w * .12f,
+                    cap = StrokeCap.Round,
+                )
+                val bristles = Path().apply {
+                    moveTo(w * .25f, h * .54f)
+                    quadraticTo(w * .44f, h * .62f, w * .60f, h * .53f)
+                    lineTo(w * .70f, h * .80f)
+                    lineTo(w * .60f, h * .87f)
+                    lineTo(w * .53f, h * .76f)
+                    lineTo(w * .46f, h * .91f)
+                    lineTo(w * .38f, h * .76f)
+                    lineTo(w * .29f, h * .84f)
                     close()
                 }
-                drawPath(sparkle, tint, style = line)
+                drawPath(bristles, tint, style = line)
             }
             OmniNavigationSymbol.GALLERY -> {
                 drawRoundRect(
@@ -108,20 +116,20 @@ internal fun OmniNavigationIcon(
                 drawPath(check, tint, style = line)
             }
             OmniNavigationSymbol.PRO -> {
-                val star = Path().apply {
-                    moveTo(w * .50f, h * .10f)
-                    lineTo(w * .61f, h * .39f)
-                    lineTo(w * .91f, h * .39f)
-                    lineTo(w * .67f, h * .58f)
-                    lineTo(w * .76f, h * .88f)
-                    lineTo(w * .50f, h * .71f)
-                    lineTo(w * .24f, h * .88f)
-                    lineTo(w * .33f, h * .58f)
-                    lineTo(w * .09f, h * .39f)
-                    lineTo(w * .39f, h * .39f)
+                val crown = Path().apply {
+                    moveTo(w * .13f, h * .34f)
+                    lineTo(w * .34f, h * .58f)
+                    lineTo(w * .50f, h * .22f)
+                    lineTo(w * .66f, h * .58f)
+                    lineTo(w * .87f, h * .34f)
+                    lineTo(w * .82f, h * .82f)
+                    lineTo(w * .18f, h * .82f)
                     close()
                 }
-                drawPath(star, tint, style = line)
+                drawPath(crown, tint, style = line)
+                drawCircle(tint, radius = w * .042f, center = Offset(w * .13f, h * .29f))
+                drawCircle(tint, radius = w * .042f, center = Offset(w * .50f, h * .16f))
+                drawCircle(tint, radius = w * .042f, center = Offset(w * .87f, h * .29f))
             }
         }
     }
