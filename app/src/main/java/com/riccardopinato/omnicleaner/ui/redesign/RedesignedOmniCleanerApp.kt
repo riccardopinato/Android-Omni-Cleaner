@@ -26,6 +26,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -91,7 +92,11 @@ private enum class OmniDestination(
 }
 
 @Composable
-fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
+fun RedesignedOmniCleanerApp(
+    viewModel: OmniCleanerViewModel,
+    darkTheme: Boolean,
+    onToggleTheme: () -> Unit,
+) {
     val context = LocalContext.current
     val controller = viewModel.cleanerController
     val monetizationRuntime = rememberMonetizationRuntime()
@@ -151,7 +156,7 @@ fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = if (darkTheme) Color(0xFF111B38) else Color(0xFFF7FAFF),
                 tonalElevation = 0.dp,
             ) {
                 OmniDestination.entries.forEach { item ->
@@ -169,6 +174,11 @@ fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
                             )
                         },
                         label = { Text(stringResource(item.labelRes)) },
+                        colors = NavigationBarItemDefaults.colors(
+                            indicatorColor = if (darkTheme) Color(0xFF4D278F) else Color(0xFFD4E4FF),
+                            selectedTextColor = if (darkTheme) Color.White else Color(0xFF174EE5),
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
                     )
                 }
             }
@@ -179,6 +189,7 @@ fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
+            OmniPremiumWaveBackground(dark = darkTheme)
             OmniDestination.entries.forEach { item ->
                 val active = destination == item
                 Box(
@@ -203,7 +214,9 @@ fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
                         ),
                 ) {
                     when (item) {
-                        OmniDestination.HOME -> HomeScreen(
+                        OmniDestination.HOME -> OmniPremiumHome(
+                            dark = darkTheme,
+                            onToggleTheme = onToggleTheme,
                             state = state,
                             premium = entitlement.isPremium,
                             modifier = Modifier.fillMaxSize(),
