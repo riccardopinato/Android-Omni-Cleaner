@@ -58,8 +58,8 @@
     <string name="nav_privacy">Privacidade</string>
     <string name="nav_pro">Pro</string>
 
-    <string name="redesign_home_eyebrow">Armazenamento simplificado</string>
-    <string name="redesign_home_subtitle">Uma visão clara do que ocupa espaço, com ações seguras sempre sob o seu controlo.</string>
+    <string name="redesign_home_eyebrow">Limpeza inteligente</string>
+    <string name="redesign_home_subtitle">Mais espaço, organização e privacidade para o seu Android.</string>
     <string name="redesign_storage_detail">%1$s livres de %2$s no total</string>
     <string name="redesign_storage_waiting">A preparar informações do armazenamento</string>
     <string name="redesign_metric_large_files">Ficheiros grandes</string>
