@@ -1,6 +1,7 @@
 package com.riccardopinato.omnicleaner.ui.redesign
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -70,35 +72,19 @@ internal fun OmniPremiumWaveBackground(dark: Boolean) {
 }
 
 @Composable
-internal fun OmniPremiumBroomMark(modifier: Modifier = Modifier, framed: Boolean = true) {
-    Box(
-        modifier = modifier.size(54.dp).then(
-            if (framed) Modifier.background(
-                Brush.linearGradient(listOf(Color(0xFF02D8FB), Color(0xFF1B62FF), Color(0xFF771DFF))),
-                RoundedCornerShape(16.dp),
-            ) else Modifier,
+internal fun OmniPremiumBroomMark(
+    modifier: Modifier = Modifier,
+    framed: Boolean = true,
+) {
+    // Reuse the exact launcher broom artwork rather than maintaining two different drawings.
+    Image(
+        painter = painterResource(
+            id = if (framed) R.drawable.omni_premium_logo
+                 else R.drawable.ic_launcher_foreground,
         ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Canvas(Modifier.fillMaxSize().clearAndSetSemantics { }) {
-            val w = size.width; val h = size.height
-            drawLine(Color(0xFFF3FEFF), Offset(w * .61f, h * .20f), Offset(w * .48f, h * .56f),
-                w * .12f, cap = StrokeCap.Round)
-            val p = Path().apply {
-                moveTo(w * .29f, h * .51f)
-                quadraticTo(w * .47f, h * .59f, w * .67f, h * .50f)
-                lineTo(w * .73f, h * .69f)
-                quadraticTo(w * .67f, h * .78f, w * .61f, h * .78f)
-                lineTo(w * .55f, h * .69f); lineTo(w * .49f, h * .81f)
-                lineTo(w * .43f, h * .70f); lineTo(w * .35f, h * .78f)
-                quadraticTo(w * .28f, h * .72f, w * .27f, h * .65f); close()
-            }
-            drawPath(p, Brush.linearGradient(listOf(Color.White, Color(0xFFB0F7FF), Color(0xFF37AFFF))))
-            drawLine(Color.White, Offset(w * .22f, h * .17f), Offset(w * .22f, h * .32f), w * .022f)
-            drawLine(Color.White, Offset(w * .15f, h * .245f), Offset(w * .29f, h * .245f), w * .022f)
-            drawCircle(Color(0xFFB9FCFF), w * .027f, Offset(w * .78f, h * .34f))
-        }
-    }
+        contentDescription = null, // Decorative; app name is provided by the adjacent text.
+        modifier = modifier.size(54.dp),
+    )
 }
 
 private fun premiumBytes(bytes: Long): String {
