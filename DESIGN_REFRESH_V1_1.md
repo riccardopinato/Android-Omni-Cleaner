@@ -37,3 +37,30 @@ No change to storage permissions, file deletion, Safe Trash, Gallery engines, EX
 - Maintain RC1 source freeze; merge only when targeting a subsequent approved release, with all required gates.
 
 Not yet claimed: visual approval, device validation, performance parity or Store Ready.
+
+
+## Premium Light & Dark implementation — 2026-11-15
+
+Reference: approved generated concept showing light and dark dashboards side by side, with a cobalt/cyan/magenta storage ring, rounded gradient action, four tinted functional tiles, background waves, highlighted navigation, and the rounded-square broom app icon.
+
+### Native implementation
+
+- `OmniPremiumHome.kt`: original responsive Compose implementation, gradient waves, gradient broom mark, dual-theme storage ring and progress, four feature tiles, entry-point CTA, access disclosure and existing Pro upsell.
+- `MainActivity.kt`: light/dark override with `rememberSaveable`; system theme remains the initial default.
+- `RedesignedOmniCleanerApp.kt`: native navigation and themed background retained on all five destinations; the four Home tiles lead to the current working screens.
+- Launcher resources: gradient background, broom foreground, monochrome vector, pre-26 fallback and 26+ adaptive icon.
+- Supported locale text updated without changing resource key count.
+- Actual storage metrics come from the existing `storageInfo` source. No mockup values, inferred freeable bytes, fake scans, deletion-on-tap or new permissions are introduced.
+
+### Scope and fidelity limitations
+
+This is a **native mobile interpretation** of a concept image that depicts desktop/sidebar layout. Small Android screens retain a bottom navigation, preventing the sidebar from shrinking the content. Lighting, glow, hand-painted 3D icon effects and shadow softness will vary by Android GPU/density; vector artwork is original and not a pixel-by-pixel bitmap replica. Physical screenshot comparison is required before any claim of exact visual parity.
+
+### Release gates
+
+- GitHub CI: locale parity + unit tests + debug + Android test compilation on exact head.
+- Visual comparison: light and dark / 320dp, 360dp, 412dp / 1.3× and 1.6× font scale / TalkBack focus order.
+- Confirm real storage-percent data, unknown-data fallback, permission prompt, and the Analyze/Review flow.
+- Confirm icon round/squircle masks and monochrome theme icon on an Android 13+ launcher.
+- Verify contrast and hit targets, image/gradient performance, memory, and APK size.
+- PR remains **DRAFT**. RC1 main/release freeze remains unchanged.
