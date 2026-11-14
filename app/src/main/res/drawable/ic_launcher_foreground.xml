@@ -3,26 +3,28 @@
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <!-- centered, inset broom silhouette and star accents: safe inside adaptive icon mask -->
-    <path android:fillColor="#33A2FCFF"
-        android:pathData="M45,51 Q53,44 64,49 Q70,66 59,82 Q47,84 39,72 Z"/>
-    <path android:fillColor="@android:color/transparent"
-        android:strokeColor="#D8FAFF" android:strokeWidth="11"
-        android:strokeLineCap="round"
-        android:pathData="M69,25 L51,58"/>
-    <path android:fillColor="@android:color/transparent"
-        android:strokeColor="#FFFFFF" android:strokeWidth="5"
-        android:strokeLineCap="round"
-        android:pathData="M68,28 L52,55"/>
-    <path android:pathData="M38,56 Q50,62 62,53 L69,68 Q67,76 61,79 L57,70 L52,82 L47,72 L39,79 Q33,74 34,67 Z">
-        <aapt:attr name="android:fillColor">
-            <gradient android:type="linear" android:startColor="#FFFFFF"
-                android:endColor="#63E1FF" android:startX="36" android:startY="55"
-                android:endX="69" android:endY="83" />
-        </aapt:attr>
-    </path>
-    <path android:fillColor="#FFFFFFFF"
-        android:pathData="M29,25 L31.8,31.5 L38,34 L31.8,36.5 L29,43 L26.2,36.5 L20,34 L26.2,31.5 Z"/>
-    <path android:fillColor="#C7FCFF"
-        android:pathData="M79,37 L81,41 L85,43 L81,45 L79,49 L77,45 L73,43 L77,41 Z"/>
+    <!-- shadow beneath the bristles; all geometry remains in the adaptive safe zone -->
+    <path android:fillColor="#5A1633C6" android:pathData="M47,55 C39,60 35,65 26,66 C29,77 37,79 43,77 C49,84 55,85 60,81 C67,86 76,80 77,71 L71,58 Z"/>
+    <!-- smooth, forward-slanting glossy handle -->
+    <path android:fillColor="#3645BBFF" android:pathData="M68,24 C72,16 76,15 81,19 C84,22 83,26 79,31 L63,54 L53,50 Z"/>
+    <path android:pathData="M68,23 C72,17 76,17 79,20 C82,23 79,27 77,30 L62,52 L55,49 Z"><aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="64" android:startY="22" android:endX="73" android:endY="48" android:startColor="#FFFFFF" android:centerColor="#F0FDFF" android:endColor="#B9F2FF" /></aapt:attr></path>
+    <path android:fillColor="#8AFFFFFF" android:pathData="M72,22 C74,18 77,18 78,21 C77,23 72,30 61,47 L58,46 Z"/>
+    <!-- head rim and reflective curved collar -->
+    <path android:fillColor="#6D244CF5" android:pathData="M51,44 C59,42 70,48 71,55 L67,62 C59,59 51,55 45,53 Z"/>
+    <path android:pathData="M52,45 C59,43 68,48 69,54 C68,57 66,58 64,58 C59,55 53,53 47,52 Z"><aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="48" android:startY="44" android:endX="65" android:endY="58" android:startColor="#FFFFFF" android:centerColor="#E9F8FF" android:endColor="#C2D5FF" /></aapt:attr></path>
+    <path android:fillColor="#8DFFFFFF" android:pathData="M51,47 C56,45 63,48 65,51 C58,49 54,50 50,51 Z"/>
+    <!-- blue rim separating collar from flowing bristles -->
+    <path android:fillColor="#FF2755EE" android:pathData="M45,52 C54,52 64,58 70,61 L68,64 C59,59 51,57 44,55 Z"/>
+    <!-- three glossy bristle lobes, left-flowing as in reference -->
+    <path android:pathData="M46,55 C39,60 34,65 26,66 C27,72 33,76 40,74 C47,71 52,66 57,60 Z"><aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="30" android:startY="58" android:endX="45" android:endY="78" android:startColor="#FFFFFF" android:centerColor="#F1F8FF" android:endColor="#D6ECFF" /></aapt:attr></path>
+    <path android:pathData="M53,57 C46,65 43,70 38,74 C43,80 49,82 54,79 C60,75 63,67 64,60 Z"><aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="42" android:startY="61" android:endX="58" android:endY="81" android:startColor="#FFFFFF" android:centerColor="#F8FDFF" android:endColor="#CCDFFF" /></aapt:attr></path>
+    <path android:pathData="M62,59 C60,68 57,76 54,79 C60,84 69,82 73,76 C75,73 72,64 69,61 Z"><aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="60" android:startY="59" android:endX="74" android:endY="84" android:startColor="#FDFEFF" android:centerColor="#D6EBFF" android:endColor="#A2C8FF" /></aapt:attr></path>
+    <!-- inner soft curvature details -->
+    <path android:fillColor="#558F9EF5" android:pathData="M44,72 Q50,69 55,61 Q52,71 43,76 Z"/>
+    <path android:fillColor="#477B89EC" android:pathData="M55,79 Q62,71 65,62 Q63,75 59,80 Z"/>
+    <path android:fillColor="#4AFFFFFF" android:pathData="M29,66 C34,65 40,61 45,57 C40,65 37,69 30,70 Z"/>
+    <!-- one prominent four-point sparkle, faithful to screenshot -->
+    <path android:fillColor="#5138CAFF" android:pathData="M29,20 C31,27 34,30 41,32 C34,34 31,37 29,44 C27,37 24,34 17,32 C24,30 27,27 29,20 Z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M29,22 C30.8,28.3 33,30.2 39,32 C33,33.8 30.8,35.7 29,42 C27.2,35.7 25,33.8 19,32 C25,30.2 27.2,28.3 29,22 Z"/>
+
 </vector>
