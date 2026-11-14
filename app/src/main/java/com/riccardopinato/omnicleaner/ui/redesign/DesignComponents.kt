@@ -82,9 +82,9 @@ internal fun OmniHeroCard(
                 .background(
                     Brush.linearGradient(
                         listOf(
-                            Color(0xFF193D8B),
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.secondary,
+                            Color(0xFF172F6A),
+                            Color(0xFF2B52B8),
+                            Color(0xFF57349B),
                         ),
                     ),
                 ),
