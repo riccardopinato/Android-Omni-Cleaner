@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextOverflow
 import kotlin.math.roundToInt
+import com.riccardopinato.omnicleaner.ui.theme.OmniVisualTokens
 import androidx.compose.foundation.progressSemantics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -71,7 +72,7 @@ internal fun OmniHeroCard(
     val safeProgress = progress?.coerceIn(0f, 1f)
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(30.dp),
+        shape = RoundedCornerShape(OmniVisualTokens.heroRadius),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
@@ -216,7 +217,7 @@ internal fun OmniMetricCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(OmniVisualTokens.metricRadius),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.18f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -255,7 +256,7 @@ internal fun OmniModuleCard(
     Card(
         onClick = onClick,
         modifier = modifier,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(OmniVisualTokens.tileRadius),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.20f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -271,7 +272,7 @@ internal fun OmniModuleCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .background(accent.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
+                        .background(accent.copy(alpha = 0.12f), RoundedCornerShape(OmniVisualTokens.glyphRadius))
                         .padding(horizontal = 10.dp, vertical = 7.dp),
                 ) {
                     Text(
