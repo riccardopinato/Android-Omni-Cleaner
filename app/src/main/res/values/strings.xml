@@ -360,4 +360,6 @@
     <string name="audit_storage_used_percent">%1$d%% of storage used</string>
     <string name="audit_storage_unavailable">Storage information unavailable</string>
     <string name="audit_advanced_maintenance">Advanced cleaning and maintenance</string>
+    <string name="audit_privacy_quick">Quick privacy: remove GPS location from JPEG copies</string>
+    <string name="audit_privacy_advanced">Advanced EXIF options</string>
 </resources>
