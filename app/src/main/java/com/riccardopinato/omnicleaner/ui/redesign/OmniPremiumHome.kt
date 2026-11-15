@@ -254,7 +254,7 @@ internal fun OmniPremiumHome(
     premium: Boolean,
     modifier: Modifier,
     dark: Boolean,
-    onToggleTheme: () -> Unit,
+    onOpenSettings: () -> Unit,
     onRefresh: () -> Unit,
     onEnableDeepClean: () -> Unit,
     onOpenClean: () -> Unit,
@@ -266,6 +266,7 @@ internal fun OmniPremiumHome(
 ) {
     val ink = if (dark) Color.White else Color(0xFF101831)
     val muted = if (dark) Color(0xFFCED8F0) else Color(0xFF465574)
+    val settingsDescription = stringResource(R.string.audit_settings)
     val small = LocalConfiguration.current.screenWidthDp < 360 ||
         LocalDensity.current.fontScale > 1.25f
     LazyColumn(
@@ -285,11 +286,11 @@ internal fun OmniPremiumHome(
                     Modifier.size(48.dp).background(
                         if (dark) Color(0xFF48288B) else Color(0xFFE0E9FF),
                         RoundedCornerShape(16.dp))
-                        .clickable(onClick = onToggleTheme)
-                        .semantics { contentDescription = "Toggle light or dark theme" },
+                        .clickable(onClick = onOpenSettings)
+                        .semantics { contentDescription = settingsDescription },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(if (dark) "☀" else "☾",
+                    Text("⚙",
                         fontSize = 25.sp,
                         color = if (dark) Color.White else Color(0xFF325ED7))
                 }
