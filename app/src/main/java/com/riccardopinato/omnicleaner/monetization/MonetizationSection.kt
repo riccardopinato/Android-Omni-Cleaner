@@ -61,7 +61,6 @@ fun MonetizationSection(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(stringResource(R.string.pro_title), style = MaterialTheme.typography.titleLarge)
             Text(
                 if (premium) stringResource(R.string.pro_active) else stringResource(R.string.pro_free),
                 color = if (premium) MaterialTheme.colorScheme.primary
