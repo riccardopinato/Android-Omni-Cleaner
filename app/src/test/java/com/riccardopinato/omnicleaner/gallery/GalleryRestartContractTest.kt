@@ -29,8 +29,8 @@ class GalleryRestartContractTest {
 
     @Test
     fun malformedUndoReferenceFailsClosed() {
-        listOf(null, "", "nope", "12\\tKEEP\\t-1", "0\\tTRASH\\t3",
-            "41\\tERASE\\t7", "8\\tTRASH\\tNaN", "5\\tKEEP\\t9\\textra")
+        listOf(null, "", "nope", "12\tKEEP\t-1", "0\tTRASH\t3",
+            "41\tERASE\t7", "8\tTRASH\tNaN", "5\tKEEP\t9\textra")
             .forEach { raw -> assertNull(decodePersistedGalleryUndo(raw)) }
     }
 
