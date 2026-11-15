@@ -102,6 +102,9 @@ private fun PremiumStorage(state: CleanerUiState, dark: Boolean) {
     val used = info?.usedPercent?.coerceIn(0f, 1f)
     val ink = if (dark) Color.White else Color(0xFF17213A)
     val secondary = if (dark) Color(0xFFBECAE8) else Color(0xFF51617E)
+    val storageSemantic = used?.let {
+        stringResource(R.string.audit_storage_used_percent, (it * 100).roundToInt())
+    } ?: stringResource(R.string.audit_storage_unavailable)
     Card(
         shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
@@ -119,9 +122,7 @@ private fun PremiumStorage(state: CleanerUiState, dark: Boolean) {
         ) {
             Box(
                 modifier = Modifier.size(108.dp).semantics {
-                    contentDescription = used?.let {
-                        (it * 100).roundToInt().toString() + "% storage used"
-                    } ?: "Storage value unavailable"
+                    contentDescription = storageSemantic
                 },
                 contentAlignment = Alignment.Center,
             ) {
@@ -224,7 +225,7 @@ private fun PremiumTile(
         elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().height(165.dp)
+            modifier = Modifier.fillMaxWidth().heightIn(min = 165.dp)
                 .background(Brush.linearGradient(card)).padding(15.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -279,8 +280,9 @@ internal fun OmniPremiumHome(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OmniPremiumBroomMark()
                 Column(Modifier.weight(1f)) {
-                    Text("Android", color = muted, fontSize = 13.sp)
-                    Text("Omni Cleaner", color = ink, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(stringResource(R.string.app_name), color = ink,
+                        fontSize = 21.sp, fontWeight = FontWeight.ExtraBold,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
                 Box(
                     Modifier.size(48.dp).background(
