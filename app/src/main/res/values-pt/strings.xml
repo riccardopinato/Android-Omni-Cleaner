@@ -356,4 +356,5 @@
     <string name="audit_hide_tools">Ocultar ferramentas adicionais</string>
     <string name="audit_storage_used_percent">Armazenamento utilizado: %1$d%%</string>
     <string name="audit_storage_unavailable">Informações de armazenamento indisponíveis</string>
+    <string name="audit_advanced_maintenance">Limpeza e manutenção avançadas</string>
 </resources>
