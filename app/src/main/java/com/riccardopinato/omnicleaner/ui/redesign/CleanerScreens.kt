@@ -80,6 +80,7 @@ import com.riccardopinato.omnicleaner.ui.OmniCleanerViewModel
 import com.riccardopinato.omnicleaner.ui.CleanerUiState
 import com.riccardopinato.omnicleaner.ui.LanguageSelectorSection
 import com.riccardopinato.omnicleaner.ui.MaintenanceSection
+import com.riccardopinato.omnicleaner.ui.ManualMaintenanceCard
 import com.riccardopinato.omnicleaner.ui.SafeTrashSection
 import com.riccardopinato.omnicleaner.ui.SmartCategoriesSection
 import com.riccardopinato.omnicleaner.ui.StorageCleanupSection
@@ -367,6 +368,7 @@ internal fun CleanScreen(
 ) {
     var showFilters by rememberSaveable { mutableStateOf(false) }
     var showSafeTrash by rememberSaveable { mutableStateOf(false) }
+    var showAdvancedMaintenance by rememberSaveable { mutableStateOf(false) }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -427,15 +429,6 @@ internal fun CleanScreen(
                 item { CleanFiltersCard(state = state, controller = controller) }
             }
 
-            item {
-                SmartCategoriesSection(
-                    onCleanupFinished = {
-                        controller.refreshAccessAndStorage()
-                        controller.scanOverview()
-                    },
-                )
-            }
-
             state.error?.let { error ->
                 item {
                     Card(
@@ -484,9 +477,6 @@ internal fun CleanScreen(
                         accent = OmniOrange,
                     )
                 }
-                items(state.visibleBigFiles.take(24), key = { "big:" + it.path }) {
-                    ResultLine(it.name, formatCleanerBytes(it.sizeBytes))
-                }
             }
 
             if (state.visibleDuplicates.isNotEmpty()) {
@@ -500,12 +490,6 @@ internal fun CleanScreen(
                             formatCleanerBytes(waste),
                         ),
                         accent = OmniRose,
-                    )
-                }
-                items(state.visibleDuplicates.take(20), key = { "dup:" + it.hash }) { group ->
-                    ResultLine(
-                        group.files.firstOrNull()?.name ?: group.hash.take(12),
-                        group.files.size.toString() + " × " + formatCleanerBytes(group.sizeBytes),
                     )
                 }
             }
@@ -543,12 +527,6 @@ internal fun CleanScreen(
                         accent = OmniMint,
                     )
                 }
-                items(state.visibleFolders.take(20), key = { "folder:" + it.path }) {
-                    ResultLine(
-                        it.name,
-                        formatCleanerBytes(it.sizeBytes) + " · " + it.fileCount.toString(),
-                    )
-                }
             }
 
             item {
@@ -563,7 +541,29 @@ internal fun CleanScreen(
                 )
             }
 
-            item { MaintenanceSection() }
+            item {
+                OutlinedButton(
+                    onClick = { showAdvancedMaintenance = !showAdvancedMaintenance },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.audit_advanced_maintenance) +
+                            if (showAdvancedMaintenance) " −" else " +"
+                    )
+                }
+            }
+            if (showAdvancedMaintenance) {
+                item {
+                    SmartCategoriesSection(
+                        onCleanupFinished = {
+                            controller.refreshAccessAndStorage()
+                            controller.scanOverview()
+                        },
+                    )
+                }
+                item { MaintenanceSection() }
+                item { ManualMaintenanceCard() }
+            }
         }
 
         item {
