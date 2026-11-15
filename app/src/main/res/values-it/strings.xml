@@ -359,4 +359,5 @@
     <string name="audit_hide_tools">Nascondi strumenti aggiuntivi</string>
     <string name="audit_storage_used_percent">Memoria utilizzata: %1$d%%</string>
     <string name="audit_storage_unavailable">Informazioni sulla memoria non disponibili</string>
+    <string name="audit_advanced_maintenance">Pulizia e manutenzione avanzate</string>
 </resources>
