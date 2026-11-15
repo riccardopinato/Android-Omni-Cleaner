@@ -355,4 +355,6 @@
     <string name="audit_theme_system">System</string>
     <string name="audit_theme_light">Light</string>
     <string name="audit_theme_dark">Dark</string>
+    <string name="audit_more_tools">Other scanning tools</string>
+    <string name="audit_hide_tools">Hide additional tools</string>
 </resources>
