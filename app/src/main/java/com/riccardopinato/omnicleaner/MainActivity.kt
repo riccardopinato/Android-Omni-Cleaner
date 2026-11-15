@@ -44,12 +44,6 @@ class MainActivity : ComponentActivity() {
                         AppAppearance.setMode(this, newMode)
                         themeMode = newMode
                     },
-                    onToggleTheme = {
-                        val newMode = if (darkTheme) AppAppearance.Mode.LIGHT
-                            else AppAppearance.Mode.DARK
-                        AppAppearance.setMode(this, newMode)
-                        themeMode = newMode
-                    },
                 )
             }
         }
