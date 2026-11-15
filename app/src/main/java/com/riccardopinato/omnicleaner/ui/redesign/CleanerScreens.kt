@@ -26,6 +26,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -34,6 +35,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -363,6 +365,8 @@ internal fun CleanScreen(
     modifier: Modifier,
     onEnableDeepClean: () -> Unit,
 ) {
+    var showFilters by rememberSaveable { mutableStateOf(false) }
+    var showSafeTrash by rememberSaveable { mutableStateOf(false) }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -411,7 +415,17 @@ internal fun CleanScreen(
             if (BuildConfig.DEBUG) {
                 item { PerformanceBenchmarkCard(state = state, controller = controller) }
             }
-            item { CleanFiltersCard(state = state, controller = controller) }
+            item {
+                OutlinedButton(
+                    onClick = { showFilters = !showFilters },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                ) {
+                    Text(stringResource(R.string.redesign_filters_title) + if (showFilters) " −" else " +")
+                }
+            }
+            if (showFilters) {
+                item { CleanFiltersCard(state = state, controller = controller) }
+            }
 
             item {
                 SmartCategoriesSection(
@@ -552,7 +566,17 @@ internal fun CleanScreen(
             item { MaintenanceSection() }
         }
 
-        item { SafeTrashSection() }
+        item {
+            OutlinedButton(
+                onClick = { showSafeTrash = !showSafeTrash },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+            ) {
+                Text(stringResource(R.string.module_safe_trash) + if (showSafeTrash) " −" else " +")
+            }
+        }
+        if (showSafeTrash) {
+            item { SafeTrashSection() }
+        }
         item { Spacer(Modifier.height(10.dp)) }
     }
 }
@@ -562,6 +586,7 @@ private fun CleanActionsCard(
     state: CleanerUiState,
     controller: CleanerController,
 ) {
+    var showMoreTools by rememberSaveable { mutableStateOf(false) }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -607,20 +632,30 @@ private fun CleanActionsCard(
                 Button(onClick = controller::scanOverview, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.scan_overview))
                 }
-                OutlinedButton(onClick = controller::scanFolders, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.scan_folders))
-                }
-                Button(onClick = { controller.scanBigFiles() }, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = { controller.scanBigFiles() }, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.scan_big_files))
                 }
                 OutlinedButton(onClick = controller::scanDuplicates, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.scan_duplicates))
                 }
-                OutlinedButton(
-                    onClick = controller::refreshPersistentIndex,
+                TextButton(
+                    onClick = { showMoreTools = !showMoreTools },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(stringResource(R.string.refresh_storage_index))
+                    Text(stringResource(
+                        if (showMoreTools) R.string.audit_hide_tools else R.string.audit_more_tools
+                    ))
+                }
+                if (showMoreTools) {
+                    OutlinedButton(onClick = controller::scanFolders, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.scan_folders))
+                    }
+                    OutlinedButton(
+                        onClick = controller::refreshPersistentIndex,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.refresh_storage_index))
+                    }
                 }
             }
         }
@@ -834,6 +869,24 @@ private fun CleanFiltersCard(
                 )
             }
 
+            var searchMode by rememberSaveable { mutableStateOf(0) }
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
+            ) {
+                listOf(
+                    R.string.module_folders,
+                    R.string.module_large_files,
+                    R.string.module_duplicates,
+                ).forEachIndexed { index, label ->
+                    FilterChip(
+                        selected = searchMode == index,
+                        onClick = { searchMode = index },
+                        label = { Text(stringResource(label)) },
+                    )
+                }
+            }
+            if (searchMode == 0) {
             OutlinedTextField(
                 value = state.folderSearchQuery,
                 onValueChange = controller::updateFolderSearchQuery,
@@ -841,6 +894,8 @@ private fun CleanFiltersCard(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            }
+            if (searchMode == 1) {
             OutlinedTextField(
                 value = state.bigFileSearchQuery,
                 onValueChange = controller::updateBigFileSearchQuery,
@@ -848,6 +903,8 @@ private fun CleanFiltersCard(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            }
+            if (searchMode == 2) {
             OutlinedTextField(
                 value = state.duplicateSearchQuery,
                 onValueChange = controller::updateDuplicateSearchQuery,
@@ -855,6 +912,8 @@ private fun CleanFiltersCard(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            }
+            if (searchMode == 1) {
             Text(
                 stringResource(R.string.redesign_large_threshold),
                 style = MaterialTheme.typography.bodySmall,
@@ -876,6 +935,8 @@ private fun CleanFiltersCard(
                     }
                 }
             }
+            }
+            if (searchMode == 0) {
             OutlinedTextField(
                 value = state.thresholdValue,
                 onValueChange = controller::updateThresholdValue,
@@ -895,6 +956,7 @@ private fun CleanFiltersCard(
                         }
                     }
                 }
+            }
             }
         }
     }
