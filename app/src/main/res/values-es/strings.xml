@@ -342,4 +342,9 @@
     <string name="performance_benchmark_report_copied">Informe copiado. Pégalo en el chat del proyecto para analizarlo.</string>
     <string name="audit_show_more">Mostrar más</string>
     <string name="audit_review_selected_count">Revisa los %1$d elementos seleccionados antes de confirmar.</string>
+    <string name="audit_gallery_options">Filtros y orden</string>
+    <string name="audit_gallery_review_queue">Revisar %1$d fotos para la papelera</string>
+    <string name="audit_gallery_review_title">Revisar selección para la papelera</string>
+    <string name="audit_gallery_unmark">Conservar</string>
+    <string name="audit_review_progress">%1$d revisadas</string>
 </resources>
