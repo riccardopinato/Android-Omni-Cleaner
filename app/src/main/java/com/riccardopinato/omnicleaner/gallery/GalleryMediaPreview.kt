@@ -178,33 +178,18 @@ fun GalleryMediaPreview(
                 }
             }
 
-            // Brief directional feedback at the corresponding screen edge.
-            AnimatedVisibility(
+            // Directional feedback is rendered in a separate top-level composable
+            // to avoid scope collisions between ColumnScope and BoxScope animations.
+            GalleryEdgeFeedback(
+                direction = SwipeDirection.TRASH,
                 visible = pendingDecision == SwipeDirection.TRASH,
                 modifier = Modifier.align(Alignment.CenterStart),
-                enter = fadeIn(tween(120)) +
-                    slideInHorizontally(initialOffsetX = { -it / 2 }, animationSpec = tween(180)),
-                exit = fadeOut(tween(80)),
-            ) {
-                GalleryDecisionBadge(
-                    label = stringResource(R.string.action_trash),
-                    symbol = "✕",
-                    background = TrashRed,
-                )
-            }
-            AnimatedVisibility(
+            )
+            GalleryEdgeFeedback(
+                direction = SwipeDirection.KEEP,
                 visible = pendingDecision == SwipeDirection.KEEP,
                 modifier = Modifier.align(Alignment.CenterEnd),
-                enter = fadeIn(tween(120)) +
-                    slideInHorizontally(initialOffsetX = { it / 2 }, animationSpec = tween(180)),
-                exit = fadeOut(tween(80)),
-            ) {
-                GalleryDecisionBadge(
-                    label = stringResource(R.string.action_keep),
-                    symbol = "✓",
-                    background = KeepGreen,
-                )
-            }
+            )
         }
 
         val trashLabel = stringResource(R.string.action_trash)
@@ -266,6 +251,32 @@ fun GalleryMediaPreview(
             text = stringResource(R.string.gallery_selection_explainer),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun GalleryEdgeFeedback(
+    direction: SwipeDirection,
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val isTrash = direction == SwipeDirection.TRASH
+    AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        enter = fadeIn(tween(120)) +
+            slideInHorizontally(
+                initialOffsetX = { if (isTrash) -it / 2 else it / 2 },
+                animationSpec = tween(180),
+            ),
+        exit = fadeOut(tween(80)),
+        label = if (isTrash) "Trash left feedback" else "Keep right feedback",
+    ) {
+        GalleryDecisionBadge(
+            label = stringResource(if (isTrash) R.string.action_trash else R.string.action_keep),
+            symbol = if (isTrash) "✕" else "✓",
+            background = if (isTrash) TrashRed else KeepGreen,
         )
     }
 }
