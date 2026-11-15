@@ -345,4 +345,9 @@
     <string name="performance_benchmark_report_copied">Report copied. Paste it into the project chat for analysis.</string>
     <string name="audit_show_more">Show more</string>
     <string name="audit_review_selected_count">Review all %1$d selected items before confirming.</string>
+    <string name="audit_gallery_options">Options and sorting</string>
+    <string name="audit_gallery_review_queue">Review %1$d photos selected for Trash</string>
+    <string name="audit_gallery_review_title">Review Trash queue</string>
+    <string name="audit_gallery_unmark">Keep</string>
+    <string name="audit_review_progress">%1$d reviewed</string>
 </resources>
