@@ -343,4 +343,6 @@
     <string name="performance_benchmark_device_summary">%1$s · Android %2$d · %3$d thread CPU</string>
     <string name="performance_benchmark_copy_report">Copia report benchmark</string>
     <string name="performance_benchmark_report_copied">Report copiato. Incollalo nella chat del progetto per l’analisi.</string>
+    <string name="audit_show_more">Mostra altri</string>
+    <string name="audit_review_selected_count">Controlla tutti i %1$d elementi selezionati prima di confermare.</string>
 </resources>
