@@ -42,7 +42,8 @@ fun ExifCleanerSection() {
     var sourceTree by remember { mutableStateOf<Uri?>(null) }
     var destinationTree by remember { mutableStateOf<Uri?>(null) }
     var recursive by remember { mutableStateOf(true) }
-    var groups by remember { mutableStateOf(ExifGroup.entries.toSet()) }
+    var groups by remember { mutableStateOf(setOf(ExifGroup.LOCATION)) }
+    var showAdvancedExif by remember { mutableStateOf(false) }
     var scan by remember { mutableStateOf<ExifScan?>(null) }
     var export by remember { mutableStateOf<ExifExport?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -90,6 +91,19 @@ fun ExifCleanerSection() {
                 )
             }
 
+            Text(
+                stringResource(R.string.audit_privacy_quick),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            OutlinedButton(
+                onClick = { showAdvancedExif = !showAdvancedExif },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.audit_privacy_advanced) +
+                    if (showAdvancedExif) " −" else " +")
+            }
+            if (showAdvancedExif) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -131,6 +145,9 @@ fun ExifCleanerSection() {
                     )
                     Text(exifGroupLabel(group))
                 }
+            }
+
+
             }
 
             Button(
