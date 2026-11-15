@@ -347,4 +347,9 @@
     <string name="audit_gallery_review_title">Revisar selección para la papelera</string>
     <string name="audit_gallery_unmark">Conservar</string>
     <string name="audit_review_progress">%1$d revisadas</string>
+    <string name="audit_settings">Ajustes</string>
+    <string name="audit_appearance">Apariencia</string>
+    <string name="audit_theme_system">Sistema</string>
+    <string name="audit_theme_light">Claro</string>
+    <string name="audit_theme_dark">Oscuro</string>
 </resources>
