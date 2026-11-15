@@ -74,7 +74,6 @@ fun ExifCleanerSection() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(stringResource(R.string.module_exif_privacy), style = MaterialTheme.typography.titleLarge)
             Text(
                 stringResource(R.string.exif_body),
                 style = MaterialTheme.typography.bodySmall,
