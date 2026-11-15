@@ -4,6 +4,7 @@ import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -78,6 +81,7 @@ import com.riccardopinato.omnicleaner.ui.theme.OmniMint
 import com.riccardopinato.omnicleaner.ui.theme.OmniOrange
 import com.riccardopinato.omnicleaner.ui.theme.OmniPurple
 import com.riccardopinato.omnicleaner.ui.theme.OmniRose
+import com.riccardopinato.omnicleaner.ui.theme.AppAppearance
 import java.util.Locale
 
 private enum class OmniDestination(
@@ -95,12 +99,14 @@ private enum class OmniDestination(
 fun RedesignedOmniCleanerApp(
     viewModel: OmniCleanerViewModel,
     darkTheme: Boolean,
-    onToggleTheme: () -> Unit,
+    themeMode: AppAppearance.Mode,
+    onThemeModeChange: (AppAppearance.Mode) -> Unit,
 ) {
     val context = LocalContext.current
     val controller = viewModel.cleanerController
     val monetizationRuntime = rememberMonetizationRuntime()
     val entitlement by PremiumEntitlementStore.state.collectAsState()
+    val consentState by monetizationRuntime.consent.state.collectAsState()
     val state = controller.state
     val activity = remember(context) { context.findActivity() }
 
@@ -111,6 +117,7 @@ fun RedesignedOmniCleanerApp(
     var destinationName by rememberSaveable { mutableStateOf(OmniDestination.HOME.name) }
     val destination = OmniDestination.valueOf(destinationName)
     var showDeepAccessDisclosure by remember { mutableStateOf(false) }
+    var showSettings by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(activity) {
         if (activity != null) {
@@ -216,7 +223,7 @@ fun RedesignedOmniCleanerApp(
                     when (item) {
                         OmniDestination.HOME -> OmniPremiumHome(
                             dark = darkTheme,
-                            onToggleTheme = onToggleTheme,
+                            onOpenSettings = { showSettings = true },
                             state = state,
                             premium = entitlement.isPremium,
                             modifier = Modifier.fillMaxSize(),
@@ -282,11 +289,63 @@ fun RedesignedOmniCleanerApp(
                                     runtime = monetizationRuntime,
                                     batch = viewModel.proBatchController,
                                 )
-                                LanguageSelectorSection()
                             }
                         }
                     }
                 }
+            }
+        }
+    }
+
+    if (showSettings) {
+        ModalBottomSheet(
+            onDismissRequest = { showSettings = false },
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 18.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Text(
+                    stringResource(R.string.audit_settings),
+                    style = MaterialTheme.typography.headlineMedium,
+                )
+                Text(
+                    stringResource(R.string.audit_appearance),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    AppAppearance.Mode.entries.forEach { mode ->
+                        FilterChip(
+                            selected = themeMode == mode,
+                            onClick = { onThemeModeChange(mode) },
+                            label = {
+                                Text(stringResource(when (mode) {
+                                    AppAppearance.Mode.SYSTEM -> R.string.audit_theme_system
+                                    AppAppearance.Mode.LIGHT -> R.string.audit_theme_light
+                                    AppAppearance.Mode.DARK -> R.string.audit_theme_dark
+                                }))
+                            },
+                        )
+                    }
+                }
+                LanguageSelectorSection()
+                if (consentState.privacyOptionsRequired && activity != null) {
+                    OutlinedButton(
+                        onClick = { monetizationRuntime.consent.showPrivacyOptions(activity) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.privacy_options))
+                    }
+                }
+                Spacer(Modifier.height(24.dp))
             }
         }
     }
