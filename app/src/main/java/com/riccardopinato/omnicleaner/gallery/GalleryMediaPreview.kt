@@ -14,6 +14,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -26,7 +27,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -42,6 +42,10 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -85,11 +89,7 @@ fun GalleryMediaPreview(
     var pendingDecision by remember(item.id) { mutableStateOf<SwipeDirection?>(null) }
 
     // One decision at a time. The image moves to the same side as the chosen button.
-    val exitTarget = when (pendingDecision) {
-        SwipeDirection.TRASH -> -exitDistancePx
-        SwipeDirection.KEEP -> exitDistancePx
-        null -> 0f
-    }
+    val exitTarget = galleryDecisionExitSign(pendingDecision).toFloat() * exitDistancePx
     val animatedExitX by animateFloatAsState(
         targetValue = exitTarget,
         animationSpec = tween(durationMillis = 210, easing = FastOutSlowInEasing),
@@ -208,6 +208,10 @@ fun GalleryMediaPreview(
             }
         }
 
+        val trashLabel = stringResource(R.string.action_trash)
+        val undoLabel = stringResource(R.string.action_undo)
+        val keepLabel = stringResource(R.string.action_keep)
+
         // Do not scroll or reorder these controls: spatial mapping must match swipes.
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -217,7 +221,8 @@ fun GalleryMediaPreview(
             Button(
                 onClick = { select(SwipeDirection.TRASH) },
                 enabled = pendingDecision == null,
-                modifier = Modifier.weight(1f).heightIn(min = 64.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 64.dp)
+                    .semantics { contentDescription = trashLabel },
                 shape = RoundedCornerShape(17.dp),
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -225,22 +230,24 @@ fun GalleryMediaPreview(
                     contentColor = Color.White,
                 ),
             ) {
-                GalleryDecisionButtonLabel("✕", stringResource(R.string.action_trash))
+                GalleryDecisionButtonLabel("✕", trashLabel)
             }
             OutlinedButton(
                 onClick = onUndo,
                 enabled = canUndo && pendingDecision == null,
-                modifier = Modifier.weight(1f).heightIn(min = 64.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 64.dp)
+                    .semantics { contentDescription = undoLabel },
                 shape = RoundedCornerShape(17.dp),
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             ) {
-                GalleryDecisionButtonLabel("↶", stringResource(R.string.action_undo))
+                GalleryDecisionButtonLabel("↶", undoLabel)
             }
             Button(
                 onClick = { select(SwipeDirection.KEEP) },
                 enabled = pendingDecision == null,
-                modifier = Modifier.weight(1f).heightIn(min = 64.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 64.dp)
+                    .semantics { contentDescription = keepLabel },
                 shape = RoundedCornerShape(17.dp),
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -248,7 +255,7 @@ fun GalleryMediaPreview(
                     contentColor = Color.White,
                 ),
             ) {
-                GalleryDecisionButtonLabel("✓", stringResource(R.string.action_keep))
+                GalleryDecisionButtonLabel("✓", keepLabel)
             }
         }
         Text(
@@ -270,7 +277,11 @@ private fun GalleryDecisionButtonLabel(symbol: String, label: String) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Text(symbol, fontSize = 21.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        if (symbol == "✕") {
+            GalleryTrashIcon()
+        } else {
+            Text(symbol, fontSize = 21.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        }
         Text(
             label, fontSize = 12.sp, fontWeight = FontWeight.Bold,
             maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -292,12 +303,40 @@ private fun GalleryDecisionBadge(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
-        Text(symbol, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+        if (symbol == "✕") {
+            GalleryTrashIcon()
+        } else {
+            Text(symbol, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+        }
         Text(
             label, color = Color.White, fontSize = 13.sp,
             fontWeight = FontWeight.Bold, maxLines = 1,
         )
     }
+}
+
+
+@Composable
+private fun GalleryTrashIcon() {
+    // Compact white wastebasket, consistent on devices without emoji fonts.
+    Canvas(Modifier.padding(vertical = 2.dp).heightIn(min = 20.dp).fillMaxWidth(0.20f)) {
+        val w = size.width
+        val h = size.height
+        val line = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
+        drawLine(Color.White, Offset(w * .12f, h * .25f), Offset(w * .88f, h * .25f), strokeWidth = line.width, cap = StrokeCap.Round)
+        drawLine(Color.White, Offset(w * .40f, h * .13f), Offset(w * .60f, h * .13f), strokeWidth = line.width, cap = StrokeCap.Round)
+        drawLine(Color.White, Offset(w * .23f, h * .37f), Offset(w * .30f, h * .92f), strokeWidth = line.width, cap = StrokeCap.Round)
+        drawLine(Color.White, Offset(w * .77f, h * .37f), Offset(w * .70f, h * .92f), strokeWidth = line.width, cap = StrokeCap.Round)
+        drawLine(Color.White, Offset(w * .30f, h * .92f), Offset(w * .70f, h * .92f), strokeWidth = line.width, cap = StrokeCap.Round)
+        drawLine(Color.White, Offset(w * .42f, h * .48f), Offset(w * .42f, h * .75f), strokeWidth = line.width * 0.75f, cap = StrokeCap.Round)
+        drawLine(Color.White, Offset(w * .58f, h * .48f), Offset(w * .58f, h * .75f), strokeWidth = line.width * 0.75f, cap = StrokeCap.Round)
+    }
+}
+
+internal fun galleryDecisionExitSign(direction: SwipeDirection?): Int = when (direction) {
+    SwipeDirection.TRASH -> -1
+    SwipeDirection.KEEP -> 1
+    null -> 0
 }
 
 internal fun gallerySwipeDirection(
