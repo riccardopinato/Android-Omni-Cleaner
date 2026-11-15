@@ -135,6 +135,23 @@ fun ExifCleanerSection() {
                 }
             }
 
+            Text(
+                stringResource(R.string.audit_privacy_quick),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            if (busy) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+
+            OutlinedButton(
+                onClick = { showAdvancedExif = !showAdvancedExif },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.audit_privacy_advanced) +
+                    if (showAdvancedExif) " −" else " +")
+            }
+            if (showAdvancedExif) {
             OutlinedButton(
                 onClick = { sourcePicker.launch(null) },
                 modifier = Modifier.fillMaxWidth(),
@@ -145,19 +162,6 @@ fun ExifCleanerSection() {
                 )
             }
 
-            Text(
-                stringResource(R.string.audit_privacy_quick),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            OutlinedButton(
-                onClick = { showAdvancedExif = !showAdvancedExif },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.audit_privacy_advanced) +
-                    if (showAdvancedExif) " −" else " +")
-            }
-            if (showAdvancedExif) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -201,9 +205,6 @@ fun ExifCleanerSection() {
                 }
             }
 
-
-            }
-
             Button(
                 onClick = {
                     val source = sourceTree ?: return@Button
@@ -229,10 +230,6 @@ fun ExifCleanerSection() {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.exif_scan))
-            }
-
-            if (busy) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
 
             scan?.let { result ->
@@ -284,6 +281,8 @@ fun ExifCleanerSection() {
                     Text(stringResource(R.string.exif_export_clean_copies))
                 }
             }
+
+            } // End advanced folder/batch tools.
 
             export?.let { result ->
                 Text(
