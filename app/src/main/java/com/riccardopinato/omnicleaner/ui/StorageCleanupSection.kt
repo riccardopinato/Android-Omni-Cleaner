@@ -336,8 +336,6 @@ fun StorageCleanupSection(
         }
     }
 
-    ManualMaintenanceCard()
-
     when (dialog) {
         CleanupDialog.EMPTY_FOLDERS -> AlertDialog(
             onDismissRequest = { dialog = null },
@@ -415,7 +413,7 @@ fun StorageCleanupSection(
 }
 
 @Composable
-private fun ManualMaintenanceCard() {
+fun ManualMaintenanceCard() {
     val context = LocalContext.current
     var message by remember { mutableStateOf<String?>(null) }
     val clipboardUnavailable = stringResource(R.string.manual_clipboard_unavailable)
