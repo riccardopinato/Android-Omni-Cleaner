@@ -74,7 +74,6 @@ fun GalleryCleanerSection(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(stringResource(R.string.module_gallery_cleaner), style = MaterialTheme.typography.titleLarge)
             Text(
                 stringResource(R.string.gallery_body),
                 style = MaterialTheme.typography.bodySmall,
