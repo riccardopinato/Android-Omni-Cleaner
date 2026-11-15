@@ -359,4 +359,8 @@
     <string name="audit_advanced_maintenance">Limpieza y mantenimiento avanzados</string>
     <string name="audit_privacy_quick">Privacidad rápida: quitar la ubicación GPS de copias JPEG</string>
     <string name="audit_privacy_advanced">Opciones EXIF avanzadas</string>
+    <string name="audit_trash_delete_title">¿Eliminar este archivo definitivamente?</string>
+    <string name="audit_trash_delete_body">¿Eliminar %1$s de la papelera segura? Esta acción no se puede deshacer.</string>
+    <string name="audit_trash_item_deleted">Archivo eliminado definitivamente; %1$s liberados.</string>
+    <string name="audit_trash_item_failed">No se pudo eliminar definitivamente el archivo.</string>
 </resources>
