@@ -201,6 +201,12 @@ fun RedesignedOmniCleanerApp(
             OmniPremiumWaveBackground(dark = darkTheme)
             OmniDestination.entries.forEach { item ->
                 val active = destination == item
+                // Clean/Privacy keep local selection and SAF workflow state alive.
+                // Home, Gallery and Pro have no expensive offscreen UI owner:
+                // their domain state already lives in the Activity ViewModel.
+                val retainsWorkflow = item == OmniDestination.CLEAN ||
+                    item == OmniDestination.PRIVACY
+                if (active || retainsWorkflow) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -294,6 +300,7 @@ fun RedesignedOmniCleanerApp(
                             }
                         }
                     }
+                }
                 }
             }
         }
