@@ -23,6 +23,7 @@ class GalleryPreferencesManager(
         val filter: GalleryMediaFilter = GalleryMediaFilter.ALL,
         val sortOrder: GallerySortOrder = GallerySortOrder.DATE_DESC,
         val totalReviewedCount: Int = 0,
+        val lastUndoRef: String? = null,
     )
 
     val sessionFlow: Flow<GallerySessionState> = context.galleryDataStore.data.map { preferences ->
@@ -40,6 +41,7 @@ class GalleryPreferencesManager(
                 GallerySortOrder.DATE_DESC,
             ),
             totalReviewedCount = preferences[Keys.TOTAL_REVIEWED] ?: 0,
+            lastUndoRef = preferences[Keys.LAST_UNDO_REF],
         )
     }
 
@@ -49,6 +51,7 @@ class GalleryPreferencesManager(
         sourceOffset: Int,
         pendingTrashRefs: Set<String>,
         totalReviewedCount: Int,
+        lastUndoRef: String? = null,
     ) {
         context.galleryDataStore.edit { preferences ->
             preferences[Keys.LAST_MEDIA_ID] = lastMediaId
@@ -56,6 +59,11 @@ class GalleryPreferencesManager(
             preferences[Keys.SOURCE_OFFSET] = sourceOffset.coerceAtLeast(0)
             preferences[Keys.PENDING_TRASH_REFS] = pendingTrashRefs
             preferences[Keys.TOTAL_REVIEWED] = totalReviewedCount
+            if (lastUndoRef == null) {
+                preferences.remove(Keys.LAST_UNDO_REF)
+            } else {
+                preferences[Keys.LAST_UNDO_REF] = lastUndoRef
+            }
         }
     }
 
@@ -73,6 +81,8 @@ class GalleryPreferencesManager(
             preferences.remove(Keys.LAST_MEDIA_INDEX)
             preferences.remove(Keys.SOURCE_OFFSET)
             preferences[Keys.PENDING_TRASH_REFS] = pendingTrashRefs
+            // A saved Undo cursor is only valid in the original sort/filter.
+            preferences.remove(Keys.LAST_UNDO_REF)
         }
     }
 
@@ -83,6 +93,7 @@ class GalleryPreferencesManager(
             preferences.remove(Keys.SOURCE_OFFSET)
             preferences.remove(Keys.PENDING_TRASH_REFS)
             preferences.remove(Keys.TOTAL_REVIEWED)
+            preferences.remove(Keys.LAST_UNDO_REF)
         }
     }
 
@@ -94,6 +105,7 @@ class GalleryPreferencesManager(
         val FILTER = stringPreferencesKey("filter")
         val SORT_ORDER = stringPreferencesKey("sort_order")
         val TOTAL_REVIEWED = intPreferencesKey("total_reviewed_count")
+        val LAST_UNDO_REF = stringPreferencesKey("last_undo_ref")
     }
 
     private inline fun <reified T : Enum<T>> enumValueOrDefault(
