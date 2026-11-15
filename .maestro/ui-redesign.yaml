@@ -1,69 +1,34 @@
 appId: com.riccardopinato.omnicleaner.debug
 ---
+# AUD-0014 / AUD-0016: non-destructive navigation and visible state contract.
+# This is emulator smoke evidence, never a physical-device/store certification.
 - launchApp:
     clearState: false
 - assertVisible: "Android Omni Cleaner"
-- assertVisible: "Home"
+- assertVisible: "Smart cleaning"
 - assertVisible: "Analyze storage"
 
-- tapOn:
-    text: "Clean"
+# Settings moved from Pro to Home in AUD-0010; verify current location.
+- tapOn: "Settings"
+- assertVisible: "Appearance"
+- scrollUntilVisible:
+    element:
+      text: "App language"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "App language"
+- pressKey: Back
+
+- tapOn: "Clean"
 - assertVisible: "Deep Cleaning"
-- assertVisible: "Analyze storage"
-- tapOn:
-    text: "Analyze storage"
-- scrollUntilVisible:
-    element:
-      text: "Storage overview"
-    direction: DOWN
-    timeout: 120000
-    speed: 50
-- assertVisible: "Storage overview"
-
-- scrollUntilVisible:
-    element:
-      text: "Smart categories"
-    direction: UP
-    timeout: 30000
-- assertVisible: "Smart categories"
-- tapOn:
-    text: "Scan smart categories"
-- assertVisible:
-    text: "Scan smart categories"
-
-- scrollUntilVisible:
-    element:
-      text: "Find duplicates"
-    direction: UP
-    timeout: 30000
-- tapOn:
-    text: "Find duplicates"
-- scrollUntilVisible:
-    element:
-      text: "a.txt"
-    direction: DOWN
-    timeout: 120000
-    speed: 50
-- assertVisible: "a.txt"
-
-- tapOn:
-    text: "Gallery"
-- assertVisible: "Gallery Cleaner"
-
-- tapOn:
-    text: "Privacy"
-- assertVisible: "EXIF Privacy"
-
-- tapOn:
-    text: "Pro"
+- tapOn: "Gallery"
+- assertVisible: "Gallery cleaner"
+- tapOn: "Privacy"
+- assertVisible: "EXIF privacy"
+- assertVisible: "Choose one JPEG photo"
+- tapOn: "Advanced EXIF options"
+- assertVisible: "Choose photo folder"
+- tapOn: "Pro"
 - assertVisible: "Omni Cleaner Pro"
-- scrollUntilVisible:
-    element:
-      text: "Restore purchase"
-    direction: DOWN
-    timeout: 30000
-- assertVisible: "Restore purchase"
-
-- tapOn:
-    text: "Home"
-- assertVisible: "Android Omni Cleaner"
+- tapOn: "Home"
+- assertVisible: "Smart cleaning"

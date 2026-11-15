@@ -1,87 +1,28 @@
 appId: com.riccardopinato.omnicleaner.debug
 ---
+# Audit-era parity smoke. No destructive cleanup is authorized by this flow.
 - launchApp:
     clearState: false
-- assertVisible: "Android Omni Cleaner"
-- assertVisible: "Storage access ready"
-
-- tapOn:
-    text: "Analyze storage"
+- tapOn: "Clean"
+- assertVisible: "Deep Cleaning"
+- assertVisible: "Scan tools"
+- tapOn: "Analyze storage"
 - scrollUntilVisible:
     element:
-      text: ".*indexed.*"
+      text: "Storage overview"
     direction: DOWN
     timeout: 120000
-    speed: 50
-    visibilityPercentage: 50
+    speed: 45
 - assertVisible: "Storage overview"
-
 - scrollUntilVisible:
     element:
-      text: "Find duplicates"
+      text: "Filters & thresholds"
     direction: UP
     timeout: 30000
-- tapOn:
-    text: "Find duplicates"
-- scrollUntilVisible:
-    element:
-      text: "a.txt"
-    direction: DOWN
-    timeout: 120000
-    speed: 50
-- assertVisible: "a.txt"
-
-- scrollUntilVisible:
-    element:
-      text: "> 10 MB"
-    direction: UP
-    timeout: 30000
-- tapOn:
-    text: "> 10 MB"
-- scrollUntilVisible:
-    element:
-      text: "Find large files"
-    direction: UP
-    timeout: 30000
-- tapOn:
-    text: "Find large files"
-- scrollUntilVisible:
-    element:
-      text: "parity-large.bin"
-    direction: DOWN
-    timeout: 120000
-    speed: 50
-- assertVisible: "parity-large.bin"
-
-- scrollUntilVisible:
-    element:
-      text: "Thumbnail cache"
-    direction: DOWN
-    timeout: 30000
-- tapOn:
-    text: "Thumbnail cache"
-- scrollUntilVisible:
-    element:
-      text: ".*DCIM/.thumbnails.*"
-    direction: DOWN
-    timeout: 60000
-- assertVisible:
-    text: ".*DCIM/.thumbnails.*"
-
-- tapOn:
-    text: "Gallery"
-- assertVisible: "Gallery Cleaner"
-
-- tapOn:
-    text: "Privacy"
-- assertVisible: "EXIF Privacy"
-
-- tapOn:
-    text: "Pro"
-- assertVisible: "Omni Cleaner Pro"
-- scrollUntilVisible:
-    element:
-      text: "Restore purchase"
-    direction: DOWN
-    timeout: 30000
-- assertVisible: "Restore purchase"
+- tapOn: "Filters & thresholds"
+- assertVisible: "Search folders"
+# Verify that review settings are retained during navigation (AUD-0016).
+- tapOn: "Gallery"
+- assertVisible: "Gallery cleaner"
+- tapOn: "Clean"
+- assertVisible: "Search folders"

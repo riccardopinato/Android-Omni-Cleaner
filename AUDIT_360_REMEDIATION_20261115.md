@@ -45,6 +45,43 @@ Here **CODED / NOT PHYSICALLY VERIFIED** never means Store Ready.
 - Previous SUCCESS at fd9a24e does **not** certify these later source changes. Run exact-head software gates before treating these fixes as verified.
 - AUD-0016 remains PARTIAL intentionally: the inactive Clean/Privacy compositions retain in-flight review and SAF state. Elimination without navigation-state preservation and profiling would be a safety regression.
 
+
+## Roadmap continuation — automated validation (2026-11-15)
+
+Baseline revalidated: `d821abf838c4514615f96f4f92879f3310b6fd9f`.
+[Android CI #43732421434](https://github.com/riccardopinato/Android-Omni-Cleaner/actions/runs/43732421434)
+passed **exact-head** locale/launcher parity, JVM unit tests, debug + androidTest APK compilation,
+`lintDebug`, `lintRelease`, `assembleRelease` and `bundleRelease`.
+Debug APK artifact tag: `fast-apk-d821abf838c4` (19,010,525 bytes,
+GitHub release asset SHA-256 `5931f01fe6ef188ad9fd47a47072d70d499d276bfa9e88633b059e6411db5c2b`).
+Thus the *older* checklist marks for these exact-source software tasks can be reconciled as PASS
+for that SHA; this does not certify any later commit.
+
+The legacy Maestro `ui-redesign.yaml`, `parity-storage.yaml` and
+`localization-accessibility.yaml` referenced the pre-audit layout. The new
+audit-bound smoke suite tests actual Home Settings, five destinations,
+single-JPEG privacy entry, advanced panel, a non-destructive storage scan,
+Clean filter state through a destination switch, and locale switching at 1.3x.
+A dedicated push trigger for `AppLab Runtime Smoke` applies **only** to the
+audit branch, with code/journey paths, because that stacked PR cannot receive
+the main-targeted PR gate. No PR, main merge or store release is created.
+
+**Evidence pending:** the updated Maestro flows and emulator smoke require a
+successful immutable-head AppLab run. No PASS is claimed until GitHub reports it.
+These scripted checks do not replace real-device gesture/permission/MediaStore,
+SAF, EXIF, TalkBack, appearance or OEM validation.
+
+**AUD-0016 safety boundary:** inactive Clean and Privacy remain composed while
+containing in-flight picker state or non-saveable destructive selections. Do
+not drop them from the composition just to improve an unmeasured benchmark;
+the safe next change needs retained selection/SAF state, navigation
+restoration tests and measured jank/memory before composing only the active tab.
+
+**Still BLOCKED EXTERNAL:** AUD-0014 physical UX/OEM QA, AUD-0015 release
+key and signing identity, Play Internal Testing and billing, AdMob/UMP, Data
+Safety, MANAGE_EXTERNAL_STORAGE policy review. Second-device Golden
+performance validation is also unfulfilled.
+
 ## UX design decisions
 - **Preserve** approved broom launcher asset and the Premium Light/Dark visual language.
 - **Preserve** the five primary destinations for this iteration; moving Pro out of nav would change the approved UI and needs a separate user design decision.
