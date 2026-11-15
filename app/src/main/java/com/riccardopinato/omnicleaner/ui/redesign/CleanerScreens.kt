@@ -547,6 +547,24 @@ private fun CleanFiltersCard(
         ) {
             Text(stringResource(R.string.redesign_filters_title), style = MaterialTheme.typography.titleMedium)
 
+            var searchMode by rememberSaveable { mutableStateOf(0) }
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
+            ) {
+                listOf(
+                    R.string.module_folders,
+                    R.string.module_large_files,
+                    R.string.module_duplicates,
+                ).forEachIndexed { index, label ->
+                    FilterChip(
+                        selected = searchMode == index,
+                        onClick = { searchMode = index },
+                        label = { Text(stringResource(label)) },
+                    )
+                }
+            }
+            if (searchMode != 0) {
             var extensionMenuExpanded by rememberSaveable { mutableStateOf(false) }
             Text(
                 stringResource(R.string.file_type_filter_title),
@@ -601,22 +619,6 @@ private fun CleanFiltersCard(
                 )
             }
 
-            var searchMode by rememberSaveable { mutableStateOf(0) }
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(7.dp),
-            ) {
-                listOf(
-                    R.string.module_folders,
-                    R.string.module_large_files,
-                    R.string.module_duplicates,
-                ).forEachIndexed { index, label ->
-                    FilterChip(
-                        selected = searchMode == index,
-                        onClick = { searchMode = index },
-                        label = { Text(stringResource(label)) },
-                    )
-                }
             }
             if (searchMode == 0) {
             OutlinedTextField(
