@@ -357,4 +357,6 @@
     <string name="audit_theme_dark">Scuro</string>
     <string name="audit_more_tools">Altri strumenti di scansione</string>
     <string name="audit_hide_tools">Nascondi strumenti aggiuntivi</string>
+    <string name="audit_storage_used_percent">Memoria utilizzata: %1$d%%</string>
+    <string name="audit_storage_unavailable">Informazioni sulla memoria non disponibili</string>
 </resources>
