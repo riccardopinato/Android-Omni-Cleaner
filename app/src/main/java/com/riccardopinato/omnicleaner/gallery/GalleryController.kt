@@ -81,16 +81,18 @@ class GalleryController(
                 sortOrder = session.sortOrder,
                 totalReviewedCount = session.totalReviewedCount,
                 sourceOffset = if (cursorCompatible) session.sourceOffset.coerceAtLeast(0) else 0,
-                pendingTrashItems = if (cursorCompatible) {
-                    restorePendingTrashItems(session.pendingTrashRefs)
-                } else {
-                    emptyList()
-                },
+                // The Android Trash queue belongs to the user, not to the
+                // currently active media filter or sort cursor.
+                pendingTrashItems = restorePendingTrashItems(session.pendingTrashRefs),
             ),
         )
         sessionLoaded = true
         if (!cursorCompatible) {
-            preferences.saveFilterAndSort(restoredFilter, session.sortOrder)
+            preferences.saveFilterAndSort(
+                restoredFilter,
+                session.sortOrder,
+                session.pendingTrashRefs,
+            )
         }
     }
 
@@ -131,6 +133,7 @@ class GalleryController(
     }
 
     fun setFilter(filter: GalleryMediaFilter) {
+        if (filter == state.filter) return
         val allowed = when (filter) {
             GalleryMediaFilter.ALL ->
                 state.accessHealth.canReadImages && state.accessHealth.canReadVideos
@@ -141,6 +144,7 @@ class GalleryController(
             update(state.copy(error = uiContext.getString(R.string.gallery_error_type_unavailable)))
             return
         }
+        val retainedTrash = state.selectedForTrash
         loadJob?.cancel()
         loadJob = null
         update(
@@ -154,18 +158,23 @@ class GalleryController(
                 loadedSourceCount = 0,
                 sourceOffset = 0,
                 history = emptyList(),
-                pendingTrashItems = emptyList(),
+                pendingTrashItems = retainedTrash,
                 error = null,
             ),
         )
         resumeMediaId = 0L
         persistJob?.cancel()
         persistJob = scope.launch {
-            preferences.saveFilterAndSort(filter, state.sortOrder)
+            preferences.saveFilterAndSort(
+                filter,
+                state.sortOrder,
+                retainedTrash.mapTo(linkedSetOf()) { encodePersistedTrashRef(it.id, it.uri.toString()) },
+            )
         }
     }
 
     fun cycleSortOrder() {
+        val retainedTrash = state.selectedForTrash
         val values = GallerySortOrder.entries
         val next = values[(state.sortOrder.ordinal + 1) % values.size]
         loadJob?.cancel()
@@ -181,13 +190,17 @@ class GalleryController(
                 loadedSourceCount = 0,
                 sourceOffset = 0,
                 history = emptyList(),
-                pendingTrashItems = emptyList(),
+                pendingTrashItems = retainedTrash,
             ),
         )
         resumeMediaId = 0L
         persistJob?.cancel()
         persistJob = scope.launch {
-            preferences.saveFilterAndSort(state.filter, next)
+            preferences.saveFilterAndSort(
+                state.filter,
+                next,
+                retainedTrash.mapTo(linkedSetOf()) { encodePersistedTrashRef(it.id, it.uri.toString()) },
+            )
         }
     }
 
@@ -329,6 +342,20 @@ class GalleryController(
                 pendingTrashItems = state.pendingTrashItems.filterNot { it.id == last.item.id },
                 sourceOffset = (state.sourceOffset - 1).coerceAtLeast(0),
                 totalReviewedCount = (state.totalReviewedCount - 1).coerceAtLeast(0),
+            ),
+        )
+        persistProgress()
+    }
+
+    /** Unmark a reviewed photo without deleting or changing the media file. */
+    fun removeFromTrashSelection(mediaId: Long) {
+        if (state.selectedForTrash.none { it.id == mediaId }) return
+        update(
+            state.copy(
+                items = state.items.map { media ->
+                    if (media.id == mediaId) media.copy(isSelectedForTrash = false) else media
+                },
+                pendingTrashItems = state.pendingTrashItems.filterNot { it.id == mediaId },
             ),
         )
         persistProgress()
