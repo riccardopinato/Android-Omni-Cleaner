@@ -45,6 +45,7 @@ fun SafeTrashSection() {
     }
 
     var entries by remember { mutableStateOf<List<SafeTrashEntry>>(emptyList()) }
+    var visibleEntryLimit by remember { mutableStateOf(12) }
     var trashBytes by remember { mutableStateOf(0L) }
     var loading by remember { mutableStateOf(true) }
     var persistentAvailable by remember { mutableStateOf(false) }
@@ -139,7 +140,7 @@ fun SafeTrashSection() {
                         )
                     }
 
-                    entries.take(12).forEach { entry ->
+                    entries.take(visibleEntryLimit).forEach { entry ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -188,6 +189,14 @@ fun SafeTrashSection() {
                         }
                     }
 
+                    if (entries.size > visibleEntryLimit) {
+                        OutlinedButton(
+                            onClick = {
+                                visibleEntryLimit = (visibleEntryLimit + 30).coerceAtMost(entries.size)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text(stringResource(R.string.audit_show_more)) }
+                    }
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
                             enabled = !loading,
