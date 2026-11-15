@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+      # The stacked audit PR targets the design branch, so it does not
+      # receive the main-only pull_request gate. Verify source HEAD on push.
+      - audit/omni-safety-ux-360-20261115
   pull_request:
     branches:
       - main
@@ -76,7 +79,7 @@ jobs:
         run: ./gradlew lintDebug lintRelease testDebugUnitTest assembleDebug assembleDebugAndroidTest assembleRelease bundleRelease --stacktrace
 
       - name: Publish exact-head development APK
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'push' && github.ref == 'refs/heads/audit/omni-safety-ux-360-20261115')
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
