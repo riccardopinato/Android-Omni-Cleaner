@@ -342,4 +342,9 @@
     <string name="performance_benchmark_report_copied">Relatório copiado. Cole-o no chat do projeto para análise.</string>
     <string name="audit_show_more">Mostrar mais</string>
     <string name="audit_review_selected_count">Reveja os %1$d itens selecionados antes de confirmar.</string>
+    <string name="audit_gallery_options">Filtros e ordenação</string>
+    <string name="audit_gallery_review_queue">Rever %1$d fotos para o lixo</string>
+    <string name="audit_gallery_review_title">Rever seleção para o lixo</string>
+    <string name="audit_gallery_unmark">Manter</string>
+    <string name="audit_review_progress">%1$d revistas</string>
 </resources>
