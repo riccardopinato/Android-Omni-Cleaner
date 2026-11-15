@@ -39,6 +39,7 @@ fun ExifCleanerSection() {
         FolderExifCleaner(context.applicationContext)
     }
 
+    var singleSource by remember { mutableStateOf<Uri?>(null) }
     var sourceTree by remember { mutableStateOf<Uri?>(null) }
     var destinationTree by remember { mutableStateOf<Uri?>(null) }
     var recursive by remember { mutableStateOf(true) }
@@ -48,6 +49,42 @@ fun ExifCleanerSection() {
     var export by remember { mutableStateOf<ExifExport?>(null) }
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<ExifStatus?>(null) }
+
+
+    // Default: pick one JPEG, then create a separate clean copy through SAF.
+    // Existing directory batch export stays available without behavioral changes.
+    val singleSourcePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            singleSource = uri
+            export = null
+            status = null
+        }
+    }
+
+    val singleSavePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("image/jpeg"),
+    ) { destination ->
+        val source = singleSource
+        if (destination != null && source != null && !busy) {
+            busy = true
+            status = null
+            scope.launch {
+                try {
+                    val result = cleaner.exportSingle(source, destination, groups.toSet())
+                    export = result
+                    status = if (result.created == 1 && result.failed == 0) {
+                        ExifStatus(R.string.exif_export_status, listOf(1, 0))
+                    } else {
+                        ExifStatus(R.string.exif_export_failed)
+                    }
+                } finally {
+                    busy = false
+                }
+            }
+        }
+    }
 
     val sourcePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
@@ -79,6 +116,24 @@ fun ExifCleanerSection() {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+
+            OutlinedButton(
+                onClick = { singleSourcePicker.launch(arrayOf("image/jpeg")) },
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.exif_choose_single_photo))
+            }
+            if (singleSource != null) {
+                Button(
+                    onClick = { singleSavePicker.launch("photo_clean.jpg") },
+                    enabled = groups.isNotEmpty() && !busy,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.exif_save_single_copy))
+                }
+            }
 
             OutlinedButton(
                 onClick = { sourcePicker.launch(null) },

@@ -107,6 +107,8 @@ class GalleryController(
     }
 
     fun refreshAccess(clearLoadedMedia: Boolean = false) {
+        // Media reload/revoked access must not silently discard reviewed Trash picks.
+        val preservedTrash = if (clearLoadedMedia) state.selectedForTrash else state.pendingTrashItems
         if (clearLoadedMedia) lastUndo = null
         val health = GalleryAccess.health(context)
         val compatibleFilter = when {
@@ -125,7 +127,7 @@ class GalleryController(
                 sourceOffset = if (clearLoadedMedia) 0 else state.sourceOffset,
                 history = if (clearLoadedMedia) emptyList() else state.history,
                 hasPersistedUndo = if (clearLoadedMedia) false else state.hasPersistedUndo,
-                pendingTrashItems = if (clearLoadedMedia) emptyList() else state.pendingTrashItems,
+                pendingTrashItems = preservedTrash,
                 hasMore = if (clearLoadedMedia) false else state.hasMore,
                 loading = if (clearLoadedMedia) false else state.loading,
                 loadingNextPage = if (clearLoadedMedia) false else state.loadingNextPage,

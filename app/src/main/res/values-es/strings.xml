@@ -240,6 +240,8 @@
     <string name="gallery_unknown_date">Fecha desconocida</string>
 
     <string name="exif_body">Analiza archivos JPEG y crea copias limpias. Los originales no se modifican.</string>
+    <string name="exif_choose_single_photo">Elegir una foto JPEG</string>
+    <string name="exif_save_single_copy">Guardar una copia JPEG limpia</string>
     <string name="exif_choose_photo_folder">Elegir carpeta de fotos</string>
     <string name="exif_change_photo_folder">Cambiar carpeta de fotos</string>
     <string name="exif_include_subfolders">Incluir subcarpetas</string>

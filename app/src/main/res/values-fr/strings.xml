@@ -240,6 +240,8 @@
     <string name="gallery_unknown_date">Date inconnue</string>
 
     <string name="exif_body">Analyse les fichiers JPEG et crée des copies nettoyées. Les originaux ne sont pas modifiés.</string>
+    <string name="exif_choose_single_photo">Choisir une photo JPEG</string>
+    <string name="exif_save_single_copy">Enregistrer une copie JPEG nettoyée</string>
     <string name="exif_choose_photo_folder">Choisir le dossier de photos</string>
     <string name="exif_change_photo_folder">Changer le dossier de photos</string>
     <string name="exif_include_subfolders">Inclure les sous-dossiers</string>

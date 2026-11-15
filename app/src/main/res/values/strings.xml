@@ -241,6 +241,8 @@
     <string name="gallery_unknown_date">Unknown date</string>
 
     <string name="exif_body">Scan JPEG files and create clean copies. Originals are not modified.</string>
+    <string name="exif_choose_single_photo">Choose one JPEG photo</string>
+    <string name="exif_save_single_copy">Save a cleaned JPEG copy</string>
     <string name="exif_choose_photo_folder">Choose photo folder</string>
     <string name="exif_change_photo_folder">Change photo folder</string>
     <string name="exif_include_subfolders">Include subfolders</string>

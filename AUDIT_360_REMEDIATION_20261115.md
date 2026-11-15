@@ -28,8 +28,8 @@ Here **CODED / NOT PHYSICALLY VERIFIED** never means Store Ready.
 | AUD-0005 (P1) | Clean was a long technical mega-scroll | CleanerScreens.kt: primary scan actions first, optional scan tools/filters, advanced maintenance and explicit trash entry | CODED | Guided user journey on small phone |
 | AUD-0006 (P2) | Large/duplicate/folder preview repeated again in selection view | CleanerScreens.kt: remove redundant read-only list rows, keep summaries and actionable review | CODED | View all result types after scans |
 | AUD-0007 (P2) | Three unrelated search boxes and complex filters shown together | CleanerScreens.kt: search mode selector for folders/large files/duplicates, panel collapsed by default | CODED | Accessibility with long locale strings |
-| AUD-0008 (P1) | Filter/sort reset deleted Gallery trash queue | GalleryController, GalleryPreferencesManager: queue persists atomically across view changes; stale pagination cannot discard queue | CODED | Filter/sort, force-stop, reboot and MediaStore permission transitions |
-| AUD-0009 (P2) | EXIF multi-step UI too technical | ExifCleanerSection.kt: simple GPS-removal default on JPEG copies, advanced controls collapsed | PARTIAL | One-file SAF flow optional v1.1; real output orientation/GPS/original checks |
+| AUD-0008 (P1) | Filter/sort reset deleted Gallery trash queue | GalleryController, GalleryPreferencesManager: queue persists across view changes and full MediaStore access refresh | CODED / NEW CI PENDING | Filter/sort, force-stop, reboot and MediaStore permission transitions |
+| AUD-0009 (P2) | EXIF multi-step UI too technical | ExifCleanerSection.kt and FolderExifCleaner.kt: direct one-JPEG SAF copy path with read-only source, SHA integrity and EXIF verification; folder batch preserved | CODED / NEW CI PENDING | Android SAF, orientation/GPS/original checks on device |
 | AUD-0010 (P2) | Language embedded inside Pro, no dedicated Settings | OmniPremiumHome gear + Settings bottom sheet; language/UMP options moved, Pro remains commercial workflow | CODED | Screen reader + insets |
 | AUD-0011 (P2) | Theme did not survive app restart; untranslated progress semantics | AppAppearance.kt persists System/Light/Dark; OmniPremiumHome uses localized storage percentage semantics | CODED | Restart/OS theme switch/localization |
 | AUD-0012 (P2) | Fixed-height Bento tiles could clip large text | OmniPremiumHome.kt: minimum rather than fixed height | CODED | 320dp, fontScale 1.0/1.5/2.0, TalkBack |
@@ -38,6 +38,12 @@ Here **CODED / NOT PHYSICALLY VERIFIED** never means Store Ready.
 | AUD-0015 (release gate) | Signing, Play Billing, AdMob/UMP and permission declarations not live-validated | RELEASE_FREEZE.md / STEP10_STORE_RELEASE_CERTIFICATION.md remains canonical | **BLOCKED EXTERNAL** | Release key secrets, Play internal testing, provider config and physical validation |
 | AUD-0016 (P2) | All five offscreen destinations remained composed | RedesignedOmniCleanerApp.kt skips inactive Home/Gallery/Pro; Clean and Privacy remain for in-flight selection and SAF state safety | PARTIAL | Profile memory/jank and test navigation state |
 | AUD-0017 (P2) | Nested screens repeated destination headings | GalleryCleanerSection, ExifCleanerSection, MonetizationSection now rely on parent heading | CODED | Screenshot comparison |
+
+## Follow-up remediation — additional source gate pending
+- Preserves user-reviewed Gallery Trash picks through a full access/media refresh; no automatic media deletion.
+- Adds a single-file JPEG OpenDocument/CreateDocument clean-copy flow; retains existing folder batch flow.
+- Previous SUCCESS at fd9a24e does **not** certify these later source changes. Run exact-head software gates before treating these fixes as verified.
+- AUD-0016 remains PARTIAL intentionally: the inactive Clean/Privacy compositions retain in-flight review and SAF state. Elimination without navigation-state preservation and profiling would be a safety regression.
 
 ## UX design decisions
 - **Preserve** approved broom launcher asset and the Premium Light/Dark visual language.
