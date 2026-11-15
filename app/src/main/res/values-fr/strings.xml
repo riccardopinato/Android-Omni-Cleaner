@@ -342,4 +342,9 @@
     <string name="performance_benchmark_report_copied">Rapport copié. Collez-le dans le chat du projet pour l’analyse.</string>
     <string name="audit_show_more">Afficher plus</string>
     <string name="audit_review_selected_count">Vérifiez les %1$d éléments sélectionnés avant de confirmer.</string>
+    <string name="audit_gallery_options">Filtres et tri</string>
+    <string name="audit_gallery_review_queue">Vérifier %1$d photos sélectionnées</string>
+    <string name="audit_gallery_review_title">Vérifier la sélection corbeille</string>
+    <string name="audit_gallery_unmark">Conserver</string>
+    <string name="audit_review_progress">%1$d examinées</string>
 </resources>
