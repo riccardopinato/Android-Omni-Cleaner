@@ -79,7 +79,7 @@ internal fun OmniPremiumBroomMark(
     // Reuse the exact launcher broom artwork rather than maintaining two different drawings.
     Image(
         painter = painterResource(
-            id = if (framed) R.drawable.omni_premium_logo
+            id = if (framed) R.drawable.omni_approved_icon
                  else R.drawable.ic_launcher_foreground,
         ),
         contentDescription = null, // Decorative; app name is provided by the adjacent text.

@@ -64,3 +64,12 @@ This is a **native mobile interpretation** of a concept image that depicts deskt
 - Confirm icon round/squircle masks and monochrome theme icon on an Android 13+ launcher.
 - Verify contrast and hit targets, image/gradient performance, memory, and APK size.
 - PR remains **DRAFT**. RC1 main/release freeze remains unchanged.
+
+### Final approved launcher artwork: raster asset, not approximation
+
+- User-approved image: *glossy cyan-to-blue-to-purple rounded-square broom icon*, star and curved bristles preserved. This approval supersedes previous first-party vector mockup illustrations.
+- Source artwork rendered at 1254×1254, packaged as a lightweight **192×192 WebP** with alpha rounded-square mask (source-backed resampling, not a regenerated drawing). File: `app/src/main/res/drawable-nodpi/omni_approved_icon.webp`. Git object SHA: `0bfe3ae03629d19d273cfc4b5aa6ace522121b3a`.
+- Launcher pre-26 points to the packaged art; adaptive icon foreground uses a safe-zone inset over the existing gradient background; themed monochrome fallback remains available.
+- In-app premium branding uses the same raster approved art, while the standalone illustrative broom tile remains vector.
+- Visual QA required: actual device icon masks and contrast, independent of CI; the source PNG itself is not stored in Git to avoid large APK/resource impact.
+- RC1 source freeze unchanged: this PR remains a **future v1.1 candidate**, not a signed release.
