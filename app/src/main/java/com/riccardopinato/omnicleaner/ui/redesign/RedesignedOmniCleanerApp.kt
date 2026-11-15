@@ -1,6 +1,8 @@
 package com.riccardopinato.omnicleaner.ui.redesign
 
 import android.Manifest
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
@@ -20,7 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -31,11 +33,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.OutlinedButton
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -201,6 +203,13 @@ fun RedesignedOmniCleanerApp(
             OmniPremiumWaveBackground(dark = darkTheme)
             OmniDestination.entries.forEach { item ->
                 val active = destination == item
+                // A short layer-only fade responds immediately to taps, avoiding
+                // an abrupt swap while leaving in-flight Clean/SAF state retained.
+                val layerAlpha by animateFloatAsState(
+                    targetValue = if (active) 1f else 0f,
+                    animationSpec = tween(durationMillis = 125),
+                    label = "destination-${item.name}",
+                )
                 // Clean/Privacy keep local selection and SAF workflow state alive.
                 // Home, Gallery and Pro have no expensive offscreen UI owner:
                 // their domain state already lives in the Activity ViewModel.
@@ -211,7 +220,7 @@ fun RedesignedOmniCleanerApp(
                     modifier = Modifier
                         .fillMaxSize()
                         .zIndex(if (active) 1f else 0f)
-                        .alpha(if (active) 1f else 0f)
+                        .alpha(layerAlpha)
                         .then(
                             if (active) {
                                 Modifier

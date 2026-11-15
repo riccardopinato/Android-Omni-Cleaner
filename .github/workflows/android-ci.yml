@@ -55,6 +55,9 @@ jobs:
       - name: Verify launcher icon across Android API levels
         run: python3 .github/scripts/check-launcher-icon.py
 
+      - name: Verify blue action styles and native broom tab
+        run: python3 .github/scripts/check-ux-action-style.py
+
       - name: Parse Windows signing bootstrap
         shell: pwsh
         run: |

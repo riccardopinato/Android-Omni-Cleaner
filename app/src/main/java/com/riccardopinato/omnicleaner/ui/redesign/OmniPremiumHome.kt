@@ -3,6 +3,9 @@ package com.riccardopinato.omnicleaner.ui.redesign
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.draw.drawWithCache
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as Button
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as OutlinedButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -44,31 +47,52 @@ import kotlin.math.roundToInt
  */
 @Composable
 internal fun OmniPremiumWaveBackground(dark: Boolean) {
-    Canvas(Modifier.fillMaxSize().clearAndSetSemantics { }) {
-        val w = size.width
-        val h = size.height
-        drawRect(Brush.verticalGradient(if (dark) listOf(Color(0xFF0A112C), Color(0xFF0A1025))
-            else listOf(Color(0xFFEAF2FF), Color(0xFFF8FAFF))))
-        val top = Path().apply {
-            moveTo(0f, 0f); lineTo(w, 0f); lineTo(w, h * .21f)
-            cubicTo(w * .60f, h * .11f, w * .42f, h * .19f, 0f, h * .04f); close()
-        }
-        drawPath(top, Brush.linearGradient(
-            if (dark) listOf(Color(0xFF2D165A), Color(0xFF173B8A), Color(0xFF0AADEB))
-            else listOf(Color(0xFFCDDFFF), Color(0xFFAAD7FF), Color(0xFF79B9FF)),
-            Offset.Zero, Offset(w, h * .22f),
-        ))
-        val bottom = Path().apply {
-            moveTo(0f, h * .76f)
-            cubicTo(w * .4f, h * .82f, w * .5f, h, w, h * .94f)
-            lineTo(w, h); lineTo(0f, h); close()
-        }
-        drawPath(bottom, Brush.linearGradient(
-            if (dark) listOf(Color(0xFF5019B5), Color(0xFF233ADE), Color(0xFF0CA8E6))
-            else listOf(Color(0xFF9CCBFF), Color(0xFF4388F8), Color(0xFFDFEBFF)),
-            Offset(0f, h * .76f), Offset(w, h),
-        ))
-    }
+    // Paths and gradient brushes are now cached per size/theme, not created
+    // on every redraw during rapid navigation or the Gallery swipe animation.
+    Spacer(
+        modifier = Modifier
+            .fillMaxSize()
+            .clearAndSetSemantics { }
+            .drawWithCache {
+                val w = size.width
+                val h = size.height
+                val background = Brush.verticalGradient(
+                    if (dark) listOf(Color(0xFF0A112C), Color(0xFF0A1025))
+                    else listOf(Color(0xFFEAF2FF), Color(0xFFF8FAFF)),
+                )
+                val top = Path().apply {
+                    moveTo(0f, 0f)
+                    lineTo(w, 0f)
+                    lineTo(w, h * .21f)
+                    cubicTo(w * .60f, h * .11f, w * .42f, h * .19f, 0f, h * .04f)
+                    close()
+                }
+                val topPaint = Brush.linearGradient(
+                    if (dark) listOf(Color(0xFF2D165A), Color(0xFF173B8A), Color(0xFF0AADEB))
+                    else listOf(Color(0xFFCDDFFF), Color(0xFFAAD7FF), Color(0xFF79B9FF)),
+                    start = Offset.Zero,
+                    end = Offset(w, h * .22f),
+                )
+                val bottom = Path().apply {
+                    moveTo(0f, h * .76f)
+                    cubicTo(w * .4f, h * .82f, w * .5f, h, w, h * .94f)
+                    lineTo(w, h)
+                    lineTo(0f, h)
+                    close()
+                }
+                val bottomPaint = Brush.linearGradient(
+                    if (dark) listOf(Color(0xFF5019B5), Color(0xFF233ADE), Color(0xFF0CA8E6))
+                    else listOf(Color(0xFF9CCBFF), Color(0xFF4388F8), Color(0xFFDFEBFF)),
+                    start = Offset(0f, h * .76f),
+                    end = Offset(w, h),
+                )
+                onDrawBehind {
+                    drawRect(brush = background)
+                    drawPath(path = top, brush = topPaint)
+                    drawPath(path = bottom, brush = bottomPaint)
+                }
+            },
+    )
 }
 
 @Composable
@@ -181,7 +205,7 @@ private fun PremiumQuickAction(onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth()
             .background(
                 Brush.horizontalGradient(listOf(
-                    Color(0xFF04CBF0), Color(0xFF256FFF), Color(0xFF6A31F9), Color(0xFFAF26E5))),
+                    Color(0xFF087EDB), Color(0xFF285DE5), Color(0xFF2045BA), Color(0xFF285DE5))),
                 RoundedCornerShape(99.dp),
             )
             .clickable(onClick = onClick)
@@ -286,7 +310,7 @@ internal fun OmniPremiumHome(
                 }
                 Box(
                     Modifier.size(48.dp).background(
-                        if (dark) Color(0xFF48288B) else Color(0xFFE0E9FF),
+                        Color(0xFF285DE5),
                         RoundedCornerShape(16.dp))
                         .clickable(onClick = onOpenSettings)
                         .semantics { contentDescription = settingsDescription },
@@ -294,7 +318,7 @@ internal fun OmniPremiumHome(
                 ) {
                     Text("⚙",
                         fontSize = 25.sp,
-                        color = if (dark) Color.White else Color(0xFF325ED7))
+                        color = Color.White)
                 }
             }
         }

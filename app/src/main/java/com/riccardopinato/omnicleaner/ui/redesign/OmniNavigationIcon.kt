@@ -54,26 +54,71 @@ internal fun OmniNavigationIcon(
                 drawLine(tint, Offset(w * .57f, h * .86f), Offset(w * .57f, h * .62f), strokeWidth = line.width)
             }
             OmniNavigationSymbol.CLEAN -> {
-                // Draw the recognizable broom silhouette from the approved visual language.
+                // Compact original Premium broom, custom drawn as a vector rather
+                // than a bitmap. It tints with the destination's selected state.
+                // A rounded diagonal handle leads into a full bristle fan.
                 drawLine(
                     color = tint,
-                    start = Offset(w * .72f, h * .12f),
-                    end = Offset(w * .43f, h * .58f),
-                    strokeWidth = w * .12f,
+                    start = Offset(w * .77f, h * .10f),
+                    end = Offset(w * .47f, h * .54f),
+                    strokeWidth = w * .105f,
                     cap = StrokeCap.Round,
                 )
-                val bristles = Path().apply {
-                    moveTo(w * .25f, h * .54f)
-                    quadraticTo(w * .44f, h * .62f, w * .60f, h * .53f)
-                    lineTo(w * .70f, h * .80f)
-                    lineTo(w * .60f, h * .87f)
-                    lineTo(w * .53f, h * .76f)
-                    lineTo(w * .46f, h * .91f)
-                    lineTo(w * .38f, h * .76f)
-                    lineTo(w * .29f, h * .84f)
+                drawLine(
+                    color = Color.White.copy(alpha = .42f),
+                    start = Offset(w * .76f, h * .11f),
+                    end = Offset(w * .53f, h * .46f),
+                    strokeWidth = w * .026f,
+                    cap = StrokeCap.Round,
+                )
+                val collar = Path().apply {
+                    moveTo(w * .38f, h * .48f)
+                    lineTo(w * .57f, h * .59f)
+                    lineTo(w * .53f, h * .67f)
+                    lineTo(w * .33f, h * .55f)
                     close()
                 }
-                drawPath(bristles, tint, style = line)
+                drawPath(collar, tint)
+                val bristleFan = Path().apply {
+                    moveTo(w * .34f, h * .56f)
+                    quadraticTo(w * .45f, h * .60f, w * .55f, h * .65f)
+                    cubicTo(w * .66f, h * .76f, w * .67f, h * .84f, w * .61f, h * .93f)
+                    lineTo(w * .51f, h * .87f)
+                    lineTo(w * .44f, h * .96f)
+                    lineTo(w * .35f, h * .88f)
+                    lineTo(w * .22f, h * .92f)
+                    cubicTo(w * .17f, h * .80f, w * .22f, h * .67f, w * .34f, h * .56f)
+                    close()
+                }
+                drawPath(bristleFan, tint)
+                // Subtle grooves keep the broom identifiable at 24 dp.
+                drawLine(
+                    color = Color.White.copy(alpha = .55f),
+                    start = Offset(w * .41f, h * .69f),
+                    end = Offset(w * .35f, h * .84f),
+                    strokeWidth = w * .031f,
+                    cap = StrokeCap.Round,
+                )
+                drawLine(
+                    color = Color.White.copy(alpha = .55f),
+                    start = Offset(w * .49f, h * .71f),
+                    end = Offset(w * .52f, h * .84f),
+                    strokeWidth = w * .031f,
+                    cap = StrokeCap.Round,
+                )
+                // One tiny four-point sparkle completes the visual motif.
+                val sparkle = Path().apply {
+                    moveTo(w * .23f, h * .17f)
+                    lineTo(w * .26f, h * .25f)
+                    lineTo(w * .34f, h * .28f)
+                    lineTo(w * .26f, h * .31f)
+                    lineTo(w * .23f, h * .39f)
+                    lineTo(w * .20f, h * .31f)
+                    lineTo(w * .12f, h * .28f)
+                    lineTo(w * .20f, h * .25f)
+                    close()
+                }
+                drawPath(sparkle, tint.copy(alpha = .83f))
             }
             OmniNavigationSymbol.GALLERY -> {
                 drawRoundRect(

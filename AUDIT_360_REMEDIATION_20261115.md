@@ -82,6 +82,37 @@ key and signing identity, Play Internal Testing and billing, AdMob/UMP, Data
 Safety, MANAGE_EXTERNAL_STORAGE policy review. Second-device Golden
 performance validation is also unfulfilled.
 
+## Roadmap follow-up — fluidity and blue action language (2026-11-16)
+
+The audit Draft branch now prepares the following **source changes, not yet CI-certified at
+this new HEAD**:
+
+- Shared Compose action component `OmniActionButton` sets a blue
+  `#285DE5` container and white action text in light and dark themes.
+  Existing Material3 `Button`, `OutlinedButton` and `TextButton`
+  call sites in the 12 interactive screens are routed through this shared component;
+  selection chips and navigation tabs retain distinct selection semantics.
+- Premium Home Settings action and quick-analysis action also use blue/white
+  action treatment.
+- Bottom navigation **Clean** now uses an original 24dp tint-aware vector broom
+  with filled bristle fan, handle and small sparkle. It replaces only that
+  destination's icon; approved full launcher icon remains unchanged.
+- Premium wave background uses `drawWithCache` so decorative paths/gradient
+  brushes are not regenerated on each redraw; navigation uses a short
+  125ms alpha animation and retains existing Clean/Privacy composition for
+  non-saveable destructive selections and in-flight SAF state.
+- `.github/scripts/check-ux-action-style.py` is added to the Android CI
+  source gate to detect future style regressions and missing broom icon.
+- No change to scanning, deletion policy, pricing, permissions, release identity
+  or app package.
+
+**Gate:** new exact-head Android CI compilation and AppLab/emulator runtime
+must succeed before claiming PASS or delivering an updated APK.
+**AUD-0016 stays PARTIAL** until an instrumented and measured state-ownership
+migration makes offscreen composition removable without sacrificing safety.
+**AUD-0014 / AUD-0015 stay NOT VERIFIED / BLOCKED EXTERNAL** pending physical
+Android and release-provider evidence.
+
 ## UX design decisions
 - **Preserve** approved broom launcher asset and the Premium Light/Dark visual language.
 - **Preserve** the five primary destinations for this iteration; moving Pro out of nav would change the approved UI and needs a separate user design decision.
