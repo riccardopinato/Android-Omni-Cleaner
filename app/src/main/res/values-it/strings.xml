@@ -237,6 +237,7 @@
     <string name="gallery_trash_confirm_body">Android mostrerà una seconda conferma di sistema. Gli elementi verranno spostati nel cestino multimediale, non eliminati direttamente.</string>
     <string name="gallery_preview_unavailable">Anteprima non disponibile</string>
     <string name="gallery_swipe_hint">← Cestino · Tieni →</string>
+    <string name="gallery_selection_explainer">Cestino seleziona soltanto la foto. Android chiederà conferma prima di spostarla.</string>
     <string name="gallery_unknown_date">Data sconosciuta</string>
 
     <string name="exif_body">Analizza JPEG e crea copie pulite. Gli originali non vengono modificati.</string>
