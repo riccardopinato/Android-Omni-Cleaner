@@ -236,6 +236,7 @@
     <string name="gallery_trash_confirm_body">O Android mostrará uma segunda confirmação do sistema. Os itens serão movidos para a lixeira multimédia, não eliminados diretamente.</string>
     <string name="gallery_preview_unavailable">Pré-visualização indisponível</string>
     <string name="gallery_swipe_hint">← Lixeira · Manter →</string>
+    <string name="gallery_selection_explainer">Lixeira apenas marca o item. O Android pedirá confirmação antes de o mover.</string>
     <string name="gallery_unknown_date">Data desconhecida</string>
 
     <string name="exif_body">Analisa ficheiros JPEG e cria cópias limpas. Os originais não são modificados.</string>
