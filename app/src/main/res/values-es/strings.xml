@@ -354,4 +354,6 @@
     <string name="audit_theme_dark">Oscuro</string>
     <string name="audit_more_tools">Otras herramientas de análisis</string>
     <string name="audit_hide_tools">Ocultar herramientas adicionales</string>
+    <string name="audit_storage_used_percent">Almacenamiento usado: %1$d%%</string>
+    <string name="audit_storage_unavailable">Información de almacenamiento no disponible</string>
 </resources>
