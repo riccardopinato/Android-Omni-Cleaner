@@ -203,12 +203,6 @@ fun MonetizationSection(
                 )
             }
 
-            if (!premium && consentState.privacyOptionsRequired && activity != null) {
-                OutlinedButton(onClick = { consent.showPrivacyOptions(activity) }) {
-                    Text(stringResource(R.string.privacy_options))
-                }
-            }
-
             if (!premium) {
                 AdManager.Banner(
                     isPremium = false,
