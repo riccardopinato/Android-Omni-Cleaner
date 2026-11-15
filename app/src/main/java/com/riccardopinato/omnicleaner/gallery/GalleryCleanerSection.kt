@@ -174,7 +174,7 @@ fun GalleryCleanerSection(
 
                 GalleryMediaPreview(
                     item = current,
-                    canUndo = state.history.isNotEmpty(),
+                    canUndo = state.history.isNotEmpty() || state.hasPersistedUndo,
                     onKeep = controller::keepCurrent,
                     onTrash = controller::trashCurrent,
                     onUndo = controller::undoLastAction,
@@ -201,7 +201,8 @@ fun GalleryCleanerSection(
             }
 
             // The final reviewed photo has no currentItem; keep Undo available.
-            if (state.currentItem == null && state.history.isNotEmpty()) {
+            if (state.currentItem == null &&
+                (state.history.isNotEmpty() || state.hasPersistedUndo)) {
                 OutlinedButton(
                     onClick = controller::undoLastAction,
                     modifier = Modifier.fillMaxWidth(),
@@ -278,7 +279,7 @@ fun GalleryCleanerSection(
                             }
                             TextButton(onClick = {
                                 controller.removeFromTrashSelection(media.id)
-                                if (state.selectedForTrash.size <= 1) showQueueReview = false
+                                if (state.selectedForTrash.isEmpty()) showQueueReview = false
                             }) {
                                 Text(stringResource(R.string.audit_gallery_unmark))
                             }
