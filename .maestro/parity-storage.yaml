@@ -16,10 +16,15 @@ appId: com.riccardopinato.omnicleaner.debug
 - assertVisible: "Storage overview"
 - scrollUntilVisible:
     element:
-      text: "Filters & thresholds"
+      text: ".*Filters & thresholds.*"
     direction: UP
     timeout: 30000
-- tapOn: "Filters & thresholds"
+- tapOn: ".*Filters & thresholds.*"
+- scrollUntilVisible:
+    element:
+      text: "Search folders"
+    direction: DOWN
+    timeout: 30000
 - assertVisible: "Search folders"
 # Verify that review settings are retained during navigation (AUD-0016).
 - tapOn: "Gallery"

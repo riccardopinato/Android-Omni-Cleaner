@@ -26,7 +26,17 @@ appId: com.riccardopinato.omnicleaner.debug
 - tapOn: "Privacy"
 - assertVisible: "EXIF privacy"
 - assertVisible: "Choose one JPEG photo"
-- tapOn: "Advanced EXIF options"
+- scrollUntilVisible:
+    element:
+      text: ".*Advanced EXIF options.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: ".*Advanced EXIF options.*"
+- scrollUntilVisible:
+    element:
+      text: "Choose photo folder"
+    direction: DOWN
+    timeout: 30000
 - assertVisible: "Choose photo folder"
 - tapOn: "Pro"
 - assertVisible: "Omni Cleaner Pro"
