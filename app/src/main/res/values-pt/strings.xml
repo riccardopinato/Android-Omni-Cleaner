@@ -357,4 +357,6 @@
     <string name="audit_storage_used_percent">Armazenamento utilizado: %1$d%%</string>
     <string name="audit_storage_unavailable">Informações de armazenamento indisponíveis</string>
     <string name="audit_advanced_maintenance">Limpeza e manutenção avançadas</string>
+    <string name="audit_privacy_quick">Privacidade rápida: remover localização GPS das cópias JPEG</string>
+    <string name="audit_privacy_advanced">Opções EXIF avançadas</string>
 </resources>
