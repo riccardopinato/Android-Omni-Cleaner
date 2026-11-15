@@ -239,7 +239,9 @@ class GalleryController(
                         offset = 0,
                     )
                     effectiveOffset = 0
-                    pendingTrash = emptyList()
+                    // A stale pagination cursor must never silently discard
+                    // user-reviewed Trash selections. The system permission
+                    // confirmation still validates each media URI.
                 }
 
                 val hasMore = loaded.size > pageSize
