@@ -6,23 +6,45 @@ import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.os.Build
 import android.util.Size
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -30,75 +52,250 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.riccardopinato.omnicleaner.R
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 import kotlin.math.max
+
+private val TrashRed = Color(0xFFB42335)
+private val KeepGreen = Color(0xFF137847)
 
 @Composable
 fun GalleryMediaPreview(
     item: GalleryMediaItem,
+    canUndo: Boolean,
     onKeep: () -> Unit,
     onTrash: () -> Unit,
+    onUndo: () -> Unit,
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val thresholdPx = remember(density) { with(density) { 110.dp.toPx() } }
+    val exitDistancePx = remember(density) { with(density) { 240.dp.toPx() } }
     var dragX by remember(item.id) { mutableFloatStateOf(0f) }
+    var releaseX by remember(item.id) { mutableFloatStateOf(0f) }
+    var pendingDecision by remember(item.id) { mutableStateOf<SwipeDirection?>(null) }
 
-    val bitmap by produceState<Bitmap?>(initialValue = null, item.uri, item.id) {
-        value = withContext(Dispatchers.IO) {
-            loadPreviewBitmap(context, item)
+    // One decision at a time. The image moves to the same side as the chosen button.
+    val exitTarget = when (pendingDecision) {
+        SwipeDirection.TRASH -> -exitDistancePx
+        SwipeDirection.KEEP -> exitDistancePx
+        null -> 0f
+    }
+    val animatedExitX by animateFloatAsState(
+        targetValue = exitTarget,
+        animationSpec = tween(durationMillis = 210, easing = FastOutSlowInEasing),
+        label = "Gallery photo choice motion",
+    )
+
+    fun select(direction: SwipeDirection, fromSwipe: Boolean = false) {
+        if (pendingDecision != null) return
+        releaseX = if (fromSwipe) dragX else 0f
+        dragX = 0f
+        pendingDecision = direction
+    }
+
+    // Commit the UI choice after the short exit cue so it remains visible.
+    // This never requests Android Trash directly: trashCurrent only selects the media.
+    LaunchedEffect(item.id, pendingDecision) {
+        when (pendingDecision) {
+            SwipeDirection.TRASH -> {
+                delay(225)
+                onTrash()
+            }
+            SwipeDirection.KEEP -> {
+                delay(225)
+                onKeep()
+            }
+            null -> Unit
         }
     }
 
-    Column {
-        val currentBitmap = bitmap
-        if (currentBitmap != null) {
-            Image(
-                bitmap = currentBitmap.asImageBitmap(),
-                contentDescription = item.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .graphicsLayer {
-                        translationX = dragX
-                        rotationZ = (dragX / 60f).coerceIn(-5f, 5f)
-                    }
-                    .clip(RoundedCornerShape(18.dp))
-                    .pointerInput(item.id) {
-                        detectHorizontalDragGestures(
-                            onDragEnd = {
-                                when (gallerySwipeDirection(dragX, thresholdPx)) {
-                                    SwipeDirection.KEEP -> onKeep()
-                                    SwipeDirection.TRASH -> onTrash()
-                                    null -> Unit
-                                }
-                                dragX = 0f
-                            },
-                            onDragCancel = { dragX = 0f },
-                            onHorizontalDrag = { change, amount ->
-                                change.consume()
-                                dragX += amount
-                            },
-                        )
-                    },
-            )
-        } else {
-            Text(
-                text = stringResource(R.string.gallery_preview_unavailable),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(vertical = 36.dp),
-            )
+    val bitmap by produceState<Bitmap?>(initialValue = null, item.uri, item.id) {
+        value = withContext(Dispatchers.IO) { loadPreviewBitmap(context, item) }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(22.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            val currentBitmap = bitmap
+            if (currentBitmap != null) {
+                Image(
+                    bitmap = currentBitmap.asImageBitmap(),
+                    contentDescription = item.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .graphicsLayer {
+                            val offset = if (pendingDecision == null) dragX
+                                else releaseX + animatedExitX
+                            translationX = offset
+                            rotationZ = (offset / 55f).coerceIn(-7f, 7f)
+                            alpha = if (pendingDecision == null) 1f
+                                else (1f - (abs(animatedExitX) / exitDistancePx) * 0.72f)
+                                    .coerceIn(0.28f, 1f)
+                        }
+                        .pointerInput(item.id, pendingDecision) {
+                            if (pendingDecision == null) {
+                                detectHorizontalDragGestures(
+                                    onDragEnd = {
+                                        val chosen = gallerySwipeDirection(dragX, thresholdPx)
+                                        if (chosen != null) select(chosen, fromSwipe = true)
+                                        else dragX = 0f
+                                    },
+                                    onDragCancel = { dragX = 0f },
+                                    onHorizontalDrag = { change, amount ->
+                                        change.consume()
+                                        dragX += amount
+                                    },
+                                )
+                            }
+                        },
+                )
+            } else {
+                Box(
+                    Modifier.fillMaxWidth().aspectRatio(1f)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = stringResource(R.string.gallery_preview_unavailable),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+
+            // Brief directional feedback at the corresponding screen edge.
+            AnimatedVisibility(
+                visible = pendingDecision == SwipeDirection.TRASH,
+                modifier = Modifier.align(Alignment.CenterStart),
+                enter = fadeIn(tween(120)) +
+                    slideInHorizontally(initialOffsetX = { -it / 2 }, animationSpec = tween(180)),
+                exit = fadeOut(tween(80)),
+            ) {
+                GalleryDecisionBadge(
+                    label = stringResource(R.string.action_trash),
+                    symbol = "✕",
+                    background = TrashRed,
+                )
+            }
+            AnimatedVisibility(
+                visible = pendingDecision == SwipeDirection.KEEP,
+                modifier = Modifier.align(Alignment.CenterEnd),
+                enter = fadeIn(tween(120)) +
+                    slideInHorizontally(initialOffsetX = { it / 2 }, animationSpec = tween(180)),
+                exit = fadeOut(tween(80)),
+            ) {
+                GalleryDecisionBadge(
+                    label = stringResource(R.string.action_keep),
+                    symbol = "✓",
+                    background = KeepGreen,
+                )
+            }
         }
 
+        // Do not scroll or reorder these controls: spatial mapping must match swipes.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Button(
+                onClick = { select(SwipeDirection.TRASH) },
+                enabled = pendingDecision == null,
+                modifier = Modifier.weight(1f).heightIn(min = 64.dp),
+                shape = RoundedCornerShape(17.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = TrashRed,
+                    contentColor = Color.White,
+                ),
+            ) {
+                GalleryDecisionButtonLabel("✕", stringResource(R.string.action_trash))
+            }
+            OutlinedButton(
+                onClick = onUndo,
+                enabled = canUndo && pendingDecision == null,
+                modifier = Modifier.weight(1f).heightIn(min = 64.dp),
+                shape = RoundedCornerShape(17.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            ) {
+                GalleryDecisionButtonLabel("↶", stringResource(R.string.action_undo))
+            }
+            Button(
+                onClick = { select(SwipeDirection.KEEP) },
+                enabled = pendingDecision == null,
+                modifier = Modifier.weight(1f).heightIn(min = 64.dp),
+                shape = RoundedCornerShape(17.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = KeepGreen,
+                    contentColor = Color.White,
+                ),
+            ) {
+                GalleryDecisionButtonLabel("✓", stringResource(R.string.action_keep))
+            }
+        }
         Text(
             text = stringResource(R.string.gallery_swipe_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 6.dp),
+        )
+        Text(
+            text = stringResource(R.string.gallery_selection_explainer),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun GalleryDecisionButtonLabel(symbol: String, label: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(symbol, fontSize = 21.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Text(
+            label, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun GalleryDecisionBadge(
+    label: String,
+    symbol: String,
+    background: Color,
+) {
+    Row(
+        modifier = Modifier
+            .padding(horizontal = 9.dp)
+            .background(background.copy(alpha = 0.94f), RoundedCornerShape(99.dp))
+            .padding(horizontal = 12.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Text(symbol, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+        Text(
+            label, color = Color.White, fontSize = 13.sp,
+            fontWeight = FontWeight.Bold, maxLines = 1,
         )
     }
 }
