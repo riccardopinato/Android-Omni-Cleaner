@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import java.io.File
 
 @Composable
 fun SafeTrashSection() {
@@ -51,6 +52,7 @@ fun SafeTrashSection() {
     var persistentAvailable by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<SafeTrashMessage?>(null) }
     var confirmEmpty by remember { mutableStateOf(false) }
+    var pendingIndividualDelete by remember { mutableStateOf<SafeTrashEntry?>(null) }
     val canRestore = StorageAccess.hasBroadAccess(context)
     val persistentTrashAvailable = manager.isPersistentTrashAvailable()
 
@@ -186,6 +188,15 @@ fun SafeTrashSection() {
                             ) {
                                 Text(stringResource(R.string.action_restore))
                             }
+                            TextButton(
+                                enabled = persistentAvailable && !loading,
+                                onClick = { pendingIndividualDelete = entry },
+                            ) {
+                                Text(
+                                    stringResource(R.string.action_delete),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            }
                         }
                     }
 
@@ -229,6 +240,47 @@ fun SafeTrashSection() {
                 }
             }
         }
+    }
+
+    pendingIndividualDelete?.let { entry ->
+        AlertDialog(
+            onDismissRequest = { pendingIndividualDelete = null },
+            title = { Text(stringResource(R.string.audit_trash_delete_title)) },
+            text = { Text(stringResource(R.string.audit_trash_delete_body, entry.originalName)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingIndividualDelete = null
+                        loading = true
+                        scope.launch {
+                            val before = withContext(Dispatchers.IO) { manager.getTrashSize() }
+                            val success = withContext(Dispatchers.IO) {
+                                manager.permanentlyDelete(File(manager.getTrashDirectory(), entry.id))
+                            }
+                            val after = withContext(Dispatchers.IO) { manager.getTrashSize() }
+                            val reclaimed = (before - after).coerceAtLeast(0L)
+                            message = SafeTrashMessage(
+                                if (success) R.string.audit_trash_item_deleted
+                                else R.string.audit_trash_item_failed,
+                                if (success) listOf(formatSafeTrashBytes(reclaimed)) else emptyList(),
+                            )
+                            reload()
+                            if (reclaimed > 0L) CleanupEventBus.publishCompleted()
+                        }
+                    },
+                ) {
+                    Text(
+                        stringResource(R.string.safe_trash_delete_permanently),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingIndividualDelete = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
     }
 
     if (confirmEmpty) {
