@@ -360,4 +360,6 @@
     <string name="audit_storage_used_percent">Memoria utilizzata: %1$d%%</string>
     <string name="audit_storage_unavailable">Informazioni sulla memoria non disponibili</string>
     <string name="audit_advanced_maintenance">Pulizia e manutenzione avanzate</string>
+    <string name="audit_privacy_quick">Privacy rapida: rimuovi la posizione GPS dalle copie JPEG</string>
+    <string name="audit_privacy_advanced">Opzioni EXIF avanzate</string>
 </resources>
