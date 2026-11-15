@@ -9,8 +9,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -40,6 +43,8 @@ fun GalleryCleanerSection(
 
     var state by remember { mutableStateOf(controller.state) }
     var showTrashConfirmation by remember { mutableStateOf(false) }
+    var showQueueReview by remember { mutableStateOf(false) }
+    var showGalleryOptions by remember { mutableStateOf(false) }
 
     DisposableEffect(controller) {
         val dispose = controller.observe { state = it }
@@ -84,6 +89,14 @@ fun GalleryCleanerSection(
                     Text(stringResource(R.string.gallery_allow_media))
                 }
             } else {
+                if (state.items.isNotEmpty()) {
+                    OutlinedButton(
+                        onClick = { showGalleryOptions = !showGalleryOptions },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.audit_gallery_options))
+                    }
+                }
                 if (state.accessHealth.level == GalleryAccessLevel.PARTIAL) {
                     Text(
                         stringResource(R.string.gallery_partial_access),
@@ -98,6 +111,7 @@ fun GalleryCleanerSection(
                     }
                 }
 
+                if (showGalleryOptions || state.items.isEmpty()) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -140,6 +154,7 @@ fun GalleryCleanerSection(
                         else stringResource(R.string.gallery_reload),
                     )
                 }
+                }
             }
 
             if (state.loading) {
@@ -147,6 +162,11 @@ fun GalleryCleanerSection(
             }
 
             state.currentItem?.let { current ->
+                Text(
+                    stringResource(R.string.audit_review_progress, state.totalReviewedCount),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 val displayDate = if (current.dateTaken > 0L) {
                     current.formattedDate
                 } else {
@@ -214,6 +234,12 @@ fun GalleryCleanerSection(
                     stringResource(R.string.gallery_selected_for_trash, state.selectedForTrash.size),
                     style = MaterialTheme.typography.bodyMedium,
                 )
+                OutlinedButton(
+                    onClick = { showQueueReview = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.audit_gallery_review_queue, state.selectedForTrash.size))
+                }
                 Button(
                     onClick = { showTrashConfirmation = true },
                     modifier = Modifier.fillMaxWidth(),
@@ -229,6 +255,44 @@ fun GalleryCleanerSection(
                 }
             }
         }
+    }
+
+    if (showQueueReview) {
+        AlertDialog(
+            onDismissRequest = { showQueueReview = false },
+            title = { Text(stringResource(R.string.audit_gallery_review_title)) },
+            text = {
+                LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
+                    items(state.selectedForTrash, key = { it.id }) { media ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(media.name, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    media.uri.toString(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                )
+                            }
+                            TextButton(onClick = {
+                                controller.removeFromTrashSelection(media.id)
+                                if (state.selectedForTrash.size <= 1) showQueueReview = false
+                            }) {
+                                Text(stringResource(R.string.audit_gallery_unmark))
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showQueueReview = false }) {
+                    Text(stringResource(R.string.action_close))
+                }
+            },
+        )
     }
 
     if (showTrashConfirmation) {
