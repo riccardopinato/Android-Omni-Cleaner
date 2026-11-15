@@ -5,7 +5,7 @@ appId: com.riccardopinato.omnicleaner.debug
 - launchApp:
     clearState: false
 - tapOn: "Home"
-- assertVisible: "Android Omni Cleaner"
+- assertVisible: "Smart cleaning"
 - tapOn: "Settings"
 - assertVisible: "Appearance"
 - scrollUntilVisible:

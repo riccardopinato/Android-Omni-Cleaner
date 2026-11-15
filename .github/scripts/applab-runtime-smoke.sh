@@ -129,6 +129,10 @@ if [[ "$status" -eq 0 ]]; then
   else
     status=$?
     echo "[Omni/AppLab] localization/accessibility journey failed with status $status."
+    echo "[Omni/AppLab] capturing bounded current hierarchy to distinguish font wrap from missing UI..."
+    timeout 20s adb shell uiautomator dump /sdcard/omni-a11y-failure.xml || true
+    timeout 10s adb shell cat /sdcard/omni-a11y-failure.xml | head -c 20000 || true
+    echo
   fi
 
   adb shell settings put system font_scale 1.0 || true
