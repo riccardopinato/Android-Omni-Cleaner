@@ -237,6 +237,7 @@
     <string name="gallery_trash_confirm_body">Android will show a second system confirmation. Items will be moved to media trash, not deleted directly.</string>
     <string name="gallery_preview_unavailable">Preview unavailable</string>
     <string name="gallery_swipe_hint">← Trash · Keep →</string>
+    <string name="gallery_selection_explainer">Trash marks this item only. Android asks for confirmation before moving it to Trash.</string>
     <string name="gallery_unknown_date">Unknown date</string>
 
     <string name="exif_body">Scan JPEG files and create clean copies. Originals are not modified.</string>
