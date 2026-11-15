@@ -122,6 +122,10 @@ fun GalleryMediaPreview(
         value = withContext(Dispatchers.IO) { loadPreviewBitmap(context, item) }
     }
 
+        val trashLabel = stringResource(R.string.action_trash)
+        val undoLabel = stringResource(R.string.action_undo)
+        val keepLabel = stringResource(R.string.action_keep)
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(
             modifier = Modifier
@@ -190,15 +194,12 @@ fun GalleryMediaPreview(
                 visible = pendingDecision == SwipeDirection.KEEP,
                 modifier = Modifier.align(Alignment.CenterEnd),
             )
-        }
-
-        val trashLabel = stringResource(R.string.action_trash)
-        val undoLabel = stringResource(R.string.action_undo)
-        val keepLabel = stringResource(R.string.action_keep)
-
         // Do not scroll or reorder these controls: spatial mapping must match swipes.
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -224,6 +225,9 @@ fun GalleryMediaPreview(
                 shape = RoundedCornerShape(17.dp),
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = .94f),
+                ),
             ) {
                 GalleryDecisionButtonLabel("↶", undoLabel)
             }
@@ -242,6 +246,9 @@ fun GalleryMediaPreview(
                 GalleryDecisionButtonLabel("✓", keepLabel)
             }
         }
+
+        }
+
         Text(
             text = stringResource(R.string.gallery_swipe_hint),
             style = MaterialTheme.typography.bodySmall,
