@@ -62,14 +62,17 @@ class GalleryPreferencesManager(
     suspend fun saveFilterAndSort(
         filter: GalleryMediaFilter,
         sortOrder: GallerySortOrder,
+        pendingTrashRefs: Set<String> = emptySet(),
     ) {
         context.galleryDataStore.edit { preferences ->
             preferences[Keys.FILTER] = filter.name
             preferences[Keys.SORT_ORDER] = sortOrder.name
+            // Changing the view resets its cursor, NEVER the explicitly selected
+            // Android Trash queue. Keep the queue atomically with filter/sort.
             preferences.remove(Keys.LAST_MEDIA_ID)
             preferences.remove(Keys.LAST_MEDIA_INDEX)
             preferences.remove(Keys.SOURCE_OFFSET)
-            preferences.remove(Keys.PENDING_TRASH_REFS)
+            preferences[Keys.PENDING_TRASH_REFS] = pendingTrashRefs
         }
     }
 
