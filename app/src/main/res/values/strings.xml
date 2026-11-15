@@ -362,4 +362,8 @@
     <string name="audit_advanced_maintenance">Advanced cleaning and maintenance</string>
     <string name="audit_privacy_quick">Quick privacy: remove GPS location from JPEG copies</string>
     <string name="audit_privacy_advanced">Advanced EXIF options</string>
+    <string name="audit_trash_delete_title">Delete this file permanently?</string>
+    <string name="audit_trash_delete_body">Permanently delete %1$s from Safe Trash? This cannot be undone.</string>
+    <string name="audit_trash_item_deleted">Permanently deleted; %1$s released.</string>
+    <string name="audit_trash_item_failed">Could not permanently delete the selected file.</string>
 </resources>
