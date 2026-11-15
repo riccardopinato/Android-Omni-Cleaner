@@ -350,4 +350,9 @@
     <string name="audit_gallery_review_title">Rivedi le foto selezionate</string>
     <string name="audit_gallery_unmark">Tieni</string>
     <string name="audit_review_progress">%1$d revisionate</string>
+    <string name="audit_settings">Impostazioni</string>
+    <string name="audit_appearance">Aspetto</string>
+    <string name="audit_theme_system">Sistema</string>
+    <string name="audit_theme_light">Chiaro</string>
+    <string name="audit_theme_dark">Scuro</string>
 </resources>
