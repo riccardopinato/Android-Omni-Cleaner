@@ -359,4 +359,8 @@
     <string name="audit_advanced_maintenance">Nettoyage et maintenance avancés</string>
     <string name="audit_privacy_quick">Confidentialité rapide : retirer la position GPS des copies JPEG</string>
     <string name="audit_privacy_advanced">Options EXIF avancées</string>
+    <string name="audit_trash_delete_title">Supprimer définitivement ce fichier ?</string>
+    <string name="audit_trash_delete_body">Supprimer définitivement %1$s de la corbeille sécurisée ? Cette action est irréversible.</string>
+    <string name="audit_trash_item_deleted">Fichier supprimé définitivement ; %1$s libérés.</string>
+    <string name="audit_trash_item_failed">Impossible de supprimer définitivement ce fichier.</string>
 </resources>
