@@ -155,8 +155,10 @@ fun GalleryCleanerSection(
 
                 GalleryMediaPreview(
                     item = current,
+                    canUndo = state.history.isNotEmpty(),
                     onKeep = controller::keepCurrent,
                     onTrash = controller::trashCurrent,
+                    onUndo = controller::undoLastAction,
                 )
                 Text(current.name, style = MaterialTheme.typography.titleMedium)
                 Text(
@@ -176,23 +178,16 @@ fun GalleryCleanerSection(
                     style = MaterialTheme.typography.bodySmall,
                 )
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                // Controls belong to the photo preview, next to its directional animations.
+            }
+
+            // The final reviewed photo has no currentItem; keep Undo available.
+            if (state.currentItem == null && state.history.isNotEmpty()) {
+                OutlinedButton(
+                    onClick = controller::undoLastAction,
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Button(onClick = controller::keepCurrent) {
-                        Text(stringResource(R.string.action_keep))
-                    }
-                    Button(onClick = controller::trashCurrent) {
-                        Text(stringResource(R.string.action_trash))
-                    }
-                    if (state.history.isNotEmpty()) {
-                        OutlinedButton(onClick = controller::undoLastAction) {
-                            Text(stringResource(R.string.action_undo))
-                        }
-                    }
+                    Text("↶  " + stringResource(R.string.action_undo))
                 }
             }
 
