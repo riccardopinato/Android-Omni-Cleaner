@@ -24,6 +24,7 @@ data class GalleryUiState(
     val loadedSourceCount: Int = 0,
     val sourceOffset: Int = 0,
     val history: List<GallerySwipeHistoryItem> = emptyList(),
+    val hasPersistedUndo: Boolean = false,
     val pendingTrashItems: List<GalleryMediaItem> = emptyList(),
     val filter: GalleryMediaFilter = GalleryMediaFilter.ALL,
     val sortOrder: GallerySortOrder = GallerySortOrder.DATE_DESC,
@@ -63,6 +64,7 @@ class GalleryController(
     private var persistJob: Job? = null
     private var sessionLoaded = false
     private var resumeMediaId = 0L
+    private var lastUndo: PersistedGalleryUndo? = null
 
     init {
         refreshAccess()
@@ -75,11 +77,13 @@ class GalleryController(
         val restoredFilter = compatibleFilter(session.filter, state.accessHealth)
         val cursorCompatible = restoredFilter == session.filter
         resumeMediaId = if (cursorCompatible) session.lastMediaId else 0L
+        lastUndo = if (cursorCompatible) decodePersistedGalleryUndo(session.lastUndoRef) else null
         update(
             state.copy(
                 filter = restoredFilter,
                 sortOrder = session.sortOrder,
                 totalReviewedCount = session.totalReviewedCount,
+                hasPersistedUndo = lastUndo != null,
                 sourceOffset = if (cursorCompatible) session.sourceOffset.coerceAtLeast(0) else 0,
                 // The Android Trash queue belongs to the user, not to the
                 // currently active media filter or sort cursor.
@@ -103,6 +107,7 @@ class GalleryController(
     }
 
     fun refreshAccess(clearLoadedMedia: Boolean = false) {
+        if (clearLoadedMedia) lastUndo = null
         val health = GalleryAccess.health(context)
         val compatibleFilter = when {
             health.level == GalleryAccessLevel.NONE -> state.filter
@@ -119,6 +124,7 @@ class GalleryController(
                 loadedSourceCount = if (clearLoadedMedia) 0 else state.loadedSourceCount,
                 sourceOffset = if (clearLoadedMedia) 0 else state.sourceOffset,
                 history = if (clearLoadedMedia) emptyList() else state.history,
+                hasPersistedUndo = if (clearLoadedMedia) false else state.hasPersistedUndo,
                 pendingTrashItems = if (clearLoadedMedia) emptyList() else state.pendingTrashItems,
                 hasMore = if (clearLoadedMedia) false else state.hasMore,
                 loading = if (clearLoadedMedia) false else state.loading,
@@ -145,6 +151,7 @@ class GalleryController(
             return
         }
         val retainedTrash = state.selectedForTrash
+        lastUndo = null
         loadJob?.cancel()
         loadJob = null
         update(
@@ -158,6 +165,7 @@ class GalleryController(
                 loadedSourceCount = 0,
                 sourceOffset = 0,
                 history = emptyList(),
+                hasPersistedUndo = false,
                 pendingTrashItems = retainedTrash,
                 error = null,
             ),
@@ -175,6 +183,7 @@ class GalleryController(
 
     fun cycleSortOrder() {
         val retainedTrash = state.selectedForTrash
+        lastUndo = null
         val values = GallerySortOrder.entries
         val next = values[(state.sortOrder.ordinal + 1) % values.size]
         loadJob?.cancel()
@@ -190,6 +199,7 @@ class GalleryController(
                 loadedSourceCount = 0,
                 sourceOffset = 0,
                 history = emptyList(),
+                hasPersistedUndo = false,
                 pendingTrashItems = retainedTrash,
             ),
         )
@@ -327,7 +337,39 @@ class GalleryController(
     fun trashCurrent() = recordCurrent(SwipeDirection.TRASH)
 
     fun undoLastAction() {
-        val last = state.history.lastOrNull() ?: return
+        val last = state.history.lastOrNull()
+        if (last == null) {
+            // Process restart / reload: the previous screen's in-memory photo
+            // is gone, but a single bounded action journal can recover it.
+            val persisted = lastUndo ?: return
+            lastUndo = null
+            update(
+                state.copy(
+                    items = emptyList(),
+                    currentIndex = 0,
+                    history = emptyList(),
+                    hasPersistedUndo = false,
+                    pendingTrashItems = state.selectedForTrash
+                        .filterNot { it.id == persisted.mediaId },
+                    sourceOffset = persisted.sourceOffsetBefore,
+                    loadedSourceCount = persisted.sourceOffsetBefore,
+                    totalReviewedCount = (state.totalReviewedCount - 1).coerceAtLeast(0),
+                    hasMore = false,
+                    error = null,
+                ),
+            )
+            persistProgress(anchorOverride = persisted.mediaId)
+            load()
+            return
+        }
+        val remainingHistory = state.history.dropLast(1)
+        lastUndo = remainingHistory.lastOrNull()?.let { prior ->
+            PersistedGalleryUndo(
+                mediaId = prior.item.id,
+                direction = prior.direction,
+                sourceOffsetBefore = (state.sourceOffset - 2).coerceAtLeast(0),
+            )
+        }
         val restoredItems = if (last.direction == SwipeDirection.TRASH) {
             state.items.map { item ->
                 if (item.id == last.item.id) item.copy(isSelectedForTrash = false) else item
@@ -340,7 +382,8 @@ class GalleryController(
             state.copy(
                 items = restoredItems,
                 currentIndex = last.previousIndex.coerceAtLeast(0),
-                history = state.history.dropLast(1),
+                history = remainingHistory,
+                hasPersistedUndo = lastUndo != null,
                 pendingTrashItems = state.pendingTrashItems.filterNot { it.id == last.item.id },
                 sourceOffset = (state.sourceOffset - 1).coerceAtLeast(0),
                 totalReviewedCount = (state.totalReviewedCount - 1).coerceAtLeast(0),
@@ -378,6 +421,7 @@ class GalleryController(
 
     fun onTrashResult(success: Boolean) {
         if (!success) return
+        lastUndo = null
         val removedIds = state.selectedForTrash.mapTo(HashSet()) { it.id }
         val currentId = state.currentItem?.id
         val remainingItems = state.items.filterNot { it.id in removedIds }
@@ -395,6 +439,7 @@ class GalleryController(
                 loadedSourceCount = adjustedLoadedCount,
                 sourceOffset = adjustedOffset,
                 history = emptyList(),
+                hasPersistedUndo = false,
                 pendingTrashItems = emptyList(),
                 error = null,
             ),
@@ -409,6 +454,11 @@ class GalleryController(
     private fun recordCurrent(direction: SwipeDirection) {
         val item = state.currentItem ?: return
         val previousIndex = state.currentIndex
+        lastUndo = PersistedGalleryUndo(
+            mediaId = item.id,
+            direction = direction,
+            sourceOffsetBefore = state.sourceOffset,
+        )
         val changedItems = if (direction == SwipeDirection.TRASH) {
             state.items.map { candidate ->
                 if (candidate.id == item.id) candidate.copy(isSelectedForTrash = true) else candidate
@@ -422,6 +472,7 @@ class GalleryController(
             currentIndex = (previousIndex + 1).coerceAtMost(changedItems.size),
             history = (state.history + GallerySwipeHistoryItem(item, direction, previousIndex))
                 .takeLast(MAX_UNDO_HISTORY),
+            hasPersistedUndo = true,
             sourceOffset = state.sourceOffset + 1,
             totalReviewedCount = state.totalReviewedCount + 1,
         )
@@ -436,9 +487,9 @@ class GalleryController(
         }
     }
 
-    private fun persistProgress() {
+    private fun persistProgress(anchorOverride: Long? = null) {
         val current = state.currentItem
-        resumeMediaId = current?.id ?: 0L
+        resumeMediaId = anchorOverride ?: current?.id ?: 0L
         val pendingRefs = state.selectedForTrash
             .mapTo(linkedSetOf()) { encodePersistedTrashRef(it.id, it.uri.toString()) }
         persistJob?.cancel()
@@ -449,6 +500,7 @@ class GalleryController(
                 sourceOffset = state.sourceOffset,
                 pendingTrashRefs = pendingRefs,
                 totalReviewedCount = state.totalReviewedCount,
+                lastUndoRef = lastUndo?.let(::encodePersistedGalleryUndo),
             )
         }
     }
@@ -520,6 +572,25 @@ class GalleryController(
     }
 }
 
+
+/** One durable action, never an authorization to delete media. */
+internal data class PersistedGalleryUndo(
+    val mediaId: Long,
+    val direction: SwipeDirection,
+    val sourceOffsetBefore: Int,
+)
+
+internal fun encodePersistedGalleryUndo(value: PersistedGalleryUndo): String =
+    "${value.mediaId}\t${value.direction.name}\t${value.sourceOffsetBefore}"
+
+internal fun decodePersistedGalleryUndo(raw: String?): PersistedGalleryUndo? {
+    val parts = raw?.split('\t') ?: return null
+    if (parts.size != 3) return null
+    val id = parts[0].toLongOrNull()?.takeIf { it > 0 } ?: return null
+    val direction = SwipeDirection.entries.firstOrNull { it.name == parts[1] } ?: return null
+    val before = parts[2].toIntOrNull()?.takeIf { it >= 0 } ?: return null
+    return PersistedGalleryUndo(id, direction, before)
+}
 
 internal data class PersistedTrashRef(
     val id: Long,
