@@ -73,7 +73,7 @@ private val KeepGreen = Color(0xFF137847)
 
 // The selection commits just after the faster card-exit cue completes.
 internal const val GALLERY_EXIT_ANIMATION_MS = 155
-internal const val GALLERY_SELECTION_COMMIT_DELAY_MS = 170
+internal const val GALLERY_SELECTION_COMMIT_DELAY_MS = 170L
 
 @Composable
 fun GalleryMediaPreview(
