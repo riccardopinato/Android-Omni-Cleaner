@@ -22,17 +22,20 @@ appId: com.riccardopinato.omnicleaner.debug
 - tapOn:
     id: "omni_nav_privacy"
 - assertVisible: "EXIF privacy"
-- tapOn: "One-photo privacy"
+- tapOn:
+    id: "omni_privacy_quick"
 - assertVisible: "Choose one JPEG photo"
 - pressKey: Back
-- tapOn: "Batch EXIF tools"
+- tapOn:
+    id: "omni_privacy_batch"
 - assertVisible: "Choose photo folder"
 - pressKey: Back
 - tapOn:
     id: "omni_nav_pro"
 - assertVisible: "Omni Cleaner Pro"
-- tapOn: "Manage Pro"
-- assertVisible: "Restore purchases"
+- tapOn:
+    id: "omni_pro_manage"
+- assertVisible: "Restore purchase"
 - pressKey: Back
 - tapOn:
     id: "omni_nav_home"

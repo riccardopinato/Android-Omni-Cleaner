@@ -90,6 +90,12 @@ jobs:
             omni-design-screenshots/03-gallery.png
             omni-design-screenshots/04-privacy.png
             omni-design-screenshots/05-pro.png
+            omni-design-screenshots/06-clean-duplicates.png
+            omni-design-screenshots/07-clean-filters.png
+            omni-design-screenshots/08-privacy-quick.png
+            omni-design-screenshots/09-privacy-batch.png
+            omni-design-screenshots/10-pro-manage.png
+            omni-design-screenshots/11-video-playing.png
             omni-design-screenshots/README.txt
           if-no-files-found: error
           retention-days: 30

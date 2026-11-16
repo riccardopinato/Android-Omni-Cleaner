@@ -590,24 +590,8 @@ private fun OmniFunctionsHub(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        if (showWelcome) OmniWelcomePanel(
-            kind = kind,
-            title = stringResource(titleRes),
-            message = stringResource(bodyRes),
-            highlights = when (kind) {
-                OmniWelcomeKind.PRIVACY -> listOf(
-                    stringResource(R.string.welcome_privacy_step1),
-                    stringResource(R.string.welcome_privacy_step2),
-                    stringResource(R.string.welcome_privacy_step3),
-                )
-                OmniWelcomeKind.PRO -> listOf(
-                    stringResource(R.string.welcome_pro_step1),
-                    stringResource(R.string.welcome_pro_step2),
-                    stringResource(R.string.welcome_pro_step3),
-                )
-                else -> emptyList()
-            },
-        )
+        // Tools must be reachable at the top: an onboarding card must not push
+        // the useful action below the first viewport.
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         ) {
@@ -616,11 +600,40 @@ private fun OmniFunctionsHub(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 actions.forEach { (labelRes, open) ->
-                    Button(onClick = open, modifier = Modifier.fillMaxWidth()) {
+                    val tag = when (labelRes) {
+                        R.string.nav_privacy_quick -> "omni_privacy_quick"
+                        R.string.nav_privacy_batch -> "omni_privacy_batch"
+                        R.string.nav_pro_manage -> "omni_pro_manage"
+                        else -> "omni_tool_other"
+                    }
+                    Button(
+                        onClick = open,
+                        modifier = Modifier.fillMaxWidth().testTag(tag),
+                    ) {
                         Text(stringResource(labelRes) + "  ›")
                     }
                 }
             }
+        }
+        if (showWelcome) {
+            OmniWelcomePanel(
+                kind = kind,
+                title = stringResource(titleRes),
+                message = stringResource(bodyRes),
+                highlights = when (kind) {
+                    OmniWelcomeKind.PRIVACY -> listOf(
+                        stringResource(R.string.welcome_privacy_step1),
+                        stringResource(R.string.welcome_privacy_step2),
+                        stringResource(R.string.welcome_privacy_step3),
+                    )
+                    OmniWelcomeKind.PRO -> listOf(
+                        stringResource(R.string.welcome_pro_step1),
+                        stringResource(R.string.welcome_pro_step2),
+                        stringResource(R.string.welcome_pro_step3),
+                    )
+                    else -> emptyList()
+                },
+            )
         }
     }
 }

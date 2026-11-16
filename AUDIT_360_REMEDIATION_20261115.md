@@ -1,3 +1,10 @@
+## Two-level navigation — first QA feedback and remediation (2026-11-16)
+
+- Android CI [#43848916665](https://github.com/riccardopinato/Android-Omni-Cleaner/actions/runs/43848916665) **SUCCESS** after Kotlin preview brace/import repair on SHA `110f3bf816fc`.
+- AppLab [#43848916398](https://github.com/riccardopinato/Android-Omni-Cleaner/actions/runs/43848916398) **FAILURE** at opening the Privacy quick tool: its onboarding intro preceded the actionable tool links, pushing the button out of the immediate viewport. Fix: put dedicated actions first, onboarding explanation below. Add stable navigation testTag IDs and update Maestro flows. Do not disguise the previous failure as a pass.
+- Visual screenshot pipeline now captures original five tabs **plus five dedicated screens** (duplicates, filters, quick privacy, batch privacy and Pro management). Optional synthetic MP4 probe uses ADB MediaStore and native VideoView, and records NOT VERIFIED when indexing/codec UI cannot be tested; never converts a skipped probe into evidence.
+- No changes to deletion policy, MediaStore Trash confirmation or Play entitlements. Main frozen, PR Draft.
+
 ## Two-level navigation and full-aspect media — 2026-11-16
 
 User-approved implementation on audit Draft branch:
