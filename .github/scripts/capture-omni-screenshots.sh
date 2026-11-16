@@ -7,6 +7,14 @@ PKG="com.riccardopinato.omnicleaner.debug"
 OUTPUT="$GITHUB_WORKSPACE/omni-design-screenshots"
 mkdir -p "$OUTPUT"/maestro
 
+# Keep actionable evidence if Maestro/device startup fails.
+capture_failure() {
+  adb shell screencap -p /sdcard/omni-visual-failure.png >/dev/null 2>&1 || true
+  adb pull /sdcard/omni-visual-failure.png "$OUTPUT/failure-screen.png" >/dev/null 2>&1 || true
+  adb logcat -d -t 350 > "$OUTPUT/failure-logcat.txt" 2>/dev/null || true
+}
+trap capture_failure ERR
+
 # Reproducible empty emulator, English interface, light theme, normal font.
 adb wait-for-device
 adb shell settings put system font_scale 1.0
@@ -19,8 +27,7 @@ appId: com.riccardopinato.omnicleaner.debug
 ---
 - launchApp:
     clearState: true
-- tapOn:
-    id: "omni_nav_home"
+# Default startup route IS Home. Do not tap a tab before Compose is ready.
 - assertVisible: "Smart cleaning"
 - takeScreenshot: 01-home
 - tapOn:
@@ -70,6 +77,11 @@ appId: com.riccardopinato.omnicleaner.debug
 - assertVisible: "Find duplicates"
 - takeScreenshot: 06-clean-duplicates
 - pressKey: Back
+- scrollUntilVisible:
+    element:
+      id: "omni_clean_tool_filters"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
     id: "omni_clean_tool_filters"
 - assertVisible: "Filters & thresholds"

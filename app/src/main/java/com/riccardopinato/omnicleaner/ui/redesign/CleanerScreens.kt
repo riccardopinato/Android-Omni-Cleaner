@@ -146,12 +146,6 @@ internal fun CleanHubScreen(
                 }
             }
         }
-        if (state.overview == null && !state.foldersScanned &&
-            !state.bigFilesScanned && !state.duplicatesScanned &&
-            !state.scanning && state.error == null
-        ) {
-            item { CleanWelcomePanel() }
-        }
         item {
             Card(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
@@ -167,18 +161,35 @@ internal fun CleanHubScreen(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
-                    CleanerToolRoute.entries.forEach { tool ->
-                        Button(
-                            onClick = { onOpenTool(tool) },
-                            modifier = Modifier.fillMaxWidth().testTag(
-                                "omni_clean_tool_${tool.name.lowercase(Locale.ROOT)}"
-                            ),
+                    // Compact dashboard: no accordion or seven-button timeline.
+                    CleanerToolRoute.entries.chunked(2).forEach { group ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Text(stringResource(tool.labelRes) + "  ›")
+                            group.forEach { tool ->
+                                Button(
+                                    onClick = { onOpenTool(tool) },
+                                    modifier = Modifier.weight(1f).testTag(
+                                        "omni_clean_tool_${tool.name.lowercase(Locale.ROOT)}"
+                                    ),
+                                ) {
+                                    Text(stringResource(tool.labelRes))
+                                }
+                            }
+                            if (group.size == 1) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 }
             }
+        }
+        if (state.overview == null && !state.foldersScanned &&
+            !state.bigFilesScanned && !state.duplicatesScanned &&
+            !state.scanning && state.error == null
+        ) {
+            item { CleanWelcomePanel() }
         }
         if (state.scanning) {
             item {

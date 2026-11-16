@@ -143,8 +143,12 @@ fun GalleryMediaPreview(
     val bitmap by produceState<Bitmap?>(initialValue = null, item.uri, item.id) {
         value = withContext(Dispatchers.IO) { loadPreviewBitmap(context, item) }
     }
-    val mediaWidth = bitmap?.width ?: item.width
-    val mediaHeight = bitmap?.height ?: item.height
+    // A provider thumbnail may be square even for 16:9 video. Prefer the
+    // original MediaStore video dimensions; photos use the decoded bitmap.
+    val mediaWidth = if (item.isVideo && item.width > 0) item.width
+        else bitmap?.width ?: item.width
+    val mediaHeight = if (item.isVideo && item.height > 0) item.height
+        else bitmap?.height ?: item.height
     val previewHeightDp = galleryFitHeightDp(
         availableWidthDp = widthDp,
         maxHeightDp = previewMaxHeightDp,
@@ -479,7 +483,7 @@ private fun loadPreviewBitmap(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             return@runCatching context.contentResolver.loadThumbnail(
                 item.uri,
-                Size(PREVIEW_SIZE_PX, PREVIEW_SIZE_PX),
+                Size(VIDEO_THUMBNAIL_PX, VIDEO_THUMBNAIL_PX),
                 null,
             )
         }
@@ -487,7 +491,7 @@ private fun loadPreviewBitmap(
         try {
             retriever.setDataSource(context, item.uri)
             retriever.getFrameAtTime(0L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-                ?.scaledDown(PREVIEW_SIZE_PX)
+                ?.scaledDown(VIDEO_THUMBNAIL_PX)
         } finally {
             retriever.release()
         }
@@ -573,3 +577,4 @@ internal fun galleryFitHeightDp(
 }
 
 private const val PREVIEW_SIZE_PX = 2160
+private const val VIDEO_THUMBNAIL_PX = 1080
