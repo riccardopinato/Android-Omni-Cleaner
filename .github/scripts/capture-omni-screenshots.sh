@@ -124,11 +124,13 @@ done
 if command -v ffmpeg >/dev/null 2>&1; then
   if ffmpeg -hide_banner -loglevel error -y \
       -f lavfi -i "testsrc=size=640x360:rate=12" -t 4 \
-      -c:v mpeg4 -q:v 5 -pix_fmt yuv420p "$OUTPUT/omni-qa-landscape.mp4"; then
+      -c:v libx264 -preset ultrafast -crf 28 -pix_fmt yuv420p \
+      -movflags +faststart "$OUTPUT/omni-qa-landscape.mp4"; then
     adb shell mkdir -p /sdcard/Movies/OmniQA
     adb push "$OUTPUT/omni-qa-landscape.mp4" /sdcard/Movies/OmniQA/omni-qa-landscape.mp4
     adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
        -d file:///sdcard/Movies/OmniQA/omni-qa-landscape.mp4 || true
+    adb shell cmd media scan-file /sdcard/Movies/OmniQA/omni-qa-landscape.mp4 || true
     adb shell pm grant "$PKG" android.permission.READ_MEDIA_IMAGES || true
     adb shell pm grant "$PKG" android.permission.READ_MEDIA_VIDEO || true
     adb shell am force-stop "$PKG" || true
