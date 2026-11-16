@@ -94,7 +94,17 @@ print("yes" if found else "no")
 PY
   )"
 
-  [[ "$transient" == "yes" ]] || return 1
+  # The system lab intentionally force-stops/restarts the app; a stale PID
+  # sampled immediately afterward can be transient when the lab itself passed.
+  # Never waive a real fatal signal or a repeated failed verification.
+  local system_restart_pid_loss="no"
+  if [[ -s "$REPORT_DIR/summary.md" ]] &&
+     grep -Fq "Application process died during system-lab." "$REPORT_DIR/summary.md" &&
+     [[ -s "$REPORT_DIR/system-lab.md" ]] &&
+     grep -Fq "Force-stop restart: PASS" "$REPORT_DIR/system-lab.md"; then
+    system_restart_pid_loss="yes"
+  fi
+  [[ "$transient" == "yes" || "$system_restart_pid_loss" == "yes" ]] || return 1
 
   for log_file in "$app_logcat" "$system_logcat"; do
     if [[ -s "$log_file" ]] &&
@@ -110,7 +120,7 @@ status=0
 run_verifier || status=$?
 if [[ "$status" -ne 0 ]]; then
   if is_transient_pid_flake; then
-    echo "[Omni/AppLab] transient crawler PID loss without crash evidence; retrying once..."
+    echo "[Omni/AppLab] transient PID loss after crawler/system restart without crash evidence; retrying once..."
     sleep 3
     if run_verifier; then
       status=0
