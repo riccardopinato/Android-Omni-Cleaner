@@ -371,4 +371,36 @@ class SafeTrashManagerTest {
         }
     }
 
+
+    @Test
+    fun thirtyFiveSyntheticEntriesCanBeReviewedRestoredAndDeletedIndividually() {
+        val root = createTempDirectory("omni-trash-many-").toFile()
+        val trash = File(root, "trash")
+        try {
+            val manager = SafeTrashManager.forTests(trash)
+            for (index in 1..35) {
+                val source = File(root, "sample-$index.txt").apply {
+                    writeText("synthetic-only-$index")
+                }
+                assertNotNull("Move failed for synthetic entry $index", manager.moveToTrash(source))
+                assertFalse(source.exists())
+            }
+
+            // The old visual 12-row limit must not conceal backend entries.
+            assertEquals(35, manager.listEntries().size)
+            val last = manager.listEntries().single { it.originalName == "sample-35.txt" }
+            val restored = manager.restore(last.id)
+            assertEquals(SafeTrashRestoreStatus.RESTORED, restored.status)
+            assertEquals("synthetic-only-35", File(root, "sample-35.txt").readText())
+            assertEquals(34, manager.listEntries().size)
+
+            val first = manager.listEntries().single { it.originalName == "sample-1.txt" }
+            assertTrue(manager.permanentlyDelete(File(trash, first.id)))
+            assertEquals(33, manager.listEntries().size)
+            assertFalse(File(root, "sample-1.txt").exists())
+            // Only synthetic files in this temporary test root were touched.
+        } finally {
+            root.deleteRecursively()
+        }
+    }
 }

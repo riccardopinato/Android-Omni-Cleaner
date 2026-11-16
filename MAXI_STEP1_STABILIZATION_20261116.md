@@ -14,6 +14,11 @@ Ambito: PR #23, branch `audit/omni-safety-ux-360-20261115`. Main RC1 e PR #22 no
 3. Android CI verifica la sintassi shell, la validità JSON e il collegamento al percorso Maestro. I test AppLab continuano a includere `connectedDebugAndroidTest`, storage parity e font scale.
 4. Nessuna modifica a meccanismi di pulizia, autorizzazioni Android, Safe Trash, Gallery Trash, SAF/EXIF, Billing/Ads o ai file dell'utente.
 
+## Safe Trash: safety regression with 35 items
+- Added a local JUnit fixture with 35 synthetic small files under a disposable temporary root; it verifies all entries remain individually readable beyond the former 12-row limit.
+- Verifies a named entry is restored with original content, another is permanently deleted only by explicit request, and the remaining entry count is correct.
+- Does not use external or personal phone storage. The separate physical/OEM gate remains open.
+
 ## Exit gate
 - [ ] Android CI exact head: SUCCESS (lint, JVM, APK/AAB, static checks)
 - [ ] AppLab exact head: SUCCESS, due nuovi restart/recovery journeys PASS
