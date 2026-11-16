@@ -210,6 +210,7 @@ fun GalleryMediaPreview(
                     .semantics { contentDescription = trashLabel },
                 shape = RoundedCornerShape(17.dp),
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                border = BorderStroke(2.dp, TrashRed),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = TrashRed,
                     contentColor = Color.White,
@@ -238,6 +239,7 @@ fun GalleryMediaPreview(
                     .semantics { contentDescription = keepLabel },
                 shape = RoundedCornerShape(17.dp),
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                border = BorderStroke(2.dp, KeepGreen),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = KeepGreen,
                     contentColor = Color.White,

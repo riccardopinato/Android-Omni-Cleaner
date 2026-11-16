@@ -43,4 +43,9 @@ wave = (UI / "ui/redesign/OmniPremiumHome.kt").read_text(encoding="utf-8")
 assert ".drawWithCache {" in wave
 nav = (UI / "ui/redesign/RedesignedOmniCleanerApp.kt").read_text(encoding="utf-8")
 assert "val layerAlpha by animateFloatAsState(" in nav
+assert 'Modifier.testTag("omni_nav_' in nav
+assert "testTagsAsResourceId = true" in nav
+gallery = (UI / "gallery/GalleryMediaPreview.kt").read_text(encoding="utf-8")
+assert "BorderStroke(2.dp, TrashRed)" in gallery
+assert "BorderStroke(2.dp, KeepGreen)" in gallery
 print(f"OMNI_ACTIONS_AND_BROOM_PASS: {len(SCREEN_FILES)} Kotlin screens")

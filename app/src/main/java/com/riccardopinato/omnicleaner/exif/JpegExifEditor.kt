@@ -26,8 +26,11 @@ object JpegExifEditor {
         if (groups.isEmpty()) return
 
         checkpoint()
+        // Reject metadata that may carry separate XMP/IPTC location fields.
+        // Failing before any mutation leaves the selected original untouched.
+        val protectLocation = ExifGroup.LOCATION in groups
         val beforeDigest = file.inputStream().buffered().use {
-            JpegContentDigest.read(it, checkpoint)
+            JpegContentDigest.read(it, checkpoint, forbidAuxiliaryMetadata = protectLocation)
         }
 
         val before = ExifInterface(file.absolutePath)
@@ -74,7 +77,7 @@ object JpegExifEditor {
         }
 
         val afterDigest = file.inputStream().buffered().use {
-            JpegContentDigest.read(it, checkpoint)
+            JpegContentDigest.read(it, checkpoint, forbidAuxiliaryMetadata = protectLocation)
         }
 
         if (!beforeDigest.contentEquals(afterDigest)) {

@@ -4,7 +4,17 @@ appId: com.riccardopinato.omnicleaner.debug
 # Executed under 1.3x system font in AppLab script.
 - launchApp:
     clearState: false
-- tapOn: "Home"
+# Address the clickable NavigationBarItem, not its nested Text child.
+# At larger font scales, a label-only tap may land in a non-clickable gap.
+- tapOn:
+    id: "omni_nav_home"
+- assertVisible: "Smart cleaning"
+# Verify repeated navigation with the exact same density before opening Settings.
+- tapOn:
+    id: "omni_nav_clean"
+- assertVisible: "Deep Cleaning"
+- tapOn:
+    id: "omni_nav_home"
 - assertVisible: "Smart cleaning"
 - tapOn: "Settings"
 - assertVisible: "Appearance"

@@ -113,6 +113,28 @@ migration makes offscreen composition removable without sacrificing safety.
 **AUD-0014 / AUD-0015 stay NOT VERIFIED / BLOCKED EXTERNAL** pending physical
 Android and release-provider evidence.
 
+## Audit continuation — 2026-11-16 (source changes require exact-head gates)
+
+- **Navigation P1:** the 1.3x font-scale journey failed after Clean → Home despite
+  standard Maestro and visual journey passing. Navigation items now have stable
+  accessibility resource IDs via Compose semantics and the 1.3x Maestro flow
+  taps the clickable tab itself, then tests Clean → Home twice. If this still
+  fails, treat as a real navigation/input regression; do not declare PASS.
+- **EXIF GPS P1:** selected GPS cleanup now blocks unsupported auxiliary
+  metadata (non-Exif APP1/XMP, APP13/IPTC and unknown sidecar segments) before
+  cleaning any temporary copy. The conservative approach leaves the original
+  untouched and does not claim complete location removal from unreviewable
+  metadata. Added JVM synthetic JPEG cases for XMP, IPTC and Exif-only images.
+- **Blue action safety P1:** Gallery Keep and Trash retain blue/white action
+  surfaces but have distinct green/red border cues, plus existing icons and
+  descriptive accessibility labels; Android Trash still requires confirmation.
+- **Software gates pending:** exact-head Android CI, AppLab with 1.3x font,
+  persistence warning and destructive-state stability. No claim of physical
+  test, performance uplift, Store signature or provider certification.
+- **AUD-0016** remains PARTIAL until navigation and responsiveness measurements
+  pass on representative devices; destructive selection state is intentionally
+  retained rather than uncomposed.
+
 ## UX design decisions
 - **Preserve** approved broom launcher asset and the Premium Light/Dark visual language.
 - **Preserve** the five primary destinations for this iteration; moving Pro out of nav would change the approved UI and needs a separate user design decision.

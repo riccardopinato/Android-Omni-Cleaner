@@ -10,6 +10,9 @@ object JpegContentDigest {
     private const val SOS = 0xDA
     private const val APP1 = 0xE1
     private const val APP2 = 0xE2
+    private const val APP13 = 0xED
+    private const val COM = 0xFE
+    private val ICC_HEADER = "ICC_PROFILE\u0000".toByteArray(Charsets.US_ASCII)
 
     private val EXIF_HEADER = byteArrayOf(
         'E'.code.toByte(),
@@ -30,6 +33,7 @@ object JpegContentDigest {
     fun read(
         input: InputStream,
         checkpoint: () -> Unit = {},
+        forbidAuxiliaryMetadata: Boolean = false,
     ): ByteArray {
         val digest = MessageDigest.getInstance("SHA-256")
 
@@ -63,6 +67,19 @@ object JpegContentDigest {
                     }
 
                     val isExif = marker == APP1 && payload.startsWith(EXIF_HEADER)
+                    // The GPS-only flow cannot honestly promise privacy if a
+                    // separate XMP/IPTC/JUMBF/unknown metadata block is retained.
+                    // Block before mutation instead of silently leaking coordinates.
+                    if (forbidAuxiliaryMetadata && (
+                            marker == COM ||
+                            marker in 0xE3..0xED ||
+                            marker == 0xEF ||
+                            (marker == APP1 && !isExif) ||
+                            (marker == APP2 && !payload.startsWith(ICC_HEADER))
+                        )
+                    ) {
+                        error("JPEG contains unreviewed auxiliary metadata; GPS-clean export blocked")
+                    }
                     if (!isExif) {
                         digest.update(markerBytes)
                         digest.update(high.toByte())
