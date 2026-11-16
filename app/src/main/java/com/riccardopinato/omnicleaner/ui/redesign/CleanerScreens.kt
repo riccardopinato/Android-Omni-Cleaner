@@ -94,6 +94,7 @@ import java.util.Locale
 /** Dedicated tool routes. The activity-scoped CleanerController owns scan results. */
 internal enum class CleanerToolRoute(val labelRes: Int) {
     OVERVIEW(R.string.scan_overview),
+    INTELLIGENCE(R.string.si_title),
     LARGE(R.string.scan_big_files),
     DUPLICATES(R.string.scan_duplicates),
     FOLDERS(R.string.scan_folders),
@@ -238,6 +239,7 @@ internal fun CleanDetailScreen(
     modifier: Modifier,
     selectionState: com.riccardopinato.omnicleaner.ui.CleanupSelectionUiState,
     onEnableDeepClean: () -> Unit,
+    onOpenTool: (CleanerToolRoute) -> Unit,
 ) {
     val onCleanupFinished = {
         controller.refreshAccessAndStorage()
@@ -306,6 +308,12 @@ internal fun CleanDetailScreen(
                 }
             }
             when (tool) {
+                CleanerToolRoute.INTELLIGENCE -> item {
+                    StorageIntelligenceSection(
+                        onOpenAdvanced = { onOpenTool(CleanerToolRoute.ADVANCED) },
+                        onOpenLargeFiles = { onOpenTool(CleanerToolRoute.LARGE) },
+                    )
+                }
                 CleanerToolRoute.OVERVIEW -> {
                     state.overview?.let { overview ->
                         item {

@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - audit/omni-safety-ux-360-20261115
+      - feature/omni-storage-intelligence-v1-20261116
     paths:
       - 'app/src/main/java/com/riccardopinato/omnicleaner/ui/redesign/**'
       - 'app/src/main/java/com/riccardopinato/omnicleaner/gallery/GalleryCleanerSection.kt'
@@ -105,6 +106,7 @@ jobs:
             omni-design-screenshots/09-privacy-batch.png
             omni-design-screenshots/10-pro-manage.png
             omni-design-screenshots/11-video-playing.png
+            omni-design-screenshots/12-storage-intelligence.png
             omni-design-screenshots/README.txt
           if-no-files-found: error
           retention-days: 30

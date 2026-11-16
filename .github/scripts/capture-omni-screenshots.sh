@@ -105,10 +105,29 @@ appId: com.riccardopinato.omnicleaner.debug
     id: "omni_pro_manage"
 - assertVisible: "Restore purchase"
 - takeScreenshot: 10-pro-manage
+- pressKey: Back
+- tapOn:
+    id: "omni_nav_clean"
+- tapOn:
+    id: "omni_clean_tool_intelligence"
+- assertVisible: "Storage Intelligence"
+- tapOn:
+    id: "omni_storage_intelligence_scan"
+- extendedWaitUntil:
+    visible: "Storage map"
+    timeout: 120000
+- takeScreenshot: 12-storage-intelligence
 DETAIL_FLOW
+# Synthetic, disposable emulator fixture to verify a *nonempty* visual
+# storage map. The first five screenshots are captured before this is created.
+# These paths belong to the short-lived GitHub runner, never a user's device.
+adb shell mkdir -p /sdcard/Download/OmniStorageQA /sdcard/Documents/OmniStorageQA /sdcard/Music/OmniStorageQA
+adb shell "dd if=/dev/zero of=/sdcard/Download/OmniStorageQA/installer.apk bs=1024 count=256 >/dev/null 2>&1"
+adb shell "dd if=/dev/zero of=/sdcard/Documents/OmniStorageQA/guide.pdf bs=1024 count=384 >/dev/null 2>&1"
+adb shell "dd if=/dev/zero of=/sdcard/Music/OmniStorageQA/archive.zip bs=1024 count=128 >/dev/null 2>&1"
 mkdir -p "$OUTPUT/maestro-details"
 maestro test --test-output-dir "$OUTPUT/maestro-details" "$OUTPUT/detail-capture.yaml"
-for name in 06-clean-duplicates 07-clean-filters 08-privacy-quick 09-privacy-batch 10-pro-manage; do
+for name in 06-clean-duplicates 07-clean-filters 08-privacy-quick 09-privacy-batch 10-pro-manage 12-storage-intelligence; do
   candidate="$(find "$OUTPUT/maestro-details" -type f -name "$name.png" -print -quit)"
   if [[ -z "$candidate" ]]; then
     echo "::error::Missing detail screenshot $name.png"
@@ -180,7 +199,8 @@ Git commit: ${GITHUB_SHA:-unknown}
 Source: debug APK assembled from this commit on the workflow runner.
 Device: Google APIs x86_64, Pixel 7 Pro, Android API 35
 Theme: system light; font scale: 1.0; no personal user data.
-Screens: 01-home, 02-clean, 03-gallery, 04-privacy, 05-pro.
+Screens: 01-home, 02-clean, 03-gallery, 04-privacy, 05-pro, dedicated tools, video, and Storage Intelligence.
+The storage map contains synthetic QA files only; numbers are not real device claims.
 Evidence: UI only. No real physical device or Play certification.
 EOF
-echo "Ten navigation screenshots captured; video playback optional if indexed."
+echo "Eleven navigation and intelligence screenshots captured; video playback optional if indexed."

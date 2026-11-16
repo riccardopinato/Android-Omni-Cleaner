@@ -3,5 +3,5 @@ appId: com.riccardopinato.omnicleaner.debug
 - launchApp:
     clearState: false
 - tapOn:
-    text: "Pro"
+    id: "omni_nav_pro"
 - assertVisible: "Omni Cleaner Pro"
