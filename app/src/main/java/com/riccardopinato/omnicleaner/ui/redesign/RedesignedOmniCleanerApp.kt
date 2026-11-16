@@ -331,7 +331,6 @@ fun RedesignedOmniCleanerApp(
                                     com.riccardopinato.omnicleaner.gallery.GalleryProSection(
                                         controller = viewModel.galleryController,
                                         onOpenReview = { detailName = OmniDetailRoute.GALLERY_REVIEW.name },
-                                onOpenInsights = { detailName = OmniDetailRoute.GALLERY_INSIGHTS.name },
                                     )
                                 }
                                 OmniDetailRoute.GALLERY_REVIEW -> ModuleScreen(
@@ -426,6 +425,7 @@ fun RedesignedOmniCleanerApp(
                             GalleryCleanerSection(
                                 controller = viewModel.galleryController,
                                 onOpenReview = { detailName = OmniDetailRoute.GALLERY_REVIEW.name },
+                                onOpenInsights = { detailName = OmniDetailRoute.GALLERY_INSIGHTS.name },
                             )
                         }
 
