@@ -120,6 +120,9 @@ Android and release-provider evidence.
   accessibility resource IDs via Compose semantics and the 1.3x Maestro flow
   taps the clickable tab itself, then tests Clean → Home twice. If this still
   fails, treat as a real navigation/input regression; do not declare PASS.
+- **Embedded XMP hardening:** beyond JPEG sidecar segments, a GPS cleanup
+  now also rejects the Exif TIFF XMP attribute before mutation. The predicate
+  has explicit JVM tests for location vs non-location selections.
 - **EXIF GPS P1:** selected GPS cleanup now blocks unsupported auxiliary
   metadata (non-Exif APP1/XMP, APP13/IPTC and unknown sidecar segments) before
   cleaning any temporary copy. The conservative approach leaves the original

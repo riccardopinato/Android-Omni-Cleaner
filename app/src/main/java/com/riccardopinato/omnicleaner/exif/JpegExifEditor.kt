@@ -40,6 +40,11 @@ object JpegExifEditor {
         validateOrientation(orientation)
 
         val xmp = before.getAttribute(XMP_TAG)
+        // An XMP TIFF attribute can contain coordinates outside the GPS IFD.
+        // Fail before writing an output rather than promising an unsafe copy.
+        if (blocksEmbeddedXmpForGps(groups, xmp)) {
+            error("JPEG contains embedded XMP metadata; GPS-clean export blocked")
+        }
         if (
             xmp?.contains("MotionPhoto", ignoreCase = true) == true ||
             xmp?.contains("MicroVideo", ignoreCase = true) == true
