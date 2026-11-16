@@ -1,0 +1,24 @@
+appId: com.riccardopinato.omnicleaner.debug
+---
+# Two independent cycles are driven from applab-runtime-smoke.sh after force-stop.
+# This flow does NOT delete files, authorize Android Trash or mutate media.
+- launchApp:
+    clearState: false
+- assertVisible: "Smart cleaning"
+- tapOn:
+    id: "omni_nav_clean"
+- assertVisible: "Deep Cleaning"
+- tapOn:
+    id: "omni_clean_tool_duplicates"
+- assertVisible: "Find duplicates"
+- pressKey: Back
+- assertVisible: "Deep Cleaning"
+- tapOn:
+    id: "omni_nav_gallery"
+- assertVisible: "Gallery cleaner"
+- tapOn:
+    id: "omni_nav_privacy"
+- assertVisible: "EXIF privacy"
+- tapOn:
+    id: "omni_nav_home"
+- assertVisible: "Smart cleaning"

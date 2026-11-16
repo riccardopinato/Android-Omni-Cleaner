@@ -140,6 +140,25 @@ if [[ "$status" -eq 0 ]]; then
   fi
 fi
 
+# This is separate from AppLab's UIAutomator hierarchy warnings. It proves
+# the app can restart and navigate after AppLab's storage-recovery lab, rather
+# than incorrectly converting a missing hierarchy snapshot into PASS.
+if [[ "$status" -eq 0 ]]; then
+  echo "[Omni/AppLab] running two non-destructive restart/recovery journeys..."
+  for cycle in 1 2; do
+    adb shell am force-stop "$PACKAGE_ID" || true
+    if maestro test "$GITHUB_WORKSPACE/target/.maestro/restart-recovery.yaml"; then
+      echo "[Omni/AppLab] restart/recovery cycle ${cycle}/2 PASSED."
+    else
+      status=$?
+      echo "[Omni/AppLab] restart/recovery cycle ${cycle}/2 FAILED (status $status)."
+      echo "[Omni/AppLab] AppLab persistence/storage warnings remain independent evidence."
+      adb shell dumpsys activity activities | tail -n 90 || true
+      break
+    fi
+  done
+fi
+
 if [[ "$status" -eq 0 ]]; then
   echo "[Omni/AppLab] running accessibility journeys at 1.3x, 1.5x, and 2.0x font scale..."
   for scale in 1.3 1.5 2.0; do
