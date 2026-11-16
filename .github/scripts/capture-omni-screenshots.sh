@@ -105,10 +105,22 @@ appId: com.riccardopinato.omnicleaner.debug
     id: "omni_pro_manage"
 - assertVisible: "Restore purchase"
 - takeScreenshot: 10-pro-manage
+- pressKey: Back
+- tapOn:
+    id: "omni_nav_clean"
+- tapOn:
+    id: "omni_clean_tool_intelligence"
+- assertVisible: "Storage Intelligence"
+- tapOn:
+    id: "omni_storage_intelligence_scan"
+- extendedWaitUntil:
+    visible: "Storage map"
+    timeout: 120000
+- takeScreenshot: 12-storage-intelligence
 DETAIL_FLOW
 mkdir -p "$OUTPUT/maestro-details"
 maestro test --test-output-dir "$OUTPUT/maestro-details" "$OUTPUT/detail-capture.yaml"
-for name in 06-clean-duplicates 07-clean-filters 08-privacy-quick 09-privacy-batch 10-pro-manage; do
+for name in 06-clean-duplicates 07-clean-filters 08-privacy-quick 09-privacy-batch 10-pro-manage 12-storage-intelligence; do
   candidate="$(find "$OUTPUT/maestro-details" -type f -name "$name.png" -print -quit)"
   if [[ -z "$candidate" ]]; then
     echo "::error::Missing detail screenshot $name.png"
@@ -183,4 +195,4 @@ Theme: system light; font scale: 1.0; no personal user data.
 Screens: 01-home, 02-clean, 03-gallery, 04-privacy, 05-pro.
 Evidence: UI only. No real physical device or Play certification.
 EOF
-echo "Ten navigation screenshots captured; video playback optional if indexed."
+echo "Eleven navigation and intelligence screenshots captured; video playback optional if indexed."
