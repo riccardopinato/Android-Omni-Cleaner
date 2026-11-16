@@ -3,6 +3,6 @@ appId: com.riccardopinato.omnicleaner.debug
 - launchApp:
     clearState: false
 - tapOn:
-    text: "Clean"
+    id: "omni_nav_clean"
 - assertVisible: "Deep Cleaning"
 - assertVisible: "Analyze storage"
