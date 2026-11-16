@@ -452,4 +452,24 @@
     <string name="gp_unavailable_photo">Photo indisponible</string>
     <string name="gp_none_detected">Aucun groupe possible sur cette page.</string>
     <string name="gp_no_auto_delete">Aucune sélection ou suppression automatique. Vérifiez chaque photo.</string>
+    <string name="gp_compare_title">Comparer deux photos</string>
+    <string name="gp_compare_note">Aperçus locaux sans recadrage (2160 px max), pas des exports en pleine résolution. Les originaux restent intacts.</string>
+    <string name="gp_compare_loading">Chargement de aperçu...</string>
+    <string name="gp_compare_meta">%1$d × %2$d · %3$s</string>
+    <string name="gp_compare_next">Comparer la photo suivante</string>
+    <string name="gp_compare_previous">Paire précédente</string>
+    <string name="gp_compare_open">Comparer ces photos</string>
+    <string name="review_center_title">Centre de vérification</string>
+    <string name="review_center_explain">Regroupe les choix des différentes fonctions. La confirmation finale reste dans chaque écran de nettoyage.</string>
+    <string name="review_center_filesystem_title">Fichiers et dossiers vides</string>
+    <string name="review_center_file_summary">%1$d fichiers uniques · %2$s indexés · %3$d dossiers vides</string>
+    <string name="review_center_no_guarantee">Les octets sélectionnés ne sont pas un gain garanti. La corbeille peut conserver les fichiers.</string>
+    <string name="review_center_stale">%1$d sélections demandent une nouvelle analyse.</string>
+    <string name="review_center_none">Aucune sélection dans cette section.</string>
+    <string name="review_center_clear">Effacer les sélections locales</string>
+    <string name="review_center_gallery_title">File de la corbeille Android</string>
+    <string name="review_center_gallery_summary">%1$d médias · %2$s en attente</string>
+    <string name="review_center_gallery_note">La corbeille Android demande une confirmation distincte. Les médias ne sont pas encore de espace libéré.</string>
+    <string name="review_center_open_gallery">Ouvrir la vérification Galerie</string>
+    <string name="review_center_footer">Cet écran ne supprime, déplace ni restaure de fichiers. Confirmez dans la fonction concernée.</string>
 </resources>

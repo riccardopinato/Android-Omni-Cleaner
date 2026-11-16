@@ -9,6 +9,7 @@ on:
       - audit/omni-safety-ux-360-20261115
       - feature/omni-storage-intelligence-v1-20261116
       - feature/omni-gallery-pro-v1-20261116
+      - feature/omni-qa-gallery-review-v1-20261116
   pull_request:
     branches:
       - main
@@ -81,6 +82,9 @@ jobs:
       - name: Verify read-only Gallery Pro contract
         run: python3 .github/scripts/check-gallery-pro.py
 
+      - name: Verify cross-module review and photo comparison
+        run: python3 .github/scripts/check-review-center.py
+
       - name: Parse Windows signing bootstrap
         shell: pwsh
         run: |
@@ -105,7 +109,7 @@ jobs:
         run: ./gradlew lintDebug lintRelease testDebugUnitTest assembleDebug assembleDebugAndroidTest assembleRelease bundleRelease --stacktrace
 
       - name: Publish exact-head development APK
-        if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'push' && (github.ref == 'refs/heads/audit/omni-safety-ux-360-20261115' || github.ref == 'refs/heads/feature/omni-storage-intelligence-v1-20261116' || github.ref == 'refs/heads/feature/omni-gallery-pro-v1-20261116'))
+        if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'push' && (github.ref == 'refs/heads/audit/omni-safety-ux-360-20261115' || github.ref == 'refs/heads/feature/omni-storage-intelligence-v1-20261116' || github.ref == 'refs/heads/feature/omni-gallery-pro-v1-20261116' || github.ref == 'refs/heads/feature/omni-qa-gallery-review-v1-20261116'))
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}

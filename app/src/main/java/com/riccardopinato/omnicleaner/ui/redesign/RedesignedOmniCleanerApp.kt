@@ -108,6 +108,7 @@ private enum class OmniDestination(
 private enum class OmniDetailRoute(val parent: OmniDestination) {
     CLEAN_OVERVIEW(OmniDestination.CLEAN),
     CLEAN_INTELLIGENCE(OmniDestination.CLEAN),
+    CLEAN_REVIEW(OmniDestination.CLEAN),
     CLEAN_LARGE(OmniDestination.CLEAN),
     CLEAN_DUPLICATES(OmniDestination.CLEAN),
     CLEAN_FOLDERS(OmniDestination.CLEAN),
@@ -124,6 +125,7 @@ private enum class OmniDetailRoute(val parent: OmniDestination) {
 private fun CleanerToolRoute.toDetailRoute(): OmniDetailRoute = when (this) {
     CleanerToolRoute.OVERVIEW -> OmniDetailRoute.CLEAN_OVERVIEW
     CleanerToolRoute.INTELLIGENCE -> OmniDetailRoute.CLEAN_INTELLIGENCE
+    CleanerToolRoute.REVIEW -> OmniDetailRoute.CLEAN_REVIEW
     CleanerToolRoute.LARGE -> OmniDetailRoute.CLEAN_LARGE
     CleanerToolRoute.DUPLICATES -> OmniDetailRoute.CLEAN_DUPLICATES
     CleanerToolRoute.FOLDERS -> OmniDetailRoute.CLEAN_FOLDERS
@@ -135,6 +137,7 @@ private fun CleanerToolRoute.toDetailRoute(): OmniDetailRoute = when (this) {
 private fun OmniDetailRoute.toCleanerTool(): CleanerToolRoute = when (this) {
     OmniDetailRoute.CLEAN_OVERVIEW -> CleanerToolRoute.OVERVIEW
     OmniDetailRoute.CLEAN_INTELLIGENCE -> CleanerToolRoute.INTELLIGENCE
+    OmniDetailRoute.CLEAN_REVIEW -> CleanerToolRoute.REVIEW
     OmniDetailRoute.CLEAN_LARGE -> CleanerToolRoute.LARGE
     OmniDetailRoute.CLEAN_DUPLICATES -> CleanerToolRoute.DUPLICATES
     OmniDetailRoute.CLEAN_FOLDERS -> CleanerToolRoute.FOLDERS
@@ -308,20 +311,28 @@ fun RedesignedOmniCleanerApp(
                             when (activeDetail) {
                                 OmniDetailRoute.CLEAN_OVERVIEW,
                                 OmniDetailRoute.CLEAN_INTELLIGENCE,
+                                OmniDetailRoute.CLEAN_REVIEW,
                                 OmniDetailRoute.CLEAN_LARGE,
                                 OmniDetailRoute.CLEAN_DUPLICATES,
                                 OmniDetailRoute.CLEAN_FOLDERS,
                                 OmniDetailRoute.CLEAN_FILTERS,
                                 OmniDetailRoute.CLEAN_TRASH,
-                                OmniDetailRoute.CLEAN_ADVANCED -> CleanDetailScreen(
-                                    tool = activeDetail.toCleanerTool(),
-                                    state = state,
-                                    controller = controller,
-                                    modifier = Modifier.fillMaxSize(),
-                                    selectionState = cleanSelectionState,
-                                    onEnableDeepClean = { showDeepAccessDisclosure = true },
-                                    onOpenTool = { detailName = it.toDetailRoute().name },
-                                )
+                                OmniDetailRoute.CLEAN_ADVANCED -> androidx.compose.runtime.key(activeDetail) {
+                                    CleanDetailScreen(
+                                        tool = activeDetail.toCleanerTool(),
+                                        state = state,
+                                        controller = controller,
+                                        modifier = Modifier.fillMaxSize(),
+                                        selectionState = cleanSelectionState,
+                                        onEnableDeepClean = { showDeepAccessDisclosure = true },
+                                        onOpenTool = { detailName = it.toDetailRoute().name },
+                                        galleryController = viewModel.galleryController,
+                                        onOpenGalleryReview = {
+                                            destinationName = OmniDestination.GALLERY.name
+                                            detailName = OmniDetailRoute.GALLERY_REVIEW.name
+                                        },
+                                    )
+                                }
                                 OmniDetailRoute.GALLERY_INSIGHTS -> ModuleScreen(
                                     eyebrow = stringResource(R.string.redesign_media_eyebrow),
                                     title = stringResource(R.string.gp_title),

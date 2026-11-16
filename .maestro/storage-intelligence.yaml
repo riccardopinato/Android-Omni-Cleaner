@@ -31,4 +31,5 @@ appId: com.riccardopinato.omnicleaner.debug
     timeout: 30000
 - tapOn:
     id: "omni_storage_open_categories"
-- assertVisible: "Advanced cleaning and maintenance"
+- assertVisible:
+    id: "omni_clean_detail_advanced"
