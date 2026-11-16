@@ -10,11 +10,12 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import com.riccardopinato.omnicleaner.localization.AppLanguage
 import com.riccardopinato.omnicleaner.ui.OmniCleanerViewModel
 import com.riccardopinato.omnicleaner.ui.redesign.RedesignedOmniCleanerApp
 import com.riccardopinato.omnicleaner.ui.theme.OmniCleanerTheme
+import com.riccardopinato.omnicleaner.ui.theme.AppAppearance
 
 class MainActivity : ComponentActivity() {
     private val omniCleanerViewModel: OmniCleanerViewModel by viewModels()
@@ -28,13 +29,21 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val systemDark = isSystemInDarkTheme()
-            var themeOverride by rememberSaveable { mutableStateOf<Boolean?>(null) }
-            val darkTheme = themeOverride ?: systemDark
+            var themeMode by remember { mutableStateOf(AppAppearance.selectedMode(this)) }
+            val darkTheme = when (themeMode) {
+                AppAppearance.Mode.SYSTEM -> systemDark
+                AppAppearance.Mode.LIGHT -> false
+                AppAppearance.Mode.DARK -> true
+            }
             OmniCleanerTheme(darkTheme = darkTheme) {
                 RedesignedOmniCleanerApp(
                     viewModel = omniCleanerViewModel,
                     darkTheme = darkTheme,
-                    onToggleTheme = { themeOverride = !darkTheme },
+                    themeMode = themeMode,
+                    onThemeModeChange = { newMode ->
+                        AppAppearance.setMode(this, newMode)
+                        themeMode = newMode
+                    },
                 )
             }
         }

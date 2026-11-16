@@ -2,6 +2,17 @@ name: AppLab Runtime Smoke
 
 on:
   workflow_dispatch:
+  # This stacked audit PR is based on PR #22, not main. The normal
+  # main-targeted PR gate does not run here. Execute an audit-only
+  # emulator smoke when the audited sources or its journeys change.
+  push:
+    branches:
+      - audit/omni-safety-ux-360-20261115
+    paths:
+      - 'app/src/**'
+      - '.maestro/**'
+      - '.github/scripts/applab-runtime-smoke.sh'
+      - '.github/workflows/applab-runtime-smoke.yml'
 
 permissions:
   contents: write

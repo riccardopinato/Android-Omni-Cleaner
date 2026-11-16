@@ -61,7 +61,7 @@ class ProBatchController(
                             results += ProBatchResult(type, items.size, items.sumOf { it.sizeBytes })
                             state = state.copy(
                                 emptyFolders = items,
-                                selectedFolderPaths = items.mapTo(linkedSetOf()) { it.path },
+                                selectedFolderPaths = emptySet(),
                             )
                         }
 
@@ -74,7 +74,7 @@ class ProBatchController(
                             )
                             state = state.copy(
                                 duplicateGroups = groups,
-                                selectedDuplicatePaths = cleanupEngine.selectDuplicatesExceptOldest(groups),
+                                selectedDuplicatePaths = emptySet(),
                             )
                         }
 
@@ -96,7 +96,7 @@ class ProBatchController(
                             )
                             state = state.copy(
                                 thumbnails = items,
-                                selectedThumbnailPaths = items.mapTo(linkedSetOf()) { it.path },
+                                selectedThumbnailPaths = emptySet(),
                             )
                         }
 
@@ -168,6 +168,13 @@ class ProBatchController(
 
     fun resolve() {
         if (state.resolving || state.awaitingSystemTrash) return
+        // Batch resolution is never invoked for merely discovered candidates:
+        // every selected file or folder must have an explicit user choice.
+        if (state.selectedFolderPaths.isEmpty() &&
+            state.selectedDuplicatePaths.isEmpty() &&
+            state.selectedLargeFilePaths.isEmpty() &&
+            state.selectedThumbnailPaths.isEmpty()
+        ) return
 
         job?.cancel()
         job = scope.launch {

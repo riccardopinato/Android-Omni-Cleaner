@@ -21,20 +21,21 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedButton
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,6 +46,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -78,6 +80,7 @@ import com.riccardopinato.omnicleaner.ui.OmniCleanerViewModel
 import com.riccardopinato.omnicleaner.ui.CleanerUiState
 import com.riccardopinato.omnicleaner.ui.LanguageSelectorSection
 import com.riccardopinato.omnicleaner.ui.MaintenanceSection
+import com.riccardopinato.omnicleaner.ui.ManualMaintenanceCard
 import com.riccardopinato.omnicleaner.ui.SafeTrashSection
 import com.riccardopinato.omnicleaner.ui.SmartCategoriesSection
 import com.riccardopinato.omnicleaner.ui.StorageCleanupSection
@@ -88,270 +91,338 @@ import com.riccardopinato.omnicleaner.ui.theme.OmniPurple
 import com.riccardopinato.omnicleaner.ui.theme.OmniRose
 import java.util.Locale
 
-private data class OmniQuickAction(
-    val title: String,
-    val subtitle: String,
-    val glyph: String,
-    val accent: Color,
-    val onClick: () -> Unit,
-)
+/** Dedicated tool routes. The activity-scoped CleanerController owns scan results. */
+internal enum class CleanerToolRoute(val labelRes: Int) {
+    OVERVIEW(R.string.scan_overview),
+    LARGE(R.string.scan_big_files),
+    DUPLICATES(R.string.scan_duplicates),
+    FOLDERS(R.string.scan_folders),
+    FILTERS(R.string.redesign_filters_title),
+    TRASH(R.string.module_safe_trash),
+    ADVANCED(R.string.audit_advanced_maintenance),
+}
 
 @Composable
-internal fun HomeScreen(
+internal fun CleanHubScreen(
     state: CleanerUiState,
-    premium: Boolean,
+    controller: CleanerController,
     modifier: Modifier,
-    onRefresh: () -> Unit,
+    onOpenTool: (CleanerToolRoute) -> Unit,
     onEnableDeepClean: () -> Unit,
-    onOpenClean: () -> Unit,
-    onOpenGallery: () -> Unit,
-    onOpenPrivacy: () -> Unit,
-    onOpenPro: () -> Unit,
-    onAnalyzeStorage: () -> Unit,
-    onFindDuplicates: () -> Unit,
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
-            Column(
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(
-                    stringResource(R.string.redesign_home_eyebrow),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.headlineLarge,
-                )
-                Text(
-                    stringResource(R.string.redesign_home_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        item {
-            val info = state.storageInfo
-            OmniHeroCard(
-                title = stringResource(R.string.storage),
-                value = info?.let { formatCleanerBytes(it.usedBytes) } ?: "—",
-                detail = info?.let {
-                    stringResource(
-                        R.string.redesign_storage_detail,
-                        formatCleanerBytes(it.freeBytes),
-                        formatCleanerBytes(it.totalBytes),
-                    )
-                } ?: stringResource(R.string.redesign_storage_waiting),
-                progress = info?.usedPercent,
-                modifier = Modifier.padding(horizontal = 20.dp),
+            OmniSectionHeader(
+                eyebrow = stringResource(R.string.redesign_clean_eyebrow),
+                title = stringResource(R.string.nav_clean),
+                subtitle = stringResource(R.string.redesign_clean_subtitle),
+                modifier = Modifier.padding(top = 18.dp),
             )
         }
-
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                OmniMetricCard(
-                    label = stringResource(R.string.redesign_metric_large_files),
-                    value = if (state.bigFilesScanned) state.bigFiles.size.toString() else "—",
-                    accent = OmniOrange,
-                    modifier = Modifier.width(128.dp),
-                )
-                OmniMetricCard(
-                    label = stringResource(R.string.redesign_metric_duplicates),
-                    value = if (state.duplicatesScanned) state.duplicates.size.toString() else "—",
-                    accent = OmniRose,
-                    modifier = Modifier.width(128.dp),
-                )
-                OmniMetricCard(
-                    label = stringResource(R.string.redesign_metric_folders),
-                    value = if (state.foldersScanned) state.folders.size.toString() else "—",
-                    accent = OmniMint,
-                    modifier = Modifier.width(128.dp),
-                )
-            }
-        }
-
-        item {
-            val actions = listOf(
-                OmniQuickAction(
-                    title = stringResource(R.string.redesign_quick_analyze),
-                    subtitle = stringResource(R.string.redesign_quick_analyze_subtitle),
-                    glyph = "↗",
-                    accent = OmniBlue,
-                    onClick = onAnalyzeStorage,
-                ),
-                OmniQuickAction(
-                    title = stringResource(R.string.redesign_quick_duplicates),
-                    subtitle = stringResource(R.string.redesign_quick_duplicates_subtitle),
-                    glyph = "≋",
-                    accent = OmniRose,
-                    onClick = onFindDuplicates,
-                ),
-                OmniQuickAction(
-                    title = stringResource(R.string.module_gallery_cleaner),
-                    subtitle = stringResource(R.string.redesign_quick_gallery_subtitle),
-                    glyph = "▣",
-                    accent = OmniPurple,
-                    onClick = onOpenGallery,
-                ),
-                OmniQuickAction(
-                    title = stringResource(R.string.module_exif_privacy),
-                    subtitle = stringResource(R.string.redesign_quick_privacy_subtitle),
-                    glyph = "◎",
-                    accent = OmniMint,
-                    onClick = onOpenPrivacy,
-                ),
-            )
-            // Preserve horizontal cards on small screens or when text is magnified.
-            val useScroll = LocalConfiguration.current.screenWidthDp < 360 ||
-                LocalDensity.current.fontScale > 1.25f
-            if (useScroll) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+        if (!state.hasBroadAccess) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(22.dp),
                 ) {
-                    actions.forEach { action ->
-                        OmniModuleCard(
-                            title = action.title,
-                            subtitle = action.subtitle,
-                            glyph = action.glyph,
-                            accent = action.accent,
-                            onClick = action.onClick,
-                            modifier = Modifier.width(180.dp),
-                        )
-                    }
-                }
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    actions.chunked(2).forEach { pair ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            pair.forEach { action ->
-                                OmniModuleCard(
-                                    title = action.title,
-                                    subtitle = action.subtitle,
-                                    glyph = action.glyph,
-                                    accent = action.accent,
-                                    onClick = action.onClick,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            ) {
-                Column(
-                    modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Text(
-                        stringResource(R.string.redesign_access_title),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    OmniStatusPill(
-                        text = when {
-                            state.hasBroadAccess -> stringResource(R.string.access_ready)
-                            state.storageCapability.standardCleaningAvailable ->
-                                stringResource(R.string.redesign_standard_ready)
-                            else -> stringResource(R.string.standard_cleaning_unavailable)
-                        },
-                        accent = when {
-                            state.hasBroadAccess -> OmniMint
-                            state.storageCapability.standardCleaningAvailable -> OmniBlue
-                            else -> MaterialTheme.colorScheme.error
-                        },
-                    )
-                    Text(
-                        when (state.storageCapability.status) {
-                            DeepStorageAccessStatus.READY -> stringResource(R.string.redesign_deep_ready)
-                            DeepStorageAccessStatus.NEEDS_ALL_FILES_ACCESS,
-                            DeepStorageAccessStatus.NEEDS_LEGACY_PERMISSION,
-                            -> stringResource(R.string.redesign_deep_optional)
-                            DeepStorageAccessStatus.SCOPED_ONLY_ANDROID_10 ->
-                                stringResource(R.string.deep_access_android10)
-                            DeepStorageAccessStatus.STORAGE_UNAVAILABLE ->
-                                stringResource(R.string.deep_access_unavailable)
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(9.dp),
+                    ) {
+                        Text(stringResource(R.string.redesign_deep_locked_title),
+                            style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.redesign_deep_locked_body),
+                            style = MaterialTheme.typography.bodySmall)
                         if (state.storageCapability.canRequestDeepAccess) {
                             Button(onClick = onEnableDeepClean) {
                                 Text(stringResource(R.string.grant_deep_access))
                             }
                         }
-                        OutlinedButton(onClick = onRefresh) {
-                            Text(stringResource(R.string.refresh))
-                        }
-                    }
-                    OutlinedButton(onClick = onOpenClean) {
-                        Text(stringResource(R.string.redesign_open_clean_workspace))
                     }
                 }
             }
         }
-
         item {
             Card(
-                onClick = onOpenPro,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                ),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                shape = RoundedCornerShape(23.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
                 Column(
-                    modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(7.dp),
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(9.dp),
                 ) {
                     Text(
-                        if (premium) stringResource(R.string.pro_active)
-                        else stringResource(R.string.redesign_pro_card_title),
+                        text = stringResource(R.string.scan_tools),
                         style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
                     )
-                    Text(
-                        stringResource(R.string.redesign_pro_card_body),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
+                    // Compact dashboard: no accordion or seven-button timeline.
+                    CleanerToolRoute.entries.chunked(2).forEach { group ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            group.forEach { tool ->
+                                Button(
+                                    onClick = { onOpenTool(tool) },
+                                    modifier = Modifier.weight(1f).testTag(
+                                        "omni_clean_tool_${tool.name.lowercase(Locale.ROOT)}"
+                                    ),
+                                ) {
+                                    Text(stringResource(tool.labelRes))
+                                }
+                            }
+                            if (group.size == 1) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
                 }
             }
         }
+        if (state.overview == null && !state.foldersScanned &&
+            !state.bigFilesScanned && !state.duplicatesScanned &&
+            !state.scanning && state.error == null
+        ) {
+            item { CleanWelcomePanel() }
+        }
+        if (state.scanning) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        Text(state.currentOperation.orEmpty())
+                        Button(onClick = controller::cancelScan) {
+                            Text(stringResource(R.string.cancel))
+                        }
+                    }
+                }
+            }
+        }
+        state.error?.let { error ->
+            item { Text(error, modifier = Modifier.padding(20.dp),
+                color = MaterialTheme.colorScheme.error) }
+        }
+        state.overview?.let { overview ->
+            item {
+                ResultSummaryCard(
+                    title = stringResource(R.string.module_storage_overview),
+                    subtitle = stringResource(
+                        R.string.overview_summary,
+                        overview.files,
+                        formatCleanerBytes(overview.logicalBytes),
+                    ),
+                    accent = OmniBlue,
+                )
+            }
+        }
+        item { Spacer(Modifier.height(8.dp)) }
+    }
+}
 
+@Composable
+internal fun CleanDetailScreen(
+    tool: CleanerToolRoute,
+    state: CleanerUiState,
+    controller: CleanerController,
+    modifier: Modifier,
+    selectionState: com.riccardopinato.omnicleaner.ui.CleanupSelectionUiState,
+    onEnableDeepClean: () -> Unit,
+) {
+    val onCleanupFinished = {
+        controller.refreshAccessAndStorage()
+        controller.scanOverview()
+    }
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        item {
+            OmniSectionHeader(
+                eyebrow = stringResource(R.string.nav_clean),
+                title = stringResource(tool.labelRes),
+                subtitle = stringResource(R.string.redesign_clean_subtitle),
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+        if (tool != CleanerToolRoute.TRASH && !state.hasBroadAccess) {
+            item {
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Text(stringResource(R.string.redesign_deep_locked_body))
+                        if (state.storageCapability.canRequestDeepAccess) {
+                            Button(onClick = onEnableDeepClean) {
+                                Text(stringResource(R.string.grant_deep_access))
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            if (tool in listOf(CleanerToolRoute.OVERVIEW, CleanerToolRoute.LARGE,
+                    CleanerToolRoute.DUPLICATES, CleanerToolRoute.FOLDERS)) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    ) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            if (state.scanning) {
+                                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                Text(state.currentOperation.orEmpty(),
+                                    style = MaterialTheme.typography.bodySmall)
+                                Button(onClick = controller::cancelScan) {
+                                    Text(stringResource(R.string.cancel))
+                                }
+                            } else {
+                                val scanAction: () -> Unit = when (tool) {
+                                    CleanerToolRoute.OVERVIEW -> ({ controller.scanOverview() })
+                                    CleanerToolRoute.LARGE -> ({ controller.scanBigFiles() })
+                                    CleanerToolRoute.DUPLICATES -> ({ controller.scanDuplicates() })
+                                    CleanerToolRoute.FOLDERS -> ({ controller.scanFolders() })
+                                    else -> ({ controller.scanOverview() })
+                                }
+                                Button(
+                                    onClick = scanAction,
+                                    modifier = Modifier.fillMaxWidth().testTag(
+                                        "omni_scan_${tool.name.lowercase(Locale.ROOT)}"
+                                    ),
+                                ) {
+                                    Text(stringResource(tool.labelRes))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            when (tool) {
+                CleanerToolRoute.OVERVIEW -> {
+                    state.overview?.let { overview ->
+                        item {
+                            ResultSummaryCard(
+                                title = stringResource(R.string.module_storage_overview),
+                                subtitle = stringResource(
+                                    R.string.overview_summary,
+                                    overview.files,
+                                    formatCleanerBytes(overview.logicalBytes),
+                                ),
+                                accent = OmniBlue,
+                            )
+                        }
+                        items(overview.byCategory.take(20), key = { "overview:" + it.path }) {
+                            ResultLine(it.path, formatCleanerBytes(it.bytes))
+                        }
+                    }
+                }
+                CleanerToolRoute.LARGE -> {
+                    if (state.bigFilesScanned) {
+                        item {
+                            ResultSummaryCard(
+                                title = stringResource(R.string.module_large_files),
+                                subtitle = stringResource(
+                                    R.string.big_files_summary,
+                                    state.visibleBigFiles.size,
+                                ),
+                                accent = OmniOrange,
+                            )
+                        }
+                    }
+                    if (state.visibleBigFiles.isNotEmpty()) {
+                        item {
+                            StorageCleanupSection(
+                                folders = emptyList(),
+                                bigFiles = state.visibleBigFiles,
+                                duplicateGroups = emptyList(),
+                                onCleanupFinished = onCleanupFinished,
+                                selectionState = selectionState,
+                            )
+                        }
+                    }
+                }
+                CleanerToolRoute.DUPLICATES -> {
+                    if (state.duplicatesScanned) {
+                        item {
+                            ResultSummaryCard(
+                                title = stringResource(R.string.module_duplicates),
+                                subtitle = stringResource(
+                                    R.string.duplicates_summary,
+                                    state.visibleDuplicates.size,
+                                    formatCleanerBytes(state.visibleDuplicates.sumOf { it.totalWasteBytes }),
+                                ),
+                                accent = OmniRose,
+                            )
+                        }
+                    }
+                    if (state.visibleDuplicates.isNotEmpty()) {
+                        item {
+                            StorageCleanupSection(
+                                folders = emptyList(),
+                                bigFiles = emptyList(),
+                                duplicateGroups = state.visibleDuplicates,
+                                onCleanupFinished = onCleanupFinished,
+                                selectionState = selectionState,
+                            )
+                        }
+                    }
+                }
+                CleanerToolRoute.FOLDERS -> {
+                    if (state.foldersScanned) {
+                        item {
+                            ResultSummaryCard(
+                                title = stringResource(R.string.module_folders),
+                                subtitle = stringResource(
+                                    R.string.folder_summary,
+                                    state.visibleFolders.size,
+                                    state.visibleFolders.count {
+                                        it.status == FolderStatus.COMPLETELY_EMPTY
+                                    },
+                                ),
+                                accent = OmniMint,
+                            )
+                        }
+                    }
+                    if (state.visibleFolders.isNotEmpty()) {
+                        item {
+                            StorageCleanupSection(
+                                folders = state.visibleFolders,
+                                bigFiles = emptyList(),
+                                duplicateGroups = emptyList(),
+                                onCleanupFinished = onCleanupFinished,
+                                selectionState = selectionState,
+                            )
+                        }
+                    }
+                }
+                CleanerToolRoute.FILTERS -> item {
+                    CleanFiltersCard(state = state, controller = controller)
+                }
+                CleanerToolRoute.TRASH -> item {
+                    SafeTrashSection()
+                }
+                CleanerToolRoute.ADVANCED -> {
+                    item { SmartCategoriesSection(onCleanupFinished = onCleanupFinished) }
+                    item { MaintenanceSection() }
+                    item { ManualMaintenanceCard() }
+                    if (BuildConfig.DEBUG) {
+                        item { PerformanceBenchmarkCard(state = state, controller = controller) }
+                    }
+                }
+            }
+            state.error?.let { error ->
+                item { Text(error, modifier = Modifier.padding(20.dp),
+                    color = MaterialTheme.colorScheme.error) }
+            }
+        }
         item { Spacer(Modifier.height(10.dp)) }
     }
 }
@@ -363,6 +434,9 @@ internal fun CleanScreen(
     modifier: Modifier,
     onEnableDeepClean: () -> Unit,
 ) {
+    var showFilters by rememberSaveable { mutableStateOf(false) }
+    var showSafeTrash by rememberSaveable { mutableStateOf(false) }
+    var showAdvancedMaintenance by rememberSaveable { mutableStateOf(false) }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -406,20 +480,27 @@ internal fun CleanScreen(
                     }
                 }
             }
+            // Permission request remains above the guide: do not hide the real CTA.
+            item { CleanWelcomePanel() }
         } else {
             item { CleanActionsCard(state = state, controller = controller) }
-            if (BuildConfig.DEBUG) {
-                item { PerformanceBenchmarkCard(state = state, controller = controller) }
+            // Before the first scan, explain the opt-in scan/review/confirm flow.
+            if (state.overview == null && !state.foldersScanned &&
+                !state.bigFilesScanned && !state.duplicatesScanned &&
+                !state.scanning && state.error == null
+            ) {
+                item { CleanWelcomePanel() }
             }
-            item { CleanFiltersCard(state = state, controller = controller) }
-
             item {
-                SmartCategoriesSection(
-                    onCleanupFinished = {
-                        controller.refreshAccessAndStorage()
-                        controller.scanOverview()
-                    },
-                )
+                OutlinedButton(
+                    onClick = { showFilters = !showFilters },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                ) {
+                    Text(stringResource(R.string.redesign_filters_title) + if (showFilters) " −" else " +")
+                }
+            }
+            if (showFilters) {
+                item { CleanFiltersCard(state = state, controller = controller) }
             }
 
             state.error?.let { error ->
@@ -470,9 +551,6 @@ internal fun CleanScreen(
                         accent = OmniOrange,
                     )
                 }
-                items(state.visibleBigFiles.take(24), key = { "big:" + it.path }) {
-                    ResultLine(it.name, formatCleanerBytes(it.sizeBytes))
-                }
             }
 
             if (state.visibleDuplicates.isNotEmpty()) {
@@ -486,12 +564,6 @@ internal fun CleanScreen(
                             formatCleanerBytes(waste),
                         ),
                         accent = OmniRose,
-                    )
-                }
-                items(state.visibleDuplicates.take(20), key = { "dup:" + it.hash }) { group ->
-                    ResultLine(
-                        group.files.firstOrNull()?.name ?: group.hash.take(12),
-                        group.files.size.toString() + " × " + formatCleanerBytes(group.sizeBytes),
                     )
                 }
             }
@@ -529,12 +601,6 @@ internal fun CleanScreen(
                         accent = OmniMint,
                     )
                 }
-                items(state.visibleFolders.take(20), key = { "folder:" + it.path }) {
-                    ResultLine(
-                        it.name,
-                        formatCleanerBytes(it.sizeBytes) + " · " + it.fileCount.toString(),
-                    )
-                }
             }
 
             item {
@@ -549,12 +615,63 @@ internal fun CleanScreen(
                 )
             }
 
-            item { MaintenanceSection() }
+            item {
+                OutlinedButton(
+                    onClick = { showAdvancedMaintenance = !showAdvancedMaintenance },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.audit_advanced_maintenance) +
+                            if (showAdvancedMaintenance) " −" else " +"
+                    )
+                }
+            }
+            if (showAdvancedMaintenance) {
+                item {
+                    SmartCategoriesSection(
+                        onCleanupFinished = {
+                            controller.refreshAccessAndStorage()
+                            controller.scanOverview()
+                        },
+                    )
+                }
+                item { MaintenanceSection() }
+                item { ManualMaintenanceCard() }
+                // Benchmark is a developer tool, not a primary cleaning action.
+                if (BuildConfig.DEBUG) {
+                    item { PerformanceBenchmarkCard(state = state, controller = controller) }
+                }
+            }
         }
 
-        item { SafeTrashSection() }
+        item {
+            OutlinedButton(
+                onClick = { showSafeTrash = !showSafeTrash },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+            ) {
+                Text(stringResource(R.string.module_safe_trash) + if (showSafeTrash) " −" else " +")
+            }
+        }
+        if (showSafeTrash) {
+            item { SafeTrashSection() }
+        }
         item { Spacer(Modifier.height(10.dp)) }
     }
+}
+
+@Composable
+private fun CleanWelcomePanel() {
+    OmniWelcomePanel(
+        kind = OmniWelcomeKind.CLEAN,
+        title = stringResource(R.string.welcome_clean_title),
+        message = stringResource(R.string.welcome_clean_body),
+        highlights = listOf(
+            stringResource(R.string.welcome_clean_step1),
+            stringResource(R.string.welcome_clean_step2),
+            stringResource(R.string.welcome_clean_step3),
+        ),
+        modifier = Modifier.padding(horizontal = 20.dp),
+    )
 }
 
 @Composable
@@ -562,6 +679,7 @@ private fun CleanActionsCard(
     state: CleanerUiState,
     controller: CleanerController,
 ) {
+    var showMoreTools by rememberSaveable { mutableStateOf(false) }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -607,20 +725,30 @@ private fun CleanActionsCard(
                 Button(onClick = controller::scanOverview, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.scan_overview))
                 }
-                OutlinedButton(onClick = controller::scanFolders, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.scan_folders))
-                }
-                Button(onClick = { controller.scanBigFiles() }, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = { controller.scanBigFiles() }, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.scan_big_files))
                 }
                 OutlinedButton(onClick = controller::scanDuplicates, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.scan_duplicates))
                 }
-                OutlinedButton(
-                    onClick = controller::refreshPersistentIndex,
+                TextButton(
+                    onClick = { showMoreTools = !showMoreTools },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(stringResource(R.string.refresh_storage_index))
+                    Text(stringResource(
+                        if (showMoreTools) R.string.audit_hide_tools else R.string.audit_more_tools
+                    ))
+                }
+                if (showMoreTools) {
+                    OutlinedButton(onClick = controller::scanFolders, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.scan_folders))
+                    }
+                    OutlinedButton(
+                        onClick = controller::refreshPersistentIndex,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.refresh_storage_index))
+                    }
                 }
             }
         }
@@ -780,6 +908,24 @@ private fun CleanFiltersCard(
         ) {
             Text(stringResource(R.string.redesign_filters_title), style = MaterialTheme.typography.titleMedium)
 
+            var searchMode by rememberSaveable { mutableStateOf(0) }
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
+            ) {
+                listOf(
+                    R.string.module_folders,
+                    R.string.module_large_files,
+                    R.string.module_duplicates,
+                ).forEachIndexed { index, label ->
+                    FilterChip(
+                        selected = searchMode == index,
+                        onClick = { searchMode = index },
+                        label = { Text(stringResource(label)) },
+                    )
+                }
+            }
+            if (searchMode != 0) {
             var extensionMenuExpanded by rememberSaveable { mutableStateOf(false) }
             Text(
                 stringResource(R.string.file_type_filter_title),
@@ -834,6 +980,8 @@ private fun CleanFiltersCard(
                 )
             }
 
+            }
+            if (searchMode == 0) {
             OutlinedTextField(
                 value = state.folderSearchQuery,
                 onValueChange = controller::updateFolderSearchQuery,
@@ -841,6 +989,8 @@ private fun CleanFiltersCard(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            }
+            if (searchMode == 1) {
             OutlinedTextField(
                 value = state.bigFileSearchQuery,
                 onValueChange = controller::updateBigFileSearchQuery,
@@ -848,6 +998,8 @@ private fun CleanFiltersCard(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            }
+            if (searchMode == 2) {
             OutlinedTextField(
                 value = state.duplicateSearchQuery,
                 onValueChange = controller::updateDuplicateSearchQuery,
@@ -855,6 +1007,8 @@ private fun CleanFiltersCard(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            }
+            if (searchMode == 1) {
             Text(
                 stringResource(R.string.redesign_large_threshold),
                 style = MaterialTheme.typography.bodySmall,
@@ -876,6 +1030,8 @@ private fun CleanFiltersCard(
                     }
                 }
             }
+            }
+            if (searchMode == 0) {
             OutlinedTextField(
                 value = state.thresholdValue,
                 onValueChange = controller::updateThresholdValue,
@@ -895,6 +1051,7 @@ private fun CleanFiltersCard(
                         }
                     }
                 }
+            }
             }
         }
     }

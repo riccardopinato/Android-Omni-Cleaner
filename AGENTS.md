@@ -8,11 +8,15 @@ Product truth:
 3. PROJECT_BASELINE.yaml
 4. RECOVERY_AUDIT.md
 
-Factory baseline for this recovery:
-- riccardopinato/App-Factory-Core
-- SHA 03406ef5e511dfc580b67967c67a11ab58e20141
-- Master v26.3
-- Golden Index v15
+Historical Factory baseline for the original recovery (provenance, NOT current authority):
+- riccardopinato/App-Factory-Core@03406ef5e511dfc580b67967c67a11ab58e20141
+- Master v26.3 / Golden Index v15
+
+CURRENT App Factory authority for new work:
+- resolve App-Factory-Core/CURRENT.yaml once per session, then current Master, Golden Index, Registry and relevant Goldens;
+- the 2026-11-15 audit pinned c5adc147046beb7024629466d10eeb799c3c2619 (Master v27, Index v29, Registry v2);
+- a future session resolves CURRENT rather than assuming this audit pin is still current;
+- RC1 remains frozen under RELEASE_FREEZE.md; audit UX goes to draft PR, not main.
 
 Do not substitute remembered older Factory rules.
 

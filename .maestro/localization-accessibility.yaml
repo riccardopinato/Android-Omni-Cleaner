@@ -1,41 +1,33 @@
 appId: com.riccardopinato.omnicleaner.debug
 ---
+# Settings/language controls were moved from Pro to Home in AUD-0010.
+# Executed under 1.3x system font in AppLab script.
 - launchApp:
     clearState: false
-- assertVisible: "Android Omni Cleaner"
-
+# Address the clickable NavigationBarItem, not its nested Text child.
+# At larger font scales, a label-only tap may land in a non-clickable gap.
 - tapOn:
-    text: "Pro"
+    id: "omni_nav_home"
+- assertVisible: "Smart cleaning"
+# Verify repeated navigation with the exact same density before opening Settings.
+- tapOn:
+    id: "omni_nav_clean"
+- assertVisible: "Deep Cleaning"
+- tapOn:
+    id: "omni_nav_home"
+- assertVisible: "Smart cleaning"
+- tapOn: "Settings"
+- assertVisible: "Appearance"
 - scrollUntilVisible:
     element:
       text: "App language"
     direction: DOWN
     timeout: 30000
-- assertVisible: "App language"
 - assertVisible: "English"
 - assertVisible: "Italiano"
-
-- tapOn:
-    text: "Italiano"
-- tapOn:
-    text: "Pro"
-- scrollUntilVisible:
-    element:
-      text: "Lingua dell’app"
-    direction: DOWN
-    timeout: 30000
+- tapOn: "Italiano"
 - assertVisible: "Lingua dell’app"
-- assertVisible: "Sistema"
-- assertVisible: "English"
-
-- tapOn:
-    text: "English"
-- tapOn:
-    text: "Pro"
-- scrollUntilVisible:
-    element:
-      text: "App language"
-    direction: DOWN
-    timeout: 30000
+- assertVisible: "Aspetto"
+- tapOn: "English"
 - assertVisible: "App language"
-- assertVisible: "System"
+- assertVisible: "Appearance"

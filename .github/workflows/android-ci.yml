@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+      # The stacked audit PR targets the design branch, so it does not
+      # receive the main-only pull_request gate. Verify source HEAD on push.
+      - audit/omni-safety-ux-360-20261115
   pull_request:
     branches:
       - main
@@ -52,6 +55,24 @@ jobs:
       - name: Verify launcher icon across Android API levels
         run: python3 .github/scripts/check-launcher-icon.py
 
+      - name: Verify blue action styles and native broom tab
+        run: python3 .github/scripts/check-ux-action-style.py
+
+      - name: Verify illustrated initial states and translations
+        run: python3 .github/scripts/check-welcome-ui.py
+
+      - name: Verify two-level navigation and original media playback
+        run: python3 .github/scripts/check-two-level-media.py
+
+      - name: Validate P1 restart/recovery QA contract
+        shell: bash
+        run: |
+          bash -n .github/scripts/applab-runtime-smoke.sh
+          python3 -m json.tool .maestro/applab-persistence.json >/dev/null
+          python3 -m json.tool .maestro/applab-storage.json >/dev/null
+          grep -Fq 'restart-recovery.yaml' .github/scripts/applab-runtime-smoke.sh
+          grep -Fq 'omni_nav_clean' .maestro/restart-recovery.yaml
+
       - name: Parse Windows signing bootstrap
         shell: pwsh
         run: |
@@ -76,7 +97,7 @@ jobs:
         run: ./gradlew lintDebug lintRelease testDebugUnitTest assembleDebug assembleDebugAndroidTest assembleRelease bundleRelease --stacktrace
 
       - name: Publish exact-head development APK
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'push' && github.ref == 'refs/heads/audit/omni-safety-ux-360-20261115')
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}

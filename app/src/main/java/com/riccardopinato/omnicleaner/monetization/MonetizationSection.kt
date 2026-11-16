@@ -6,12 +6,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material3.Button
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -27,12 +28,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
+import com.riccardopinato.omnicleaner.ui.redesign.OmniWelcomeKind
+import com.riccardopinato.omnicleaner.ui.redesign.OmniWelcomePanel
 import kotlinx.coroutines.launch
 
 @Composable
 fun MonetizationSection(
     runtime: MonetizationRuntime,
     batch: ProBatchController,
+    showWelcome: Boolean = true,
 ) {
     val context = LocalContext.current
     val activity = context.findActivity()
@@ -56,12 +60,27 @@ fun MonetizationSection(
 
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(stringResource(R.string.pro_title), style = MaterialTheme.typography.titleLarge)
+            if (!premium && showWelcome) {
+                // Benefits describe existing capabilities only. Keep Billing
+                // errors and genuine Google Play availability visible below.
+                OmniWelcomePanel(
+                    kind = OmniWelcomeKind.PRO,
+                    title = stringResource(R.string.welcome_pro_title),
+                    message = stringResource(R.string.welcome_pro_body),
+                    highlights = listOf(
+                        stringResource(R.string.welcome_pro_step1),
+                        stringResource(R.string.welcome_pro_step2),
+                        stringResource(R.string.welcome_pro_step3),
+                    ),
+                )
+            }
             Text(
                 if (premium) stringResource(R.string.pro_active) else stringResource(R.string.pro_free),
                 color = if (premium) MaterialTheme.colorScheme.primary
@@ -201,12 +220,6 @@ fun MonetizationSection(
                     controller = batch,
                     state = batchState,
                 )
-            }
-
-            if (!premium && consentState.privacyOptionsRequired && activity != null) {
-                OutlinedButton(onClick = { consent.showPrivacyOptions(activity) }) {
-                    Text(stringResource(R.string.privacy_options))
-                }
             }
 
             if (!premium) {
