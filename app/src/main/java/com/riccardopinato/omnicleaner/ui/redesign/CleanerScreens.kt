@@ -145,9 +145,6 @@ internal fun CleanScreen(
             }
         } else {
             item { CleanActionsCard(state = state, controller = controller) }
-            if (BuildConfig.DEBUG) {
-                item { PerformanceBenchmarkCard(state = state, controller = controller) }
-            }
             item {
                 OutlinedButton(
                     onClick = { showFilters = !showFilters },
@@ -294,6 +291,10 @@ internal fun CleanScreen(
                 }
                 item { MaintenanceSection() }
                 item { ManualMaintenanceCard() }
+                // Benchmark is a developer tool, not a primary cleaning action.
+                if (BuildConfig.DEBUG) {
+                    item { PerformanceBenchmarkCard(state = state, controller = controller) }
+                }
             }
         }
 

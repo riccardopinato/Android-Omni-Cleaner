@@ -46,7 +46,10 @@ import kotlin.math.roundToInt
  * All storage and scan metrics are device-derived; no mock percentages or savings.
  */
 @Composable
-internal fun OmniPremiumWaveBackground(dark: Boolean) {
+internal fun OmniPremiumWaveBackground(
+    dark: Boolean,
+    showBottomWave: Boolean = true,
+) {
     // Paths and gradient brushes are now cached per size/theme, not created
     // on every redraw during rapid navigation or the Gallery swipe animation.
     Spacer(
@@ -58,7 +61,8 @@ internal fun OmniPremiumWaveBackground(dark: Boolean) {
                 val h = size.height
                 val background = Brush.verticalGradient(
                     if (dark) listOf(Color(0xFF0A112C), Color(0xFF0A1025))
-                    else listOf(Color(0xFFEAF2FF), Color(0xFFF8FAFF)),
+                    else if (showBottomWave) listOf(Color(0xFFEAF2FF), Color(0xFFF8FAFF))
+                    else listOf(Color(0xFFF1F6FF), Color(0xFFFBFCFF)),
                 )
                 val top = Path().apply {
                     moveTo(0f, 0f)
@@ -69,7 +73,8 @@ internal fun OmniPremiumWaveBackground(dark: Boolean) {
                 }
                 val topPaint = Brush.linearGradient(
                     if (dark) listOf(Color(0xFF2D165A), Color(0xFF173B8A), Color(0xFF0AADEB))
-                    else listOf(Color(0xFFCDDFFF), Color(0xFFAAD7FF), Color(0xFF79B9FF)),
+                    else if (showBottomWave) listOf(Color(0xFFCDDFFF), Color(0xFFAAD7FF), Color(0xFF79B9FF))
+                    else listOf(Color(0xFFDCEBFF), Color(0xFFBFDBFF), Color(0xFFAED4FF)),
                     start = Offset.Zero,
                     end = Offset(w, h * .22f),
                 )
@@ -89,7 +94,7 @@ internal fun OmniPremiumWaveBackground(dark: Boolean) {
                 onDrawBehind {
                     drawRect(brush = background)
                     drawPath(path = top, brush = topPaint)
-                    drawPath(path = bottom, brush = bottomPaint)
+                    if (showBottomWave) drawPath(path = bottom, brush = bottomPaint)
                 }
             },
     )

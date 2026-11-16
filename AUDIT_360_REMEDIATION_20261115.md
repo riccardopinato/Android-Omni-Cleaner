@@ -1,3 +1,15 @@
+## Visual inspection — five genuine Android emulator PNGs (2026-11-16)
+
+- Evidence: GitHub Actions [visual run #43786270256](https://github.com/riccardopinato/Android-Omni-Cleaner/actions/runs/43786270256); five 1440x3120 Pixel 7 Pro Android API35 light-theme PNGs, downloadable artifact 14190313423.
+- HOME: attractive editorial hierarchy, storage ring, strong action, colorful tiles; second row needs scrolling and first-fold density is high.
+- CLEAN: developer-only Performance Lab appeared as a dominant bright green card directly after scan actions, competing with the actual user tools.
+- GALLERY: all filter action controls looked identical blue; the selected filter was not visually discernible at a glance.
+- GALLERY/PRIVACY/PRO: default gray-lavender card surfaces contrasted with the white Clean surface, while a giant saturated bottom wave filled the majority of the available empty space. This appears unbalanced, not an intentional empty-state design.
+- PRO: a Google Play connection error surfaced on the emulator; this is provider availability, not a verified Android UI regression. Do not mask it in production.
+- Remediation: retain decorative waves on HOME; use lighter upper accent and no saturated bottom wave on the four functional pages; use consistent Material surface cards with subtle elevation; distinguish selected Gallery filter using white check + light-blue border; move debug Performance Lab inside collapsed advanced maintenance.
+- Scope: visual presentation only. No changes to permission semantics, purchased entitlement, actual cleanup, billing or selected state.
+- A second visual capture + Android CI/AppLab after remediation must prove real rendering before approval.
+
 # Android Omni Cleaner — Audit 360° remediation ledger
 Date: 2026-11-15
 Mode: implementation on audit-only follow-up explicitly authorized by user

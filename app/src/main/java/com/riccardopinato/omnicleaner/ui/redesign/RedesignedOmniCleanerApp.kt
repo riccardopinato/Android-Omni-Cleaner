@@ -205,7 +205,12 @@ fun RedesignedOmniCleanerApp(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            OmniPremiumWaveBackground(dark = darkTheme)
+            // Brand waves belong to the rich Home dashboard; functional pages
+            // use a quieter surface so sparse states remain intentional.
+            OmniPremiumWaveBackground(
+                dark = darkTheme,
+                showBottomWave = destination == OmniDestination.HOME,
+            )
             OmniDestination.entries.forEach { item ->
                 val active = destination == item
                 // A short layer-only fade responds immediately to taps, avoiding

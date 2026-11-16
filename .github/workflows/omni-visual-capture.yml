@@ -6,6 +6,10 @@ on:
     branches:
       - audit/omni-safety-ux-360-20261115
     paths:
+      - 'app/src/main/java/com/riccardopinato/omnicleaner/ui/redesign/**'
+      - 'app/src/main/java/com/riccardopinato/omnicleaner/gallery/GalleryCleanerSection.kt'
+      - 'app/src/main/java/com/riccardopinato/omnicleaner/exif/ExifCleanerSection.kt'
+      - 'app/src/main/java/com/riccardopinato/omnicleaner/monetization/MonetizationSection.kt'
       - '.github/workflows/omni-visual-capture.yml'
       - '.github/scripts/capture-omni-screenshots.sh'
 
