@@ -53,13 +53,13 @@
     <string name="privacy_options">Opzioni privacy</string>
 
     <string name="nav_home">Home</string>
-    <string name="nav_clean">Pulisci</string>
+    <string name="nav_clean">Pulizia</string>
     <string name="nav_gallery">Galleria</string>
     <string name="nav_privacy">Privacy</string>
     <string name="nav_pro">Pro</string>
 
-    <string name="redesign_home_eyebrow">Spazio, più semplice</string>
-    <string name="redesign_home_subtitle">Una vista chiara di ciò che occupa memoria, con azioni sicure sempre sotto il tuo controllo.</string>
+    <string name="redesign_home_eyebrow">Pulizia intelligente</string>
+    <string name="redesign_home_subtitle">Più spazio, ordine e privacy per il tuo Android.</string>
     <string name="redesign_storage_detail">%1$s liberi su %2$s totali</string>
     <string name="redesign_storage_waiting">Preparazione informazioni memoria</string>
     <string name="redesign_metric_large_files">File grandi</string>
@@ -237,6 +237,7 @@
     <string name="gallery_trash_confirm_body">Android mostrerà una seconda conferma di sistema. Gli elementi verranno spostati nel cestino multimediale, non eliminati direttamente.</string>
     <string name="gallery_preview_unavailable">Anteprima non disponibile</string>
     <string name="gallery_swipe_hint">← Cestino · Tieni →</string>
+    <string name="gallery_selection_explainer">Cestino seleziona soltanto la foto. Android chiederà conferma prima di spostarla.</string>
     <string name="gallery_unknown_date">Data sconosciuta</string>
 
     <string name="exif_body">Analizza JPEG e crea copie pulite. Gli originali non vengono modificati.</string>

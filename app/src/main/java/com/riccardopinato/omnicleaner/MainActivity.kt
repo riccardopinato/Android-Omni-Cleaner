@@ -6,6 +6,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.riccardopinato.omnicleaner.localization.AppLanguage
 import com.riccardopinato.omnicleaner.ui.OmniCleanerViewModel
 import com.riccardopinato.omnicleaner.ui.redesign.RedesignedOmniCleanerApp
@@ -22,8 +27,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            OmniCleanerTheme {
-                RedesignedOmniCleanerApp(omniCleanerViewModel)
+            val systemDark = isSystemInDarkTheme()
+            var themeOverride by rememberSaveable { mutableStateOf<Boolean?>(null) }
+            val darkTheme = themeOverride ?: systemDark
+            OmniCleanerTheme(darkTheme = darkTheme) {
+                RedesignedOmniCleanerApp(
+                    viewModel = omniCleanerViewModel,
+                    darkTheme = darkTheme,
+                    onToggleTheme = { themeOverride = !darkTheme },
+                )
             }
         }
     }

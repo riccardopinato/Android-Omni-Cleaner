@@ -51,6 +51,8 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -85,6 +87,14 @@ import com.riccardopinato.omnicleaner.ui.theme.OmniOrange
 import com.riccardopinato.omnicleaner.ui.theme.OmniPurple
 import com.riccardopinato.omnicleaner.ui.theme.OmniRose
 import java.util.Locale
+
+private data class OmniQuickAction(
+    val title: String,
+    val subtitle: String,
+    val glyph: String,
+    val accent: Color,
+    val onClick: () -> Unit,
+)
 
 @Composable
 internal fun HomeScreen(
@@ -173,45 +183,83 @@ internal fun HomeScreen(
         }
 
         item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                OmniModuleCard(
+            val actions = listOf(
+                OmniQuickAction(
                     title = stringResource(R.string.redesign_quick_analyze),
                     subtitle = stringResource(R.string.redesign_quick_analyze_subtitle),
                     glyph = "↗",
                     accent = OmniBlue,
                     onClick = onAnalyzeStorage,
-                    modifier = Modifier.width(180.dp),
-                )
-                OmniModuleCard(
+                ),
+                OmniQuickAction(
                     title = stringResource(R.string.redesign_quick_duplicates),
                     subtitle = stringResource(R.string.redesign_quick_duplicates_subtitle),
                     glyph = "≋",
                     accent = OmniRose,
                     onClick = onFindDuplicates,
-                    modifier = Modifier.width(180.dp),
-                )
-                OmniModuleCard(
+                ),
+                OmniQuickAction(
                     title = stringResource(R.string.module_gallery_cleaner),
                     subtitle = stringResource(R.string.redesign_quick_gallery_subtitle),
                     glyph = "▣",
                     accent = OmniPurple,
                     onClick = onOpenGallery,
-                    modifier = Modifier.width(180.dp),
-                )
-                OmniModuleCard(
+                ),
+                OmniQuickAction(
                     title = stringResource(R.string.module_exif_privacy),
                     subtitle = stringResource(R.string.redesign_quick_privacy_subtitle),
                     glyph = "◎",
                     accent = OmniMint,
                     onClick = onOpenPrivacy,
-                    modifier = Modifier.width(180.dp),
-                )
+                ),
+            )
+            // Preserve horizontal cards on small screens or when text is magnified.
+            val useScroll = LocalConfiguration.current.screenWidthDp < 360 ||
+                LocalDensity.current.fontScale > 1.25f
+            if (useScroll) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    actions.forEach { action ->
+                        OmniModuleCard(
+                            title = action.title,
+                            subtitle = action.subtitle,
+                            glyph = action.glyph,
+                            accent = action.accent,
+                            onClick = action.onClick,
+                            modifier = Modifier.width(180.dp),
+                        )
+                    }
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    actions.chunked(2).forEach { pair ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            pair.forEach { action ->
+                                OmniModuleCard(
+                                    title = action.title,
+                                    subtitle = action.subtitle,
+                                    glyph = action.glyph,
+                                    accent = action.accent,
+                                    onClick = action.onClick,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
 

@@ -49,6 +49,9 @@ jobs:
       - name: Verify locale resource parity
         run: python3 .github/scripts/check-locales.py
 
+      - name: Verify launcher icon across Android API levels
+        run: python3 .github/scripts/check-launcher-icon.py
+
       - name: Parse Windows signing bootstrap
         shell: pwsh
         run: |

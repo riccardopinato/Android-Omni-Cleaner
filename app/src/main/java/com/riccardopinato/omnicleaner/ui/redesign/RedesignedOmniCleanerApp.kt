@@ -26,6 +26,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -81,17 +82,21 @@ import java.util.Locale
 
 private enum class OmniDestination(
     val labelRes: Int,
-    val glyph: String,
+    val icon: OmniNavigationSymbol,
 ) {
-    HOME(R.string.nav_home, "H"),
-    CLEAN(R.string.nav_clean, "C"),
-    GALLERY(R.string.nav_gallery, "G"),
-    PRIVACY(R.string.nav_privacy, "P"),
-    PRO(R.string.nav_pro, "★"),
+    HOME(R.string.nav_home, OmniNavigationSymbol.HOME),
+    CLEAN(R.string.nav_clean, OmniNavigationSymbol.CLEAN),
+    GALLERY(R.string.nav_gallery, OmniNavigationSymbol.GALLERY),
+    PRIVACY(R.string.nav_privacy, OmniNavigationSymbol.PRIVACY),
+    PRO(R.string.nav_pro, OmniNavigationSymbol.PRO),
 }
 
 @Composable
-fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
+fun RedesignedOmniCleanerApp(
+    viewModel: OmniCleanerViewModel,
+    darkTheme: Boolean,
+    onToggleTheme: () -> Unit,
+) {
     val context = LocalContext.current
     val controller = viewModel.cleanerController
     val monetizationRuntime = rememberMonetizationRuntime()
@@ -151,7 +156,7 @@ fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = if (darkTheme) Color(0xFF111B38) else Color(0xFFF7FAFF),
                 tonalElevation = 0.dp,
             ) {
                 OmniDestination.entries.forEach { item ->
@@ -159,10 +164,9 @@ fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
                         selected = destination == item,
                         onClick = { destinationName = item.name },
                         icon = {
-                            Text(
-                                item.glyph,
-                                fontWeight = FontWeight.Bold,
-                                color = if (destination == item) {
+                            OmniNavigationIcon(
+                                symbol = item.icon,
+                                tint = if (destination == item) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
                                     MaterialTheme.colorScheme.onSurfaceVariant
@@ -170,6 +174,11 @@ fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
                             )
                         },
                         label = { Text(stringResource(item.labelRes)) },
+                        colors = NavigationBarItemDefaults.colors(
+                            indicatorColor = if (darkTheme) Color(0xFF4D278F) else Color(0xFFD4E4FF),
+                            selectedTextColor = if (darkTheme) Color.White else Color(0xFF174EE5),
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
                     )
                 }
             }
@@ -180,6 +189,7 @@ fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
+            OmniPremiumWaveBackground(dark = darkTheme)
             OmniDestination.entries.forEach { item ->
                 val active = destination == item
                 Box(
@@ -204,7 +214,9 @@ fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
                         ),
                 ) {
                     when (item) {
-                        OmniDestination.HOME -> HomeScreen(
+                        OmniDestination.HOME -> OmniPremiumHome(
+                            dark = darkTheme,
+                            onToggleTheme = onToggleTheme,
                             state = state,
                             premium = entitlement.isPremium,
                             modifier = Modifier.fillMaxSize(),

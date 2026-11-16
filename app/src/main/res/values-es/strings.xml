@@ -58,8 +58,8 @@
     <string name="nav_privacy">Privacidad</string>
     <string name="nav_pro">Pro</string>
 
-    <string name="redesign_home_eyebrow">Almacenamiento, simplificado</string>
-    <string name="redesign_home_subtitle">Una vista clara de lo que ocupa espacio, con acciones seguras siempre bajo tu control.</string>
+    <string name="redesign_home_eyebrow">Limpieza inteligente</string>
+    <string name="redesign_home_subtitle">Más espacio, orden y privacidad para tu Android.</string>
     <string name="redesign_storage_detail">%1$s libres de %2$s totales</string>
     <string name="redesign_storage_waiting">Preparando información del almacenamiento</string>
     <string name="redesign_metric_large_files">Archivos grandes</string>
@@ -236,6 +236,7 @@
     <string name="gallery_trash_confirm_body">Android mostrará una segunda confirmación del sistema. Los elementos se moverán a la papelera multimedia, no se eliminarán directamente.</string>
     <string name="gallery_preview_unavailable">Vista previa no disponible</string>
     <string name="gallery_swipe_hint">← Papelera · Conservar →</string>
+    <string name="gallery_selection_explainer">Papelera solo marca el elemento. Android pedirá confirmación antes de moverlo.</string>
     <string name="gallery_unknown_date">Fecha desconocida</string>
 
     <string name="exif_body">Analiza archivos JPEG y crea copias limpias. Los originales no se modifican.</string>

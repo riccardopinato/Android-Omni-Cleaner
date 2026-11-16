@@ -58,8 +58,8 @@
     <string name="nav_privacy">Privacy</string>
     <string name="nav_pro">Pro</string>
 
-    <string name="redesign_home_eyebrow">Storage, simplified</string>
-    <string name="redesign_home_subtitle">A clear view of what takes space, with safe actions always under your control.</string>
+    <string name="redesign_home_eyebrow">Smart cleaning</string>
+    <string name="redesign_home_subtitle">More space, order and privacy for your Android.</string>
     <string name="redesign_storage_detail">%1$s free of %2$s total</string>
     <string name="redesign_storage_waiting">Storage information is being prepared</string>
     <string name="redesign_metric_large_files">Large files</string>
@@ -237,6 +237,7 @@
     <string name="gallery_trash_confirm_body">Android will show a second system confirmation. Items will be moved to media trash, not deleted directly.</string>
     <string name="gallery_preview_unavailable">Preview unavailable</string>
     <string name="gallery_swipe_hint">← Trash · Keep →</string>
+    <string name="gallery_selection_explainer">Trash marks this item only. Android asks for confirmation before moving it to Trash.</string>
     <string name="gallery_unknown_date">Unknown date</string>
 
     <string name="exif_body">Scan JPEG files and create clean copies. Originals are not modified.</string>
