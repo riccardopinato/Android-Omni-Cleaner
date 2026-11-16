@@ -95,6 +95,7 @@ import java.util.Locale
 internal enum class CleanerToolRoute(val labelRes: Int) {
     OVERVIEW(R.string.scan_overview),
     INTELLIGENCE(R.string.si_title),
+    REVIEW(R.string.review_center_title),
     LARGE(R.string.scan_big_files),
     DUPLICATES(R.string.scan_duplicates),
     FOLDERS(R.string.scan_folders),
@@ -240,13 +241,15 @@ internal fun CleanDetailScreen(
     selectionState: com.riccardopinato.omnicleaner.ui.CleanupSelectionUiState,
     onEnableDeepClean: () -> Unit,
     onOpenTool: (CleanerToolRoute) -> Unit,
+    galleryController: com.riccardopinato.omnicleaner.gallery.GalleryController,
+    onOpenGalleryReview: () -> Unit,
 ) {
     val onCleanupFinished = {
         controller.refreshAccessAndStorage()
         controller.scanOverview()
     }
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize().testTag("omni_clean_detail_${tool.name.lowercase(Locale.ROOT)}"),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
@@ -257,7 +260,7 @@ internal fun CleanDetailScreen(
                 modifier = Modifier.padding(top = 8.dp),
             )
         }
-        if (tool != CleanerToolRoute.TRASH && !state.hasBroadAccess) {
+        if (tool !in listOf(CleanerToolRoute.TRASH, CleanerToolRoute.REVIEW) && !state.hasBroadAccess) {
             item {
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -308,6 +311,17 @@ internal fun CleanDetailScreen(
                 }
             }
             when (tool) {
+                CleanerToolRoute.REVIEW -> item {
+                    ReviewCenterSection(
+                        state = state,
+                        selection = selectionState,
+                        galleryController = galleryController,
+                        onOpenLarge = { onOpenTool(CleanerToolRoute.LARGE) },
+                        onOpenDuplicates = { onOpenTool(CleanerToolRoute.DUPLICATES) },
+                        onOpenFolders = { onOpenTool(CleanerToolRoute.FOLDERS) },
+                        onOpenGallery = onOpenGalleryReview,
+                    )
+                }
                 CleanerToolRoute.INTELLIGENCE -> item {
                     StorageIntelligenceSection(
                         onOpenAdvanced = { onOpenTool(CleanerToolRoute.ADVANCED) },

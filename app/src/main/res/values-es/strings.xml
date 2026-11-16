@@ -452,4 +452,24 @@
     <string name="gp_unavailable_photo">Foto no disponible</string>
     <string name="gp_none_detected">No se han detectado grupos en esta página.</string>
     <string name="gp_no_auto_delete">No se selecciona ni elimina nada automáticamente. Comprueba cada foto.</string>
+    <string name="gp_compare_title">Comparación de fotos en paralelo</string>
+    <string name="gp_compare_note">Vistas locales con proporción original (hasta 2160 px), no exportaciones a resolución completa. Los originales no cambian.</string>
+    <string name="gp_compare_loading">Cargando vista...</string>
+    <string name="gp_compare_meta">%1$d × %2$d · %3$s</string>
+    <string name="gp_compare_next">Comparar foto siguiente</string>
+    <string name="gp_compare_previous">Pareja anterior</string>
+    <string name="gp_compare_open">Comparar estas fotos</string>
+    <string name="review_center_title">Centro de revisión</string>
+    <string name="review_center_explain">Revisa elecciones de distintas funciones. La confirmación final sigue en cada pantalla original.</string>
+    <string name="review_center_filesystem_title">Archivos y carpetas vacías</string>
+    <string name="review_center_file_summary">%1$d archivos únicos · %2$s indexados · %3$d carpetas vacías</string>
+    <string name="review_center_no_guarantee">Los bytes seleccionados no son espacio recuperado. La papelera conserva archivos y no sumamos medios solapados.</string>
+    <string name="review_center_stale">%1$d selecciones necesitan otro análisis antes de limpiar.</string>
+    <string name="review_center_none">Sin selecciones en esta sección.</string>
+    <string name="review_center_clear">Borrar selecciones de archivos y carpetas</string>
+    <string name="review_center_gallery_title">Cola de papelera Android de fotos y vídeos</string>
+    <string name="review_center_gallery_summary">%1$d medios · %2$s en cola</string>
+    <string name="review_center_gallery_note">La papelera Android exige confirmación del sistema. Los medios en cola no son espacio recuperado.</string>
+    <string name="review_center_open_gallery">Abrir revisión de galería</string>
+    <string name="review_center_footer">Esta pantalla no elimina ni mueve archivos. Utiliza la confirmación segura de cada función.</string>
 </resources>

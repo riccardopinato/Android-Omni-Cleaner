@@ -48,6 +48,7 @@ internal fun GalleryProSection(
     var analyzing by remember { mutableStateOf(false) }
     var photoSummary by remember { mutableStateOf<GalleryPhotoScanSummary?>(null) }
     var photoError by remember { mutableStateOf(false) }
+    var comparedIds by remember { mutableStateOf<List<Long>>(emptyList()) }
 
     DisposableEffect(controller) {
         val dispose = controller.observe { state = it }
@@ -57,6 +58,7 @@ internal fun GalleryProSection(
     androidx.compose.runtime.LaunchedEffect(state.items) {
         photoSummary = null
         photoError = false
+        comparedIds = emptyList()
     }
     val videos = remember(state.items) {
         state.items.filter { it.isVideo }.map {
@@ -241,10 +243,25 @@ internal fun GalleryProSection(
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                             }
+                            OmniActionButton(
+                                onClick = { comparedIds = group.photoIds },
+                                modifier = Modifier.fillMaxWidth()
+                                    .testTag("omni_gallery_compare_group_$index"),
+                            ) { Text(stringResource(R.string.gp_compare_open)) }
                         }
                     }
                     if (result.candidateGroups.isEmpty()) {
                         Text(stringResource(R.string.gp_none_detected))
+                    }
+                    if (comparedIds.size >= 2) {
+                        val photosToCompare = comparedIds.mapNotNull { byId[it] }
+                            .filter { !it.isVideo }
+                        if (photosToCompare.size >= 2) {
+                            GalleryPhotoComparison(
+                                photos = photosToCompare,
+                                onClose = { comparedIds = emptyList() },
+                            )
+                        }
                     }
                 }
                 OmniActionButton(onClick = onOpenReview, modifier = Modifier.fillMaxWidth()) {

@@ -12,6 +12,8 @@ capture_failure() {
   adb shell screencap -p /sdcard/omni-visual-failure.png >/dev/null 2>&1 || true
   adb pull /sdcard/omni-visual-failure.png "$OUTPUT/failure-screen.png" >/dev/null 2>&1 || true
   adb logcat -d -t 350 > "$OUTPUT/failure-logcat.txt" 2>/dev/null || true
+  adb shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1 || true
+  adb pull /sdcard/window.xml "$OUTPUT/failure-window.xml" >/dev/null 2>&1 || true
 }
 trap capture_failure ERR
 
@@ -26,9 +28,12 @@ cat > "$OUTPUT/visual-capture.yaml" <<'FLOW'
 appId: com.riccardopinato.omnicleaner.debug
 ---
 - launchApp:
-    clearState: true
+    clearState: false
+# Fresh install, do not revoke app-ops after granting storage access.
 # Default startup route IS Home. Do not tap a tab before Compose is ready.
-- assertVisible: "Smart cleaning"
+- extendedWaitUntil:
+    visible: "Smart cleaning"
+    timeout: 90000
 - takeScreenshot: 01-home
 - tapOn:
     id: "omni_nav_clean"
@@ -124,6 +129,14 @@ appId: com.riccardopinato.omnicleaner.debug
     id: "omni_gallery_open_pro"
 - assertVisible: "Gallery Pro"
 - takeScreenshot: 13-gallery-pro
+- pressKey: Back
+- tapOn:
+    id: "omni_nav_clean"
+- tapOn:
+    id: "omni_clean_tool_review"
+- assertVisible:
+    id: "omni_review_center"
+- takeScreenshot: 14-review-center
 DETAIL_FLOW
 # Synthetic, disposable emulator fixture to verify a *nonempty* visual
 # storage map. The first five screenshots are captured before this is created.
@@ -134,7 +147,7 @@ adb shell "dd if=/dev/zero of=/sdcard/Documents/OmniStorageQA/guide.pdf bs=1024 
 adb shell "dd if=/dev/zero of=/sdcard/Music/OmniStorageQA/archive.zip bs=1024 count=128 >/dev/null 2>&1"
 mkdir -p "$OUTPUT/maestro-details"
 maestro test --test-output-dir "$OUTPUT/maestro-details" "$OUTPUT/detail-capture.yaml"
-for name in 06-clean-duplicates 07-clean-filters 08-privacy-quick 09-privacy-batch 10-pro-manage 12-storage-intelligence 13-gallery-pro; do
+for name in 06-clean-duplicates 07-clean-filters 08-privacy-quick 09-privacy-batch 10-pro-manage 12-storage-intelligence 13-gallery-pro 14-review-center; do
   candidate="$(find "$OUTPUT/maestro-details" -type f -name "$name.png" -print -quit)"
   if [[ -z "$candidate" ]]; then
     echo "::error::Missing detail screenshot $name.png"

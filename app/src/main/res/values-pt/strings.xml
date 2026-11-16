@@ -452,4 +452,24 @@
     <string name="gp_unavailable_photo">Fotografia indisponível</string>
     <string name="gp_none_detected">Nenhum grupo possível nesta página.</string>
     <string name="gp_no_auto_delete">Nada é selecionado ou eliminado automaticamente. Verifique cada foto.</string>
+    <string name="gp_compare_title">Comparação de fotos lado a lado</string>
+    <string name="gp_compare_note">Pré-visualizações locais sem cortes (até 2160 px), não exportações na resolução total. Os originais não mudam.</string>
+    <string name="gp_compare_loading">A carregar pré-visualização...</string>
+    <string name="gp_compare_meta">%1$d × %2$d · %3$s</string>
+    <string name="gp_compare_next">Comparar foto seguinte</string>
+    <string name="gp_compare_previous">Par anterior</string>
+    <string name="gp_compare_open">Comparar estas fotos</string>
+    <string name="review_center_title">Centro de revisão</string>
+    <string name="review_center_explain">Reúne escolhas de diferentes funções. A confirmação final continua nas páginas originais.</string>
+    <string name="review_center_filesystem_title">Ficheiros e pastas vazias</string>
+    <string name="review_center_file_summary">%1$d ficheiros únicos · %2$s indexados · %3$d pastas vazias</string>
+    <string name="review_center_no_guarantee">Os bytes selecionados não são espaço garantido. O lixo pode manter ficheiros e não somamos meios sobrepostos.</string>
+    <string name="review_center_stale">%1$d seleções precisam de nova análise antes de limpar.</string>
+    <string name="review_center_none">Sem seleções nesta secção.</string>
+    <string name="review_center_clear">Limpar seleções de ficheiros e pastas</string>
+    <string name="review_center_gallery_title">Fila de lixo Android de fotos e vídeos</string>
+    <string name="review_center_gallery_summary">%1$d itens · %2$s na fila</string>
+    <string name="review_center_gallery_note">O lixo Android exige confirmação do sistema. Os itens na fila não representam espaço recuperado.</string>
+    <string name="review_center_open_gallery">Abrir revisão da galeria</string>
+    <string name="review_center_footer">Este ecrã não elimina nem move ficheiros. Utilize a confirmação protegida de cada função.</string>
 </resources>

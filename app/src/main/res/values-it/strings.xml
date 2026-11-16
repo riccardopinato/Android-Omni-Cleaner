@@ -455,4 +455,24 @@
     <string name="gp_unavailable_photo">Foto non disponibile</string>
     <string name="gp_none_detected">Nessun gruppo possibile nella pagina caricata.</string>
     <string name="gp_no_auto_delete">Nessuna selezione, modifica o eliminazione automatica. Controlla visivamente ogni foto.</string>
+    <string name="gp_compare_title">Confronto foto affiancate</string>
+    <string name="gp_compare_note">Anteprime locali in proporzioni originali (fino a 2160 px), non esportazioni a piena risoluzione. Gli originali non cambiano.</string>
+    <string name="gp_compare_loading">Caricamento anteprima...</string>
+    <string name="gp_compare_meta">%1$d × %2$d · %3$s</string>
+    <string name="gp_compare_next">Confronta la foto successiva</string>
+    <string name="gp_compare_previous">Coppia precedente</string>
+    <string name="gp_compare_open">Confronta queste foto</string>
+    <string name="review_center_title">Centro di revisione</string>
+    <string name="review_center_explain">Riepiloga le selezioni tra le funzioni. La conferma finale resta nelle schermate di pulizia originali.</string>
+    <string name="review_center_filesystem_title">File e cartelle vuote</string>
+    <string name="review_center_file_summary">%1$d file unici selezionati · %2$s indicizzati · %3$d cartelle vuote</string>
+    <string name="review_center_no_guarantee">I byte selezionati non sono spazio certamente liberato. Il cestino conserva file e i media sovrapposti non vengono sommati.</string>
+    <string name="review_center_stale">%1$d selezioni richiedono una nuova scansione prima di pulire.</string>
+    <string name="review_center_none">Nessuna selezione in questa sezione.</string>
+    <string name="review_center_clear">Azzera selezioni di file e cartelle</string>
+    <string name="review_center_gallery_title">Coda cestino Android per foto e video</string>
+    <string name="review_center_gallery_summary">%1$d media · %2$s in coda</string>
+    <string name="review_center_gallery_note">Il cestino Android richiede una conferma di sistema separata. I media in coda non sono spazio già liberato.</string>
+    <string name="review_center_open_gallery">Apri revisione galleria</string>
+    <string name="review_center_footer">Questa schermata non elimina, sposta o ripristina file. Usa la conferma già protetta nelle singole funzioni.</string>
 </resources>

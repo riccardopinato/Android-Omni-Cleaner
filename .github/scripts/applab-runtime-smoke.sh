@@ -13,7 +13,8 @@ SOURCE_BRANCH="${OMNI_SOURCE_BRANCH:-${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-}}}"
 # This is emulator evidence, never physical-device or Play certification.
 if [[ "$SOURCE_BRANCH" == "audit/omni-safety-ux-360-20261115" ||
       "$SOURCE_BRANCH" == "feature/omni-storage-intelligence-v1-20261116" ||
-      "$SOURCE_BRANCH" == "feature/omni-gallery-pro-v1-20261116" ]]; then
+      "$SOURCE_BRANCH" == "feature/omni-gallery-pro-v1-20261116" ||
+      "$SOURCE_BRANCH" == "feature/omni-qa-gallery-review-v1-20261116" ]]; then
   echo "[Omni/AppLab] running device-backed connectedDebugAndroidTest..."
   (
     cd "$GITHUB_WORKSPACE/target"
@@ -161,7 +162,7 @@ if [[ "$status" -eq 0 ]]; then
   done
 fi
 
-if [[ "$status" -eq 0 && "$SOURCE_BRANCH" == "feature/omni-storage-intelligence-v1-20261116" ]]; then
+if [[ "$status" -eq 0 && ( "$SOURCE_BRANCH" == "feature/omni-storage-intelligence-v1-20261116" || "$SOURCE_BRANCH" == "feature/omni-qa-gallery-review-v1-20261116" ) ]]; then
   echo "[Omni/AppLab] running read-only Storage Intelligence functional journey..."
   # Reset only the synthetic emulator test app state. Restore access before
   # the journey, since pm clear may revoke Android app-op grants.
@@ -175,13 +176,23 @@ if [[ "$status" -eq 0 && "$SOURCE_BRANCH" == "feature/omni-storage-intelligence-
   fi
 fi
 
-if [[ "$status" -eq 0 && "$SOURCE_BRANCH" == "feature/omni-gallery-pro-v1-20261116" ]]; then
+if [[ "$status" -eq 0 && ( "$SOURCE_BRANCH" == "feature/omni-gallery-pro-v1-20261116" || "$SOURCE_BRANCH" == "feature/omni-qa-gallery-review-v1-20261116" ) ]]; then
   echo "[Omni/AppLab] running read-only Gallery Pro journey..."
   if maestro test "$GITHUB_WORKSPACE/target/.maestro/gallery-pro.yaml"; then
     echo "[Omni/AppLab] Gallery Pro journey PASS."
   else
     status=$?
     echo "[Omni/AppLab] Gallery Pro journey FAILED: $status"
+  fi
+fi
+
+if [[ "$status" -eq 0 && "$SOURCE_BRANCH" == "feature/omni-qa-gallery-review-v1-20261116" ]]; then
+  echo "[Omni/AppLab] cross-module Review Center journey..."
+  if maestro test "$GITHUB_WORKSPACE/target/.maestro/review-center.yaml"; then
+    echo "[Omni/AppLab] Review Center journey PASS."
+  else
+    status=$?
+    echo "[Omni/AppLab] Review Center journey FAILED: $status"
   fi
 fi
 

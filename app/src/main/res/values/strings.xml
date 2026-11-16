@@ -455,4 +455,24 @@
     <string name="gp_unavailable_photo">Photo unavailable</string>
     <string name="gp_none_detected">No possible groups in this loaded page.</string>
     <string name="gp_no_auto_delete">Nothing is selected, changed or deleted automatically. Verify each photo visually.</string>
+    <string name="gp_compare_title">Side-by-side photo review</string>
+    <string name="gp_compare_note">Original-aspect local previews (up to 2160 px), not full-resolution exports. No originals are changed.</string>
+    <string name="gp_compare_loading">Loading preview...</string>
+    <string name="gp_compare_meta">%1$d × %2$d · %3$s</string>
+    <string name="gp_compare_next">Compare next photo</string>
+    <string name="gp_compare_previous">Previous pair</string>
+    <string name="gp_compare_open">Compare these photos</string>
+    <string name="review_center_title">Review Center</string>
+    <string name="review_center_explain">One place to inspect choices across modules. Final confirmation remains in the original cleaning screens.</string>
+    <string name="review_center_filesystem_title">Files and empty folders</string>
+    <string name="review_center_file_summary">%1$d unique selected files · %2$s indexed · %3$d empty folders</string>
+    <string name="review_center_no_guarantee">Selected bytes are not guaranteed freed space. Trash may retain files and overlapping media are not added.</string>
+    <string name="review_center_stale">%1$d selections require a fresh scan before cleaning.</string>
+    <string name="review_center_none">No selections in this section.</string>
+    <string name="review_center_clear">Clear file and folder selections</string>
+    <string name="review_center_gallery_title">Android photo and video Trash queue</string>
+    <string name="review_center_gallery_summary">%1$d media items · %2$s queued</string>
+    <string name="review_center_gallery_note">The Android Trash queue requires its own system confirmation. Queued media are not counted as reclaimed bytes.</string>
+    <string name="review_center_open_gallery">Open Gallery review</string>
+    <string name="review_center_footer">This screen never deletes, moves or restores files. Use the existing reviewed confirmation in each module.</string>
 </resources>

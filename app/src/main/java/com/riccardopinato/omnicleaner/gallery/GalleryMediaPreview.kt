@@ -475,7 +475,7 @@ internal fun gallerySwipeDirection(
     else -> null
 }
 
-private fun loadPreviewBitmap(
+internal fun loadPreviewBitmap(
     context: Context,
     item: GalleryMediaItem,
 ): Bitmap? = runCatching {
