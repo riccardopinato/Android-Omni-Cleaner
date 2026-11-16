@@ -61,6 +61,9 @@ jobs:
       - name: Verify illustrated initial states and translations
         run: python3 .github/scripts/check-welcome-ui.py
 
+      - name: Verify two-level navigation and original media playback
+        run: python3 .github/scripts/check-two-level-media.py
+
       - name: Parse Windows signing bootstrap
         shell: pwsh
         run: |

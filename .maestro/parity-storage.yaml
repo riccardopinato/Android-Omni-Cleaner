@@ -1,12 +1,18 @@
 appId: com.riccardopinato.omnicleaner.debug
 ---
-# Audit-era parity smoke. No destructive cleanup is authorized by this flow.
+# Hub -> dedicated tool -> scan -> filters -> another tab -> return.
+# Deliberately non-destructive; never confirms any Trash request.
 - launchApp:
     clearState: false
-- tapOn: "Clean"
+- tapOn:
+    id: "omni_nav_clean"
 - assertVisible: "Deep Cleaning"
 - assertVisible: "Scan tools"
-- tapOn: "Analyze storage"
+- tapOn:
+    id: "omni_clean_tool_overview"
+- assertVisible: "Analyze storage"
+- tapOn:
+    id: "omni_scan_overview"
 - scrollUntilVisible:
     element:
       text: "Storage overview"
@@ -14,20 +20,22 @@ appId: com.riccardopinato.omnicleaner.debug
     timeout: 120000
     speed: 45
 - assertVisible: "Storage overview"
-- scrollUntilVisible:
-    element:
-      text: ".*Filters & thresholds.*"
-    direction: UP
-    timeout: 30000
-- tapOn: ".*Filters & thresholds.*"
+- pressKey: Back
+- tapOn:
+    id: "omni_clean_tool_filters"
 - scrollUntilVisible:
     element:
       text: "Search folders"
     direction: DOWN
     timeout: 30000
 - assertVisible: "Search folders"
-# Verify that review settings are retained during navigation (AUD-0016).
-- tapOn: "Gallery"
+# Domain scan state survives as we navigate through a different top-level tab.
+- pressKey: Back
+- tapOn:
+    id: "omni_nav_gallery"
 - assertVisible: "Gallery cleaner"
-- tapOn: "Clean"
-- assertVisible: "Search folders"
+- tapOn:
+    id: "omni_nav_clean"
+- tapOn:
+    id: "omni_clean_tool_overview"
+- assertVisible: "Storage overview"

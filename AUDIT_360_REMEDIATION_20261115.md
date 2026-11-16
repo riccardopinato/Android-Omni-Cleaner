@@ -1,3 +1,38 @@
+## Two-level navigation and full-aspect media — 2026-11-16
+
+User-approved implementation on audit Draft branch:
+- Bottom tabs remain Home/Clean/Gallery/Privacy/Pro; a second-level detail route
+  opens independently, includes Android Back and a visible Back button, and
+  hides the bottom tabs while working on a tool.
+- Clean hub links Overview, Large Files, Duplicates, Folders, Filters, Safe Trash
+  and Advanced tools. Detail pages present focused scan, results and original
+  safety confirmation. The CleanerController preserves scans; a root-owned
+  CleanupSelectionUiState retains uncommitted selected file paths when navigating
+  between detail screens, without changing deletion semantics.
+- Gallery hub retains permission/filter/sort/review-queue controls; review opens
+  in a dedicated screen. Media preview now shows the entire original aspect
+  (ContentScale.Fit, not Crop) and uses a bounded, higher-resolution decode
+  rather than a 1080px square thumbnail for photos.
+- Videos use Android native VideoView/MediaController (play, pause, seek),
+  sourced from the existing read-only MediaStore URI. They **never auto-play**,
+  and the player pauses on Activity pause and releases on screen disposal.
+  Playback actions do NOT mark an item Keep or Trash. Explicit Keep/Trash/Undo
+  buttons remain below the media frame, not overlapping it.
+- Privacy has dedicated single-JPEG and folder/batch screens; root-owned
+  ExifWorkflowState and root coroutine scope retain picker URI, progress and
+  SAF export state across navigation. Pro hub opens dedicated purchase/entitlement
+  management page without duplicating intro.
+- The newly introduced media playback does not request any additional permission,
+  does not transcode or touch original file bytes, and uses platform widgets to
+  avoid increasing APK size through a playback dependency.
+- Updated navigation Maestro tests, photo geometry unit tests and CI source gate
+  with EN/IT/ES/FR/PT strings.
+- Outstanding evidence after source commit: exact-head build and JVM,
+  instrumentation and Maestro, real photo and video rendering on emulator,
+  lifecycle/pause/seek real OEM verification, dark-mode visual, physical
+  file/SAF tests. Do not claim complete AUD-0016 or Store certification based
+  only on CI.
+
 ## Illustrated contextual first-use states — 2026-11-16
 
 **Scope: audit Draft branch only; no main or Play merge.**

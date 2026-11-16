@@ -385,4 +385,12 @@
     <string name="welcome_pro_step1">Reveja ficheiros e categorias em lotes</string>
     <string name="welcome_pro_step2">Verifique a seleção antes de eliminar</string>
     <string name="welcome_pro_step3">Utilize o Pro sem anúncios em banner</string>
+    <string name="nav_back">Voltar</string>
+    <string name="nav_gallery_review">Revisão em ecrã completo</string>
+    <string name="nav_privacy_quick">Privacidade de uma fotografia</string>
+    <string name="nav_privacy_batch">Ferramentas EXIF em lote</string>
+    <string name="nav_pro_manage">Gerir Pro</string>
+    <string name="gallery_open_review">Abrir foto ou vídeo sem cortes</string>
+    <string name="gallery_video_play">Reproduzir vídeo</string>
+    <string name="gallery_video_unavailable">Não é possível reproduzir este vídeo neste dispositivo</string>
 </resources>

@@ -388,4 +388,12 @@
     <string name="welcome_pro_step1">Review files and categories in batches</string>
     <string name="welcome_pro_step2">Check selections before any deletion</string>
     <string name="welcome_pro_step3">Use Pro without banner ads</string>
+    <string name="nav_back">Back</string>
+    <string name="nav_gallery_review">Full-screen review</string>
+    <string name="nav_privacy_quick">One-photo privacy</string>
+    <string name="nav_privacy_batch">Batch EXIF tools</string>
+    <string name="nav_pro_manage">Manage Pro</string>
+    <string name="gallery_open_review">Open full-size photo or video</string>
+    <string name="gallery_video_play">Play video</string>
+    <string name="gallery_video_unavailable">This video cannot be played on this device</string>
 </resources>

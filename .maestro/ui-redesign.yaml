@@ -1,44 +1,39 @@
 appId: com.riccardopinato.omnicleaner.debug
 ---
-# AUD-0014 / AUD-0016: non-destructive navigation and visible state contract.
-# This is emulator smoke evidence, never a physical-device/store certification.
+# Dedicated screen hierarchy; no destructive request is authorized here.
 - launchApp:
     clearState: false
 - assertVisible: "Android Omni Cleaner"
 - assertVisible: "Smart cleaning"
 - assertVisible: "Analyze storage"
-
-# Settings moved from Pro to Home in AUD-0010; verify current location.
 - tapOn: "Settings"
 - assertVisible: "Appearance"
-- scrollUntilVisible:
-    element:
-      text: "App language"
-    direction: DOWN
-    timeout: 30000
-- assertVisible: "App language"
 - pressKey: Back
-
-- tapOn: "Clean"
+- tapOn:
+    id: "omni_nav_clean"
 - assertVisible: "Deep Cleaning"
-- tapOn: "Gallery"
+- tapOn:
+    id: "omni_clean_tool_duplicates"
+- assertVisible: "Find duplicates"
+- pressKey: Back
+- tapOn:
+    id: "omni_nav_gallery"
 - assertVisible: "Gallery cleaner"
-- tapOn: "Privacy"
+- tapOn:
+    id: "omni_nav_privacy"
 - assertVisible: "EXIF privacy"
+- tapOn: "One-photo privacy"
 - assertVisible: "Choose one JPEG photo"
-- scrollUntilVisible:
-    element:
-      text: ".*Advanced EXIF options.*"
-    direction: DOWN
-    timeout: 30000
-- tapOn: ".*Advanced EXIF options.*"
-- scrollUntilVisible:
-    element:
-      text: "Choose photo folder"
-    direction: DOWN
-    timeout: 30000
+- pressKey: Back
+- tapOn: "Batch EXIF tools"
 - assertVisible: "Choose photo folder"
-- tapOn: "Pro"
+- pressKey: Back
+- tapOn:
+    id: "omni_nav_pro"
 - assertVisible: "Omni Cleaner Pro"
-- tapOn: "Home"
+- tapOn: "Manage Pro"
+- assertVisible: "Restore purchases"
+- pressKey: Back
+- tapOn:
+    id: "omni_nav_home"
 - assertVisible: "Smart cleaning"

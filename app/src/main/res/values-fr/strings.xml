@@ -385,4 +385,12 @@
     <string name="welcome_pro_step1">Examinez fichiers et catégories par lots</string>
     <string name="welcome_pro_step2">Vérifiez la sélection avant la suppression</string>
     <string name="welcome_pro_step3">Utilisez Pro sans bannières publicitaires</string>
+    <string name="nav_back">Retour</string>
+    <string name="nav_gallery_review">Tri en plein écran</string>
+    <string name="nav_privacy_quick">Confidentialité d\'une photo</string>
+    <string name="nav_privacy_batch">Outils EXIF par lots</string>
+    <string name="nav_pro_manage">Gérer Pro</string>
+    <string name="gallery_open_review">Ouvrir la photo ou vidéo sans recadrage</string>
+    <string name="gallery_video_play">Lire la vidéo</string>
+    <string name="gallery_video_unavailable">Impossible de lire cette vidéo sur cet appareil</string>
 </resources>

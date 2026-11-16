@@ -33,25 +33,47 @@ import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.ui.redesign.OmniWelcomeKind
 import com.riccardopinato.omnicleaner.ui.redesign.OmniWelcomePanel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
+
+/**
+ * Stable owner for SAF file/tree selections and in-flight export results while
+ * navigating away from quick or batch tools. The coroutine scope is owned by the
+ * top-level app, not the transient detail screen.
+ */
+internal class ExifWorkflowState {
+    val singleSource = mutableStateOf<Uri?>(null)
+    val sourceTree = mutableStateOf<Uri?>(null)
+    val destinationTree = mutableStateOf<Uri?>(null)
+    val recursive = mutableStateOf(true)
+    val groups = mutableStateOf(setOf(ExifGroup.LOCATION))
+    val showAdvancedExif = mutableStateOf(false)
+    val scan = mutableStateOf<ExifScan?>(null)
+    val export = mutableStateOf<ExifExport?>(null)
+    val busy = mutableStateOf(false)
+    val status = mutableStateOf<ExifStatus?>(null)
+}
 
 @Composable
-fun ExifCleanerSection() {
+internal fun ExifCleanerSection(
+    advancedPage: Boolean? = null,
+    workflow: ExifWorkflowState = remember { ExifWorkflowState() },
+    scope: CoroutineScope = rememberCoroutineScope(),
+) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val cleaner = remember(context.applicationContext) {
         FolderExifCleaner(context.applicationContext)
     }
 
-    var singleSource by remember { mutableStateOf<Uri?>(null) }
-    var sourceTree by remember { mutableStateOf<Uri?>(null) }
-    var destinationTree by remember { mutableStateOf<Uri?>(null) }
-    var recursive by remember { mutableStateOf(true) }
-    var groups by remember { mutableStateOf(setOf(ExifGroup.LOCATION)) }
-    var showAdvancedExif by remember { mutableStateOf(false) }
-    var scan by remember { mutableStateOf<ExifScan?>(null) }
-    var export by remember { mutableStateOf<ExifExport?>(null) }
-    var busy by remember { mutableStateOf(false) }
-    var status by remember { mutableStateOf<ExifStatus?>(null) }
+    var singleSource by workflow.singleSource
+    var sourceTree by workflow.sourceTree
+    var destinationTree by workflow.destinationTree
+    var recursive by workflow.recursive
+    var groups by workflow.groups
+    var showAdvancedExif by workflow.showAdvancedExif
+    var scan by workflow.scan
+    var export by workflow.export
+    var busy by workflow.busy
+    var status by workflow.status
 
 
     // Default: pick one JPEG, then create a separate clean copy through SAF.
@@ -124,7 +146,7 @@ fun ExifCleanerSection() {
 
             // Keep this visual guide out of the way after the user picks a
             // source, starts a batch flow or receives any meaningful result.
-            if (singleSource == null && sourceTree == null &&
+            if (advancedPage == null && singleSource == null && sourceTree == null &&
                 scan == null && export == null && status == null &&
                 !busy && !showAdvancedExif
             ) {
@@ -140,6 +162,7 @@ fun ExifCleanerSection() {
                 )
             }
 
+            if (advancedPage != true) {
             OutlinedButton(
                 onClick = { singleSourcePicker.launch(arrayOf("image/jpeg")) },
                 enabled = !busy,
@@ -162,18 +185,21 @@ fun ExifCleanerSection() {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
+            } // Quick JPEG workflow
             if (busy) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
 
-            OutlinedButton(
-                onClick = { showAdvancedExif = !showAdvancedExif },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.audit_privacy_advanced) +
-                    if (showAdvancedExif) " −" else " +")
+            if (advancedPage == null) {
+                OutlinedButton(
+                    onClick = { showAdvancedExif = !showAdvancedExif },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.audit_privacy_advanced) +
+                        if (showAdvancedExif) " −" else " +")
+                }
             }
-            if (showAdvancedExif) {
+            if (advancedPage == true || (advancedPage == null && showAdvancedExif)) {
             OutlinedButton(
                 onClick = { sourcePicker.launch(null) },
                 modifier = Modifier.fillMaxWidth(),
@@ -325,7 +351,7 @@ fun ExifCleanerSection() {
 }
 
 
-private data class ExifStatus(
+internal data class ExifStatus(
     val stringRes: Int,
     val args: List<Any> = emptyList(),
 )

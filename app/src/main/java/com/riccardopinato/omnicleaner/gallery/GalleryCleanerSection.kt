@@ -31,6 +31,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
@@ -45,6 +46,8 @@ import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
 @Composable
 fun GalleryCleanerSection(
     controller: GalleryController,
+    onOpenReview: (() -> Unit)? = null,
+    reviewOnly: Boolean = false,
 ) {
     val context = LocalContext.current
 
@@ -83,7 +86,7 @@ fun GalleryCleanerSection(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(
+            if (!reviewOnly) Text(
                 stringResource(R.string.gallery_body),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -91,7 +94,7 @@ fun GalleryCleanerSection(
 
             // Show guidance only before the first review, not for completed
             // sessions, queued trash, loading states or read errors.
-            if (state.items.isEmpty() && state.totalReviewedCount == 0 &&
+            if (!reviewOnly && state.items.isEmpty() && state.totalReviewedCount == 0 &&
                 !state.loading && !state.loadingNextPage &&
                 !state.hasPersistedUndo && state.pendingTrashItems.isEmpty() &&
                 state.error == null
@@ -116,7 +119,7 @@ fun GalleryCleanerSection(
                     Text(stringResource(R.string.gallery_allow_media))
                 }
             } else {
-                if (state.items.isNotEmpty()) {
+                if (!reviewOnly && state.items.isNotEmpty()) {
                     OutlinedButton(
                         onClick = { showGalleryOptions = !showGalleryOptions },
                         modifier = Modifier.fillMaxWidth(),
@@ -138,7 +141,7 @@ fun GalleryCleanerSection(
                     }
                 }
 
-                if (showGalleryOptions || state.items.isEmpty()) {
+                if (!reviewOnly && (showGalleryOptions || state.items.isEmpty())) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -198,13 +201,22 @@ fun GalleryCleanerSection(
                     stringResource(R.string.gallery_unknown_date)
                 }
 
-                GalleryMediaPreview(
-                    item = current,
-                    canUndo = state.history.isNotEmpty() || state.hasPersistedUndo,
-                    onKeep = controller::keepCurrent,
-                    onTrash = controller::trashCurrent,
-                    onUndo = controller::undoLastAction,
-                )
+                if (!reviewOnly && onOpenReview != null) {
+                    Button(
+                        onClick = onOpenReview,
+                        modifier = Modifier.fillMaxWidth().testTag("omni_gallery_open_review"),
+                    ) {
+                        Text(stringResource(R.string.gallery_open_review))
+                    }
+                } else {
+                    GalleryMediaPreview(
+                        item = current,
+                        canUndo = state.history.isNotEmpty() || state.hasPersistedUndo,
+                        onKeep = controller::keepCurrent,
+                        onTrash = controller::trashCurrent,
+                        onUndo = controller::undoLastAction,
+                    )
+                }
                 Text(current.name, style = MaterialTheme.typography.titleMedium)
                 Text(
                     buildString {

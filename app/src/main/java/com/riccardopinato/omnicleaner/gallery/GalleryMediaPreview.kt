@@ -1,6 +1,21 @@
 package com.riccardopinato.omnicleaner.gallery
 
 import android.content.Context
+import android.graphics.ImageDecoder
+import android.graphics.Matrix
+import androidx.exifinterface.media.ExifInterface
+import android.media.MediaController
+import android.widget.VideoView
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
@@ -87,6 +102,9 @@ fun GalleryMediaPreview(
     val density = LocalDensity.current
     val thresholdPx = remember(density) { with(density) { 110.dp.toPx() } }
     val exitDistancePx = remember(density) { with(density) { 240.dp.toPx() } }
+    val configuration = LocalConfiguration.current
+    val previewMaxHeightDp = (configuration.screenHeightDp * 0.62f).coerceIn(320f, 680f)
+    val widthDp = configuration.screenWidthDp.toFloat().coerceAtLeast(300f) - 32f
     var dragX by remember(item.id) { mutableFloatStateOf(0f) }
     var releaseX by remember(item.id) { mutableFloatStateOf(0f) }
     var pendingDecision by remember(item.id) { mutableStateOf<SwipeDirection?>(null) }
@@ -125,6 +143,14 @@ fun GalleryMediaPreview(
     val bitmap by produceState<Bitmap?>(initialValue = null, item.uri, item.id) {
         value = withContext(Dispatchers.IO) { loadPreviewBitmap(context, item) }
     }
+    val mediaWidth = bitmap?.width ?: item.width
+    val mediaHeight = bitmap?.height ?: item.height
+    val previewHeightDp = galleryFitHeightDp(
+        availableWidthDp = widthDp,
+        maxHeightDp = previewMaxHeightDp,
+        imageWidth = mediaWidth,
+        imageHeight = mediaHeight,
+    )
 
         val trashLabel = stringResource(R.string.action_trash)
         val undoLabel = stringResource(R.string.action_undo)
@@ -134,19 +160,22 @@ fun GalleryMediaPreview(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(22.dp)),
+                .height(previewHeightDp.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(Color(0xFF101827))
+                .testTag("omni_gallery_media_full"),
             contentAlignment = Alignment.Center,
         ) {
             val currentBitmap = bitmap
-            if (currentBitmap != null) {
+            if (item.isVideo) {
+                GalleryVideoPlayer(item = item, thumbnail = currentBitmap)
+            } else if (currentBitmap != null) {
                 Image(
                     bitmap = currentBitmap.asImageBitmap(),
                     contentDescription = item.name,
-                    contentScale = ContentScale.Crop,
+                    contentScale = ContentScale.Fit,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
+                        .fillMaxSize()
                         .graphicsLayer {
                             val offset = if (pendingDecision == null) dragX
                                 else releaseX + animatedExitX
@@ -175,7 +204,7 @@ fun GalleryMediaPreview(
                 )
             } else {
                 Box(
-                    Modifier.fillMaxWidth().aspectRatio(1f)
+                    Modifier.fillMaxSize()
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -198,12 +227,14 @@ fun GalleryMediaPreview(
                 visible = pendingDecision == SwipeDirection.KEEP,
                 modifier = Modifier.align(Alignment.CenterEnd),
             )
+        }
+        // The action buttons now sit OUTSIDE the original-aspect media frame,
+        // so neither the video controls nor the edge of portrait photos is covered.
         // Do not scroll or reorder these controls: spatial mapping must match swipes.
         Row(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(10.dp),
+                .padding(horizontal = 4.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -251,10 +282,6 @@ fun GalleryMediaPreview(
             ) {
                 GalleryDecisionButtonLabel("✓", keepLabel)
             }
-        }
-
-        }
-
         Text(
             text = stringResource(R.string.gallery_swipe_hint),
             style = MaterialTheme.typography.bodySmall,
@@ -265,6 +292,78 @@ fun GalleryMediaPreview(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+/**
+ * Android's native media pipeline plays the original MediaStore URI.
+ * No cropping, transcoding or write access; playback is opt-in and lifecycle-bound.
+ * Video surface consumes its own taps (seek/play) instead of triggering photo swipes.
+ */
+@Composable
+private fun GalleryVideoPlayer(item: GalleryMediaItem, thumbnail: Bitmap?) {
+    val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    var started by remember(item.uri) { mutableStateOf(false) }
+    var error by remember(item.uri) { mutableStateOf(false) }
+    val video = remember(context, item.uri) {
+        VideoView(context).apply {
+            val controls = MediaController(context)
+            controls.setAnchorView(this)
+            setMediaController(controls)
+            setOnErrorListener { _, _, _ ->
+                error = true
+                true
+            }
+            runCatching { setVideoURI(item.uri) }.onFailure { error = true }
+        }
+    }
+    DisposableEffect(lifecycle, video) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                video.pause()
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.removeObserver(observer)
+            video.stopPlayback()
+        }
+    }
+    LaunchedEffect(started) {
+        if (started) {
+            runCatching { video.start() }.onFailure { error = true }
+        }
+    }
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        if (started && !error) {
+            AndroidView(
+                factory = { video },
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else if (thumbnail != null) {
+            Image(
+                bitmap = thumbnail.asImageBitmap(),
+                contentDescription = item.name,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        if (!started && !error) {
+            OmniActionButton(
+                onClick = { started = true },
+                modifier = Modifier.testTag("omni_gallery_video_play"),
+            ) {
+                Text(stringResource(R.string.gallery_video_play))
+            }
+        }
+        if (error) {
+            Text(
+                text = stringResource(R.string.gallery_video_unavailable),
+                color = Color.White,
+                modifier = Modifier.padding(16.dp),
+            )
+        }
     }
 }
 
@@ -375,15 +474,14 @@ private fun loadPreviewBitmap(
     context: Context,
     item: GalleryMediaItem,
 ): Bitmap? = runCatching {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        return@runCatching context.contentResolver.loadThumbnail(
-            item.uri,
-            Size(PREVIEW_SIZE_PX, PREVIEW_SIZE_PX),
-            null,
-        )
-    }
-
     if (item.isVideo) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            return@runCatching context.contentResolver.loadThumbnail(
+                item.uri,
+                Size(PREVIEW_SIZE_PX, PREVIEW_SIZE_PX),
+                null,
+            )
+        }
         val retriever = MediaMetadataRetriever()
         try {
             retriever.setDataSource(context, item.uri)
@@ -393,7 +491,35 @@ private fun loadPreviewBitmap(
             retriever.release()
         }
     } else {
-        decodeSampledBitmap(context, item, PREVIEW_SIZE_PX)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val source = ImageDecoder.createSource(context.contentResolver, item.uri)
+            ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+                val natural = info.size
+                val largest = max(natural.width, natural.height).coerceAtLeast(1)
+                if (largest > PREVIEW_SIZE_PX) {
+                    val scale = PREVIEW_SIZE_PX.toFloat() / largest.toFloat()
+                    decoder.setTargetSize(
+                        (natural.width * scale).toInt().coerceAtLeast(1),
+                        (natural.height * scale).toInt().coerceAtLeast(1),
+                    )
+                }
+            }
+        } else {
+            val sampled = decodeSampledBitmap(context, item, PREVIEW_SIZE_PX)
+            if (sampled == null) null else {
+                val rotation = context.contentResolver.openInputStream(item.uri)?.use {
+                    ExifInterface(it).rotationDegrees
+                } ?: 0
+                if (rotation == 0) sampled else {
+                    val matrix = Matrix().apply { postRotate(rotation.toFloat()) }
+                    val corrected = Bitmap.createBitmap(
+                        sampled, 0, 0, sampled.width, sampled.height, matrix, true,
+                    )
+                    if (corrected !== sampled) sampled.recycle()
+                    corrected
+                }
+            }
+        }
     }
 }.getOrNull()
 
@@ -431,4 +557,18 @@ private fun Bitmap.scaledDown(maxSize: Int): Bitmap {
     return Bitmap.createScaledBitmap(this, targetWidth, targetHeight, true)
 }
 
-private const val PREVIEW_SIZE_PX = 1080
+/** Height of the *entire* original-ratio frame; no 1:1 crop.
+ * Portrait footage uses the available vertical area, landscape keeps its ratio.
+ */
+internal fun galleryFitHeightDp(
+    availableWidthDp: Float,
+    maxHeightDp: Float,
+    imageWidth: Int,
+    imageHeight: Int,
+): Float {
+    if (imageWidth <= 0 || imageHeight <= 0) return maxHeightDp.coerceAtLeast(220f)
+    val ideal = availableWidthDp * imageHeight.toFloat() / imageWidth.toFloat()
+    return ideal.coerceIn(180f, maxHeightDp.coerceAtLeast(220f))
+}
+
+private const val PREVIEW_SIZE_PX = 2160

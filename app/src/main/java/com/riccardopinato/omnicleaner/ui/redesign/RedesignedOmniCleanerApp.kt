@@ -2,6 +2,8 @@ package com.riccardopinato.omnicleaner.ui.redesign
 
 import android.Manifest
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.animation.core.tween
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -66,6 +68,8 @@ import com.riccardopinato.omnicleaner.cleaner.FolderStatus
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.ThresholdUnit
 import com.riccardopinato.omnicleaner.exif.ExifCleanerSection
+import com.riccardopinato.omnicleaner.exif.ExifWorkflowState
+import com.riccardopinato.omnicleaner.ui.CleanupSelectionUiState
 import com.riccardopinato.omnicleaner.gallery.GalleryCleanerSection
 import com.riccardopinato.omnicleaner.monetization.AdManager
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
@@ -101,6 +105,41 @@ private enum class OmniDestination(
     PRO(R.string.nav_pro, OmniNavigationSymbol.PRO),
 }
 
+private enum class OmniDetailRoute(val parent: OmniDestination) {
+    CLEAN_OVERVIEW(OmniDestination.CLEAN),
+    CLEAN_LARGE(OmniDestination.CLEAN),
+    CLEAN_DUPLICATES(OmniDestination.CLEAN),
+    CLEAN_FOLDERS(OmniDestination.CLEAN),
+    CLEAN_FILTERS(OmniDestination.CLEAN),
+    CLEAN_TRASH(OmniDestination.CLEAN),
+    CLEAN_ADVANCED(OmniDestination.CLEAN),
+    GALLERY_REVIEW(OmniDestination.GALLERY),
+    PRIVACY_SINGLE(OmniDestination.PRIVACY),
+    PRIVACY_BATCH(OmniDestination.PRIVACY),
+    PRO_MANAGE(OmniDestination.PRO),
+}
+
+private fun CleanerToolRoute.toDetailRoute(): OmniDetailRoute = when (this) {
+    CleanerToolRoute.OVERVIEW -> OmniDetailRoute.CLEAN_OVERVIEW
+    CleanerToolRoute.LARGE -> OmniDetailRoute.CLEAN_LARGE
+    CleanerToolRoute.DUPLICATES -> OmniDetailRoute.CLEAN_DUPLICATES
+    CleanerToolRoute.FOLDERS -> OmniDetailRoute.CLEAN_FOLDERS
+    CleanerToolRoute.FILTERS -> OmniDetailRoute.CLEAN_FILTERS
+    CleanerToolRoute.TRASH -> OmniDetailRoute.CLEAN_TRASH
+    CleanerToolRoute.ADVANCED -> OmniDetailRoute.CLEAN_ADVANCED
+}
+
+private fun OmniDetailRoute.toCleanerTool(): CleanerToolRoute = when (this) {
+    OmniDetailRoute.CLEAN_OVERVIEW -> CleanerToolRoute.OVERVIEW
+    OmniDetailRoute.CLEAN_LARGE -> CleanerToolRoute.LARGE
+    OmniDetailRoute.CLEAN_DUPLICATES -> CleanerToolRoute.DUPLICATES
+    OmniDetailRoute.CLEAN_FOLDERS -> CleanerToolRoute.FOLDERS
+    OmniDetailRoute.CLEAN_FILTERS -> CleanerToolRoute.FILTERS
+    OmniDetailRoute.CLEAN_TRASH -> CleanerToolRoute.TRASH
+    OmniDetailRoute.CLEAN_ADVANCED -> CleanerToolRoute.ADVANCED
+    else -> error("Not a Clean tool route: $this")
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RedesignedOmniCleanerApp(
@@ -123,6 +162,14 @@ fun RedesignedOmniCleanerApp(
 
     var destinationName by rememberSaveable { mutableStateOf(OmniDestination.HOME.name) }
     val destination = OmniDestination.valueOf(destinationName)
+    var detailName by rememberSaveable { mutableStateOf<String?>(null) }
+    val activeDetail = OmniDetailRoute.entries.firstOrNull {
+        it.name == detailName && it.parent == destination
+    }
+    val cleanSelectionState = remember { CleanupSelectionUiState() }
+    val privacyWorkflow = remember { ExifWorkflowState() }
+    val workflowScope = rememberCoroutineScope()
+    BackHandler(enabled = activeDetail != null) { detailName = null }
     var showDeepAccessDisclosure by remember { mutableStateOf(false) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
 
@@ -170,6 +217,7 @@ fun RedesignedOmniCleanerApp(
         modifier = Modifier.semantics { testTagsAsResourceId = true },
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
+            if (activeDetail == null) {
             NavigationBar(
                 containerColor = if (darkTheme) Color(0xFF111B38) else Color(0xFFF7FAFF),
                 tonalElevation = 0.dp,
@@ -178,7 +226,10 @@ fun RedesignedOmniCleanerApp(
                     NavigationBarItem(
                         modifier = Modifier.testTag("omni_nav_${item.name.lowercase(Locale.ROOT)}"),
                         selected = destination == item,
-                        onClick = { destinationName = item.name },
+                        onClick = {
+                            detailName = null
+                            destinationName = item.name
+                        },
                         icon = {
                             OmniNavigationIcon(
                                 symbol = item.icon,
@@ -198,6 +249,7 @@ fun RedesignedOmniCleanerApp(
                     )
                 }
             }
+            } // No bottom navigation in dedicated functional screens.
         },
     ) { innerPadding ->
         Box(
@@ -209,7 +261,7 @@ fun RedesignedOmniCleanerApp(
             // use a quieter surface so sparse states remain intentional.
             OmniPremiumWaveBackground(
                 dark = darkTheme,
-                showBottomWave = destination == OmniDestination.HOME,
+                showBottomWave = destination == OmniDestination.HOME && activeDetail == null,
             )
             OmniDestination.entries.forEach { item ->
                 val active = destination == item
@@ -247,7 +299,66 @@ fun RedesignedOmniCleanerApp(
                             },
                         ),
                 ) {
-                    when (item) {
+                    if (active && activeDetail != null) {
+                        OmniDetailFrame(onBack = { detailName = null }) {
+                            when (activeDetail) {
+                                OmniDetailRoute.CLEAN_OVERVIEW,
+                                OmniDetailRoute.CLEAN_LARGE,
+                                OmniDetailRoute.CLEAN_DUPLICATES,
+                                OmniDetailRoute.CLEAN_FOLDERS,
+                                OmniDetailRoute.CLEAN_FILTERS,
+                                OmniDetailRoute.CLEAN_TRASH,
+                                OmniDetailRoute.CLEAN_ADVANCED -> CleanDetailScreen(
+                                    tool = activeDetail.toCleanerTool(),
+                                    state = state,
+                                    controller = controller,
+                                    modifier = Modifier.fillMaxSize(),
+                                    selectionState = cleanSelectionState,
+                                    onEnableDeepClean = { showDeepAccessDisclosure = true },
+                                )
+                                OmniDetailRoute.GALLERY_REVIEW -> ModuleScreen(
+                                    eyebrow = stringResource(R.string.redesign_media_eyebrow),
+                                    title = stringResource(R.string.nav_gallery_review),
+                                    subtitle = stringResource(R.string.redesign_gallery_subtitle),
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    GalleryCleanerSection(
+                                        controller = viewModel.galleryController,
+                                        reviewOnly = true,
+                                    )
+                                }
+                                OmniDetailRoute.PRIVACY_SINGLE,
+                                OmniDetailRoute.PRIVACY_BATCH -> ModuleScreen(
+                                    eyebrow = stringResource(R.string.redesign_privacy_eyebrow),
+                                    title = stringResource(
+                                        if (activeDetail == OmniDetailRoute.PRIVACY_SINGLE)
+                                            R.string.nav_privacy_quick
+                                        else R.string.nav_privacy_batch
+                                    ),
+                                    subtitle = stringResource(R.string.redesign_privacy_subtitle),
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    ExifCleanerSection(
+                                        advancedPage = activeDetail == OmniDetailRoute.PRIVACY_BATCH,
+                                        workflow = privacyWorkflow,
+                                        scope = workflowScope,
+                                    )
+                                }
+                                OmniDetailRoute.PRO_MANAGE -> ModuleScreen(
+                                    eyebrow = stringResource(R.string.redesign_pro_eyebrow),
+                                    title = stringResource(R.string.nav_pro_manage),
+                                    subtitle = stringResource(R.string.redesign_pro_subtitle),
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    MonetizationSection(
+                                        runtime = monetizationRuntime,
+                                        batch = viewModel.proBatchController,
+                                        showWelcome = false,
+                                    )
+                                }
+                            }
+                        }
+                    } else when (item) {
                         OmniDestination.HOME -> OmniPremiumHome(
                             dark = darkTheme,
                             onOpenSettings = { showSettings = true },
@@ -262,6 +373,7 @@ fun RedesignedOmniCleanerApp(
                             onOpenPro = { destinationName = OmniDestination.PRO.name },
                             onAnalyzeStorage = {
                                 destinationName = OmniDestination.CLEAN.name
+                                detailName = OmniDetailRoute.CLEAN_OVERVIEW.name
                                 when {
                                     state.hasBroadAccess -> controller.scanOverview()
                                     state.storageCapability.canRequestDeepAccess ->
@@ -270,6 +382,7 @@ fun RedesignedOmniCleanerApp(
                             },
                             onFindDuplicates = {
                                 destinationName = OmniDestination.CLEAN.name
+                                detailName = OmniDetailRoute.CLEAN_DUPLICATES.name
                                 when {
                                     state.hasBroadAccess -> controller.scanDuplicates()
                                     state.storageCapability.canRequestDeepAccess ->
@@ -278,10 +391,11 @@ fun RedesignedOmniCleanerApp(
                             },
                         )
 
-                        OmniDestination.CLEAN -> CleanScreen(
+                        OmniDestination.CLEAN -> CleanHubScreen(
                             state = state,
                             controller = controller,
                             modifier = Modifier.fillMaxSize(),
+                            onOpenTool = { detailName = it.toDetailRoute().name },
                             onEnableDeepClean = { showDeepAccessDisclosure = true },
                         )
 
@@ -291,7 +405,10 @@ fun RedesignedOmniCleanerApp(
                             subtitle = stringResource(R.string.redesign_gallery_subtitle),
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                            GalleryCleanerSection(controller = viewModel.galleryController)
+                            GalleryCleanerSection(
+                                controller = viewModel.galleryController,
+                                onOpenReview = { detailName = OmniDetailRoute.GALLERY_REVIEW.name },
+                            )
                         }
 
                         OmniDestination.PRIVACY -> ModuleScreen(
@@ -300,7 +417,19 @@ fun RedesignedOmniCleanerApp(
                             subtitle = stringResource(R.string.redesign_privacy_subtitle),
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                            ExifCleanerSection()
+                            OmniFunctionsHub(
+                                kind = OmniWelcomeKind.PRIVACY,
+                                titleRes = R.string.welcome_privacy_title,
+                                bodyRes = R.string.welcome_privacy_body,
+                                actions = listOf(
+                                    R.string.nav_privacy_quick to {
+                                        detailName = OmniDetailRoute.PRIVACY_SINGLE.name
+                                    },
+                                    R.string.nav_privacy_batch to {
+                                        detailName = OmniDetailRoute.PRIVACY_BATCH.name
+                                    },
+                                ),
+                            )
                         }
 
                         OmniDestination.PRO -> ModuleScreen(
@@ -309,14 +438,17 @@ fun RedesignedOmniCleanerApp(
                             subtitle = stringResource(R.string.redesign_pro_subtitle),
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(14.dp),
-                            ) {
-                                MonetizationSection(
-                                    runtime = monetizationRuntime,
-                                    batch = viewModel.proBatchController,
-                                )
-                            }
+                            OmniFunctionsHub(
+                                kind = OmniWelcomeKind.PRO,
+                                titleRes = R.string.welcome_pro_title,
+                                bodyRes = R.string.welcome_pro_body,
+                                actions = listOf(
+                                    R.string.nav_pro_manage to {
+                                        detailName = OmniDetailRoute.PRO_MANAGE.name
+                                    },
+                                ),
+                                showWelcome = !entitlement.isPremium,
+                            )
                         }
                     }
                 }
@@ -424,5 +556,71 @@ private fun ModuleScreen(
         }
         item { content() }
         item { Spacer(Modifier.height(10.dp)) }
+    }
+}
+
+/** A bounded two-level router: navigation hub → dedicated tool → Android Back. */
+@Composable
+private fun OmniDetailFrame(
+    onBack: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Button(
+            onClick = onBack,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+        ) {
+            Text("‹  " + stringResource(R.string.nav_back))
+        }
+        Box(modifier = Modifier.weight(1f)) {
+            content()
+        }
+    }
+}
+
+@Composable
+private fun OmniFunctionsHub(
+    kind: OmniWelcomeKind,
+    titleRes: Int,
+    bodyRes: Int,
+    actions: List<Pair<Int, () -> Unit>>,
+    showWelcome: Boolean = true,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        if (showWelcome) OmniWelcomePanel(
+            kind = kind,
+            title = stringResource(titleRes),
+            message = stringResource(bodyRes),
+            highlights = when (kind) {
+                OmniWelcomeKind.PRIVACY -> listOf(
+                    stringResource(R.string.welcome_privacy_step1),
+                    stringResource(R.string.welcome_privacy_step2),
+                    stringResource(R.string.welcome_privacy_step3),
+                )
+                OmniWelcomeKind.PRO -> listOf(
+                    stringResource(R.string.welcome_pro_step1),
+                    stringResource(R.string.welcome_pro_step2),
+                    stringResource(R.string.welcome_pro_step3),
+                )
+                else -> emptyList()
+            },
+        )
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                actions.forEach { (labelRes, open) ->
+                    Button(onClick = open, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(labelRes) + "  ›")
+                    }
+                }
+            }
+        }
     }
 }

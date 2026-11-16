@@ -36,6 +36,7 @@ import kotlinx.coroutines.launch
 fun MonetizationSection(
     runtime: MonetizationRuntime,
     batch: ProBatchController,
+    showWelcome: Boolean = true,
 ) {
     val context = LocalContext.current
     val activity = context.findActivity()
@@ -66,7 +67,7 @@ fun MonetizationSection(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            if (!premium) {
+            if (!premium && showWelcome) {
                 // Benefits describe existing capabilities only. Keep Billing
                 // errors and genuine Google Play availability visible below.
                 OmniWelcomePanel(

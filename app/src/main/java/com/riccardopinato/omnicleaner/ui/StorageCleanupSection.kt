@@ -52,12 +52,20 @@ private enum class CleanupDialog {
     FILES,
 }
 
+/** Keep uncommitted selections in the Activity-root owner across detail pages. */
+class CleanupSelectionUiState {
+    val selectedFolders = mutableStateOf<Set<String>>(emptySet())
+    val selectedBigFiles = mutableStateOf<Set<String>>(emptySet())
+    val selectedDuplicates = mutableStateOf<Set<String>>(emptySet())
+}
+
 @Composable
 fun StorageCleanupSection(
     folders: List<FolderItem>,
     bigFiles: List<BigFileItem>,
     duplicateGroups: List<DuplicateGroup>,
     onCleanupFinished: () -> Unit,
+    selectionState: CleanupSelectionUiState = remember { CleanupSelectionUiState() },
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -69,9 +77,9 @@ fun StorageCleanupSection(
     var visibleBigFileLimit by remember { mutableStateOf(20) }
     var visibleDuplicateGroupLimit by remember { mutableStateOf(12) }
     var visibleDuplicateFilesLimit by remember { mutableStateOf(6) }
-    var selectedFolders by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var selectedBigFiles by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var selectedDuplicates by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var selectedFolders by selectionState.selectedFolders
+    var selectedBigFiles by selectionState.selectedBigFiles
+    var selectedDuplicates by selectionState.selectedDuplicates
     var dialog by remember { mutableStateOf<CleanupDialog?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var pendingPreparation by remember { mutableStateOf<FileCleanupPreparation?>(null) }
