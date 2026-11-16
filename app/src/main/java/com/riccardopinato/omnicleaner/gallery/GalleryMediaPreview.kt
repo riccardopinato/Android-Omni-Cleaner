@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.ImageDecoder
 import android.graphics.Matrix
 import androidx.exifinterface.media.ExifInterface
-import android.media.MediaController
+import android.widget.MediaController
 import android.widget.VideoView
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.layout.fillMaxSize
@@ -282,6 +282,7 @@ fun GalleryMediaPreview(
             ) {
                 GalleryDecisionButtonLabel("✓", keepLabel)
             }
+        }
         Text(
             text = stringResource(R.string.gallery_swipe_hint),
             style = MaterialTheme.typography.bodySmall,
