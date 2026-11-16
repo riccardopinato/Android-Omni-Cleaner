@@ -368,4 +368,24 @@
     <string name="audit_trash_delete_body">Permanently delete %1$s from Safe Trash? This cannot be undone.</string>
     <string name="audit_trash_item_deleted">Permanently deleted; %1$s released.</string>
     <string name="audit_trash_item_failed">Could not permanently delete the selected file.</string>
+    <string name="welcome_clean_title">Start with safe cleaning</string>
+    <string name="welcome_clean_body">Scan first, review what you find, and decide what to remove.</string>
+    <string name="welcome_clean_step1">Scan storage only when you choose</string>
+    <string name="welcome_clean_step2">Review every selected item</string>
+    <string name="welcome_clean_step3">Confirm cleaning before changes</string>
+    <string name="welcome_gallery_title">Review your photos with confidence</string>
+    <string name="welcome_gallery_body">Choose what to keep. Nothing is sent to Trash automatically.</string>
+    <string name="welcome_gallery_step1">Swipe right to keep a photo</string>
+    <string name="welcome_gallery_step2">Swipe left to add it to your Trash queue</string>
+    <string name="welcome_gallery_step3">Review the queue before confirming</string>
+    <string name="welcome_privacy_title">Protect location details in photos</string>
+    <string name="welcome_privacy_body">Create a checked JPEG copy without changing your original.</string>
+    <string name="welcome_privacy_step1">Choose a JPEG photo</string>
+    <string name="welcome_privacy_step2">Remove supported GPS information</string>
+    <string name="welcome_privacy_step3">Block export if metadata cannot be verified</string>
+    <string name="welcome_pro_title">Discover Omni Cleaner Pro</string>
+    <string name="welcome_pro_body">Optional tools for more thorough reviews, always under your control.</string>
+    <string name="welcome_pro_step1">Review files and categories in batches</string>
+    <string name="welcome_pro_step2">Check selections before any deletion</string>
+    <string name="welcome_pro_step3">Use Pro without banner ads</string>
 </resources>

@@ -143,8 +143,17 @@ internal fun CleanScreen(
                     }
                 }
             }
+            // Permission request remains above the guide: do not hide the real CTA.
+            item { CleanWelcomePanel() }
         } else {
             item { CleanActionsCard(state = state, controller = controller) }
+            // Before the first scan, explain the opt-in scan/review/confirm flow.
+            if (state.overview == null && !state.foldersScanned &&
+                !state.bigFilesScanned && !state.duplicatesScanned &&
+                !state.scanning && state.error == null
+            ) {
+                item { CleanWelcomePanel() }
+            }
             item {
                 OutlinedButton(
                     onClick = { showFilters = !showFilters },
@@ -311,6 +320,21 @@ internal fun CleanScreen(
         }
         item { Spacer(Modifier.height(10.dp)) }
     }
+}
+
+@Composable
+private fun CleanWelcomePanel() {
+    OmniWelcomePanel(
+        kind = OmniWelcomeKind.CLEAN,
+        title = stringResource(R.string.welcome_clean_title),
+        message = stringResource(R.string.welcome_clean_body),
+        highlights = listOf(
+            stringResource(R.string.welcome_clean_step1),
+            stringResource(R.string.welcome_clean_step2),
+            stringResource(R.string.welcome_clean_step3),
+        ),
+        modifier = Modifier.padding(horizontal = 20.dp),
+    )
 }
 
 @Composable

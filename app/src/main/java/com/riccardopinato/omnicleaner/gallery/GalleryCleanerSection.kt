@@ -38,6 +38,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
+import com.riccardopinato.omnicleaner.ui.redesign.OmniWelcomeKind
+import com.riccardopinato.omnicleaner.ui.redesign.OmniWelcomePanel
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
 
 @Composable
@@ -86,6 +88,25 @@ fun GalleryCleanerSection(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            // Show guidance only before the first review, not for completed
+            // sessions, queued trash, loading states or read errors.
+            if (state.items.isEmpty() && state.totalReviewedCount == 0 &&
+                !state.loading && !state.loadingNextPage &&
+                !state.hasPersistedUndo && state.pendingTrashItems.isEmpty() &&
+                state.error == null
+            ) {
+                OmniWelcomePanel(
+                    kind = OmniWelcomeKind.GALLERY,
+                    title = stringResource(R.string.welcome_gallery_title),
+                    message = stringResource(R.string.welcome_gallery_body),
+                    highlights = listOf(
+                        stringResource(R.string.welcome_gallery_step1),
+                        stringResource(R.string.welcome_gallery_step2),
+                        stringResource(R.string.welcome_gallery_step3),
+                    ),
+                )
+            }
 
             if (!state.hasAccess) {
                 Button(

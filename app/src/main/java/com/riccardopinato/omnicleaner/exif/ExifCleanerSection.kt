@@ -30,6 +30,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
+import com.riccardopinato.omnicleaner.ui.redesign.OmniWelcomeKind
+import com.riccardopinato.omnicleaner.ui.redesign.OmniWelcomePanel
 import kotlinx.coroutines.launch
 
 @Composable
@@ -120,6 +122,23 @@ fun ExifCleanerSection() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
+            // Keep this visual guide out of the way after the user picks a
+            // source, starts a batch flow or receives any meaningful result.
+            if (singleSource == null && sourceTree == null &&
+                scan == null && export == null && status == null &&
+                !busy && !showAdvancedExif
+            ) {
+                OmniWelcomePanel(
+                    kind = OmniWelcomeKind.PRIVACY,
+                    title = stringResource(R.string.welcome_privacy_title),
+                    message = stringResource(R.string.welcome_privacy_body),
+                    highlights = listOf(
+                        stringResource(R.string.welcome_privacy_step1),
+                        stringResource(R.string.welcome_privacy_step2),
+                        stringResource(R.string.welcome_privacy_step3),
+                    ),
+                )
+            }
 
             OutlinedButton(
                 onClick = { singleSourcePicker.launch(arrayOf("image/jpeg")) },

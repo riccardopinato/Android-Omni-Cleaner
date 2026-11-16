@@ -1,3 +1,29 @@
+## Illustrated contextual first-use states — 2026-11-16
+
+**Scope: audit Draft branch only; no main or Play merge.**
+
+- Four lightweight original Compose Canvas illustrations and localized guides:
+  Clean (scan/review/confirm), Gallery (Keep/Trash gesture and review queue),
+  Privacy (JPEG copy, GPS safety, unverifiable metadata block), Pro
+  (batch review, user confirmation, no banner ads).
+- Each onboarding panel is conditional, never a fake result or a substitute for
+  real permissions and actionable controls. Clean hides after a first scan or
+  while processing; Gallery hides when media/review queue or prior review exists;
+  Privacy hides on photo selection, folder workflow and actual results;
+  Pro appears only for non-premium users.
+- All functional action buttons remain blue with white text. Existing photo
+  safety semantics, Android trash approval, purchase errors and premium checks
+  are unchanged. Artwork is drawn in Compose Canvas without raster assets,
+  network requests or animation loops.
+- Added 20 new message IDs in en, it, es, fr, pt and a static CI contract gate
+  `.github/scripts/check-welcome-ui.py`.
+- **Acceptance gates:** Android CI SUCCESS, AppLab Maestro/instrumentation PASS,
+  fresh real screenshot capture across five navigation destinations, and
+  analysis of visual proportions/overflow and initial-state legibility.
+- **Not certified** until the exact-head CI and emulator screenshot output
+  have been inspected. Dark-mode, physical Android, Play Billing and OEM
+  behavior remain separate.
+
 ## Visual inspection — five genuine Android emulator PNGs (2026-11-16)
 
 - Evidence: GitHub Actions [visual run #43786270256](https://github.com/riccardopinato/Android-Omni-Cleaner/actions/runs/43786270256); five 1440x3120 Pixel 7 Pro Android API35 light-theme PNGs, downloadable artifact 14190313423.

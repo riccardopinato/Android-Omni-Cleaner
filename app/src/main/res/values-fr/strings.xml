@@ -365,4 +365,24 @@
     <string name="audit_trash_delete_body">Supprimer définitivement %1$s de la corbeille sécurisée ? Cette action est irréversible.</string>
     <string name="audit_trash_item_deleted">Fichier supprimé définitivement ; %1$s libérés.</string>
     <string name="audit_trash_item_failed">Impossible de supprimer définitivement ce fichier.</string>
+    <string name="welcome_clean_title">Commencez par un nettoyage sûr</string>
+    <string name="welcome_clean_body">Analysez le stockage, vérifiez les résultats et choisissez les éléments à retirer.</string>
+    <string name="welcome_clean_step1">Analysez le stockage à votre demande</string>
+    <string name="welcome_clean_step2">Vérifiez chaque élément sélectionné</string>
+    <string name="welcome_clean_step3">Confirmez le nettoyage avant toute modification</string>
+    <string name="welcome_gallery_title">Triez vos photos sereinement</string>
+    <string name="welcome_gallery_body">Choisissez les photos à garder. Aucune suppression automatique.</string>
+    <string name="welcome_gallery_step1">Balayez à droite pour garder une photo</string>
+    <string name="welcome_gallery_step2">Balayez à gauche pour préparer la corbeille</string>
+    <string name="welcome_gallery_step3">Vérifiez la sélection avant de confirmer</string>
+    <string name="welcome_privacy_title">Protégez la position de vos photos</string>
+    <string name="welcome_privacy_body">Créez une copie JPEG vérifiée sans modifier la photo originale.</string>
+    <string name="welcome_privacy_step1">Choisissez une photo JPEG</string>
+    <string name="welcome_privacy_step2">Retirez les données GPS prises en charge</string>
+    <string name="welcome_privacy_step3">Bloquez la copie si les métadonnées restent incertaines</string>
+    <string name="welcome_pro_title">Découvrez Omni Cleaner Pro</string>
+    <string name="welcome_pro_body">Des outils facultatifs pour des vérifications plus poussées, sous votre contrôle.</string>
+    <string name="welcome_pro_step1">Examinez fichiers et catégories par lots</string>
+    <string name="welcome_pro_step2">Vérifiez la sélection avant la suppression</string>
+    <string name="welcome_pro_step3">Utilisez Pro sans bannières publicitaires</string>
 </resources>

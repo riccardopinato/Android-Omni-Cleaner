@@ -28,6 +28,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
+import com.riccardopinato.omnicleaner.ui.redesign.OmniWelcomeKind
+import com.riccardopinato.omnicleaner.ui.redesign.OmniWelcomePanel
 import kotlinx.coroutines.launch
 
 @Composable
@@ -64,6 +66,20 @@ fun MonetizationSection(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            if (!premium) {
+                // Benefits describe existing capabilities only. Keep Billing
+                // errors and genuine Google Play availability visible below.
+                OmniWelcomePanel(
+                    kind = OmniWelcomeKind.PRO,
+                    title = stringResource(R.string.welcome_pro_title),
+                    message = stringResource(R.string.welcome_pro_body),
+                    highlights = listOf(
+                        stringResource(R.string.welcome_pro_step1),
+                        stringResource(R.string.welcome_pro_step2),
+                        stringResource(R.string.welcome_pro_step3),
+                    ),
+                )
+            }
             Text(
                 if (premium) stringResource(R.string.pro_active) else stringResource(R.string.pro_free),
                 color = if (premium) MaterialTheme.colorScheme.primary

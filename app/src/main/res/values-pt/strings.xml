@@ -365,4 +365,24 @@
     <string name="audit_trash_delete_body">Eliminar %1$s definitivamente do lixo seguro? Esta ação não pode ser anulada.</string>
     <string name="audit_trash_item_deleted">Ficheiro eliminado definitivamente; %1$s libertados.</string>
     <string name="audit_trash_item_failed">Não foi possível eliminar o ficheiro definitivamente.</string>
+    <string name="welcome_clean_title">Comece por uma limpeza segura</string>
+    <string name="welcome_clean_body">Analise o armazenamento, reveja os resultados e escolha o que remover.</string>
+    <string name="welcome_clean_step1">Analise o armazenamento quando quiser</string>
+    <string name="welcome_clean_step2">Reveja todos os itens selecionados</string>
+    <string name="welcome_clean_step3">Confirme a limpeza antes das alterações</string>
+    <string name="welcome_gallery_title">Reveja as suas fotografias com calma</string>
+    <string name="welcome_gallery_body">Escolha o que manter. Nada vai para o lixo automaticamente.</string>
+    <string name="welcome_gallery_step1">Deslize para a direita para manter a fotografia</string>
+    <string name="welcome_gallery_step2">Deslize para a esquerda para adicionar ao lixo</string>
+    <string name="welcome_gallery_step3">Reveja a seleção antes de confirmar</string>
+    <string name="welcome_privacy_title">Proteja a localização nas fotografias</string>
+    <string name="welcome_privacy_body">Crie uma cópia JPEG verificada sem alterar o original.</string>
+    <string name="welcome_privacy_step1">Escolha uma fotografia JPEG</string>
+    <string name="welcome_privacy_step2">Remova os dados GPS suportados</string>
+    <string name="welcome_privacy_step3">Bloqueie a cópia se não for possível verificar os metadados</string>
+    <string name="welcome_pro_title">Descubra o Omni Cleaner Pro</string>
+    <string name="welcome_pro_body">Ferramentas opcionais para revisões mais completas, sempre sob o seu controlo.</string>
+    <string name="welcome_pro_step1">Reveja ficheiros e categorias em lotes</string>
+    <string name="welcome_pro_step2">Verifique a seleção antes de eliminar</string>
+    <string name="welcome_pro_step3">Utilize o Pro sem anúncios em banner</string>
 </resources>
