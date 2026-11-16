@@ -12,7 +12,8 @@ SOURCE_BRANCH="${OMNI_SOURCE_BRANCH:-${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-}}}"
 # storage, localization and entitlement instrumentation on this live emulator.
 # This is emulator evidence, never physical-device or Play certification.
 if [[ "$SOURCE_BRANCH" == "audit/omni-safety-ux-360-20261115" ||
-      "$SOURCE_BRANCH" == "feature/omni-storage-intelligence-v1-20261116" ]]; then
+      "$SOURCE_BRANCH" == "feature/omni-storage-intelligence-v1-20261116" ||
+      "$SOURCE_BRANCH" == "feature/omni-gallery-pro-v1-20261116" ]]; then
   echo "[Omni/AppLab] running device-backed connectedDebugAndroidTest..."
   (
     cd "$GITHUB_WORKSPACE/target"
@@ -171,6 +172,16 @@ if [[ "$status" -eq 0 && "$SOURCE_BRANCH" == "feature/omni-storage-intelligence-
   else
     status=$?
     echo "[Omni/AppLab] Storage Intelligence journey FAILED with status $status."
+  fi
+fi
+
+if [[ "$status" -eq 0 && "$SOURCE_BRANCH" == "feature/omni-gallery-pro-v1-20261116" ]]; then
+  echo "[Omni/AppLab] running read-only Gallery Pro journey..."
+  if maestro test "$GITHUB_WORKSPACE/target/.maestro/gallery-pro.yaml"; then
+    echo "[Omni/AppLab] Gallery Pro journey PASS."
+  else
+    status=$?
+    echo "[Omni/AppLab] Gallery Pro journey FAILED: $status"
   fi
 fi
 

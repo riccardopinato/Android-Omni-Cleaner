@@ -9,6 +9,7 @@ on:
     branches:
       - audit/omni-safety-ux-360-20261115
       - feature/omni-storage-intelligence-v1-20261116
+      - feature/omni-gallery-pro-v1-20261116
     paths:
       - 'app/src/**'
       - '.maestro/**'

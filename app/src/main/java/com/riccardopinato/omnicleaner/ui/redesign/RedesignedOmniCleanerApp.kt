@@ -115,6 +115,7 @@ private enum class OmniDetailRoute(val parent: OmniDestination) {
     CLEAN_TRASH(OmniDestination.CLEAN),
     CLEAN_ADVANCED(OmniDestination.CLEAN),
     GALLERY_REVIEW(OmniDestination.GALLERY),
+    GALLERY_INSIGHTS(OmniDestination.GALLERY),
     PRIVACY_SINGLE(OmniDestination.PRIVACY),
     PRIVACY_BATCH(OmniDestination.PRIVACY),
     PRO_MANAGE(OmniDestination.PRO),
@@ -321,6 +322,18 @@ fun RedesignedOmniCleanerApp(
                                     onEnableDeepClean = { showDeepAccessDisclosure = true },
                                     onOpenTool = { detailName = it.toDetailRoute().name },
                                 )
+                                OmniDetailRoute.GALLERY_INSIGHTS -> ModuleScreen(
+                                    eyebrow = stringResource(R.string.redesign_media_eyebrow),
+                                    title = stringResource(R.string.gp_title),
+                                    subtitle = stringResource(R.string.gp_intro),
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    com.riccardopinato.omnicleaner.gallery.GalleryProSection(
+                                        controller = viewModel.galleryController,
+                                        onOpenReview = { detailName = OmniDetailRoute.GALLERY_REVIEW.name },
+                                onOpenInsights = { detailName = OmniDetailRoute.GALLERY_INSIGHTS.name },
+                                    )
+                                }
                                 OmniDetailRoute.GALLERY_REVIEW -> ModuleScreen(
                                     eyebrow = stringResource(R.string.redesign_media_eyebrow),
                                     title = stringResource(R.string.nav_gallery_review),

@@ -47,6 +47,7 @@ import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
 fun GalleryCleanerSection(
     controller: GalleryController,
     onOpenReview: (() -> Unit)? = null,
+    onOpenInsights: (() -> Unit)? = null,
     reviewOnly: Boolean = false,
 ) {
     val context = LocalContext.current
@@ -109,6 +110,13 @@ fun GalleryCleanerSection(
                         stringResource(R.string.welcome_gallery_step3),
                     ),
                 )
+            }
+
+            if (!reviewOnly && onOpenInsights != null) {
+                Button(
+                    onClick = onOpenInsights,
+                    modifier = Modifier.fillMaxWidth().testTag("omni_gallery_open_pro"),
+                ) { Text(stringResource(R.string.gp_open_insights)) }
             }
 
             if (!state.hasAccess) {

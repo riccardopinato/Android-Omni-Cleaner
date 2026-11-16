@@ -117,6 +117,13 @@ appId: com.riccardopinato.omnicleaner.debug
     visible: "Storage map"
     timeout: 120000
 - takeScreenshot: 12-storage-intelligence
+- pressKey: Back
+- tapOn:
+    id: "omni_nav_gallery"
+- tapOn:
+    id: "omni_gallery_open_pro"
+- assertVisible: "Gallery Pro"
+- takeScreenshot: 13-gallery-pro
 DETAIL_FLOW
 # Synthetic, disposable emulator fixture to verify a *nonempty* visual
 # storage map. The first five screenshots are captured before this is created.
@@ -127,7 +134,7 @@ adb shell "dd if=/dev/zero of=/sdcard/Documents/OmniStorageQA/guide.pdf bs=1024 
 adb shell "dd if=/dev/zero of=/sdcard/Music/OmniStorageQA/archive.zip bs=1024 count=128 >/dev/null 2>&1"
 mkdir -p "$OUTPUT/maestro-details"
 maestro test --test-output-dir "$OUTPUT/maestro-details" "$OUTPUT/detail-capture.yaml"
-for name in 06-clean-duplicates 07-clean-filters 08-privacy-quick 09-privacy-batch 10-pro-manage 12-storage-intelligence; do
+for name in 06-clean-duplicates 07-clean-filters 08-privacy-quick 09-privacy-batch 10-pro-manage 12-storage-intelligence 13-gallery-pro; do
   candidate="$(find "$OUTPUT/maestro-details" -type f -name "$name.png" -print -quit)"
   if [[ -z "$candidate" ]]; then
     echo "::error::Missing detail screenshot $name.png"
