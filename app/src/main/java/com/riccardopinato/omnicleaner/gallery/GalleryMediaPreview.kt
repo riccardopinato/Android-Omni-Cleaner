@@ -71,6 +71,10 @@ import kotlin.math.max
 private val TrashRed = Color(0xFFB42335)
 private val KeepGreen = Color(0xFF137847)
 
+// The selection commits just after the faster card-exit cue completes.
+internal const val GALLERY_EXIT_ANIMATION_MS = 155
+internal const val GALLERY_SELECTION_COMMIT_DELAY_MS = 170
+
 @Composable
 fun GalleryMediaPreview(
     item: GalleryMediaItem,
@@ -91,7 +95,7 @@ fun GalleryMediaPreview(
     val exitTarget = galleryDecisionExitSign(pendingDecision).toFloat() * exitDistancePx
     val animatedExitX by animateFloatAsState(
         targetValue = exitTarget,
-        animationSpec = tween(durationMillis = 210, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = GALLERY_EXIT_ANIMATION_MS, easing = FastOutSlowInEasing),
         label = "Gallery photo choice motion",
     )
 
@@ -107,11 +111,11 @@ fun GalleryMediaPreview(
     LaunchedEffect(item.id, pendingDecision) {
         when (pendingDecision) {
             SwipeDirection.TRASH -> {
-                delay(225)
+                delay(GALLERY_SELECTION_COMMIT_DELAY_MS)
                 onTrash()
             }
             SwipeDirection.KEEP -> {
-                delay(225)
+                delay(GALLERY_SELECTION_COMMIT_DELAY_MS)
                 onKeep()
             }
             null -> Unit

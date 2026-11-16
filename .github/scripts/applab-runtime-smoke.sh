@@ -8,6 +8,17 @@ set -Eeuo pipefail
 
 SOURCE_BRANCH="${OMNI_SOURCE_BRANCH:-${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-}}}"
 
+# Source build only proves androidTest compiles. Execute the existing safety,
+# storage, localization and entitlement instrumentation on this live emulator.
+# This is emulator evidence, never physical-device or Play certification.
+if [[ "$SOURCE_BRANCH" == "audit/omni-safety-ux-360-20261115" ]]; then
+  echo "[Omni/AppLab] running device-backed connectedDebugAndroidTest..."
+  (
+    cd "$GITHUB_WORKSPACE/target"
+    ./gradlew connectedDebugAndroidTest --stacktrace
+  )
+fi
+
 adb install -r -t "$APK_PATH"
 adb shell appops set "$PACKAGE_ID" MANAGE_EXTERNAL_STORAGE allow || true
 
@@ -120,20 +131,23 @@ if [[ "$status" -eq 0 ]]; then
 fi
 
 if [[ "$status" -eq 0 ]]; then
-  echo "[Omni/AppLab] running localization/accessibility journey at 1.3x font scale..."
-  adb shell settings put system font_scale 1.3 || true
-  adb shell am force-stop "$PACKAGE_ID" || true
+  echo "[Omni/AppLab] running accessibility journeys at 1.3x, 1.5x, and 2.0x font scale..."
+  for scale in 1.3 1.5 2.0; do
+    adb shell settings put system font_scale "$scale" || true
+    adb shell am force-stop "$PACKAGE_ID" || true
 
-  if maestro test "$GITHUB_WORKSPACE/target/.maestro/localization-accessibility.yaml"; then
-    echo "[Omni/AppLab] localization/accessibility journey passed."
-  else
-    status=$?
-    echo "[Omni/AppLab] localization/accessibility journey failed with status $status."
-    echo "[Omni/AppLab] capturing bounded current hierarchy to distinguish font wrap from missing UI..."
-    timeout 20s adb shell uiautomator dump /sdcard/omni-a11y-failure.xml || true
-    timeout 10s adb shell cat /sdcard/omni-a11y-failure.xml | head -c 20000 || true
-    echo
-  fi
+    if maestro test "$GITHUB_WORKSPACE/target/.maestro/localization-accessibility.yaml"; then
+      echo "[Omni/AppLab] localization/accessibility journey PASSED at ${scale}x."
+    else
+      status=$?
+      echo "[Omni/AppLab] localization/accessibility journey FAILED at ${scale}x with status $status."
+      echo "[Omni/AppLab] capturing bounded current hierarchy..."
+      timeout 20s adb shell uiautomator dump /sdcard/omni-a11y-failure.xml || true
+      timeout 10s adb shell cat /sdcard/omni-a11y-failure.xml | head -c 20000 || true
+      echo
+      break
+    fi
+  done
 
   adb shell settings put system font_scale 1.0 || true
   adb shell am force-stop "$PACKAGE_ID" || true

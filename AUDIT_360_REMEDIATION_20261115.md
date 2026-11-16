@@ -135,6 +135,19 @@ Android and release-provider evidence.
   pass on representative devices; destructive selection state is intentionally
   retained rather than uncomposed.
 
+## Roadmap follow-up — responsive Gallery and deeper emulator gates (2026-11-16)
+
+Source work staged after the preceding exact-head software gates:
+- Gallery choice/exit cue reduced from 210/225 ms to 155/170 ms, preserving
+  the release animation before an actual Keep or Trash selection is committed.
+  This changes perceived latency only; system-managed deletion stays untouched.
+  A JVM timing-contract test asserts that commit still follows the animation.
+- AppLab smoke is extended to execute the Android instrumented test suite on
+  the emulator, not merely compile the androidTest APK, and to repeat the
+  localization journey under 1.3x, 1.5x, 2.0x Android font scales.
+- Full suite, physical responsiveness, TalkBack and Play provider certification
+  must be reported separately. Instrumentation on emulator is NOT physical QA.
+
 ## UX design decisions
 - **Preserve** approved broom launcher asset and the Premium Light/Dark visual language.
 - **Preserve** the five primary destinations for this iteration; moving Pro out of nav would change the approved UI and needs a separate user design decision.

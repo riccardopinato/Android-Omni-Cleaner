@@ -2,9 +2,17 @@ package com.riccardopinato.omnicleaner.gallery
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GallerySwipeDecisionTest {
+    @Test
+    fun fastSwipeSelectionKeepsAnimationAheadOfCommit() {
+        assertTrue(GALLERY_EXIT_ANIMATION_MS in 100..180)
+        assertTrue(GALLERY_SELECTION_COMMIT_DELAY_MS > GALLERY_EXIT_ANIMATION_MS)
+        assertTrue(GALLERY_SELECTION_COMMIT_DELAY_MS <= 180)
+    }
+
     @Test
     fun rightSwipeKeepsAndLeftSwipeTrashes() {
         assertEquals(SwipeDirection.KEEP, gallerySwipeDirection(150f, 100f))
