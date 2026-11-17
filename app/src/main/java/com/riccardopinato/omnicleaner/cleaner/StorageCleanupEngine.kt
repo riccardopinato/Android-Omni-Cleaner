@@ -191,7 +191,14 @@ class StorageCleanupEngine(
             }
 
             if (file.length() <= SafeTrashManager.MAX_REVERSIBLE_TRASH_BYTES) {
-                val digestBound = CleanupSnapshotValidator.withCurrentDigest(snapshot)
+                // A supplied SHA was already revalidated above (including
+                // the keeper for duplicates). Do not read both 50-MiB APKs
+                // a further time just to re-bind that same digest.
+                val digestBound = if (snapshot.expectedSha256 != null) {
+                    snapshot
+                } else {
+                    CleanupSnapshotValidator.withCurrentDigest(snapshot)
+                }
                 if (digestBound != null) {
                     safeTrash += digestBound
                 } else {
@@ -235,13 +242,9 @@ class StorageCleanupEngine(
         for (snapshot in strongestCleanupSnapshots(snapshots)) {
             coroutineContext.ensureActive()
 
-            // Revalidate again immediately before mutation. This also protects
-            // the delay while an Android system-trash confirmation is open.
-            if (!CleanupSnapshotValidator.validate(snapshot).valid) {
-                rejected++
-                continue
-            }
-
+            // moveToTrash(snapshot) performs the full snapshot + keeper
+            // validation immediately before mutation. Do not duplicate the
+            // same full-file SHA pass here.
             if (safeTrashManager.moveToTrash(snapshot) != null) {
                 moved++
                 movedBytes += snapshot.expectedBytes.coerceAtLeast(0L)

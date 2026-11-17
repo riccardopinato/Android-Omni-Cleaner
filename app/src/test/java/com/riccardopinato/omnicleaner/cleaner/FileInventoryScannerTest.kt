@@ -13,6 +13,31 @@ import kotlin.io.path.createTempDirectory
 class FileInventoryScannerTest {
 
     @Test
+    fun largeWasteGroupsAreConfirmedBeforeSmallWasteGroups() = runBlocking {
+        val root = createTempDirectory("omni-priority-").toFile()
+        try {
+            File(root, "small-a.bin").writeText("small")
+            File(root, "small-b.bin").writeText("small")
+            val large = ByteArray(4_096) { 7 }
+            File(root, "large-a.bin").writeBytes(large)
+            File(root, "large-b.bin").writeBytes(large)
+            val seen = mutableListOf<DuplicateGroup>()
+            val inventory = FileInventoryScanner().collect(root)
+            FileInventoryScanner().duplicatesProgressive(
+                inventory.files,
+                parallelism = 120,
+                onConfirmedGroup = { seen += it },
+            )
+            assertEquals(2, seen.size)
+            assertEquals(4_096L, seen.first().sizeBytes)
+            assertEquals(5L, seen.last().sizeBytes)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+
+    @Test
     fun progressiveGroupsOnlyPublishFullyByteVerifiedMatches() = runBlocking {
         val root = createTempDirectory("omni-progressive-verified-").toFile()
         try {

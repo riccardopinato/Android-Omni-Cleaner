@@ -65,3 +65,12 @@ Still require exact-head CI, Android emulator/provider tests and physical-device
 - JVM tests: 50-MiB APK purge, zero-byte bulk purge, path escape and unknown-child protection.
 - Does not purge the **Android MediaStore system trash** for photos/videos; those are a separate OS-managed collection with different permissions.
 - Exact-head CI and real-device purge/restore tests required before merge/public release.
+
+## Iteration 5 — Scan 2.1 safe I/O reduction / priority
+
+- Same-size candidate groups now process by decreasing theoretical duplicate-waste bytes (saturating multiplication), making useful large-file confirmed previews available earlier; all groups still receive complete SHA and byte verification.
+- Caller-provided duplicate-scanner worker count is clamped to 1–4 instead of allowing unbounded I/O tasks.
+- Non-media cleanup preparation avoids repeating full SHA validation for snapshot hashes already checked in that same loop; large-file snapshots with no digest still obtain a fresh digest.
+- Pre-mutation snapshot validation remains in `SafeTrashManager.moveToTrash`; removes the redundant full SHA/keeper pass in the outer cleanup engine. No security bypass or irreversible fallback.
+- Added deterministic JVM test for large-waste-first verified groups, including oversized requested parallelism.
+- No physical speedup claims until a device benchmark records cold/warm timings, hash bytes, thermal and battery impact.

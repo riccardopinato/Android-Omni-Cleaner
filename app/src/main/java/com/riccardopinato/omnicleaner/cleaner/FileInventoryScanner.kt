@@ -139,6 +139,14 @@ class FileInventoryScanner {
             .groupBy { it.size }
             .values
             .filter { it.size > 1 }
+            // Prioritize the highest verified potential saving: a confirmed
+            // large-file group appears sooner without skipping other groups.
+            .sortedWith(compareByDescending<List<IndexedFile>> { group ->
+                val size = group.first().size
+                val extra = (group.size - 1).toLong()
+                if (size > 0L && extra > Long.MAX_VALUE / size) Long.MAX_VALUE
+                else size * extra
+            }.thenBy { group -> group.minOf { it.file.absolutePath } })
 
         val totalCandidates = bySize.sumOf { it.size }
         val result = ArrayList<DuplicateGroup>()
@@ -158,7 +166,8 @@ class FileInventoryScanner {
             }
         }
 
-        val workerCount = parallelism.coerceAtLeast(1)
+        // Caller-provided parallelism must not bypass the mobile I/O bound.
+        val workerCount = parallelism.coerceIn(1, 4)
         // One bulk SQLite read replaces one indexed query for each candidate.
         hashCache?.prepare(bySize.flatten())
         try {
