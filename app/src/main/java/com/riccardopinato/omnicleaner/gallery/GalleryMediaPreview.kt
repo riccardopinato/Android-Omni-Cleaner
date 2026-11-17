@@ -3,6 +3,7 @@ package com.riccardopinato.omnicleaner.gallery
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.media.MediaMetadataRetriever
 import android.os.Build
 import android.util.Size
@@ -44,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.exifinterface.media.ExifInterface
 import com.riccardopinato.omnicleaner.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -191,7 +193,7 @@ private fun GalleryFullPhoto(item: GalleryMediaItem, previewBitmap: Bitmap?) {
     val context = LocalContext.current
     val original by produceState<Bitmap?>(initialValue = previewBitmap, item.uri) {
         value = withContext(Dispatchers.IO) {
-            decodeSampledBitmap(context, item, FULLSCREEN_SIZE_PX)
+            runCatching { decodeSampledBitmap(context, item, FULLSCREEN_SIZE_PX) }.getOrNull()
         } ?: previewBitmap
     }
     if (original == null) {
@@ -282,7 +284,7 @@ private fun decodeSampledBitmap(
     context: Context,
     item: GalleryMediaItem,
     maxSize: Int,
-): Bitmap? {
+): Bitmap? = runCatching {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     context.contentResolver.openInputStream(item.uri)?.use {
         BitmapFactory.decodeStream(it, null, bounds)
@@ -292,12 +294,29 @@ private fun decodeSampledBitmap(
     while (largest / sample > maxSize * 2) {
         sample *= 2
     }
-    val options = BitmapFactory.Options().apply {
-        inSampleSize = sample
-    }
-    return context.contentResolver.openInputStream(item.uri)?.use {
+    val options = BitmapFactory.Options().apply { inSampleSize = sample }
+    val decoded = context.contentResolver.openInputStream(item.uri)?.use {
         BitmapFactory.decodeStream(it, null, options)
-    }?.scaledDown(maxSize)
+    } ?: return@runCatching null
+    decoded.scaledDown(maxSize).applyExifOrientation(context, item)
+}.getOrNull()
+
+/** Respect camera EXIF rotation/mirroring when BitmapFactory reads raw pixels. */
+private fun Bitmap.applyExifOrientation(
+    context: Context,
+    item: GalleryMediaItem,
+): Bitmap {
+    val exif = runCatching {
+        context.contentResolver.openInputStream(item.uri)?.use { ExifInterface(it) }
+    }.getOrNull() ?: return this
+    val degrees = exif.rotationDegrees
+    val flipped = exif.isFlipped
+    if (degrees == 0 && !flipped) return this
+    val transform = Matrix().apply {
+        if (flipped) postScale(-1f, 1f)
+        if (degrees != 0) postRotate(degrees.toFloat())
+    }
+    return Bitmap.createBitmap(this, 0, 0, width, height, transform, true)
 }
 
 private fun Bitmap.scaledDown(maxSize: Int): Bitmap {
