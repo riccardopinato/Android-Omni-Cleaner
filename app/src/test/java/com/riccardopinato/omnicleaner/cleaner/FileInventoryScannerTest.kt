@@ -7,6 +7,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.createTempDirectory
 
 class FileInventoryScannerTest {
@@ -188,27 +189,27 @@ class FileInventoryScannerTest {
             val digest = scanner.digest(first)
 
             class FakeCache : DuplicateHashCache {
-                var sampleGets = 0
-                var fullGets = 0
-                var samplePuts = 0
-                var fullPuts = 0
+                val sampleGets = AtomicInteger()
+                val fullGets = AtomicInteger()
+                val samplePuts = AtomicInteger()
+                val fullPuts = AtomicInteger()
 
                 override fun sampleHash(item: IndexedFile): String? {
-                    sampleGets++
+                    sampleGets.incrementAndGet()
                     return digest.takeIf { item.revision != null }
                 }
 
                 override fun fullHash(item: IndexedFile): String? {
-                    fullGets++
+                    fullGets.incrementAndGet()
                     return digest.takeIf { item.revision != null }
                 }
 
                 override fun putSampleHash(item: IndexedFile, hash: String) {
-                    if (item.revision != null) samplePuts++
+                    if (item.revision != null) samplePuts.incrementAndGet()
                 }
 
                 override fun putFullHash(item: IndexedFile, hash: String) {
-                    if (item.revision != null) fullPuts++
+                    if (item.revision != null) fullPuts.incrementAndGet()
                 }
             }
 
@@ -221,10 +222,10 @@ class FileInventoryScannerTest {
 
             assertEquals(1, groups.size)
             assertEquals(2, groups.single().files.size)
-            assertTrue(cache.sampleGets >= 2)
-            assertTrue(cache.fullGets >= 2)
-            assertEquals(0, cache.samplePuts)
-            assertEquals(0, cache.fullPuts)
+            assertTrue(cache.sampleGets.get() >= 2)
+            assertTrue(cache.fullGets.get() >= 2)
+            assertEquals(0, cache.samplePuts.get())
+            assertEquals(0, cache.fullPuts.get())
             assertTrue(first.isFile)
             assertTrue(second.isFile)
         } finally {
