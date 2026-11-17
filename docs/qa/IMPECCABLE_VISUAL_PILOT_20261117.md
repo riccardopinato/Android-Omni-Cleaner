@@ -14,7 +14,7 @@
 ## Bounded pilot change (no new dependency)
 
 - Photo and video thumbnails now use `ContentScale.Fit` and a bounded aspect ratio derived from the decoded frame instead of forced 1:1 cropping.
-- For photos, the image is sampled directly from the source stream where possible, preserving original aspect ratio; fullscreen bounded decode up to 2048 px allows visual inspection without decoding the unbounded original into memory.
+- For photos, the image is sampled directly from the source stream where possible and camera EXIF rotation/mirroring is applied; fullscreen bounded decode up to 2048 px allows visual inspection without decoding the unbounded original into memory. Revoked or missing source URIs fail to a safe fallback instead of crashing the viewer.
 - An explicit localized `Open photo / Play video` button opens a **non-destructive** full-screen viewer. Photos fit without cropping; videos use Android platform `VideoView` with media controls, and playback stops on dialog disposal. This avoids adding a heavy media library to a storage cleaner.
 - The fullscreen dialog has no delete control. Existing review `Keep/Trash/Undo` remain on the main gallery surface with the same controller and Android confirmations.
 - EN/IT/ES/FR/PT strings added together. Aspect-ratio edge cases covered by focused JVM tests.
