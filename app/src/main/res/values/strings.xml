@@ -175,6 +175,7 @@
     <string name="safe_trash_summary">%1$d items · %2$s</string>
     <string name="safe_trash_empty">Safe Trash is empty.</string>
     <string name="safe_trash_restore_access">Re-enable Deep Cleaning to restore files to their original path. You can still empty the private trash.</string>
+    <string name="safe_trash_purge_count_bytes">Items to permanently delete: %1$d · %2$s. This cannot be undone.</string>
     <string name="safe_trash_empty_permanently">Empty permanently</string>
     <string name="safe_trash_empty_confirm_title">Empty Safe Trash?</string>
     <string name="safe_trash_empty_confirm_body">This permanently deletes the private copies. Only after emptying can these bytes be considered actually reclaimed.</string>

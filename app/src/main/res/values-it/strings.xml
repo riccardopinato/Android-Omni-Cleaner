@@ -175,6 +175,7 @@
     <string name="safe_trash_summary">%1$d elementi · %2$s</string>
     <string name="safe_trash_empty">Safe Trash vuoto.</string>
     <string name="safe_trash_restore_access">Per ripristinare nel percorso originale riattiva Pulizia Profonda. Puoi comunque svuotare il cestino privato.</string>
+    <string name="safe_trash_purge_count_bytes">Elementi da eliminare definitivamente: %1$d · %2$s. Non è possibile annullare.</string>
     <string name="safe_trash_empty_permanently">Svuota definitivamente</string>
     <string name="safe_trash_empty_confirm_title">Svuotare Safe Trash?</string>
     <string name="safe_trash_empty_confirm_body">Questa azione elimina definitivamente le copie private. Solo dopo lo svuotamento questi byte possono essere considerati realmente liberati.</string>

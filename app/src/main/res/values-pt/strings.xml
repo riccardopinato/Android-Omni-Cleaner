@@ -174,6 +174,7 @@
     <string name="safe_trash_summary">%1$d itens · %2$s</string>
     <string name="safe_trash_empty">A Lixeira segura está vazia.</string>
     <string name="safe_trash_restore_access">Reative a Limpeza profunda para restaurar ficheiros no caminho original. Ainda pode esvaziar a lixeira privada.</string>
+    <string name="safe_trash_purge_count_bytes">Itens a eliminar definitivamente: %1$d · %2$s. Esta ação não pode ser anulada.</string>
     <string name="safe_trash_empty_permanently">Esvaziar permanentemente</string>
     <string name="safe_trash_empty_confirm_title">Esvaziar a Lixeira segura?</string>
     <string name="safe_trash_empty_confirm_body">Esta ação elimina permanentemente as cópias privadas. Só depois de esvaziar estes bytes podem ser considerados efetivamente libertados.</string>

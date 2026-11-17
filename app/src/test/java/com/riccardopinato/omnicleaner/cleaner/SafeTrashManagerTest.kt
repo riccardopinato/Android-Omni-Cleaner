@@ -14,6 +14,77 @@ import kotlin.io.path.createTempDirectory
 class SafeTrashManagerTest {
 
     @Test
+    fun permanentDeletionOfLargeApkIsConfirmedAndReturnsItsBytes() {
+        val root = createTempDirectory("omni-apk-purge-").toFile()
+        val source = File(root, "verified-installer.apk")
+        val trash = File(root, ".OmniCleaner/SafeTrash")
+        try {
+            java.io.RandomAccessFile(source, "rw").use { it.setLength(50L * 1024L * 1024L) }
+            val manager = SafeTrashManager.forTests(trash, root)
+            assertNotNull(manager.moveToTrash(source))
+            val entry = manager.listEntries().single()
+
+            val result = manager.purgeEntry(entry.id)
+            assertEquals(SafeTrashPurgeStatus.DELETED, result.status)
+            assertEquals(50L * 1024L * 1024L, result.reclaimedBytes)
+            assertTrue(manager.listEntries().isEmpty())
+            assertEquals(0L, manager.getTrashSize())
+            assertFalse(File(trash, entry.id).exists())
+            assertFalse(source.exists())
+            assertEquals(SafeTrashPurgeStatus.ENTRY_NOT_FOUND, manager.purgeEntry(entry.id).status)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun emptyTrashDeletesZeroByteFilesAndReportsTheEntryCount() {
+        val root = createTempDirectory("omni-zero-trash-").toFile()
+        val trash = File(root, "trash")
+        try {
+            val source = File(root, "empty.apk").apply { createNewFile() }
+            val manager = SafeTrashManager.forTests(trash, root)
+            assertNotNull(manager.moveToTrash(source))
+            assertEquals(0L, manager.getTrashSize())
+            assertEquals(1, manager.listEntries().size)
+
+            val result = manager.purgeAll()
+            assertTrue(result.completed)
+            assertEquals(1, result.deletedEntries)
+            assertEquals(0, result.rejectedEntries)
+            assertEquals(0L, result.reclaimedBytes)
+            assertTrue(manager.listEntries().isEmpty())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun purgeAllSkipsUnrecognizedEntriesAndRefusesPathsOutsideTrash() {
+        val root = createTempDirectory("omni-guarded-purge-").toFile()
+        val trash = File(root, "trash")
+        val untouched = File(root, "keep-me.apk").apply { writeText("important") }
+        try {
+            val manager = SafeTrashManager.forTests(trash, root)
+            assertNotNull(manager.moveToTrash(File(root, "safe.apk").apply { writeText("trash-me") }))
+            val foreign = File(trash, "unexpected-note.txt").apply { writeText("keep") }
+            assertFalse(manager.permanentlyDelete(untouched))
+            assertEquals(SafeTrashPurgeStatus.INVALID_ENTRY, manager.purgeEntry("../keep-me.apk").status)
+
+            val result = manager.purgeAll()
+            assertFalse(result.completed)
+            assertEquals(1, result.deletedEntries)
+            assertEquals(1, result.rejectedEntries)
+            assertTrue(foreign.exists())
+            assertTrue(untouched.exists())
+            assertTrue(manager.listEntries().isEmpty())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+
+    @Test
     fun fiftyMebibyteApkIsTrashedAndRestoredWithBytesIntact() {
         val root = createTempDirectory("omni-large-apk-trash-").toFile()
         val trash = File(root, ".OmniCleaner/SafeTrash")

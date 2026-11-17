@@ -55,3 +55,13 @@ User-reported P0: 50 MiB APK duplicates were excluded by a hardcoded 10 MiB non-
 - Added JVM regression tests for 50 MiB move/list/restore and >512 MiB refusal; extended incomplete-migration test to require preservation of existing payload.
 
 Still require exact-head CI, Android emulator/provider tests and physical-device cleanup/restore validation.
+
+## Iteration 4 — User-confirmed permanent Safe Trash purge
+
+- Scoped `purgeEntry(entryId)` and `purgeAll()` return explicit deletion status, successful entry counts and bytes actually removed; no deletion outside verified UUID trash entries.
+- The old `permanentlyDelete(file)` now rejects any path that is not an immediate Safe Trash child; compatibility wrapper remains for prior call sites.
+- A failed `listFiles()` cannot be interpreted as successfully emptied. Unknown/corrupt entries are preserved and reported as partial failure, not silently deleted.
+- UI explicitly shows item size and the total number of selected trash entries/size before irreversible confirmation; allows zero-byte entries; publishes cache invalidation for successfully deleted zero-byte files too.
+- JVM tests: 50-MiB APK purge, zero-byte bulk purge, path escape and unknown-child protection.
+- Does not purge the **Android MediaStore system trash** for photos/videos; those are a separate OS-managed collection with different permissions.
+- Exact-head CI and real-device purge/restore tests required before merge/public release.

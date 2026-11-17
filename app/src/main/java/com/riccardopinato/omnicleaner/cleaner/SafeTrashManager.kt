@@ -33,6 +33,29 @@ data class SafeTrashRestoreResult(
     val restoredFile: File? = null,
 )
 
+/** A file is reclaimed only when its entire trash entry is no longer present. */
+enum class SafeTrashPurgeStatus {
+    DELETED,
+    ENTRY_NOT_FOUND,
+    INVALID_ENTRY,
+    TRASH_UNAVAILABLE,
+    DELETE_FAILED,
+}
+
+data class SafeTrashPurgeResult(
+    val status: SafeTrashPurgeStatus,
+    val reclaimedBytes: Long = 0L,
+) {
+    val deleted: Boolean get() = status == SafeTrashPurgeStatus.DELETED
+}
+
+data class SafeTrashEmptyResult(
+    val deletedEntries: Int,
+    val rejectedEntries: Int,
+    val reclaimedBytes: Long,
+    val completed: Boolean,
+)
+
 class SafeTrashManager private constructor(
     private val trashDirectory: File,
     private val restoreRoot: File,
@@ -310,33 +333,89 @@ class SafeTrashManager private constructor(
         )
     }
 
-    fun permanentlyDelete(file: File): Boolean {
-        if (!isPersistentTrashAvailable()) return false
-        val root = runCatching { trashDirectory.canonicalFile }.getOrNull() ?: return false
-        val rootPrefix = root.path.trimEnd(File.separatorChar) + File.separator
-        val absolute = file.absoluteFile
-
-        if (!absolute.path.startsWith(rootPrefix)) return false
-        if (PathSafety.isSymlink(file)) {
-            // File.delete() removes the link itself and does not recurse into
-            // the link target.
-            return file.delete()
+    /**
+     * A permanent delete is explicitly scoped to one known Safe Trash entry ID.
+     * Unrecognized directories, links and parent paths are never purged.
+     */
+    fun purgeEntry(entryId: String): SafeTrashPurgeResult {
+        if (!isPersistentTrashAvailable()) {
+            return SafeTrashPurgeResult(SafeTrashPurgeStatus.TRASH_UNAVAILABLE)
+        }
+        if (!ENTRY_ID_PATTERN.matches(entryId)) {
+            return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
         }
 
-        val target = runCatching { file.canonicalFile }.getOrNull() ?: return false
-        if (target == root || !target.path.startsWith(rootPrefix)) return false
-        return deleteTreeWithoutFollowingSymlinks(target, root)
+        val directory = File(trashDirectory, entryId)
+        if (!directory.exists()) {
+            return SafeTrashPurgeResult(SafeTrashPurgeStatus.ENTRY_NOT_FOUND)
+        }
+        if (!directory.isDirectory || PathSafety.isSymlink(directory)) {
+            return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
+        }
+        if (readEntry(directory) == null) {
+            return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
+        }
+
+        val root = runCatching { trashDirectory.canonicalFile }.getOrNull()
+            ?: return SafeTrashPurgeResult(SafeTrashPurgeStatus.TRASH_UNAVAILABLE)
+        val target = runCatching { directory.canonicalFile }.getOrNull()
+            ?: return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
+        if (target.parentFile != root || PathSafety.isSymlink(target)) {
+            return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
+        }
+        // Physical payload size at deletion time is more truthful than the
+        // metadata's original size if a trash entry has been modified.
+        val payload = File(target, PAYLOAD_NAME)
+        if (!payload.isFile || PathSafety.isSymlink(payload)) {
+            return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
+        }
+        val bytesBefore = payload.length().coerceAtLeast(0L)
+        val deleted = runCatching {
+            deleteTreeWithoutFollowingSymlinks(target, root)
+        }.getOrDefault(false)
+        if (!deleted || target.exists()) {
+            return SafeTrashPurgeResult(SafeTrashPurgeStatus.DELETE_FAILED)
+        }
+        // The original file remains untouched; only the verified trash entry
+        // was removed. SHA is validated on move/restore, not needed to purge.
+        return SafeTrashPurgeResult(SafeTrashPurgeStatus.DELETED, bytesBefore)
     }
 
-    fun emptyTrash(): Boolean {
-        if (!isPersistentTrashAvailable()) return false
-        val entries = trashDirectory.listFiles() ?: return true
-        var allDeleted = true
-        for (entry in entries) {
-            if (!permanentlyDelete(entry)) allDeleted = false
+    fun purgeAll(): SafeTrashEmptyResult {
+        if (!isPersistentTrashAvailable()) {
+            return SafeTrashEmptyResult(0, 0, 0L, completed = false)
         }
-        return allDeleted
+        // A failed directory listing must never be interpreted as success.
+        val children = trashDirectory.listFiles()
+            ?: return SafeTrashEmptyResult(0, 0, 0L, completed = false)
+
+        var deletedCount = 0
+        var failedCount = 0
+        var reclaimedBytes = 0L
+        for (child in children) {
+            val result = purgeEntry(child.name)
+            if (result.deleted) {
+                deletedCount++
+                reclaimedBytes += result.reclaimedBytes
+            } else {
+                failedCount++
+            }
+        }
+        val actuallyEmpty = trashDirectory.listFiles()?.isEmpty() == true
+        return SafeTrashEmptyResult(
+            deletedEntries = deletedCount,
+            rejectedEntries = failedCount,
+            reclaimedBytes = reclaimedBytes,
+            completed = failedCount == 0 && actuallyEmpty,
+        )
     }
+
+    /** Compatibility path: only immediate children are ever accepted. */
+    fun permanentlyDelete(file: File): Boolean =
+        file.absoluteFile.parentFile == trashDirectory.absoluteFile &&
+            purgeEntry(file.name).deleted
+
+    fun emptyTrash(): Boolean = purgeAll().completed
 
     fun sameContents(first: File, second: File, expectedBytes: Long): Boolean {
         if (!first.isFile || !second.isFile) return false

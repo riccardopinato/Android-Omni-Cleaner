@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.SafeTrashEntry
 import com.riccardopinato.omnicleaner.cleaner.SafeTrashManager
+import com.riccardopinato.omnicleaner.cleaner.SafeTrashPurgeStatus
 import com.riccardopinato.omnicleaner.cleaner.SafeTrashRestoreStatus
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
@@ -35,7 +36,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
-import java.io.File
 
 @Composable
 fun SafeTrashSection() {
@@ -220,7 +220,7 @@ fun SafeTrashSection() {
                             Text(stringResource(R.string.refresh))
                         }
                         Button(
-                            enabled = !loading && trashBytes > 0L,
+                            enabled = !loading && persistentAvailable && entries.isNotEmpty(),
                             onClick = { confirmEmpty = true },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
@@ -246,26 +246,31 @@ fun SafeTrashSection() {
         AlertDialog(
             onDismissRequest = { pendingIndividualDelete = null },
             title = { Text(stringResource(R.string.audit_trash_delete_title)) },
-            text = { Text(stringResource(R.string.audit_trash_delete_body, entry.originalName)) },
+            text = {
+                Text(
+                    stringResource(R.string.audit_trash_delete_body, entry.originalName) +
+                        "\n" + formatSafeTrashBytes(entry.sizeBytes),
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
                         pendingIndividualDelete = null
                         loading = true
                         scope.launch {
-                            val before = withContext(Dispatchers.IO) { manager.getTrashSize() }
-                            val success = withContext(Dispatchers.IO) {
-                                manager.permanentlyDelete(File(manager.getTrashDirectory(), entry.id))
+                            val result = withContext(Dispatchers.IO) {
+                                runCatching { manager.purgeEntry(entry.id) }.getOrNull()
                             }
-                            val after = withContext(Dispatchers.IO) { manager.getTrashSize() }
-                            val reclaimed = (before - after).coerceAtLeast(0L)
+                            val success = result?.status == SafeTrashPurgeStatus.DELETED
                             message = SafeTrashMessage(
                                 if (success) R.string.audit_trash_item_deleted
                                 else R.string.audit_trash_item_failed,
-                                if (success) listOf(formatSafeTrashBytes(reclaimed)) else emptyList(),
+                                if (success) listOf(
+                                    formatSafeTrashBytes(result?.reclaimedBytes ?: 0L),
+                                ) else emptyList(),
                             )
                             reload()
-                            if (reclaimed > 0L) CleanupEventBus.publishCompleted()
+                            if (success) CleanupEventBus.publishCompleted()
                         }
                     },
                 ) {
@@ -288,9 +293,17 @@ fun SafeTrashSection() {
             onDismissRequest = { confirmEmpty = false },
             title = { Text(stringResource(R.string.safe_trash_empty_confirm_title)) },
             text = {
-                Text(
-                    stringResource(R.string.safe_trash_empty_confirm_body),
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.safe_trash_empty_confirm_body))
+                    Text(
+                        stringResource(
+                            R.string.safe_trash_purge_count_bytes,
+                            entries.size,
+                            formatSafeTrashBytes(trashBytes),
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
             },
             confirmButton = {
                 TextButton(
@@ -298,23 +311,26 @@ fun SafeTrashSection() {
                         confirmEmpty = false
                         loading = true
                         scope.launch {
-                            val before = withContext(Dispatchers.IO) { manager.getTrashSize() }
-                            val completed = withContext(Dispatchers.IO) { manager.emptyTrash() }
-                            val after = withContext(Dispatchers.IO) { manager.getTrashSize() }
-                            val reclaimed = (before - after).coerceAtLeast(0L)
-                            message = if (completed) {
+                            val result = withContext(Dispatchers.IO) {
+                                runCatching { manager.purgeAll() }.getOrNull()
+                            }
+                            message = if (result?.completed == true) {
                                 SafeTrashMessage(
                                     R.string.safe_trash_emptied,
-                                    listOf(formatSafeTrashBytes(reclaimed)),
+                                    listOf(formatSafeTrashBytes(result.reclaimedBytes)),
                                 )
                             } else {
                                 SafeTrashMessage(
                                     R.string.safe_trash_partial_empty,
-                                    listOf(formatSafeTrashBytes(reclaimed)),
+                                    listOf(
+                                        formatSafeTrashBytes(result?.reclaimedBytes ?: 0L),
+                                    ),
                                 )
                             }
                             reload()
-                            if (reclaimed > 0L) CleanupEventBus.publishCompleted()
+                            if ((result?.deletedEntries ?: 0) > 0) {
+                                CleanupEventBus.publishCompleted()
+                            }
                         }
                     },
                 ) {
