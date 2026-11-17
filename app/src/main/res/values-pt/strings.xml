@@ -339,4 +339,7 @@
     <string name="performance_benchmark_device_summary">%1$s · Android %2$d · %3$d threads CPU</string>
     <string name="performance_benchmark_copy_report">Copiar relatório do benchmark</string>
     <string name="performance_benchmark_report_copied">Relatório copiado. Cole-o no chat do projeto para análise.</string>
+    <string name="gallery_open_photo">Abrir foto</string>
+    <string name="gallery_play_video">Reproduzir vídeo</string>
+    <string name="gallery_video_playback_error">Não é possível reproduzir este vídeo neste dispositivo.</string>
 </resources>
