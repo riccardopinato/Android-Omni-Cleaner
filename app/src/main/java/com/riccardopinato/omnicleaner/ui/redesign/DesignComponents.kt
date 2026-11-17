@@ -7,11 +7,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -171,14 +175,14 @@ internal fun OmniMetricCard(
 internal fun OmniModuleCard(
     title: String,
     subtitle: String,
-    glyph: String,
+    iconRes: Int,
     accent: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier.heightIn(min = 146.dp),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -192,11 +196,11 @@ internal fun OmniModuleCard(
                     .background(accent.copy(alpha = 0.14f), RoundedCornerShape(14.dp))
                     .padding(horizontal = 10.dp, vertical = 7.dp),
             ) {
-                Text(
-                    text = glyph,
-                    modifier = Modifier.clearAndSetSemantics { },
-                    style = MaterialTheme.typography.titleMedium,
-                    color = accent,
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                    tint = accent,
                 )
             }
             Text(title, style = MaterialTheme.typography.titleMedium)
@@ -205,6 +209,50 @@ internal fun OmniModuleCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+/** Single glanceable metric strip, including honest unscanned placeholders. */
+internal data class OmniHomeMetric(val label: String, val value: String, val accent: Color)
+
+@Composable
+internal fun OmniHomeMetrics(
+    metrics: List<OmniHomeMetric>,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            metrics.forEach { metric ->
+                Column(
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .background(metric.accent, RoundedCornerShape(99.dp))
+                            .size(width = 24.dp, height = 4.dp),
+                    )
+                    Text(
+                        text = metric.value,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = metric.label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
     }
 }

@@ -65,6 +65,7 @@
     <string name="redesign_metric_large_files">File grandi</string>
     <string name="redesign_metric_duplicates">Gruppi duplicati</string>
     <string name="redesign_metric_folders">Cartelle analizzate</string>
+    <string name="redesign_quick_actions_title">Azioni rapide</string>
     <string name="redesign_quick_analyze">Analizza memoria</string>
     <string name="redesign_quick_analyze_subtitle">Scopri dove finisce lo spazio</string>
     <string name="redesign_quick_duplicates">Trova duplicati</string>

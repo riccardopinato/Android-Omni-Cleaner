@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -86,6 +87,14 @@ import com.riccardopinato.omnicleaner.ui.theme.OmniPurple
 import com.riccardopinato.omnicleaner.ui.theme.OmniRose
 import java.util.Locale
 
+private data class OmniHomeAction(
+    val title: String,
+    val subtitle: String,
+    val iconRes: Int,
+    val accent: Color,
+    val onClick: () -> Unit,
+)
+
 @Composable
 internal fun HomeScreen(
     state: CleanerUiState,
@@ -144,74 +153,98 @@ internal fun HomeScreen(
         }
 
         item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                OmniMetricCard(
-                    label = stringResource(R.string.redesign_metric_large_files),
-                    value = if (state.bigFilesScanned) state.bigFiles.size.toString() else "—",
-                    accent = OmniOrange,
-                    modifier = Modifier.width(128.dp),
-                )
-                OmniMetricCard(
-                    label = stringResource(R.string.redesign_metric_duplicates),
-                    value = if (state.duplicatesScanned) state.duplicates.size.toString() else "—",
-                    accent = OmniRose,
-                    modifier = Modifier.width(128.dp),
-                )
-                OmniMetricCard(
-                    label = stringResource(R.string.redesign_metric_folders),
-                    value = if (state.foldersScanned) state.folders.size.toString() else "—",
-                    accent = OmniMint,
-                    modifier = Modifier.width(128.dp),
-                )
-            }
+            OmniHomeMetrics(
+                metrics = listOf(
+                    OmniHomeMetric(
+                        label = stringResource(R.string.redesign_metric_large_files),
+                        value = if (state.bigFilesScanned) state.bigFiles.size.toString() else "—",
+                        accent = OmniOrange,
+                    ),
+                    OmniHomeMetric(
+                        label = stringResource(R.string.redesign_metric_duplicates),
+                        value = if (state.duplicatesScanned) state.duplicates.size.toString() else "—",
+                        accent = OmniRose,
+                    ),
+                    OmniHomeMetric(
+                        label = stringResource(R.string.redesign_metric_folders),
+                        value = if (state.foldersScanned) state.folders.size.toString() else "—",
+                        accent = OmniMint,
+                    ),
+                ),
+                modifier = Modifier.padding(horizontal = 20.dp),
+            )
         }
 
         item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                OmniModuleCard(
+            val actions = listOf(
+                OmniHomeAction(
                     title = stringResource(R.string.redesign_quick_analyze),
                     subtitle = stringResource(R.string.redesign_quick_analyze_subtitle),
-                    glyph = "↗",
+                    iconRes = R.drawable.omni_ic_scan,
                     accent = OmniBlue,
                     onClick = onAnalyzeStorage,
-                    modifier = Modifier.width(180.dp),
-                )
-                OmniModuleCard(
+                ),
+                OmniHomeAction(
                     title = stringResource(R.string.redesign_quick_duplicates),
                     subtitle = stringResource(R.string.redesign_quick_duplicates_subtitle),
-                    glyph = "≋",
+                    iconRes = R.drawable.omni_ic_duplicates,
                     accent = OmniRose,
                     onClick = onFindDuplicates,
-                    modifier = Modifier.width(180.dp),
-                )
-                OmniModuleCard(
+                ),
+                OmniHomeAction(
                     title = stringResource(R.string.module_gallery_cleaner),
                     subtitle = stringResource(R.string.redesign_quick_gallery_subtitle),
-                    glyph = "▣",
+                    iconRes = R.drawable.omni_nav_gallery,
                     accent = OmniPurple,
                     onClick = onOpenGallery,
-                    modifier = Modifier.width(180.dp),
-                )
-                OmniModuleCard(
+                ),
+                OmniHomeAction(
                     title = stringResource(R.string.module_exif_privacy),
                     subtitle = stringResource(R.string.redesign_quick_privacy_subtitle),
-                    glyph = "◎",
+                    iconRes = R.drawable.omni_nav_privacy,
                     accent = OmniMint,
                     onClick = onOpenPrivacy,
-                    modifier = Modifier.width(180.dp),
-                )
+                ),
+            )
+            BoxWithConstraints(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = stringResource(R.string.redesign_quick_actions_title),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    if (maxWidth < 340.dp) {
+                        actions.forEach { action ->
+                            OmniModuleCard(
+                                title = action.title,
+                                subtitle = action.subtitle,
+                                iconRes = action.iconRes,
+                                accent = action.accent,
+                                onClick = action.onClick,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    } else {
+                        actions.chunked(2).forEach { pair ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                pair.forEach { action ->
+                                    OmniModuleCard(
+                                        title = action.title,
+                                        subtitle = action.subtitle,
+                                        iconRes = action.iconRes,
+                                        accent = action.accent,
+                                        onClick = action.onClick,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
