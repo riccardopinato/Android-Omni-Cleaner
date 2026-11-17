@@ -37,3 +37,9 @@ Source: the head of PR #27, following the first exact-head Android CI PASS.
 - Source tests: progressive emission excludes same-sample/different-content files; instrumentation covers marker restart/scope and independent cache revision tests.
 
 **Pending evidence:** exact-head CI, AppLab runtime, physical speed/cancellation/restart tests, signed release and destructive-cleanup validation remain required. Do not mark Store-ready solely from source/CI.
+
+## Iteration 2 verification
+
+- First commit `4b0b45b64d7325e3bd24578b6ba1330dc2125cf9`: exact-head [Android CI PASS](https://github.com/riccardopinato/Android-Omni-Cleaner/actions/runs/44043905535).
+- Preview card now lists up to 20 **read-only** confirmed groups by representative filename, count and individual size. These are not inserted into cleanup queues.
+- Trigger AppLab runtime and real emulator screenshot workflows on the dedicated feature branch; inspect their exact-head results separately from the CI gate.

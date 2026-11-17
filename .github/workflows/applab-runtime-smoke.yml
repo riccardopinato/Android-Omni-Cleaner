@@ -11,6 +11,7 @@ on:
       - feature/omni-storage-intelligence-v1-20261116
       - feature/omni-gallery-pro-v1-20261116
       - feature/omni-qa-gallery-review-v1-20261116
+      - feature/omni-scan-engine-2-0-20261117
     paths:
       - 'app/src/**'
       - '.maestro/**'

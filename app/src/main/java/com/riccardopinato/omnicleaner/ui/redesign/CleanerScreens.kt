@@ -477,6 +477,21 @@ internal fun CleanDetailScreen(
                             )
                         }
                     }
+                    if (!state.duplicatesScanned && state.duplicatePreviewGroups.isNotEmpty()) {
+                        items(
+                            state.duplicatePreviewGroups.take(20),
+                            key = { "scan-preview:" + it.files.first().path },
+                        ) { group ->
+                            ResultLine(
+                                title = group.files.first().name,
+                                value = stringResource(
+                                    R.string.pro_duplicate_group,
+                                    group.files.size,
+                                    formatCleanerBytes(group.sizeBytes),
+                                ),
+                            )
+                        }
+                    }
                     if (state.duplicatesScanned && state.visibleDuplicates.isNotEmpty()) {
                         item {
                             StorageCleanupSection(
