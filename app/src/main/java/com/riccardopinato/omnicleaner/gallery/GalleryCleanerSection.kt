@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
+import com.riccardopinato.omnicleaner.cleaner.MediaTrashBatchPolicy
 import com.riccardopinato.omnicleaner.ui.redesign.OmniWelcomeKind
 import com.riccardopinato.omnicleaner.ui.redesign.OmniWelcomePanel
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
@@ -280,6 +281,15 @@ fun GalleryCleanerSection(
                     stringResource(R.string.gallery_selected_for_trash, state.selectedForTrash.size),
                     style = MaterialTheme.typography.bodyMedium,
                 )
+                if (state.selectedForTrash.size > MediaTrashBatchPolicy.MAX_URIS_PER_REQUEST) {
+                    Text(
+                        stringResource(
+                            R.string.gallery_trash_batches,
+                            MediaTrashBatchPolicy.MAX_URIS_PER_REQUEST,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
                 OutlinedButton(
                     onClick = { showQueueReview = true },
                     modifier = Modifier.fillMaxWidth(),

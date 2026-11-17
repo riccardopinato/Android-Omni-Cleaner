@@ -150,6 +150,7 @@ class StorageCleanupEngine(
         snapshots: List<CleanupFileSnapshot>,
     ): FileCleanupPreparation = withContext(Dispatchers.IO) {
         val media = ArrayList<Uri>()
+        val seenMedia = HashSet<Uri>()
         val safeTrash = ArrayList<CleanupFileSnapshot>()
         val blocked = ArrayList<File>()
         val stale = ArrayList<File>()
@@ -174,7 +175,15 @@ class StorageCleanupEngine(
             if (MediaStoreHelper.isMediaFile(file)) {
                 val uri = runCatching { MediaStoreHelper.getMediaUri(context, file) }.getOrNull()
                 if (uri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    media += uri
+                    if (uri in seenMedia) continue
+                    if (seenMedia.size == MediaTrashBatchPolicy.MAX_URIS_PER_REQUEST) {
+                        // Do not silently submit >2,000 Android URIs; the
+                        // remainder is reported as blocked and stays untouched.
+                        blocked += file
+                    } else {
+                        seenMedia += uri
+                        media += uri
+                    }
                 } else {
                     blocked += file
                 }

@@ -240,6 +240,7 @@
     <string name="gallery_loading_next">A carregar página seguinte…</string>
     <string name="gallery_load_more">Carregar mais itens</string>
     <string name="gallery_review_complete">Revisão concluída para todos os itens carregados.</string>
+    <string name="gallery_trash_batches">Android pedirá confirmação para os primeiros %1$d itens. Os restantes continuarão na fila.</string>
     <string name="gallery_selected_for_trash">%1$d itens selecionados para a lixeira</string>
     <string name="gallery_move_android_trash">Mover para a Lixeira do Android</string>
     <string name="gallery_trash_confirm_title">Confirmar lixeira</string>

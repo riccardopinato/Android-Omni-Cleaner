@@ -240,6 +240,7 @@
     <string name="gallery_loading_next">Chargement de la page suivante…</string>
     <string name="gallery_load_more">Charger plus d’éléments</string>
     <string name="gallery_review_complete">Vérification terminée pour tous les éléments chargés.</string>
+    <string name="gallery_trash_batches">Android demandera confirmation pour les %1$d premiers éléments. Les autres resteront en attente.</string>
     <string name="gallery_selected_for_trash">%1$d éléments sélectionnés pour la corbeille</string>
     <string name="gallery_move_android_trash">Déplacer vers la Corbeille Android</string>
     <string name="gallery_trash_confirm_title">Confirmer la mise à la corbeille</string>

@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.Context
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.MediaStoreHelper
+import com.riccardopinato.omnicleaner.cleaner.MediaTrashBatchPolicy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -60,6 +61,8 @@ class GalleryController(
         private set
 
     private val observers = LinkedHashSet<(GalleryUiState) -> Unit>()
+    // Exact selection for one in-flight Android system confirmation.
+    private var inFlightTrashIds: Set<Long> = emptySet()
     private var loadJob: Job? = null
     private var persistJob: Job? = null
     private var sessionLoaded = false
@@ -409,40 +412,45 @@ class GalleryController(
     }
 
     fun createTrashRequest(): PendingIntent? {
-        val uris = state.selectedForTrash.map { it.uri }
-        if (uris.isEmpty()) {
+        if (inFlightTrashIds.isNotEmpty()) return null
+        val selectedBatch = MediaTrashBatchPolicy.firstBatch(state.selectedForTrash)
+        if (selectedBatch.isEmpty()) {
             update(state.copy(error = uiContext.getString(R.string.gallery_error_no_selection)))
             return null
         }
-        val pendingIntent = MediaStoreHelper.trashMediaFiles(context.contentResolver, uris)
+        val pendingIntent = MediaStoreHelper.trashMediaFiles(
+            context.contentResolver, selectedBatch.map { it.uri },
+        )
         if (pendingIntent == null) {
             update(state.copy(error = uiContext.getString(R.string.gallery_error_trash_android11)))
+        } else {
+            inFlightTrashIds = selectedBatch.mapTo(HashSet()) { it.id }
         }
         return pendingIntent
     }
 
     fun onTrashResult(success: Boolean) {
-        if (!success) return
+        val approvedIds = inFlightTrashIds
+        inFlightTrashIds = emptySet()
+        if (!success || approvedIds.isEmpty()) return
         lastUndo = null
-        val removedIds = state.selectedForTrash.mapTo(HashSet()) { it.id }
-        val currentId = state.currentItem?.id
-        val remainingItems = state.items.filterNot { it.id in removedIds }
-        val nextIndex = currentId
-            ?.let { id -> remainingItems.indexOfFirst { it.id == id } }
-            ?.takeIf { it >= 0 }
-            ?: 0
-        val adjustedOffset = (state.sourceOffset - removedIds.size).coerceAtLeast(0)
-        val adjustedLoadedCount = (state.loadedSourceCount - removedIds.size).coerceAtLeast(0)
+
+        val removedFromLoaded = state.items.count { it.id in approvedIds }
+        val removedBeforeCurrent = state.items.take(state.currentIndex)
+            .count { it.id in approvedIds }
+        val remainingItems = state.items.filterNot { it.id in approvedIds }
 
         update(
             state.copy(
                 items = remainingItems,
-                currentIndex = nextIndex.coerceAtMost(remainingItems.size),
-                loadedSourceCount = adjustedLoadedCount,
-                sourceOffset = adjustedOffset,
+                currentIndex = (state.currentIndex - removedBeforeCurrent)
+                    .coerceIn(0, remainingItems.size),
+                loadedSourceCount = (state.loadedSourceCount - removedFromLoaded).coerceAtLeast(0),
+                sourceOffset = (state.sourceOffset - approvedIds.size).coerceAtLeast(0),
                 history = emptyList(),
                 hasPersistedUndo = false,
-                pendingTrashItems = emptyList(),
+                // Later batches must remain user-reviewed, never silently cleared.
+                pendingTrashItems = state.pendingTrashItems.filterNot { it.id in approvedIds },
                 error = null,
             ),
         )

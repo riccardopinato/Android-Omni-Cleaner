@@ -240,6 +240,7 @@
     <string name="gallery_loading_next">Cargando página siguiente…</string>
     <string name="gallery_load_more">Cargar más elementos</string>
     <string name="gallery_review_complete">Revisión completada para todos los elementos cargados.</string>
+    <string name="gallery_trash_batches">Android solicitará confirmación para los primeros %1$d elementos. Los demás seguirán en la cola.</string>
     <string name="gallery_selected_for_trash">%1$d elementos seleccionados para la papelera</string>
     <string name="gallery_move_android_trash">Mover a la Papelera de Android</string>
     <string name="gallery_trash_confirm_title">Confirmar papelera</string>
