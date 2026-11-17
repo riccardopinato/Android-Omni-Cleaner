@@ -209,12 +209,13 @@ internal fun HomeScreen(
             BoxWithConstraints(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
             ) {
+                val useSingleColumn = maxWidth < 340.dp
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
                         text = stringResource(R.string.redesign_quick_actions_title),
                         style = MaterialTheme.typography.titleMedium,
                     )
-                    if (maxWidth < 340.dp) {
+                    if (useSingleColumn) {
                         actions.forEach { action ->
                             OmniModuleCard(
                                 title = action.title,
