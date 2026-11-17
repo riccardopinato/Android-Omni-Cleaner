@@ -24,7 +24,9 @@ import com.riccardopinato.omnicleaner.cleaner.ThresholdUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 internal val COMMON_FILE_EXTENSION_FILTERS: List<String> = listOf(
     "apk", "pdf", "zip", "rar", "7z",
@@ -50,6 +52,11 @@ internal data class CleanerUiState(
     val folders: List<FolderItem> = emptyList(),
     val bigFiles: List<BigFileItem> = emptyList(),
     val duplicates: List<DuplicateGroup> = emptyList(),
+    // These byte-verified groups are preview-only until full scan completion.
+    val duplicatePreviewGroups: List<DuplicateGroup> = emptyList(),
+    val duplicateScanMode: DuplicateScanMode = DuplicateScanMode.REUSE_VERIFIED_INDEX,
+    val duplicateResumeAvailable: Boolean = false,
+    val duplicateScanEpoch: Long = 0L,
     val foldersScanned: Boolean = false,
     val bigFilesScanned: Boolean = false,
     val duplicatesScanned: Boolean = false,
@@ -142,6 +149,7 @@ internal class CleanerController(
 
     private var scanJob: Job? = null
     private var scanGeneration = 0L
+    private val duplicateRecovery = DuplicateScanRecoveryStore(context)
 
     init {
         refreshAccessAndStorage()
@@ -158,6 +166,9 @@ internal class CleanerController(
             folders = if (deepScanAvailable) state.folders else emptyList(),
             bigFiles = if (deepScanAvailable) state.bigFiles else emptyList(),
             duplicates = if (deepScanAvailable) state.duplicates else emptyList(),
+            duplicatePreviewGroups = if (deepScanAvailable) state.duplicatePreviewGroups else emptyList(),
+            duplicateResumeAvailable = deepScanAvailable &&
+                duplicateRecovery.pendingFor(StorageAccess.primaryRoot()) != null,
             foldersScanned = if (deepScanAvailable) state.foldersScanned else false,
             bigFilesScanned = if (deepScanAvailable) state.bigFilesScanned else false,
             duplicatesScanned = if (deepScanAvailable) state.duplicatesScanned else false,
@@ -297,23 +308,52 @@ internal class CleanerController(
         if (state.hasBroadAccess) scanBigFiles(filter.minimumBytes)
     }
 
+    fun updateDuplicateScanMode(mode: DuplicateScanMode) {
+        if (state.scanning) return
+        state = state.copy(duplicateScanMode = mode)
+    }
+
+    fun resumeDuplicates() {
+        if (state.scanning || !state.hasBroadAccess) return
+        val pending = duplicateRecovery.pendingFor(StorageAccess.primaryRoot()) ?: return
+        state = state.copy(
+            fileExtensionFilter = pending.extension,
+            duplicateScanMode = pending.mode,
+        )
+        scanDuplicates()
+    }
+
     fun scanDuplicates() = runScan(uiContext.getString(R.string.module_duplicates)) {
         val selectedExtension = state.fileExtensionFilter
+        val mode = state.duplicateScanMode
+        val root = StorageAccess.primaryRoot()
+        val operationGeneration = scanGeneration
+        val preview = ArrayList<DuplicateGroup>()
+        var lastPreviewPublish = 0L
         state = state.copy(
+            duplicates = emptyList(),
+            duplicatePreviewGroups = emptyList(),
             duplicateProgressProcessed = 0,
             duplicateProgressTotal = 0,
             indexedFilesChecked = 0,
             duplicatesScanned = false,
             duplicateScanExtension = selectedExtension,
+            duplicateScanEpoch = state.duplicateScanEpoch + 1L,
         )
 
+        withContext(Dispatchers.IO) {
+            duplicateRecovery.begin(root, selectedExtension, mode)
+        }
+        state = state.copy(duplicateResumeAvailable = true)
+
         val groups = fileScanner.findDuplicates(
-            root = StorageAccess.primaryRoot(),
+            root = root,
             extensionFilter = selectedExtension,
+            forceRefreshInventory = mode == DuplicateScanMode.REFRESH_INVENTORY,
             onInventoryProgress = { checked, _ ->
                 if (checked % 512 == 0) {
                     scope.launch {
-                        if (state.scanning) {
+                        if (scanGeneration == operationGeneration && state.scanning) {
                             state = state.copy(indexedFilesChecked = checked)
                         }
                     }
@@ -321,7 +361,7 @@ internal class CleanerController(
             },
             onDuplicateProgress = { processed, total ->
                 scope.launch {
-                    if (state.scanning) {
+                    if (scanGeneration == operationGeneration && state.scanning) {
                         state = state.copy(
                             duplicateProgressProcessed = processed,
                             duplicateProgressTotal = total,
@@ -329,11 +369,33 @@ internal class CleanerController(
                     }
                 }
             },
+            onConfirmedGroup = { group ->
+                preview += group
+                val now = System.nanoTime()
+                if (preview.size == 1 || now - lastPreviewPublish >= 250_000_000L) {
+                    lastPreviewPublish = now
+                    val progressSnapshot = preview.sortedByDescending { it.totalWasteBytes }
+                    scope.launch {
+                        if (
+                            scanGeneration == operationGeneration &&
+                            state.scanning &&
+                            !state.duplicatesScanned
+                        ) {
+                            state = state.copy(duplicatePreviewGroups = progressSnapshot)
+                        }
+                    }
+                }
+            },
         )
 
+        withContext(Dispatchers.IO) {
+            duplicateRecovery.complete(root, selectedExtension, mode)
+        }
         state = state.copy(
             duplicates = groups,
+            duplicatePreviewGroups = emptyList(),
             duplicatesScanned = true,
+            duplicateResumeAvailable = false,
             duplicateProgressProcessed = state.duplicateProgressTotal,
         )
     }

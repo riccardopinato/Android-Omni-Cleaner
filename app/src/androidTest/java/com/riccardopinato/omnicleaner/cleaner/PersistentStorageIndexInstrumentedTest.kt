@@ -14,6 +14,37 @@ import org.junit.Test
 class PersistentStorageIndexInstrumentedTest {
 
     @Test
+    fun interruptedDuplicateScanMarkerSurvivesRestartAndScopesModeAndExtension() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val prefsName = "scan2-recovery-${UUID.randomUUID()}"
+        val root = File(context.cacheDir, "scan2-recovery-scope")
+        try {
+            val first = com.riccardopinato.omnicleaner.ui.DuplicateScanRecoveryStore(context, prefsName)
+            first.begin(
+                root, "pdf",
+                com.riccardopinato.omnicleaner.ui.DuplicateScanMode.REFRESH_INVENTORY,
+            )
+            val restarted = com.riccardopinato.omnicleaner.ui.DuplicateScanRecoveryStore(context, prefsName)
+            val marker = requireNotNull(restarted.pendingFor(root))
+            assertEquals("pdf", marker.extension)
+            assertEquals(
+                com.riccardopinato.omnicleaner.ui.DuplicateScanMode.REFRESH_INVENTORY,
+                marker.mode,
+            )
+            assertNull(restarted.pendingFor(File(context.cacheDir, "different-root")))
+            // A prior request cannot clear a newer or differently scoped marker.
+            restarted.complete(root, null, com.riccardopinato.omnicleaner.ui.DuplicateScanMode.REUSE_VERIFIED_INDEX)
+            assertNotNull(restarted.pendingFor(root))
+            restarted.complete(root, "pdf", marker.mode)
+            assertNull(restarted.pendingFor(root))
+        } finally {
+            context.getSharedPreferences(prefsName, android.content.Context.MODE_PRIVATE)
+                .edit().clear().commit()
+        }
+    }
+
+
+    @Test
     fun preparedBatchSessionReusesStrongRevisionHashesAfterRestart() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val databaseName = "scan2-hash-test-${UUID.randomUUID()}.db"

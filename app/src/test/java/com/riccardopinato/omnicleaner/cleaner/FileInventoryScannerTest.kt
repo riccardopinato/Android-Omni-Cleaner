@@ -13,6 +13,35 @@ import kotlin.io.path.createTempDirectory
 class FileInventoryScannerTest {
 
     @Test
+    fun progressiveGroupsOnlyPublishFullyByteVerifiedMatches() = runBlocking {
+        val root = createTempDirectory("omni-progressive-verified-").toFile()
+        try {
+            val edge = ByteArray(64 * 1024) { (it % 127).toByte() }
+            val middle = ByteArray(32 * 1024) { 7 }
+            File(root, "one.bin").writeBytes(edge + middle + edge)
+            File(root, "two.bin").writeBytes(edge + middle + edge)
+            File(root, "same-edge-different.bin").writeBytes(
+                edge + ByteArray(32 * 1024) { 9 } + edge
+            )
+            val provisional = mutableListOf<DuplicateGroup>()
+            val inventory = FileInventoryScanner().collect(root)
+            val groups = FileInventoryScanner().duplicatesProgressive(
+                files = inventory.files,
+                onConfirmedGroup = { provisional += it },
+            )
+            assertEquals(groups.size, provisional.size)
+            assertEquals(1, provisional.size)
+            assertEquals(
+                setOf("one.bin", "two.bin"),
+                provisional.single().files.map { it.name }.toSet(),
+            )
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+
+    @Test
     fun scanCacheSessionIsPreparedOnceAndFlushedAfterVerification() = runBlocking {
         val root = createTempDirectory("omni-scan2-cache-").toFile()
         try {

@@ -23,6 +23,13 @@
     <string name="scan_folders">Scan folders</string>
     <string name="scan_big_files">Find large files</string>
     <string name="scan_duplicates">Find duplicates</string>
+    <string name="scan2_mode_fast">Fast</string>
+    <string name="scan2_mode_full">Full</string>
+    <string name="scan2_mode_fast_hint">Reuses the validated file index where possible; every duplicate is checked against the live file.</string>
+    <string name="scan2_mode_full_hint">Refreshes the accessible file inventory before scanning; files are verified before cleanup.</string>
+    <string name="scan2_resume_explain">A previous scan was interrupted. Run it again using any saved, still-valid hashes; progress restarts.</string>
+    <string name="scan2_resume">Resume duplicate search</string>
+    <string name="scan2_partial_groups">%1$d verified groups found so far. Scan incomplete; cleanup is disabled.</string>
     <string name="omni_scan_verifying_matches">Verifying content matches… The preliminary file check is complete.</string>
     <string name="scan_error">Scan error</string>
 

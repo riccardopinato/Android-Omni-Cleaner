@@ -54,6 +54,7 @@ private enum class CleanupDialog {
 
 /** Keep uncommitted selections in the Activity-root owner across detail pages. */
 class CleanupSelectionUiState {
+    var lastDuplicateScanEpoch: Long = 0L
     val selectedFolders = mutableStateOf<Set<String>>(emptySet())
     val selectedBigFiles = mutableStateOf<Set<String>>(emptySet())
     val selectedDuplicates = mutableStateOf<Set<String>>(emptySet())

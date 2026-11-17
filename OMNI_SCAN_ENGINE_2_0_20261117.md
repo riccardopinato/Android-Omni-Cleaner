@@ -25,3 +25,15 @@ A large file library can make "Find duplicates" look frozen. Step 9.6 already pr
 - [ ] Instrumentation test for session persistence and revision invalidation executed.
 - [ ] Physical run on large library: cold vs warm; candidate count, sample/full hash elapsed time, cache hits, peak workers, battery/thermal.
 - [ ] Physical no-data-loss review + deletion/restore testing; production signing/Play remain separate gates.
+
+## Iteration 2 — Progressively verified previews + safe resume request + scan modes
+
+Source: the head of PR #27, following the first exact-head Android CI PASS.
+
+- **Fast** reuses the shared RAM/persistent inventory when freshness checks pass; **Full** triggers an explicit full inventory refresh and reconciliation. Both run exactly the same byte-identical duplicate detection, with fresh file revisions and safety checks.
+- **Preview-only groups** are published after SHA-256 and byte-for-byte verification, at most approximately 4 UI updates per second. They are held separately from `state.duplicates`, never enter Review Center, never expose cleanup selection or a recoverable-space claim until the scan is complete.
+- **Restart marker** persists the selected root, extension and mode before a long scan begins. On cancellation/process death the next app start offers “Resume” for that exact request. The app **restarts candidate progress from zero**, uses the already persisted strong-revision hashes and always revalidates the current filesystem. This is safe accelerated restart, **not** a durable per-file work cursor.
+- Changing the scan generation clears stale duplicate selections. No new special permission, network usage, model or dependency is required.
+- Source tests: progressive emission excludes same-sample/different-content files; instrumentation covers marker restart/scope and independent cache revision tests.
+
+**Pending evidence:** exact-head CI, AppLab runtime, physical speed/cancellation/restart tests, signed release and destructive-cleanup validation remain required. Do not mark Store-ready solely from source/CI.

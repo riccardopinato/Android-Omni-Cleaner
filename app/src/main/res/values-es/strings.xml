@@ -23,6 +23,13 @@
     <string name="scan_folders">Analizar carpetas</string>
     <string name="scan_big_files">Buscar archivos grandes</string>
     <string name="scan_duplicates">Buscar duplicados</string>
+    <string name="scan2_mode_fast">Rápida</string>
+    <string name="scan2_mode_full">Completa</string>
+    <string name="scan2_mode_fast_hint">Reutiliza el índice validado cuando es posible; cada duplicado se comprueba en el archivo real.</string>
+    <string name="scan2_mode_full_hint">Actualiza el inventario de archivos accesibles antes del análisis; cada archivo se verifica antes de limpiarlo.</string>
+    <string name="scan2_resume_explain">El análisis anterior se interrumpió. Repítelo usando los hashes guardados todavía válidos; el progreso comienza de nuevo.</string>
+    <string name="scan2_resume">Reanudar búsqueda de duplicados</string>
+    <string name="scan2_partial_groups">%1$d grupos verificados hasta ahora. Análisis incompleto: limpieza desactivada.</string>
     <string name="omni_scan_verifying_matches">Verificando archivos coincidentes… El control preliminar ha terminado.</string>
     <string name="scan_error">Error de análisis</string>
 

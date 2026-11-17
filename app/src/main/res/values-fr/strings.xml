@@ -23,6 +23,13 @@
     <string name="scan_folders">Analyser les dossiers</string>
     <string name="scan_big_files">Rechercher les gros fichiers</string>
     <string name="scan_duplicates">Rechercher les doublons</string>
+    <string name="scan2_mode_fast">Rapide</string>
+    <string name="scan2_mode_full">Complète</string>
+    <string name="scan2_mode_fast_hint">Réutilise l’index validé quand c’est possible ; chaque doublon est vérifié sur le fichier réel.</string>
+    <string name="scan2_mode_full_hint">Actualise l’inventaire des fichiers accessibles avant l’analyse ; vérification avant tout nettoyage.</string>
+    <string name="scan2_resume_explain">L’analyse précédente a été interrompue. Relancez-la avec les empreintes valides enregistrées ; la progression repart à zéro.</string>
+    <string name="scan2_resume">Reprendre la recherche des doublons</string>
+    <string name="scan2_partial_groups">%1$d groupes vérifiés pour l’instant. Analyse incomplète : nettoyage désactivé.</string>
     <string name="omni_scan_verifying_matches">Vérification des fichiers correspondants… Le contrôle préliminaire est terminé.</string>
     <string name="scan_error">Erreur d’analyse</string>
 

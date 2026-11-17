@@ -74,6 +74,7 @@ import com.riccardopinato.omnicleaner.monetization.MonetizationSection
 import com.riccardopinato.omnicleaner.monetization.PremiumEntitlementStore
 import com.riccardopinato.omnicleaner.monetization.findActivity
 import com.riccardopinato.omnicleaner.monetization.rememberMonetizationRuntime
+import com.riccardopinato.omnicleaner.ui.DuplicateScanMode
 import com.riccardopinato.omnicleaner.ui.CleanerController
 import com.riccardopinato.omnicleaner.ui.COMMON_FILE_EXTENSION_FILTERS
 import com.riccardopinato.omnicleaner.ui.OmniCleanerViewModel
@@ -248,6 +249,12 @@ internal fun CleanDetailScreen(
         controller.refreshAccessAndStorage()
         controller.scanOverview()
     }
+    LaunchedEffect(state.duplicateScanEpoch) {
+        if (selectionState.lastDuplicateScanEpoch != state.duplicateScanEpoch) {
+            selectionState.selectedDuplicates.value = emptySet()
+            selectionState.lastDuplicateScanEpoch = state.duplicateScanEpoch
+        }
+    }
     LazyColumn(
         modifier = modifier.fillMaxSize().testTag("omni_clean_detail_${tool.name.lowercase(Locale.ROOT)}"),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -282,6 +289,45 @@ internal fun CleanDetailScreen(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     ) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            if (tool == CleanerToolRoute.DUPLICATES && !state.scanning) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    FilterChip(
+                                        selected = state.duplicateScanMode == DuplicateScanMode.REUSE_VERIFIED_INDEX,
+                                        onClick = {
+                                            controller.updateDuplicateScanMode(DuplicateScanMode.REUSE_VERIFIED_INDEX)
+                                        },
+                                        label = { Text(stringResource(R.string.scan2_mode_fast)) },
+                                    )
+                                    FilterChip(
+                                        selected = state.duplicateScanMode == DuplicateScanMode.REFRESH_INVENTORY,
+                                        onClick = {
+                                            controller.updateDuplicateScanMode(DuplicateScanMode.REFRESH_INVENTORY)
+                                        },
+                                        label = { Text(stringResource(R.string.scan2_mode_full)) },
+                                    )
+                                }
+                                Text(
+                                    stringResource(
+                                        if (state.duplicateScanMode == DuplicateScanMode.REFRESH_INVENTORY)
+                                            R.string.scan2_mode_full_hint
+                                        else R.string.scan2_mode_fast_hint
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                if (state.duplicateResumeAvailable) {
+                                    Text(
+                                        stringResource(R.string.scan2_resume_explain),
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                    OutlinedButton(
+                                        onClick = controller::resumeDuplicates,
+                                        modifier = Modifier.fillMaxWidth()
+                                            .testTag("omni_resume_duplicates"),
+                                    ) {
+                                        Text(stringResource(R.string.scan2_resume))
+                                    }
+                                }
+                            }
                             if (state.scanning) {
                                 if (tool == CleanerToolRoute.DUPLICATES &&
                                     state.duplicateProgressTotal > 0 &&
@@ -419,7 +465,19 @@ internal fun CleanDetailScreen(
                             )
                         }
                     }
-                    if (state.visibleDuplicates.isNotEmpty()) {
+                    if (!state.duplicatesScanned && state.duplicatePreviewGroups.isNotEmpty()) {
+                        item {
+                            ResultSummaryCard(
+                                title = stringResource(R.string.module_duplicates),
+                                subtitle = stringResource(
+                                    R.string.scan2_partial_groups,
+                                    state.duplicatePreviewGroups.size,
+                                ),
+                                accent = OmniRose,
+                            )
+                        }
+                    }
+                    if (state.duplicatesScanned && state.visibleDuplicates.isNotEmpty()) {
                         item {
                             StorageCleanupSection(
                                 folders = emptyList(),

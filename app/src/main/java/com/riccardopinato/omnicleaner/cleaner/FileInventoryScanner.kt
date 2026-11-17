@@ -130,6 +130,7 @@ class FileInventoryScanner {
         files: List<IndexedFile>,
         hashCache: DuplicateHashCache? = null,
         parallelism: Int = boundedHashWorkerCount(),
+        onConfirmedGroup: ((DuplicateGroup) -> Unit)? = null,
         onProgress: ((processed: Int, total: Int) -> Unit)? = null,
     ): List<DuplicateGroup> = withContext(Dispatchers.IO) {
         val bySize = uniquePhysicalFiles(files)
@@ -275,7 +276,7 @@ class FileInventoryScanner {
 
                         if (sorted.any { !unchanged(it) }) continue
 
-                        result += DuplicateGroup(
+                        val confirmedGroup = DuplicateGroup(
                             hash = hash,
                             sizeBytes = sorted.first().size,
                             files = sorted.map { item ->
@@ -291,6 +292,10 @@ class FileInventoryScanner {
                                 )
                             },
                         )
+                        result += confirmedGroup
+                        // Callback is read-only. The cleanup model is populated
+                        // only by the caller after the whole scan succeeds.
+                        onConfirmedGroup?.invoke(confirmedGroup)
                     }
                 }
             }
