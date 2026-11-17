@@ -138,6 +138,12 @@ fun SafeTrashSection() {
                 }
                 if (entries.isEmpty() && trashReadable && unrecognizedEntries == 0) {
                     Text(stringResource(R.string.safe_trash_empty), style = MaterialTheme.typography.bodySmall)
+                } else if (entries.isEmpty() && unrecognizedEntries > 0) {
+                    OutlinedButton(
+                        enabled = !loading,
+                        onClick = { loading = true; scope.launch { reload() } },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(stringResource(R.string.refresh)) }
                 } else if (entries.isNotEmpty()) {
                     if (!canRestore) {
                         Text(

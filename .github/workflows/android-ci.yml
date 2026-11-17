@@ -101,9 +101,9 @@ jobs:
             exit 1
           }
 
-      - name: Fast pull-request verification
+      - name: Verify feature source, release code and instrumentation APK
         if: github.event_name == 'pull_request' || github.ref == 'refs/heads/feature/omni-scan-engine-2-0-20261117'
-        run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest --stacktrace
+        run: ./gradlew lintDebug lintRelease testDebugUnitTest assembleDebug assembleDebugAndroidTest assembleRelease bundleRelease --stacktrace
 
       - name: Show exact failing JVM assertions
         if: failure()

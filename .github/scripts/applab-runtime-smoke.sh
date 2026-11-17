@@ -14,7 +14,8 @@ SOURCE_BRANCH="${OMNI_SOURCE_BRANCH:-${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-}}}"
 if [[ "$SOURCE_BRANCH" == "audit/omni-safety-ux-360-20261115" ||
       "$SOURCE_BRANCH" == "feature/omni-storage-intelligence-v1-20261116" ||
       "$SOURCE_BRANCH" == "feature/omni-gallery-pro-v1-20261116" ||
-      "$SOURCE_BRANCH" == "feature/omni-qa-gallery-review-v1-20261116" ]]; then
+      "$SOURCE_BRANCH" == "feature/omni-qa-gallery-review-v1-20261116" ||
+      "$SOURCE_BRANCH" == "feature/omni-scan-engine-2-0-20261117" ]]; then
   echo "[Omni/AppLab] running device-backed connectedDebugAndroidTest..."
   (
     cd "$GITHUB_WORKSPACE/target"

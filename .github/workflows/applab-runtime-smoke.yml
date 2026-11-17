@@ -153,6 +153,26 @@ jobs:
           if [[ -s "$GITHUB_WORKSPACE/applab-runtime-smoke/result.json" ]]; then
             cat "$GITHUB_WORKSPACE/applab-runtime-smoke/result.json"
           fi
+          # Persist failure diagnosis in the run log even when GitHub artifact
+          # uploads are unavailable. A visual FAIL must not be masked.
+          for report in visual-journey.md visual-qa.md; do
+            if [[ -s "$GITHUB_WORKSPACE/applab-runtime-smoke/$report" ]]; then
+              echo "===== $report ====="
+              cat "$GITHUB_WORKSPACE/applab-runtime-smoke/$report"
+            fi
+          done
+          if [[ -s "$GITHUB_WORKSPACE/applab-runtime-smoke/visual-journey.json" ]]; then
+            echo "===== visual-journey.json bounded summary ====="
+            python3 - "$GITHUB_WORKSPACE/applab-runtime-smoke/visual-journey.json" <<'PY'
+          import json, sys
+          from pathlib import Path
+          try:
+              result = json.loads(Path(sys.argv[1]).read_text())
+              print(json.dumps(result, ensure_ascii=False, indent=2)[:16000])
+          except (OSError, json.JSONDecodeError) as exc:
+              print("Could not read detailed visual failure:", exc)
+          PY
+          fi
           if [[ -s "$GITHUB_WORKSPACE/applab-runtime-smoke/interaction-crawl.md" ]]; then
             echo "===== APPLAB INTERACTION CRAWL ====="
             cat "$GITHUB_WORKSPACE/applab-runtime-smoke/interaction-crawl.md"
