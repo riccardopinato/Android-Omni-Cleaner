@@ -18,7 +18,15 @@ class SafeTrashStorageInstrumentedTest {
     @Test
     fun fiftyMebibyteApkCanBeRestoredThenPurgedOnAndroidRuntime() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val root = File(context.cacheDir, "omni-purge-${UUID.randomUUID()}").apply { mkdirs() }
+        // PathSafety intentionally blocks /data and Android/data. Exercise
+        // the actual shared-storage File API with a uniquely scoped fixture.
+        val command = "appops set ${context.packageName} MANAGE_EXTERNAL_STORAGE allow"
+        val shell = InstrumentationRegistry.getInstrumentation().uiAutomation
+            .executeShellCommand(command)
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(shell).use { it.readBytes() }
+        val root = File(StorageAccess.primaryRoot(), "OmniCleanerQA-${UUID.randomUUID()}")
+            .apply { mkdirs() }
+        assertTrue("Shared-storage fixture requires authorized Deep Cleaning", root.isDirectory)
         try {
             val trash = File(root, "safe-trash")
             val file = File(root, "fixture.apk")
