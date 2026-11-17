@@ -12,6 +12,57 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PersistentStorageIndexInstrumentedTest {
+
+    @Test
+    fun preparedBatchSessionReusesStrongRevisionHashesAfterRestart() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val databaseName = "scan2-hash-test-${UUID.randomUUID()}.db"
+        val root = File(context.cacheDir, "scan2-hash-${UUID.randomUUID()}").apply { mkdirs() }
+        val a = File(root, "a.bin").apply { writeText("same bytes") }
+        val b = File(root, "b.bin").apply { writeText("same bytes") }
+        try {
+            val inventory = FileInventoryScanner().collect(root)
+            val index = PersistentStorageIndex(context, databaseName)
+            index.reconcileFull(root, inventory, completedAtMillis = 10_000L)
+            val items = inventory.files
+            // A platform without a strong change token must not reuse hashes.
+            if (items.any { it.revision == null }) return@runBlocking
+
+            val digest = FileInventoryScanner().digest(a)
+            val session = index.newScanCache()
+            session.prepare(items)
+            assertNull(session.sampleHash(items.first()))
+            for (item in items) {
+                session.putSampleHash(item, digest)
+                session.putFullHash(item, digest)
+            }
+            session.flush()
+
+            val restarted = PersistentStorageIndex(context, databaseName)
+            val warm = restarted.newScanCache()
+            warm.prepare(items)
+            for (item in items) {
+                assertEquals(digest, warm.sampleHash(item))
+                assertEquals(digest, warm.fullHash(item))
+            }
+            warm.flush()
+
+            b.writeText("changed bytes")
+            val changed = FileInventoryScanner().collect(root)
+            restarted.reconcileFull(root, changed, completedAtMillis = 20_000L)
+            val invalidated = restarted.newScanCache()
+            invalidated.prepare(changed.files)
+            assertNull(invalidated.sampleHash(changed.files.first { it.file.name == "b.bin" }))
+            invalidated.flush()
+        } finally {
+            root.deleteRecursively()
+            context.deleteDatabase(databaseName)
+            context.getSharedPreferences(
+                "storage_index_state_$databaseName", android.content.Context.MODE_PRIVATE,
+            ).edit().clear().commit()
+        }
+    }
+
     @Test
     fun persistedInventorySurvivesRepositoryObjectRestartAndInvalidatesChangedHash() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext

@@ -283,9 +283,43 @@ internal fun CleanDetailScreen(
                     ) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             if (state.scanning) {
-                                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                                Text(state.currentOperation.orEmpty(),
-                                    style = MaterialTheme.typography.bodySmall)
+                                if (tool == CleanerToolRoute.DUPLICATES &&
+                                    state.duplicateProgressTotal > 0 &&
+                                    state.duplicateProgressProcessed < state.duplicateProgressTotal
+                                ) {
+                                    LinearProgressIndicator(
+                                        progress = {
+                                            (state.duplicateProgressProcessed.toFloat() /
+                                                state.duplicateProgressTotal).coerceIn(0f, 1f)
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                    Text(
+                                        stringResource(
+                                            R.string.duplicate_scan_progress,
+                                            state.duplicateProgressProcessed,
+                                            state.duplicateProgressTotal,
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                } else {
+                                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                    Text(
+                                        when {
+                                            tool == CleanerToolRoute.DUPLICATES &&
+                                                state.duplicateProgressTotal > 0 ->
+                                                stringResource(R.string.omni_scan_verifying_matches)
+                                            tool == CleanerToolRoute.DUPLICATES &&
+                                                state.indexedFilesChecked > 0 ->
+                                                stringResource(
+                                                    R.string.scan_indexing_files_count,
+                                                    state.indexedFilesChecked,
+                                                )
+                                            else -> state.currentOperation.orEmpty()
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
                                 Button(onClick = controller::cancelScan) {
                                     Text(stringResource(R.string.cancel))
                                 }

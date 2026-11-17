@@ -10,6 +10,40 @@ import java.io.File
 import kotlin.io.path.createTempDirectory
 
 class FileInventoryScannerTest {
+
+    @Test
+    fun scanCacheSessionIsPreparedOnceAndFlushedAfterVerification() = runBlocking {
+        val root = createTempDirectory("omni-scan2-cache-").toFile()
+        try {
+            File(root, "a.bin").writeText("identical")
+            File(root, "b.bin").writeText("identical")
+            val inventory = FileInventoryScanner().collect(root)
+            var prepareCalls = 0
+            var preparedPaths = emptySet<String>()
+            var flushCalls = 0
+            val cache = object : DuplicateHashCache {
+                override fun prepare(items: List<IndexedFile>) {
+                    prepareCalls++
+                    preparedPaths = items.map { it.file.name }.toSet()
+                }
+                override fun flush() { flushCalls++ }
+                override fun sampleHash(item: IndexedFile): String? = null
+                override fun fullHash(item: IndexedFile): String? = null
+                override fun putSampleHash(item: IndexedFile, hash: String) = Unit
+                override fun putFullHash(item: IndexedFile, hash: String) = Unit
+            }
+            val result = FileInventoryScanner().duplicatesProgressive(
+                inventory.files, hashCache = cache,
+            )
+            assertEquals(1, result.size)
+            assertEquals(1, prepareCalls)
+            assertEquals(setOf("a.bin", "b.bin"), preparedPaths)
+            assertEquals(1, flushCalls)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
     @Test
     fun detectsByteIdenticalDuplicates() = runBlocking {
         val root = createTempDirectory("omni-duplicates-").toFile()

@@ -158,7 +158,9 @@ class FileInventoryScanner {
         }
 
         val workerCount = parallelism.coerceAtLeast(1)
-
+        // One bulk SQLite read replaces one indexed query for each candidate.
+        hashCache?.prepare(bySize.flatten())
+        try {
         for (sameSize in bySize) {
             coroutineContext.ensureActive()
 
@@ -295,6 +297,11 @@ class FileInventoryScanner {
         }
 
         result.sortedByDescending { it.totalWasteBytes }
+        } finally {
+            // Persist bounded batches even when the user cancels the scan.
+            // No scan completion state is published by this flush.
+            hashCache?.flush()
+        }
     }
 
     suspend fun identical(first: File, second: File): Boolean = withContext(Dispatchers.IO) {

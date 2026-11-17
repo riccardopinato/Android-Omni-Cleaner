@@ -23,6 +23,7 @@
     <string name="scan_folders">Analyser les dossiers</string>
     <string name="scan_big_files">Rechercher les gros fichiers</string>
     <string name="scan_duplicates">Rechercher les doublons</string>
+    <string name="omni_scan_verifying_matches">Vérification des fichiers correspondants… Le contrôle préliminaire est terminé.</string>
     <string name="scan_error">Erreur d’analyse</string>
 
     <string name="module_storage_overview">Vue d’ensemble du stockage</string>

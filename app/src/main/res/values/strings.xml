@@ -23,6 +23,7 @@
     <string name="scan_folders">Scan folders</string>
     <string name="scan_big_files">Find large files</string>
     <string name="scan_duplicates">Find duplicates</string>
+    <string name="omni_scan_verifying_matches">Verifying content matches… The preliminary file check is complete.</string>
     <string name="scan_error">Scan error</string>
 
     <string name="module_storage_overview">Storage overview</string>
