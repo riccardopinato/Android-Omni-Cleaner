@@ -105,6 +105,25 @@ jobs:
         if: github.event_name == 'pull_request' || github.ref == 'refs/heads/feature/omni-scan-engine-2-0-20261117'
         run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest --stacktrace
 
+      - name: Show exact failing JVM assertions
+        if: failure()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          for path in Path("app/build/test-results/testDebugUnitTest").glob("TEST-*.xml"):
+              try:
+                  root = ET.parse(path).getroot()
+                  for case in root.iter("testcase"):
+                      for failure in case.findall("failure"):
+                          print(f"FAIL {case.get('classname')}::{case.get('name')}")
+                          print(failure.get("message", ""))
+                          print((failure.text or "")[:4000])
+              except Exception as error:
+                  print(f"Could not parse {path}: {error}")
+          PY
+
       - name: Full main/manual verification
         if: github.event_name != 'pull_request' && github.ref != 'refs/heads/feature/omni-scan-engine-2-0-20261117'
         run: ./gradlew lintDebug lintRelease testDebugUnitTest assembleDebug assembleDebugAndroidTest assembleRelease bundleRelease --stacktrace
