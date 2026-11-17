@@ -17,6 +17,14 @@ data class SafeTrashEntry(
     val sha256: String,
 )
 
+/** Unknown entries are never silently purged or hidden as empty storage. */
+data class SafeTrashInventory(
+    val entries: List<SafeTrashEntry>,
+    val totalPayloadBytes: Long,
+    val unrecognizedEntries: Int,
+    val readable: Boolean,
+)
+
 enum class SafeTrashRestoreStatus {
     RESTORED,
     ENTRY_NOT_FOUND,
@@ -78,31 +86,33 @@ class SafeTrashManager private constructor(
             !PathSafety.isSymlink(trashDirectory) &&
             PathSafety.isWithinRoot(trashDirectory, restoreRoot)
 
-    fun listEntries(): List<SafeTrashEntry> {
-        if (!isPersistentTrashAvailable()) return emptyList()
-        return trashDirectory.listFiles()
-            .orEmpty()
-            .asSequence()
-            .filter { it.isDirectory }
-            .mapNotNull(::readEntry)
-            .sortedByDescending { entry ->
-                File(trashDirectory, entry.id).lastModified()
+    fun inspect(): SafeTrashInventory {
+        if (!isPersistentTrashAvailable()) {
+            return SafeTrashInventory(emptyList(), 0L, 0, readable = false)
+        }
+        val children = trashDirectory.listFiles()
+            ?: return SafeTrashInventory(emptyList(), 0L, 0, readable = false)
+
+        val valid = ArrayList<SafeTrashEntry>(children.size)
+        var bytes = 0L
+        var unrecognized = 0
+        for (child in children) {
+            val payload = File(child, PAYLOAD_NAME)
+            if (payload.isFile && !PathSafety.isSymlink(payload)) {
+                bytes += payload.length().coerceAtLeast(0L)
             }
-            .toList()
+            val entry = if (child.isDirectory && !PathSafety.isSymlink(child) &&
+                ENTRY_ID_PATTERN.matches(child.name)
+            ) readEntry(child) else null
+            if (entry == null) unrecognized++ else valid += entry
+        }
+        valid.sortByDescending { File(trashDirectory, it.id).lastModified() }
+        return SafeTrashInventory(valid, bytes, unrecognized, readable = true)
     }
 
-    fun getTrashSize(): Long {
-        if (!isPersistentTrashAvailable()) return 0L
-        return trashDirectory.listFiles()
-            .orEmpty()
-            .sumOf { entry ->
-                File(entry, PAYLOAD_NAME)
-                    .takeIf { it.isFile && !PathSafety.isSymlink(it) }
-                    ?.length()
-                    ?.coerceAtLeast(0L)
-                    ?: 0L
-            }
-    }
+    fun listEntries(): List<SafeTrashEntry> = inspect().entries
+
+    fun getTrashSize(): Long = inspect().totalPayloadBytes
 
     fun moveToTrash(snapshot: CleanupFileSnapshot): File? {
         if (!CleanupSnapshotValidator.validate(snapshot).valid) return null

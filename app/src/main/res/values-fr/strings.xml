@@ -172,6 +172,7 @@
 
     <string name="safe_trash_body">Les fichiers ici occupent encore de l’espace. Vous pouvez les restaurer sans écraser de fichiers existants ou les supprimer définitivement.</string>
     <string name="safe_trash_summary">%1$d éléments · %2$s</string>
+    <string name="safe_trash_unrecognized">%1$d éléments inconnus ou incomplets ont été conservés par sécurité. Ils ne seront pas supprimés automatiquement.</string>
     <string name="safe_trash_empty">La Corbeille sécurisée est vide.</string>
     <string name="safe_trash_restore_access">Réactivez le Nettoyage approfondi pour restaurer les fichiers à leur emplacement d’origine. Vous pouvez tout de même vider la corbeille privée.</string>
     <string name="safe_trash_purge_count_bytes">Éléments à supprimer définitivement : %1$d · %2$s. Cette action est irréversible.</string>

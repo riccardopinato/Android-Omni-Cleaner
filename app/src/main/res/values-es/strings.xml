@@ -172,6 +172,7 @@
 
     <string name="safe_trash_body">Los archivos aquí siguen ocupando espacio. Puedes restaurarlos sin sobrescribir archivos existentes o eliminarlos permanentemente.</string>
     <string name="safe_trash_summary">%1$d elementos · %2$s</string>
+    <string name="safe_trash_unrecognized">Se conservaron %1$d elementos desconocidos o incompletos por seguridad. No se eliminarán automáticamente.</string>
     <string name="safe_trash_empty">La Papelera segura está vacía.</string>
     <string name="safe_trash_restore_access">Vuelve a activar Limpieza profunda para restaurar archivos en su ruta original. Aun así puedes vaciar la papelera privada.</string>
     <string name="safe_trash_purge_count_bytes">Elementos para eliminar definitivamente: %1$d · %2$s. Esta acción no se puede deshacer.</string>

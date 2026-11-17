@@ -48,6 +48,8 @@ fun SafeTrashSection() {
     var entries by remember { mutableStateOf<List<SafeTrashEntry>>(emptyList()) }
     var visibleEntryLimit by remember { mutableStateOf(12) }
     var trashBytes by remember { mutableStateOf(0L) }
+    var unrecognizedEntries by remember { mutableStateOf(0) }
+    var trashReadable by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var persistentAvailable by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<SafeTrashMessage?>(null) }
@@ -57,16 +59,12 @@ fun SafeTrashSection() {
     val persistentTrashAvailable = manager.isPersistentTrashAvailable()
 
     suspend fun reload() {
-        val snapshot = withContext(Dispatchers.IO) {
-            Triple(
-                manager.listEntries(),
-                manager.getTrashSize(),
-                manager.isPersistentTrashAvailable(),
-            )
-        }
-        entries = snapshot.first
-        trashBytes = snapshot.second
-        persistentAvailable = snapshot.third
+        val snapshot = withContext(Dispatchers.IO) { manager.inspect() }
+        entries = snapshot.entries
+        trashBytes = snapshot.totalPayloadBytes
+        unrecognizedEntries = snapshot.unrecognizedEntries
+        trashReadable = snapshot.readable
+        persistentAvailable = snapshot.readable
         loading = false
     }
 
@@ -131,9 +129,16 @@ fun SafeTrashSection() {
                     style = MaterialTheme.typography.bodyMedium,
                 )
 
-                if (entries.isEmpty()) {
+                if (unrecognizedEntries > 0) {
+                    Text(
+                        stringResource(R.string.safe_trash_unrecognized, unrecognizedEntries),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                if (entries.isEmpty() && trashReadable && unrecognizedEntries == 0) {
                     Text(stringResource(R.string.safe_trash_empty), style = MaterialTheme.typography.bodySmall)
-                } else {
+                } else if (entries.isNotEmpty()) {
                     if (!canRestore) {
                         Text(
                             stringResource(R.string.safe_trash_restore_access),

@@ -172,6 +172,7 @@
 
     <string name="safe_trash_body">Os ficheiros aqui continuam a ocupar espaço. Pode restaurá-los sem substituir ficheiros existentes ou eliminá-los permanentemente.</string>
     <string name="safe_trash_summary">%1$d itens · %2$s</string>
+    <string name="safe_trash_unrecognized">%1$d itens desconhecidos ou incompletos foram preservados por segurança. Não serão eliminados automaticamente.</string>
     <string name="safe_trash_empty">A Lixeira segura está vazia.</string>
     <string name="safe_trash_restore_access">Reative a Limpeza profunda para restaurar ficheiros no caminho original. Ainda pode esvaziar a lixeira privada.</string>
     <string name="safe_trash_purge_count_bytes">Itens a eliminar definitivamente: %1$d · %2$s. Esta ação não pode ser anulada.</string>

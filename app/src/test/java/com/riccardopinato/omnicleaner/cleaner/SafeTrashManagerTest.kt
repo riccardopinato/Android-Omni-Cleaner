@@ -12,6 +12,29 @@ import java.util.UUID
 import kotlin.io.path.createTempDirectory
 
 class SafeTrashManagerTest {
+    @Test
+    fun inventoryExposesUnknownAndPartialEntriesWithoutDeletingThem() {
+        val root = createTempDirectory("omni-trash-inventory-").toFile()
+        val trash = File(root, "trash")
+        try {
+            val manager = SafeTrashManager.forTests(trash, root)
+            assertNotNull(manager.moveToTrash(File(root, "good.apk").apply { writeText("ok") }))
+            val corrupt = File(trash, UUID.randomUUID().toString()).apply { mkdirs() }
+            val orphan = File(corrupt, "payload").apply { writeText("valuable-partial") }
+            val unknown = File(trash, "unidentified.txt").apply { writeText("keep") }
+
+            val inventory = manager.inspect()
+            assertTrue(inventory.readable)
+            assertEquals(1, inventory.entries.size)
+            assertEquals(2, inventory.unrecognizedEntries)
+            assertEquals(2L + orphan.length(), inventory.totalPayloadBytes)
+            assertTrue(orphan.exists())
+            assertTrue(unknown.exists())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
 
     @Test
     fun permanentDeletionOfLargeApkIsConfirmedAndReturnsItsBytes() {

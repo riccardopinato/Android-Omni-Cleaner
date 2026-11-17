@@ -173,6 +173,7 @@
 
     <string name="safe_trash_body">Files here still occupy storage. You can restore them without overwriting existing files, or delete them permanently.</string>
     <string name="safe_trash_summary">%1$d items · %2$s</string>
+    <string name="safe_trash_unrecognized">%1$d unrecognized or incomplete Trash items were retained for safety. They cannot be deleted automatically.</string>
     <string name="safe_trash_empty">Safe Trash is empty.</string>
     <string name="safe_trash_restore_access">Re-enable Deep Cleaning to restore files to their original path. You can still empty the private trash.</string>
     <string name="safe_trash_purge_count_bytes">Items to permanently delete: %1$d · %2$s. This cannot be undone.</string>

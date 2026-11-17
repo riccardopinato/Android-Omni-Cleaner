@@ -173,6 +173,7 @@
 
     <string name="safe_trash_body">I file qui dentro occupano ancora spazio. Puoi ripristinarli senza sovrascrivere file esistenti oppure eliminarli definitivamente.</string>
     <string name="safe_trash_summary">%1$d elementi · %2$s</string>
+    <string name="safe_trash_unrecognized">%1$d elementi del cestino non riconosciuti o incompleti sono stati conservati per sicurezza. Non verranno eliminati automaticamente.</string>
     <string name="safe_trash_empty">Safe Trash vuoto.</string>
     <string name="safe_trash_restore_access">Per ripristinare nel percorso originale riattiva Pulizia Profonda. Puoi comunque svuotare il cestino privato.</string>
     <string name="safe_trash_purge_count_bytes">Elementi da eliminare definitivamente: %1$d · %2$s. Non è possibile annullare.</string>
