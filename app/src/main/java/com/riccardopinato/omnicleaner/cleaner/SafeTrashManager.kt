@@ -113,7 +113,8 @@ class SafeTrashManager private constructor(
 
         val originalSize = file.length().coerceAtLeast(0L)
         val originalModified = file.lastModified().coerceAtLeast(0L)
-        if (originalSize > MAX_SMALL_FILE_TRASH_BYTES) return null
+        // Bounded reversible cleanup includes large installers; never delete directly.
+        if (originalSize > MAX_REVERSIBLE_TRASH_BYTES) return null
         if (expectedSize != null && originalSize != expectedSize) return null
         if (expectedModified != null && originalModified != expectedModified) return null
 
@@ -159,10 +160,13 @@ class SafeTrashManager private constructor(
                     runCatching { sha256(payload) }.getOrNull() == originalHash
             if (validPayload) return payload
 
-            runCatching {
-                if (!file.exists()) payload.renameTo(file)
-            }
-            entry.deleteRecursively()
+            // Never delete the relocated payload unless rollback succeeded:
+            // otherwise the only remaining copy could be lost.
+            val rolledBack = runCatching {
+                !file.exists() && payload.isFile && payload.renameTo(file)
+            }.getOrDefault(false)
+            if (rolledBack) entry.deleteRecursively()
+            // Failed rollback: retain payload plus metadata for recovery.
             return null
         }
 
@@ -175,7 +179,7 @@ class SafeTrashManager private constructor(
         val copied = runCatching {
             FileInputStream(file).use { input ->
                 FileOutputStream(payload).use { output ->
-                    input.copyTo(output)
+                    input.copyTo(output, bufferSize = FILE_IO_BUFFER_BYTES)
                     output.fd.sync()
                 }
             }
@@ -263,7 +267,7 @@ class SafeTrashManager private constructor(
         val copied = runCatching {
             FileInputStream(payload).use { input ->
                 FileOutputStream(temp).use { output ->
-                    input.copyTo(output)
+                    input.copyTo(output, bufferSize = FILE_IO_BUFFER_BYTES)
                     output.fd.sync()
                 }
             }
@@ -340,8 +344,8 @@ class SafeTrashManager private constructor(
 
         FileInputStream(first).use { left ->
             FileInputStream(second).use { right ->
-                val leftBuffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                val rightBuffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                val leftBuffer = ByteArray(FILE_IO_BUFFER_BYTES)
+                val rightBuffer = ByteArray(FILE_IO_BUFFER_BYTES)
                 var compared = 0L
 
                 while (true) {
@@ -415,15 +419,21 @@ class SafeTrashManager private constructor(
                 continue
             }
 
-            val target = File(trashDirectory, legacyEntry.name)
-            if (target.exists()) {
-                if (isVerifiedMigrationCopy(legacyPayload, target)) {
-                    legacyEntry.deleteRecursively()
-                    continue
-                }
-                target.deleteRecursively()
+            val preferredTarget = File(trashDirectory, legacyEntry.name)
+            if (
+                preferredTarget.exists() &&
+                isVerifiedMigrationCopy(legacyPayload, preferredTarget)
+            ) {
+                legacyEntry.deleteRecursively()
+                continue
             }
-
+            // A collision may contain user data: never delete it.
+            // Use a fresh ID when an incomplete or different entry exists.
+            val target = if (preferredTarget.exists()) {
+                File(trashDirectory, UUID.randomUUID().toString())
+            } else {
+                preferredTarget
+            }
             if (!target.mkdirs()) continue
 
             val targetMetadata = File(target, METADATA_NAME)
@@ -467,7 +477,7 @@ class SafeTrashManager private constructor(
     private fun copyAndSync(source: File, destination: File) {
         FileInputStream(source).use { input ->
             FileOutputStream(destination).use { output ->
-                input.copyTo(output)
+                input.copyTo(output, bufferSize = FILE_IO_BUFFER_BYTES)
                 output.fd.sync()
             }
         }
@@ -532,7 +542,7 @@ class SafeTrashManager private constructor(
     private fun sha256(file: File): String {
         val digest = MessageDigest.getInstance("SHA-256")
         FileInputStream(file).use { input ->
-            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            val buffer = ByteArray(FILE_IO_BUFFER_BYTES)
             while (true) {
                 val read = input.read(buffer)
                 if (read <= 0) break
@@ -543,7 +553,9 @@ class SafeTrashManager private constructor(
     }
 
     internal companion object {
-        const val MAX_SMALL_FILE_TRASH_BYTES: Long = 10L * 1024L * 1024L
+        // Supports common APKs without unbounded cross-volume copy fallback.
+        const val MAX_REVERSIBLE_TRASH_BYTES: Long = 512L * 1024L * 1024L
+        private const val FILE_IO_BUFFER_BYTES = 256 * 1024
         private const val COPY_FREE_SPACE_MARGIN_BYTES: Long = 1L * 1024L * 1024L
         private const val PAYLOAD_NAME = "payload"
         private const val METADATA_NAME = "original.properties"

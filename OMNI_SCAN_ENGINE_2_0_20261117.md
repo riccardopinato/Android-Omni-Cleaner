@@ -43,3 +43,15 @@ Source: the head of PR #27, following the first exact-head Android CI PASS.
 - First commit `4b0b45b64d7325e3bd24578b6ba1330dc2125cf9`: exact-head [Android CI PASS](https://github.com/riccardopinato/Android-Omni-Cleaner/actions/runs/44043905535).
 - Preview card now lists up to 20 **read-only** confirmed groups by representative filename, count and individual size. These are not inserted into cleanup queues.
 - Trigger AppLab runtime and real emulator screenshot workflows on the dedicated feature branch; inspect their exact-head results separately from the CI gate.
+
+## Iteration 3 — Large APK Safe Trash hotfix
+
+User-reported P0: 50 MiB APK duplicates were excluded by a hardcoded 10 MiB non-media Safe Trash limit. The cleaner keeps a verified keeper for every duplicate group: two pairs yield at most two trash candidates.
+
+- Raised reversible Safe Trash cap to **512 MiB** in preparation and execution, never adding permanent-delete fallback.
+- Increased hashing/copy/byte-comparison buffers to **256 KiB** with bounded memory use.
+- Fixed failed post-rename rollback: do not delete a payload that might be the only surviving copy.
+- Fixed legacy migration collisions: preserve existing target, migrate verified legacy entry under a fresh ID when necessary.
+- Added JVM regression tests for 50 MiB move/list/restore and >512 MiB refusal; extended incomplete-migration test to require preservation of existing payload.
+
+Still require exact-head CI, Android emulator/provider tests and physical-device cleanup/restore validation.

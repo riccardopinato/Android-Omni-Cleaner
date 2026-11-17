@@ -181,7 +181,7 @@ class StorageCleanupEngine(
                 continue
             }
 
-            if (file.length() <= SafeTrashManager.MAX_SMALL_FILE_TRASH_BYTES) {
+            if (file.length() <= SafeTrashManager.MAX_REVERSIBLE_TRASH_BYTES) {
                 val digestBound = CleanupSnapshotValidator.withCurrentDigest(snapshot)
                 if (digestBound != null) {
                     safeTrash += digestBound
@@ -189,7 +189,7 @@ class StorageCleanupEngine(
                     stale += file
                 }
             } else {
-                // No irreversible fallback: large non-media files stay untouched.
+                // No irreversible fallback: over-limit non-media files stay untouched.
                 blocked += file
             }
         }
