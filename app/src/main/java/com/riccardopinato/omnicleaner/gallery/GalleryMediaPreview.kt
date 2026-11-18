@@ -13,13 +13,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -105,38 +106,47 @@ fun GalleryMediaPreview(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val currentBitmap = bitmap
         if (currentBitmap != null) {
-            Image(
-                bitmap = currentBitmap.asImageBitmap(),
-                contentDescription = item.name,
-                // Never crop photographs or video frames in the review surface.
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(previewFrameAspectRatio(currentBitmap.width, currentBitmap.height))
-                    .heightIn(max = 340.dp)
-                    .graphicsLayer {
-                        translationX = dragX
-                        rotationZ = (dragX / 60f).coerceIn(-5f, 5f)
-                    }
-                    .clip(RoundedCornerShape(18.dp))
-                    .pointerInput(item.id) {
-                        detectHorizontalDragGestures(
-                            onDragEnd = {
-                                when (gallerySwipeDirection(dragX, thresholdPx)) {
-                                    SwipeDirection.KEEP -> onKeep()
-                                    SwipeDirection.TRASH -> onTrash()
-                                    null -> Unit
-                                }
-                                dragX = 0f
-                            },
-                            onDragCancel = { dragX = 0f },
-                            onHorizontalDrag = { change, amount ->
-                                change.consume()
-                                dragX += amount
-                            },
-                        )
-                    },
-            )
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                // The compact review card shows the *entire* item via Fit; the
+                // fullscreen dialog remains available for original-proportion inspection.
+                // A bounded frame keeps Keep/Trash and Open photo in easy reach
+                // even for 9:16 camera portraits.
+                val imageRatio = previewFrameAspectRatio(
+                    currentBitmap.width,
+                    currentBitmap.height,
+                )
+                val frameHeight = (maxWidth / imageRatio).coerceIn(170.dp, 240.dp)
+                Image(
+                    bitmap = currentBitmap.asImageBitmap(),
+                    contentDescription = item.name,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(frameHeight)
+                        .graphicsLayer {
+                            translationX = dragX
+                            rotationZ = (dragX / 60f).coerceIn(-5f, 5f)
+                        }
+                        .clip(RoundedCornerShape(18.dp))
+                        .pointerInput(item.id) {
+                            detectHorizontalDragGestures(
+                                onDragEnd = {
+                                    when (gallerySwipeDirection(dragX, thresholdPx)) {
+                                        SwipeDirection.KEEP -> onKeep()
+                                        SwipeDirection.TRASH -> onTrash()
+                                        null -> Unit
+                                    }
+                                    dragX = 0f
+                                },
+                                onDragCancel = { dragX = 0f },
+                                onHorizontalDrag = { change, amount ->
+                                    change.consume()
+                                    dragX += amount
+                                },
+                            )
+                        },
+                )
+            }
         } else {
             Box(
                 modifier = Modifier
