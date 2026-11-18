@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
@@ -70,13 +71,8 @@ fun GalleryCleanerSection(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(stringResource(R.string.module_gallery_cleaner), style = MaterialTheme.typography.titleLarge)
-            Text(
-                stringResource(R.string.gallery_body),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
+            // Parent ModuleScreen already provides title and the safety explanation.
+            // Avoid duplicating that header, which pushes review controls below the fold.
             if (!state.hasAccess) {
                 Button(
                     onClick = { permissionLauncher.launch(GalleryAccess.requiredPermissions()) },
@@ -115,22 +111,31 @@ fun GalleryCleanerSection(
                     }
                 }
 
-                OutlinedButton(
-                    onClick = controller::cycleSortOrder,
+                Row(
                     modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(stringResource(R.string.gallery_sort, gallerySortLabel(state.sortOrder)))
-                }
+                    OutlinedButton(
+                        onClick = controller::cycleSortOrder,
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.gallery_sort, gallerySortLabel(state.sortOrder)),
+                            maxLines = 2,
+                        )
+                    }
 
-                Button(
-                    onClick = { controller.load() },
-                    enabled = !state.loading,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        if (state.items.isEmpty()) stringResource(R.string.gallery_load)
-                        else stringResource(R.string.gallery_reload),
-                    )
+                    Button(
+                        onClick = { controller.load() },
+                        enabled = !state.loading,
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    ) {
+                        Text(
+                            if (state.items.isEmpty()) stringResource(R.string.gallery_load)
+                            else stringResource(R.string.gallery_reload),
+                            maxLines = 2,
+                        )
+                    }
                 }
             }
 
@@ -167,7 +172,12 @@ fun GalleryCleanerSection(
                     onKeep = controller::keepCurrent,
                     onTrash = controller::trashCurrent,
                 )
-                Text(current.name, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    current.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(
                     buildString {
                         append(current.formattedSize)

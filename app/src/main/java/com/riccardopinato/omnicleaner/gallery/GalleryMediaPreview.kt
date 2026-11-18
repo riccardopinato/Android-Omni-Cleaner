@@ -113,6 +113,7 @@ fun GalleryMediaPreview(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(previewFrameAspectRatio(currentBitmap.width, currentBitmap.height))
+                    .heightIn(max = 340.dp)
                     .graphicsLayer {
                         translationX = dragX
                         rotationZ = (dragX / 60f).coerceIn(-5f, 5f)
