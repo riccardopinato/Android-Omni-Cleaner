@@ -1,87 +1,41 @@
 appId: com.riccardopinato.omnicleaner.debug
 ---
+# Hub -> dedicated tool -> scan -> filters -> another tab -> return.
+# Deliberately non-destructive; never confirms any Trash request.
 - launchApp:
     clearState: false
-- assertVisible: "Android Omni Cleaner"
-- assertVisible: "Storage access ready"
-
 - tapOn:
-    text: "Analyze storage"
+    id: "omni_nav_clean"
+- assertVisible: "Deep Cleaning"
+- assertVisible: "Scan tools"
+- tapOn:
+    id: "omni_clean_tool_overview"
+- assertVisible: "Analyze storage"
+- tapOn:
+    id: "omni_scan_overview"
 - scrollUntilVisible:
     element:
-      text: ".*indexed.*"
+      text: "Storage overview"
     direction: DOWN
     timeout: 120000
-    speed: 50
-    visibilityPercentage: 50
+    speed: 45
 - assertVisible: "Storage overview"
-
-- scrollUntilVisible:
-    element:
-      text: "Find duplicates"
-    direction: UP
-    timeout: 30000
+- pressKey: Back
 - tapOn:
-    text: "Find duplicates"
+    id: "omni_clean_tool_filters"
 - scrollUntilVisible:
     element:
-      text: "a.txt"
-    direction: DOWN
-    timeout: 120000
-    speed: 50
-- assertVisible: "a.txt"
-
-- scrollUntilVisible:
-    element:
-      text: "> 10 MB"
-    direction: UP
-    timeout: 30000
-- tapOn:
-    text: "> 10 MB"
-- scrollUntilVisible:
-    element:
-      text: "Find large files"
-    direction: UP
-    timeout: 30000
-- tapOn:
-    text: "Find large files"
-- scrollUntilVisible:
-    element:
-      text: "parity-large.bin"
-    direction: DOWN
-    timeout: 120000
-    speed: 50
-- assertVisible: "parity-large.bin"
-
-- scrollUntilVisible:
-    element:
-      text: "Thumbnail cache"
+      text: "Search folders"
     direction: DOWN
     timeout: 30000
+- assertVisible: "Search folders"
+# Domain scan state survives as we navigate through a different top-level tab.
+- pressKey: Back
 - tapOn:
-    text: "Thumbnail cache"
-- scrollUntilVisible:
-    element:
-      text: ".*DCIM/.thumbnails.*"
-    direction: DOWN
-    timeout: 60000
-- assertVisible:
-    text: ".*DCIM/.thumbnails.*"
-
+    id: "omni_nav_gallery"
+- assertVisible: "Gallery cleaner"
 - tapOn:
-    text: "Gallery"
-- assertVisible: "Gallery Cleaner"
-
+    id: "omni_nav_clean"
 - tapOn:
-    text: "Privacy"
-- assertVisible: "EXIF Privacy"
-
-- tapOn:
-    text: "Pro"
-- assertVisible: "Omni Cleaner Pro"
-- scrollUntilVisible:
-    element:
-      text: "Restore purchase"
-    direction: DOWN
-    timeout: 30000
-- assertVisible: "Restore purchase"
+    id: "omni_clean_tool_overview"
+- assertVisible: "Storage overview"

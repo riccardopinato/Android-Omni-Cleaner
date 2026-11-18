@@ -1,13 +1,22 @@
 project:
   repository: riccardopinato/Android-Omni-Cleaner
-  status: STEP10_RC1_SOURCE_FREEZE_SIGNING_GATE_PENDING
+  status: V1_1_APPROVED_APK_CANONICAL_DEVELOPMENT_NOT_STORE_READY
   recovery_started_at: 2026-10-09
-  current_maxi_step: "10"
+  user_approved_apk_commit: 837b66d8c860b0bc13b0a96a7c508b5b680e7f56
+  approved_apk_sha256: 7d5623a46439ddf87b52526aa5914fee5d32b571825fc48a220bdee1c4c0e68b
+  canonical_development_source_commit: 1f626905a58b124b41fff6be535ede5aa8f62e86
+  previous_main_snapshot_branch: backup/omni-main-before-apk-baseline-20261118
+  previous_main_snapshot_commit: 62bdd4ce2173e7145d4ae22d66c6256c2d17c9ad
+  approved_apk_snapshot_branch: backup/omni-user-approved-apk-837b66d8-20261118
+  current_maxi_step: "v1.1"
 
 factory:
   repository: riccardopinato/App-Factory-Core
   commit_sha: 03406ef5e511dfc580b67967c67a11ab58e20141
-  master_version: "26.3"
+  master_version: "26.3" # historical recovery baseline; CURRENT governs new work
+  latest_resolved_factory_sha: a8d20ceb71ce9e9e16e6756d257d611fa6f1e0ec
+  latest_resolved_master_version: "27"
+  latest_resolved_golden_index_version: 29
   golden_index_version: 15
   golden_registry_version: 2
   performance_goldens_merged: true

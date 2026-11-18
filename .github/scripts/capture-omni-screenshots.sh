@@ -1,0 +1,291 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+: "${APK_PATH:?APK_PATH must point to the exact-head debug APK}"
+: "${GITHUB_WORKSPACE:?GITHUB_WORKSPACE is required}"
+
+PKG="com.riccardopinato.omnicleaner.debug"
+OUTPUT="$GITHUB_WORKSPACE/omni-design-screenshots"
+mkdir -p "$OUTPUT"/maestro
+
+# Keep actionable evidence if Maestro/device startup fails.
+capture_failure() {
+  adb shell screencap -p /sdcard/omni-visual-failure.png >/dev/null 2>&1 || true
+  adb pull /sdcard/omni-visual-failure.png "$OUTPUT/failure-screen.png" >/dev/null 2>&1 || true
+  adb logcat -d -t 350 > "$OUTPUT/failure-logcat.txt" 2>/dev/null || true
+  adb shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1 || true
+  adb pull /sdcard/window.xml "$OUTPUT/failure-window.xml" >/dev/null 2>&1 || true
+}
+trap capture_failure ERR
+
+# Reproducible empty emulator, English interface, light theme, normal font.
+adb wait-for-device
+adb shell settings put system font_scale 1.0
+adb shell cmd uimode night no || true
+adb install -r -t "$APK_PATH"
+adb shell appops set "$PKG" MANAGE_EXTERNAL_STORAGE allow || true
+
+cat > "$OUTPUT/visual-capture.yaml" <<'FLOW'
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+# Fresh install, do not revoke app-ops after granting storage access.
+# Default startup route IS Home. Do not tap a tab before Compose is ready.
+- extendedWaitUntil:
+    visible: "Smart cleaning"
+    timeout: 90000
+- takeScreenshot: 01-home
+- tapOn:
+    id: "omni_nav_clean"
+- assertVisible: "Deep Cleaning"
+- takeScreenshot: 02-clean
+- tapOn:
+    id: "omni_nav_gallery"
+- assertVisible: "Gallery cleaner"
+- takeScreenshot: 03-gallery
+- tapOn:
+    id: "omni_nav_privacy"
+- assertVisible: "EXIF privacy"
+- takeScreenshot: 04-privacy
+- tapOn:
+    id: "omni_nav_pro"
+- assertVisible: "Omni Cleaner Pro"
+- takeScreenshot: 05-pro
+FLOW
+
+maestro test --test-output-dir "$OUTPUT/maestro" "$OUTPUT/visual-capture.yaml"
+
+# Maestro stores takeScreenshot images in a nested per-flow artifact folder.
+# Copy those actual pixels into a stable, user-friendly artifact layout.
+for name in 01-home 02-clean 03-gallery 04-privacy 05-pro; do
+  candidate="$(find "$OUTPUT/maestro" -type f -name "$name.png" -print -quit)"
+  if [[ -z "$candidate" ]]; then
+    echo "::error::Missing Maestro screenshot $name.png"
+    find "$OUTPUT/maestro" -type f \( -name "*.png" -o -name "*.jpg" \) -print || true
+    exit 1
+  fi
+  cp "$candidate" "$OUTPUT/$name.png"
+  test -s "$OUTPUT/$name.png"
+  file "$OUTPUT/$name.png"
+done
+
+# Dedicated detail screens are rendered independently, with Android Back.
+cat > "$OUTPUT/detail-capture.yaml" <<'DETAIL_FLOW'
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    id: "omni_nav_clean"
+- tapOn:
+    id: "omni_clean_tool_duplicates"
+- assertVisible: "Find duplicates"
+- takeScreenshot: 06-clean-duplicates
+- pressKey: Back
+- scrollUntilVisible:
+    element:
+      id: "omni_clean_tool_filters"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "omni_clean_tool_filters"
+- assertVisible: "Filters & thresholds"
+- takeScreenshot: 07-clean-filters
+- pressKey: Back
+- tapOn:
+    id: "omni_nav_privacy"
+- tapOn:
+    id: "omni_privacy_quick"
+- assertVisible: "Choose one JPEG photo"
+- takeScreenshot: 08-privacy-quick
+- pressKey: Back
+- tapOn:
+    id: "omni_privacy_batch"
+- assertVisible: "Choose photo folder"
+- takeScreenshot: 09-privacy-batch
+- pressKey: Back
+- tapOn:
+    id: "omni_nav_pro"
+- tapOn:
+    id: "omni_pro_manage"
+- assertVisible: "Restore purchase"
+- takeScreenshot: 10-pro-manage
+- pressKey: Back
+- tapOn:
+    id: "omni_nav_clean"
+- tapOn:
+    id: "omni_clean_tool_intelligence"
+- assertVisible: "Storage Intelligence"
+- tapOn:
+    id: "omni_storage_intelligence_scan"
+- extendedWaitUntil:
+    visible: "Storage map"
+    timeout: 120000
+- takeScreenshot: 12-storage-intelligence
+- pressKey: Back
+- tapOn:
+    id: "omni_nav_gallery"
+- tapOn:
+    id: "omni_gallery_open_pro"
+- assertVisible: "Gallery Pro"
+- takeScreenshot: 13-gallery-pro
+- pressKey: Back
+- tapOn:
+    id: "omni_nav_clean"
+- tapOn:
+    id: "omni_clean_tool_review"
+- assertVisible:
+    id: "omni_review_center"
+- takeScreenshot: 14-review-center
+DETAIL_FLOW
+# Synthetic, disposable emulator fixture to verify a *nonempty* visual
+# storage map. The first five screenshots are captured before this is created.
+# These paths belong to the short-lived GitHub runner, never a user's device.
+adb shell mkdir -p /sdcard/Download/OmniStorageQA /sdcard/Documents/OmniStorageQA /sdcard/Music/OmniStorageQA
+adb shell "dd if=/dev/zero of=/sdcard/Download/OmniStorageQA/installer.apk bs=1024 count=256 >/dev/null 2>&1"
+adb shell "dd if=/dev/zero of=/sdcard/Documents/OmniStorageQA/guide.pdf bs=1024 count=384 >/dev/null 2>&1"
+adb shell "dd if=/dev/zero of=/sdcard/Music/OmniStorageQA/archive.zip bs=1024 count=128 >/dev/null 2>&1"
+mkdir -p "$OUTPUT/maestro-details"
+maestro test --test-output-dir "$OUTPUT/maestro-details" "$OUTPUT/detail-capture.yaml"
+for name in 06-clean-duplicates 07-clean-filters 08-privacy-quick 09-privacy-batch 10-pro-manage 12-storage-intelligence 13-gallery-pro 14-review-center; do
+  candidate="$(find "$OUTPUT/maestro-details" -type f -name "$name.png" -print -quit)"
+  if [[ -z "$candidate" ]]; then
+    echo "::error::Missing detail screenshot $name.png"
+    exit 1
+  fi
+  cp "$candidate" "$OUTPUT/$name.png"
+  test -s "$OUTPUT/$name.png"
+done
+
+# Produce an actual H.264/MP4 clip inside the disposable Android emulator.
+# Android screenrecord uses platform MediaCodec, so CI has no FFmpeg/apt dependency.
+# Recorded frames are app fixture pixels, never personal media.
+adb shell mkdir -p /sdcard/Movies/OmniQA
+if ! adb shell screenrecord --time-limit 3 --size 640x360 --bit-rate 500000 \
+      /sdcard/Movies/OmniQA/omni-qa-landscape.mp4; then
+  echo "::error::VIDEO_FIXTURE_FAILED: Android screenrecord could not encode native MP4"
+  exit 1
+fi
+video_bytes="$(adb shell stat -c %s /sdcard/Movies/OmniQA/omni-qa-landscape.mp4 2>/dev/null | tr -d '\r' || true)"
+if [[ ! "$video_bytes" =~ ^[0-9]+$ ]] || (( video_bytes < 2048 )); then
+  echo "::error::VIDEO_FIXTURE_EMPTY: native MP4 missing or too small ($video_bytes bytes)"
+  exit 1
+fi
+echo "VIDEO_FIXTURE_OK: native MediaCodec MP4, $video_bytes bytes"
+adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
+   -d file:///sdcard/Movies/OmniQA/omni-qa-landscape.mp4 || true
+adb shell cmd media scan-file /sdcard/Movies/OmniQA/omni-qa-landscape.mp4 || true
+adb shell pm grant "$PKG" android.permission.READ_MEDIA_IMAGES || true
+adb shell pm grant "$PKG" android.permission.READ_MEDIA_VIDEO || true
+adb shell am force-stop "$PKG" || true
+sleep 5
+if ! adb shell content query --uri content://media/external/video/media \
+    --projection _display_name | grep -q "omni-qa-landscape.mp4"; then
+  echo "::error::VIDEO_NOT_INDEXED: synthetic MP4 missing from Android MediaStore"
+  exit 1
+fi
+cat > "$OUTPUT/video-capture.yaml" <<'VIDEO_FLOW'
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+# Dismiss only the external Pixel Launcher ANR modal, if present.
+- tapOn:
+    text: "Close app"
+    optional: true
+- tapOn:
+    id: "omni_nav_gallery"
+- tapOn: "Videos only"
+- tapOn: "Load gallery"
+- tapOn:
+    id: "omni_gallery_open_review"
+- assertVisible:
+    id: "omni_gallery_media_full"
+- tapOn:
+    id: "omni_gallery_video_play"
+- takeScreenshot: 11-video-playing
+- tapOn:
+    id: "omni_gallery_immersive_open"
+- assertVisible: "Close"
+- assertVisible:
+    id: "omni_gallery_immersive_content"
+- tapOn:
+    id: "omni_gallery_video_play"
+- takeScreenshot: 15-video-immersive
+- tapOn:
+    id: "omni_gallery_immersive_close"
+- assertVisible:
+    id: "omni_gallery_media_full"
+VIDEO_FLOW
+mkdir -p "$OUTPUT/maestro-video"
+if ! maestro test --test-output-dir "$OUTPUT/maestro-video" "$OUTPUT/video-capture.yaml"; then
+  echo "::error::VIDEO_IMMERSIVE_QA_FAILED: native player or fullscreen review flow"
+  exit 1
+fi
+for name in 11-video-playing 15-video-immersive; do
+  found="$(find "$OUTPUT/maestro-video" -type f -name "$name.png" -print -quit)"
+  if [[ -z "$found" ]]; then
+    echo "::error::Missing required video screenshot: $name"
+    exit 1
+  fi
+  cp "$found" "$OUTPUT/$name.png"
+done
+echo "VIDEO_IMMERSIVE_SMOKE_PASS: native MediaStore MP4, playback, fullscreen, Close"
+
+# Visual regression coverage for the intended light/dark, large-font responsive
+# shell. This is an independent emulator flow, not Play/physical certification.
+adb shell settings put system font_scale 1.5
+adb shell cmd uimode night yes || true
+adb shell am force-stop "$PKG" || true
+cat > "$OUTPUT/dark-large-capture.yaml" <<'DARK_LARGE'
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+# Some Android 35 emulator images show a system Pixel Launcher ANR on top
+# of the correctly running app. Dismiss ONLY that launcher process, not
+# a genuine Android Omni Cleaner crash/ANR, before asserting product UI.
+- tapOn:
+    text: "Close app"
+    optional: true
+- extendedWaitUntil:
+    visible: "Smart cleaning"
+    timeout: 90000
+- takeScreenshot: 16-home-dark-large
+- tapOn:
+    id: "omni_nav_clean"
+- takeScreenshot: 17-clean-dark-large
+- tapOn:
+    id: "omni_nav_gallery"
+- takeScreenshot: 18-gallery-dark-large
+- tapOn:
+    id: "omni_nav_privacy"
+- takeScreenshot: 19-privacy-dark-large
+- tapOn:
+    id: "omni_nav_pro"
+- takeScreenshot: 20-pro-dark-large
+DARK_LARGE
+mkdir -p "$OUTPUT/maestro-dark-large"
+maestro test --test-output-dir "$OUTPUT/maestro-dark-large" "$OUTPUT/dark-large-capture.yaml"
+for name in 16-home-dark-large 17-clean-dark-large 18-gallery-dark-large 19-privacy-dark-large 20-pro-dark-large; do
+  screenshot="$(find "$OUTPUT/maestro-dark-large" -type f -name "$name.png" -print -quit)"
+  if [[ -z "$screenshot" ]]; then
+    echo "::error::Missing dark/large accessibility screenshot: $name"
+    exit 1
+  fi
+  cp "$screenshot" "$OUTPUT/$name.png"
+done
+adb shell settings put system font_scale 1.0
+adb shell cmd uimode night no || true
+
+cat > "$OUTPUT/README.txt" <<EOF
+Android Omni Cleaner: five genuine Android emulator screenshots.
+Git commit: ${OMNI_SOURCE_SHA:-${GITHUB_SHA:-unknown}}
+Source: debug APK assembled from this commit on the workflow runner.
+Device: Google APIs x86_64, Pixel 7 Pro, Android API 35
+Theme: light normal and dark font-scale 1.5; no personal user data.
+Screens: 01-home, 02-clean, 03-gallery, 04-privacy, 05-pro, dedicated tools, video, and Storage Intelligence.
+The storage map contains synthetic QA files only; numbers are not real device claims.
+Evidence: UI only. No real physical device or Play certification.
+EOF
+echo "Primary, detail, and dark/large screenshots captured; indexed video fullscreen is a hard QA gate."

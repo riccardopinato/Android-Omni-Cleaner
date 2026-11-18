@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/omni_launcher_background" />
-    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <!-- Keep Android 13+ launcher artwork identical to the approved Android 8+ icon.
+         This v33 resource overrides mipmap-anydpi-v26 on recent Android versions. -->
+    <background android:drawable="@drawable/omni_premium_icon_background" />
+    <foreground android:drawable="@drawable/omni_approved_adaptive_foreground" />
     <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
 </adaptive-icon>

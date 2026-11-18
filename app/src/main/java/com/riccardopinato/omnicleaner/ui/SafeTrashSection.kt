@@ -6,13 +6,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.SafeTrashEntry
 import com.riccardopinato.omnicleaner.cleaner.SafeTrashManager
+import com.riccardopinato.omnicleaner.cleaner.SafeTrashPurgeStatus
 import com.riccardopinato.omnicleaner.cleaner.SafeTrashRestoreStatus
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
@@ -45,25 +46,25 @@ fun SafeTrashSection() {
     }
 
     var entries by remember { mutableStateOf<List<SafeTrashEntry>>(emptyList()) }
+    var visibleEntryLimit by remember { mutableStateOf(12) }
     var trashBytes by remember { mutableStateOf(0L) }
+    var unrecognizedEntries by remember { mutableStateOf(0) }
+    var trashReadable by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var persistentAvailable by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<SafeTrashMessage?>(null) }
     var confirmEmpty by remember { mutableStateOf(false) }
+    var pendingIndividualDelete by remember { mutableStateOf<SafeTrashEntry?>(null) }
     val canRestore = StorageAccess.hasBroadAccess(context)
     val persistentTrashAvailable = manager.isPersistentTrashAvailable()
 
     suspend fun reload() {
-        val snapshot = withContext(Dispatchers.IO) {
-            Triple(
-                manager.listEntries(),
-                manager.getTrashSize(),
-                manager.isPersistentTrashAvailable(),
-            )
-        }
-        entries = snapshot.first
-        trashBytes = snapshot.second
-        persistentAvailable = snapshot.third
+        val snapshot = withContext(Dispatchers.IO) { manager.inspect() }
+        entries = snapshot.entries
+        trashBytes = snapshot.totalPayloadBytes
+        unrecognizedEntries = snapshot.unrecognizedEntries
+        trashReadable = snapshot.readable
+        persistentAvailable = snapshot.readable
         loading = false
     }
 
@@ -128,9 +129,22 @@ fun SafeTrashSection() {
                     style = MaterialTheme.typography.bodyMedium,
                 )
 
-                if (entries.isEmpty()) {
+                if (unrecognizedEntries > 0) {
+                    Text(
+                        stringResource(R.string.safe_trash_unrecognized, unrecognizedEntries),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                if (entries.isEmpty() && trashReadable && unrecognizedEntries == 0) {
                     Text(stringResource(R.string.safe_trash_empty), style = MaterialTheme.typography.bodySmall)
-                } else {
+                } else if (entries.isEmpty() && unrecognizedEntries > 0) {
+                    OutlinedButton(
+                        enabled = !loading,
+                        onClick = { loading = true; scope.launch { reload() } },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(stringResource(R.string.refresh)) }
+                } else if (entries.isNotEmpty()) {
                     if (!canRestore) {
                         Text(
                             stringResource(R.string.safe_trash_restore_access),
@@ -139,7 +153,7 @@ fun SafeTrashSection() {
                         )
                     }
 
-                    entries.take(12).forEach { entry ->
+                    entries.take(visibleEntryLimit).forEach { entry ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -185,9 +199,26 @@ fun SafeTrashSection() {
                             ) {
                                 Text(stringResource(R.string.action_restore))
                             }
+                            TextButton(
+                                enabled = persistentAvailable && !loading,
+                                onClick = { pendingIndividualDelete = entry },
+                            ) {
+                                Text(
+                                    stringResource(R.string.action_delete),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            }
                         }
                     }
 
+                    if (entries.size > visibleEntryLimit) {
+                        OutlinedButton(
+                            onClick = {
+                                visibleEntryLimit = (visibleEntryLimit + 30).coerceAtMost(entries.size)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text(stringResource(R.string.audit_show_more)) }
+                    }
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
                             enabled = !loading,
@@ -200,7 +231,7 @@ fun SafeTrashSection() {
                             Text(stringResource(R.string.refresh))
                         }
                         Button(
-                            enabled = !loading && trashBytes > 0L,
+                            enabled = !loading && persistentAvailable && entries.isNotEmpty(),
                             onClick = { confirmEmpty = true },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
@@ -222,14 +253,68 @@ fun SafeTrashSection() {
         }
     }
 
+    pendingIndividualDelete?.let { entry ->
+        AlertDialog(
+            onDismissRequest = { pendingIndividualDelete = null },
+            title = { Text(stringResource(R.string.audit_trash_delete_title)) },
+            text = {
+                Text(
+                    stringResource(R.string.audit_trash_delete_body, entry.originalName) +
+                        "\n" + formatSafeTrashBytes(entry.sizeBytes),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingIndividualDelete = null
+                        loading = true
+                        scope.launch {
+                            val result = withContext(Dispatchers.IO) {
+                                runCatching { manager.purgeEntry(entry.id) }.getOrNull()
+                            }
+                            val success = result?.status == SafeTrashPurgeStatus.DELETED
+                            message = SafeTrashMessage(
+                                if (success) R.string.audit_trash_item_deleted
+                                else R.string.audit_trash_item_failed,
+                                if (success) listOf(
+                                    formatSafeTrashBytes(result?.reclaimedBytes ?: 0L),
+                                ) else emptyList(),
+                            )
+                            reload()
+                            if (success) CleanupEventBus.publishCompleted()
+                        }
+                    },
+                ) {
+                    Text(
+                        stringResource(R.string.safe_trash_delete_permanently),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingIndividualDelete = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
     if (confirmEmpty) {
         AlertDialog(
             onDismissRequest = { confirmEmpty = false },
             title = { Text(stringResource(R.string.safe_trash_empty_confirm_title)) },
             text = {
-                Text(
-                    stringResource(R.string.safe_trash_empty_confirm_body),
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.safe_trash_empty_confirm_body))
+                    Text(
+                        stringResource(
+                            R.string.safe_trash_purge_count_bytes,
+                            entries.size,
+                            formatSafeTrashBytes(trashBytes),
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
             },
             confirmButton = {
                 TextButton(
@@ -237,23 +322,26 @@ fun SafeTrashSection() {
                         confirmEmpty = false
                         loading = true
                         scope.launch {
-                            val before = withContext(Dispatchers.IO) { manager.getTrashSize() }
-                            val completed = withContext(Dispatchers.IO) { manager.emptyTrash() }
-                            val after = withContext(Dispatchers.IO) { manager.getTrashSize() }
-                            val reclaimed = (before - after).coerceAtLeast(0L)
-                            message = if (completed) {
+                            val result = withContext(Dispatchers.IO) {
+                                runCatching { manager.purgeAll() }.getOrNull()
+                            }
+                            message = if (result?.completed == true) {
                                 SafeTrashMessage(
                                     R.string.safe_trash_emptied,
-                                    listOf(formatSafeTrashBytes(reclaimed)),
+                                    listOf(formatSafeTrashBytes(result.reclaimedBytes)),
                                 )
                             } else {
                                 SafeTrashMessage(
                                     R.string.safe_trash_partial_empty,
-                                    listOf(formatSafeTrashBytes(reclaimed)),
+                                    listOf(
+                                        formatSafeTrashBytes(result?.reclaimedBytes ?: 0L),
+                                    ),
                                 )
                             }
                             reload()
-                            if (reclaimed > 0L) CleanupEventBus.publishCompleted()
+                            if ((result?.deletedEntries ?: 0) > 0) {
+                                CleanupEventBus.publishCompleted()
+                            }
                         }
                     },
                 ) {

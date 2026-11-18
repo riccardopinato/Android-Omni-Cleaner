@@ -1,0 +1,22 @@
+appId: com.riccardopinato.omnicleaner.debug
+---
+# Read-only Gallery Pro verification, with no Trash action.
+- launchApp:
+    clearState: false
+- tapOn:
+    id: "omni_nav_gallery"
+- assertVisible: "Gallery cleaner"
+- tapOn:
+    id: "omni_gallery_open_pro"
+- assertVisible: "Gallery Pro"
+- assertVisible: "Video analysis"
+- tapOn:
+    id: "omni_gallery_pro_video_search"
+- inputText: "mp4"
+- pressKey: Back
+- scrollUntilVisible:
+    element:
+      text: "Potentially similar photos"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Potentially similar photos"

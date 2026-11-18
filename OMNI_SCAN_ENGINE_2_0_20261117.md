@@ -1,0 +1,76 @@
+# Omni Scan Engine 2.0 — Batch Hash I/O + actionable progress
+
+Status: IMPLEMENTED IN FEATURE BRANCH; source/CI/AppLab/physical gates still required.
+Parent: `integration/omni-v1-1-software-verified-20261116` (not frozen `main`).
+
+## Why
+A large file library can make "Find duplicates" look frozen. Step 9.6 already provides a shared SQLite inventory, 64-KiB edge samples, bounded 1–4 hash workers, and full SHA-256/byte verification. Scan 2.0 avoids repeated per-file SQLite read roundtrips and per-file autocommit writes.
+
+## Changes
+- **Single-use per-scan cache sessions**: explicitly prepare eligible same-size candidate hashes from SQLite with 250-path bounded IN batches. Check exact path, size, mtime, device/inode, and high-resolution ctime; no cache reuse without strong revision.
+- **64-write transaction batches**: sample/full SHA-256 writes persist with bounded transactions. The final pending batch is flushed even on cooperative cancellation; on abrupt process death, at most the pending batch can be lost. The next scan recomputes missing hashes.
+- **No schema migration and no new dependency**: existing private SQLite index stays authoritative for *accelerating reads only*, not for cleanup decisions.
+- **UI**: Duplicates screen shows candidate sample progress, and a separate indeterminate verification stage after preliminary samples complete. Progress does not claim scan completion while final byte comparisons are running.
+- **Correctness preserved**: original alias collapse, SHA-256, final byte-for-byte comparison, keeper checking and deletion revalidation remain untouched. One scan session does not share uncommitted hashes with a cancelled session.
+
+## Limits
+- This change is not a semantic/AI search model.
+- It does not implement a durable cursor checkpoint or interruption-resume of the entire scan; already committed hashes are the bounded reusable work.
+- The full filesystem inventory can still be cold when the directory fingerprint or MediaStore generation changed; 120-second RAM cache, 6-hour indexed warm reuse and manual refresh are unchanged.
+- Physical speedup is **not measured yet**. Do not claim this fixes every long-running scan until exact-APK device benchmarks exist.
+
+## Acceptance
+- [ ] Exact-head Android CI + JVM tests + localization parity PASS.
+- [ ] AppLab Duplicates route and cancel/restart flow PASS.
+- [ ] Instrumentation test for session persistence and revision invalidation executed.
+- [ ] Physical run on large library: cold vs warm; candidate count, sample/full hash elapsed time, cache hits, peak workers, battery/thermal.
+- [ ] Physical no-data-loss review + deletion/restore testing; production signing/Play remain separate gates.
+
+## Iteration 2 — Progressively verified previews + safe resume request + scan modes
+
+Source: the head of PR #27, following the first exact-head Android CI PASS.
+
+- **Fast** reuses the shared RAM/persistent inventory when freshness checks pass; **Full** triggers an explicit full inventory refresh and reconciliation. Both run exactly the same byte-identical duplicate detection, with fresh file revisions and safety checks.
+- **Preview-only groups** are published after SHA-256 and byte-for-byte verification, at most approximately 4 UI updates per second. They are held separately from `state.duplicates`, never enter Review Center, never expose cleanup selection or a recoverable-space claim until the scan is complete.
+- **Restart marker** persists the selected root, extension and mode before a long scan begins. On cancellation/process death the next app start offers “Resume” for that exact request. The app **restarts candidate progress from zero**, uses the already persisted strong-revision hashes and always revalidates the current filesystem. This is safe accelerated restart, **not** a durable per-file work cursor.
+- Changing the scan generation clears stale duplicate selections. No new special permission, network usage, model or dependency is required.
+- Source tests: progressive emission excludes same-sample/different-content files; instrumentation covers marker restart/scope and independent cache revision tests.
+
+**Pending evidence:** exact-head CI, AppLab runtime, physical speed/cancellation/restart tests, signed release and destructive-cleanup validation remain required. Do not mark Store-ready solely from source/CI.
+
+## Iteration 2 verification
+
+- First commit `4b0b45b64d7325e3bd24578b6ba1330dc2125cf9`: exact-head [Android CI PASS](https://github.com/riccardopinato/Android-Omni-Cleaner/actions/runs/44043905535).
+- Preview card now lists up to 20 **read-only** confirmed groups by representative filename, count and individual size. These are not inserted into cleanup queues.
+- Trigger AppLab runtime and real emulator screenshot workflows on the dedicated feature branch; inspect their exact-head results separately from the CI gate.
+
+## Iteration 3 — Large APK Safe Trash hotfix
+
+User-reported P0: 50 MiB APK duplicates were excluded by a hardcoded 10 MiB non-media Safe Trash limit. The cleaner keeps a verified keeper for every duplicate group: two pairs yield at most two trash candidates.
+
+- Raised reversible Safe Trash cap to **512 MiB** in preparation and execution, never adding permanent-delete fallback.
+- Increased hashing/copy/byte-comparison buffers to **256 KiB** with bounded memory use.
+- Fixed failed post-rename rollback: do not delete a payload that might be the only surviving copy.
+- Fixed legacy migration collisions: preserve existing target, migrate verified legacy entry under a fresh ID when necessary.
+- Added JVM regression tests for 50 MiB move/list/restore and >512 MiB refusal; extended incomplete-migration test to require preservation of existing payload.
+
+Still require exact-head CI, Android emulator/provider tests and physical-device cleanup/restore validation.
+
+## Iteration 4 — User-confirmed permanent Safe Trash purge
+
+- Scoped `purgeEntry(entryId)` and `purgeAll()` return explicit deletion status, successful entry counts and bytes actually removed; no deletion outside verified UUID trash entries.
+- The old `permanentlyDelete(file)` now rejects any path that is not an immediate Safe Trash child; compatibility wrapper remains for prior call sites.
+- A failed `listFiles()` cannot be interpreted as successfully emptied. Unknown/corrupt entries are preserved and reported as partial failure, not silently deleted.
+- UI explicitly shows item size and the total number of selected trash entries/size before irreversible confirmation; allows zero-byte entries; publishes cache invalidation for successfully deleted zero-byte files too.
+- JVM tests: 50-MiB APK purge, zero-byte bulk purge, path escape and unknown-child protection.
+- Does not purge the **Android MediaStore system trash** for photos/videos; those are a separate OS-managed collection with different permissions.
+- Exact-head CI and real-device purge/restore tests required before merge/public release.
+
+## Iteration 5 — Scan 2.1 safe I/O reduction / priority
+
+- Same-size candidate groups now process by decreasing theoretical duplicate-waste bytes (saturating multiplication), making useful large-file confirmed previews available earlier; all groups still receive complete SHA and byte verification.
+- Caller-provided duplicate-scanner worker count is clamped to 1–4 instead of allowing unbounded I/O tasks.
+- Non-media cleanup preparation avoids repeating full SHA validation for snapshot hashes already checked in that same loop; large-file snapshots with no digest still obtain a fresh digest.
+- Pre-mutation snapshot validation remains in `SafeTrashManager.moveToTrash`; removes the redundant full SHA/keeper pass in the outer cleanup engine. No security bypass or irreversible fallback.
+- Added deterministic JVM test for large-waste-first verified groups, including oversized requested parallelism.
+- No physical speedup claims until a device benchmark records cold/warm timings, hash bytes, thermal and battery impact.

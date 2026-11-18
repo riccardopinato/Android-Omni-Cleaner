@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "enabled": true,
+  "required": false,
+  "settle_seconds": 5,
+  "expected_text_regex": [
+    "Smart cleaning"
+  ],
+  "forbidden_text_regex": [
+    "App isn't responding",
+    "keeps stopping"
+  ]
+}

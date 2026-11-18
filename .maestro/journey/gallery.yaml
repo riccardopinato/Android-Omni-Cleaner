@@ -3,5 +3,5 @@ appId: com.riccardopinato.omnicleaner.debug
 - launchApp:
     clearState: false
 - tapOn:
-    text: "Gallery"
+    id: "omni_nav_gallery"
 - assertVisible: "Gallery Cleaner"

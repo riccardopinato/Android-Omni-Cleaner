@@ -1,6 +1,17 @@
 package com.riccardopinato.omnicleaner.ui.redesign
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.style.TextOverflow
+import kotlin.math.roundToInt
+import com.riccardopinato.omnicleaner.ui.theme.OmniVisualTokens
 import androidx.compose.foundation.progressSemantics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,48 +69,112 @@ internal fun OmniHeroCard(
     progress: Float?,
     modifier: Modifier = Modifier,
 ) {
-    val start = MaterialTheme.colorScheme.primary
-    val end = MaterialTheme.colorScheme.secondary
+    val safeProgress = progress?.coerceIn(0f, 1f)
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(OmniVisualTokens.heroRadius),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
-        Column(
+        Box(
             modifier = Modifier
-                .background(Brush.linearGradient(listOf(start, end)))
-                .padding(22.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            Color(0xFF172F6A),
+                            Color(0xFF2B52B8),
+                            Color(0xFF57349B),
+                        ),
+                    ),
+                ),
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White.copy(alpha = 0.84f),
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineLarge,
-                color = Color.White,
-            )
-            Text(
-                text = detail,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.82f),
-            )
-            if (progress != null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .progressSemantics(progress.coerceIn(0f, 1f))
-                        .background(Color.White.copy(alpha = 0.20f), RoundedCornerShape(99.dp)),
+            // Decorative gradients are drawn locally; no third-party images are bundled.
+            Canvas(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clearAndSetSemantics { },
+            ) {
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.06f),
+                    radius = size.width * 0.40f,
+                    center = Offset(size.width * 0.96f, size.height * 0.06f),
+                )
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.05f),
+                    radius = size.width * 0.24f,
+                    center = Offset(size.width * 0.78f, size.height * 1.04f),
+                )
+            }
+            Column(
+                modifier = Modifier.padding(22.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White.copy(alpha = 0.89f),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(progress.coerceIn(0f, 1f))
-                            .background(Color.White, RoundedCornerShape(99.dp))
-                            .padding(vertical = 3.dp),
-                    )
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(7.dp),
+                    ) {
+                        Text(
+                            text = value,
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = Color.White,
+                        )
+                        Text(
+                            text = detail,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.87f),
+                        )
+                    }
+                    if (safeProgress != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(86.dp)
+                                .progressSemantics(safeProgress),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Canvas(modifier = Modifier.fillMaxSize()) {
+                                val thickness = 8.dp.toPx()
+                                val diameter = (size.minDimension - thickness).coerceAtLeast(0f)
+                                val topLeft = Offset(thickness / 2f, thickness / 2f)
+                                val circleSize = Size(diameter, diameter)
+                                drawArc(
+                                    color = Color.White.copy(alpha = 0.23f),
+                                    startAngle = -90f,
+                                    sweepAngle = 360f,
+                                    useCenter = false,
+                                    topLeft = topLeft,
+                                    size = circleSize,
+                                    style = Stroke(width = thickness),
+                                )
+                                if (safeProgress > 0f) {
+                                    drawArc(
+                                        color = Color.White,
+                                        startAngle = -90f,
+                                        sweepAngle = 360f * safeProgress,
+                                        useCenter = false,
+                                        topLeft = topLeft,
+                                        size = circleSize,
+                                        style = Stroke(width = thickness, cap = StrokeCap.Round),
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "${(safeProgress * 100f).roundToInt()}%",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -142,26 +217,28 @@ internal fun OmniMetricCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(OmniVisualTokens.metricRadius),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.18f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(7.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Box(
                 modifier = Modifier
-                    .background(accent.copy(alpha = 0.14f), CircleShape)
-                    .padding(6.dp),
-            ) {
-                Text("•", modifier = Modifier.clearAndSetSemantics { }, color = accent, fontWeight = FontWeight.Bold)
-            }
+                    .size(10.dp)
+                    .background(accent, CircleShape)
+                    .clearAndSetSemantics { },
+            )
             Text(text = value, style = MaterialTheme.typography.titleLarge)
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -179,32 +256,54 @@ internal fun OmniModuleCard(
     Card(
         onClick = onClick,
         modifier = modifier,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(OmniVisualTokens.tileRadius),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.20f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
-            modifier = Modifier.padding(17.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp),
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .background(accent.copy(alpha = 0.14f), RoundedCornerShape(14.dp))
-                    .padding(horizontal = 10.dp, vertical = 7.dp),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
+                Box(
+                    modifier = Modifier
+                        .background(accent.copy(alpha = 0.12f), RoundedCornerShape(OmniVisualTokens.glyphRadius))
+                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                ) {
+                    Text(
+                        text = glyph,
+                        modifier = Modifier.clearAndSetSemantics { },
+                        style = MaterialTheme.typography.titleMedium,
+                        color = accent,
+                    )
+                }
                 Text(
-                    text = glyph,
+                    text = "↗",
                     modifier = Modifier.clearAndSetSemantics { },
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleLarge,
                     color = accent,
                 )
             }
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
