@@ -4,6 +4,9 @@ import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,8 +29,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -153,23 +154,53 @@ fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 0.dp,
+            val dark = androidx.compose.foundation.isSystemInDarkTheme()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(if (dark) androidx.compose.ui.graphics.Color(0xFF182130)
+                        else androidx.compose.ui.graphics.Color.White)
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
             ) {
                 OmniDestination.entries.forEach { item ->
-                    NavigationBarItem(
-                        selected = destination == item,
-                        onClick = { destinationName = item.name },
-                        icon = {
-                            Icon(
-                                painter = painterResource(item.iconRes),
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
+                    val selected = destination == item
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(if (selected) {
+                                if (dark) androidx.compose.ui.graphics.Color(0xFF314162)
+                                else androidx.compose.ui.graphics.Color(0xFFE9EFFF)
+                            } else androidx.compose.ui.graphics.Color.Transparent)
+                            .clickable(
+                                role = androidx.compose.ui.semantics.Role.Tab,
+                                onClick = { destinationName = item.name },
                             )
-                        },
-                        label = { Text(stringResource(item.labelRes)) },
-                    )
+                            .padding(horizontal = 2.dp, vertical = 8.dp),
+                        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(3.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(item.iconRes),
+                            contentDescription = null,
+                            modifier = Modifier.size(22.dp),
+                            tint = if (selected) {
+                                if (dark) androidx.compose.ui.graphics.Color(0xFFAEC6FF)
+                                else androidx.compose.ui.graphics.Color(0xFF3159D6)
+                            } else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            stringResource(item.labelRes),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (selected) {
+                                if (dark) androidx.compose.ui.graphics.Color(0xFFE1E9FF)
+                                else androidx.compose.ui.graphics.Color(0xFF3159D6)
+                            } else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                        )
+                    }
                 }
             }
         },
@@ -238,14 +269,9 @@ fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
                             onEnableDeepClean = { showDeepAccessDisclosure = true },
                         )
 
-                        OmniDestination.GALLERY -> ModuleScreen(
-                            eyebrow = stringResource(R.string.redesign_media_eyebrow),
-                            title = stringResource(R.string.module_gallery_cleaner),
-                            subtitle = stringResource(R.string.redesign_gallery_subtitle),
-                            modifier = Modifier.fillMaxSize(),
-                        ) {
-                            GalleryCleanerSection(controller = viewModel.galleryController)
-                        }
+                        OmniDestination.GALLERY -> GalleryCleanerSection(
+                            controller = viewModel.galleryController,
+                        )
 
                         OmniDestination.PRIVACY -> ModuleScreen(
                             eyebrow = stringResource(R.string.redesign_privacy_eyebrow),
