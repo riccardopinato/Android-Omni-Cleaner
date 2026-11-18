@@ -311,7 +311,8 @@ fun GalleryMediaPreview(
             modifier = Modifier.fillMaxWidth().testTag("omni_gallery_immersive_open"),
         ) {
             Text(stringResource(R.string.omni_gallery_immersive_open))
-        }        Text(
+        }
+        Text(
             text = stringResource(R.string.gallery_swipe_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
