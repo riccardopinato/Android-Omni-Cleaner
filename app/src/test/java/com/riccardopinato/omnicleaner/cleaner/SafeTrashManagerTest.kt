@@ -6,11 +6,163 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import java.io.RandomAccessFile
 import java.util.Properties
 import java.util.UUID
 import kotlin.io.path.createTempDirectory
 
 class SafeTrashManagerTest {
+    @Test
+    fun inventoryExposesUnknownAndPartialEntriesWithoutDeletingThem() {
+        val root = createTempDirectory("omni-trash-inventory-").toFile()
+        val trash = File(root, "trash")
+        try {
+            val manager = SafeTrashManager.forTests(trash, root)
+            assertNotNull(manager.moveToTrash(File(root, "good.apk").apply { writeText("ok") }))
+            val corrupt = File(trash, UUID.randomUUID().toString()).apply { mkdirs() }
+            val orphan = File(corrupt, "payload").apply { writeText("valuable-partial") }
+            val unknown = File(trash, "unidentified.txt").apply { writeText("keep") }
+
+            val inventory = manager.inspect()
+            assertTrue(inventory.readable)
+            assertEquals(1, inventory.entries.size)
+            assertEquals(2, inventory.unrecognizedEntries)
+            assertEquals(2L + orphan.length(), inventory.totalPayloadBytes)
+            assertTrue(orphan.exists())
+            assertTrue(unknown.exists())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+
+    @Test
+    fun permanentDeletionOfLargeApkIsConfirmedAndReturnsItsBytes() {
+        val root = createTempDirectory("omni-apk-purge-").toFile()
+        val source = File(root, "verified-installer.apk")
+        val trash = File(root, ".OmniCleaner/SafeTrash")
+        try {
+            java.io.RandomAccessFile(source, "rw").use { it.setLength(50L * 1024L * 1024L) }
+            val manager = SafeTrashManager.forTests(trash, root)
+            assertNotNull(manager.moveToTrash(source))
+            val entry = manager.listEntries().single()
+
+            val result = manager.purgeEntry(entry.id)
+            assertEquals(SafeTrashPurgeStatus.DELETED, result.status)
+            assertEquals(50L * 1024L * 1024L, result.reclaimedBytes)
+            assertTrue(manager.listEntries().isEmpty())
+            assertEquals(0L, manager.getTrashSize())
+            assertFalse(File(trash, entry.id).exists())
+            assertFalse(source.exists())
+            assertEquals(SafeTrashPurgeStatus.ENTRY_NOT_FOUND, manager.purgeEntry(entry.id).status)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun emptyTrashDeletesZeroByteFilesAndReportsTheEntryCount() {
+        val root = createTempDirectory("omni-zero-trash-").toFile()
+        val trash = File(root, "trash")
+        try {
+            val source = File(root, "empty.apk").apply { createNewFile() }
+            val manager = SafeTrashManager.forTests(trash, root)
+            assertNotNull(manager.moveToTrash(source))
+            assertEquals(0L, manager.getTrashSize())
+            assertEquals(1, manager.listEntries().size)
+
+            val result = manager.purgeAll()
+            assertTrue(result.completed)
+            assertEquals(1, result.deletedEntries)
+            assertEquals(0, result.rejectedEntries)
+            assertEquals(0L, result.reclaimedBytes)
+            assertTrue(manager.listEntries().isEmpty())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun purgeAllSkipsUnrecognizedEntriesAndRefusesPathsOutsideTrash() {
+        val root = createTempDirectory("omni-guarded-purge-").toFile()
+        val trash = File(root, "trash")
+        val untouched = File(root, "keep-me.apk").apply { writeText("important") }
+        try {
+            val manager = SafeTrashManager.forTests(trash, root)
+            assertNotNull(manager.moveToTrash(File(root, "safe.apk").apply { writeText("trash-me") }))
+            val foreign = File(trash, "unexpected-note.txt").apply { writeText("keep") }
+            assertFalse(manager.permanentlyDelete(untouched))
+            assertEquals(SafeTrashPurgeStatus.INVALID_ENTRY, manager.purgeEntry("../keep-me.apk").status)
+
+            val result = manager.purgeAll()
+            assertFalse(result.completed)
+            assertEquals(1, result.deletedEntries)
+            assertEquals(1, result.rejectedEntries)
+            assertTrue(foreign.exists())
+            assertTrue(untouched.exists())
+            assertTrue(manager.listEntries().isEmpty())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+
+    @Test
+    fun fiftyMebibyteApkIsTrashedAndRestoredWithBytesIntact() {
+        val root = createTempDirectory("omni-large-apk-trash-").toFile()
+        val trash = File(root, ".OmniCleaner/SafeTrash")
+        val source = File(root, "installer.apk")
+        try {
+            RandomAccessFile(source, "rw").use { raf ->
+                raf.setLength(50L * 1024L * 1024L)
+                raf.seek(24L * 1024L * 1024L)
+                raf.write(byteArrayOf(3, 8, 12, 20, 25))
+            }
+            val manager = SafeTrashManager.forTests(trash, root)
+            val payload = manager.moveToTrash(source)
+            assertNotNull(payload)
+            assertFalse(source.exists())
+            assertEquals(50L * 1024L * 1024L, manager.getTrashSize())
+            val entry = manager.listEntries().single()
+            assertEquals("installer.apk", entry.originalName)
+            assertEquals(50L * 1024L * 1024L, entry.sizeBytes)
+
+            val restored = manager.restore(entry.id)
+            assertEquals(SafeTrashRestoreStatus.RESTORED, restored.status)
+            assertTrue(source.isFile)
+            assertEquals(50L * 1024L * 1024L, source.length())
+            RandomAccessFile(source, "r").use { raf ->
+                raf.seek(24L * 1024L * 1024L)
+                assertEquals(3, raf.read())
+                assertEquals(8, raf.read())
+                assertEquals(12, raf.read())
+                assertEquals(20, raf.read())
+                assertEquals(25, raf.read())
+            }
+            assertTrue(manager.listEntries().isEmpty())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun overLimitApkIsBlockedAndPreserved() {
+        val root = createTempDirectory("omni-overlimit-apk-trash-").toFile()
+        val source = File(root, "oversized.apk")
+        try {
+            RandomAccessFile(source, "rw").use { raf ->
+                raf.setLength(SafeTrashManager.MAX_REVERSIBLE_TRASH_BYTES + 1L)
+            }
+            val manager = SafeTrashManager.forTests(File(root, "trash"), root)
+            assertTrue(manager.moveToTrash(source) == null)
+            assertTrue(source.exists())
+            assertEquals(SafeTrashManager.MAX_REVERSIBLE_TRASH_BYTES + 1L, source.length())
+            assertTrue(manager.listEntries().isEmpty())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
     @Test
     fun moveToTrashPreservesPayloadAndMetadata() {
         val root = createTempDirectory("omni-trash-").toFile()
@@ -291,12 +443,12 @@ class SafeTrashManagerTest {
             manager.migrateLegacyTrashIfNeeded()
 
             assertFalse(legacyEntry.exists())
+            // Preserve the incomplete older target rather than delete user data.
+            assertEquals("cut", File(partialTarget, "payload").readText())
             val migrated = manager.listEntries().single()
-            assertEquals(entryId, migrated.id)
-            assertEquals(
-                "complete-payload",
-                File(File(persistent, entryId), "payload").readText(),
-            )
+            assertTrue(migrated.id != entryId)
+            assertEquals("complete-payload",
+                File(File(persistent, migrated.id), "payload").readText())
         } finally {
             root.deleteRecursively()
         }
@@ -371,4 +523,36 @@ class SafeTrashManagerTest {
         }
     }
 
+
+    @Test
+    fun thirtyFiveSyntheticEntriesCanBeReviewedRestoredAndDeletedIndividually() {
+        val root = createTempDirectory("omni-trash-many-").toFile()
+        val trash = File(root, "trash")
+        try {
+            val manager = SafeTrashManager.forTests(trash)
+            for (index in 1..35) {
+                val source = File(root, "sample-$index.txt").apply {
+                    writeText("synthetic-only-$index")
+                }
+                assertNotNull("Move failed for synthetic entry $index", manager.moveToTrash(source))
+                assertFalse(source.exists())
+            }
+
+            // The old visual 12-row limit must not conceal backend entries.
+            assertEquals(35, manager.listEntries().size)
+            val last = manager.listEntries().single { it.originalName == "sample-35.txt" }
+            val restored = manager.restore(last.id)
+            assertEquals(SafeTrashRestoreStatus.RESTORED, restored.status)
+            assertEquals("synthetic-only-35", File(root, "sample-35.txt").readText())
+            assertEquals(34, manager.listEntries().size)
+
+            val first = manager.listEntries().single { it.originalName == "sample-1.txt" }
+            assertTrue(manager.permanentlyDelete(File(trash, first.id)))
+            assertEquals(33, manager.listEntries().size)
+            assertFalse(File(root, "sample-1.txt").exists())
+            // Only synthetic files in this temporary test root were touched.
+        } finally {
+            root.deleteRecursively()
+        }
+    }
 }

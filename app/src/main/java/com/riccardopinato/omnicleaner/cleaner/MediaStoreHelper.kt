@@ -276,7 +276,9 @@ object MediaStoreHelper {
         resolver: ContentResolver,
         uris: List<Uri>,
     ): PendingIntent? {
-        if (uris.isEmpty() || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
-        return MediaStore.createTrashRequest(resolver, uris, true)
+        if (uris.isEmpty() || Build.VERSION.SDK_INT < Build.VERSION_CODES.R ||
+            uris.size > MediaTrashBatchPolicy.MAX_URIS_PER_REQUEST
+        ) return null
+        return runCatching { MediaStore.createTrashRequest(resolver, uris, true) }.getOrNull()
     }
 }

@@ -7,9 +7,98 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.createTempDirectory
 
 class FileInventoryScannerTest {
+
+    @Test
+    fun largeWasteGroupsAreConfirmedBeforeSmallWasteGroups() = runBlocking {
+        val root = createTempDirectory("omni-priority-").toFile()
+        try {
+            File(root, "small-a.bin").writeText("small")
+            File(root, "small-b.bin").writeText("small")
+            val large = ByteArray(4_096) { 7 }
+            File(root, "large-a.bin").writeBytes(large)
+            File(root, "large-b.bin").writeBytes(large)
+            val seen = mutableListOf<DuplicateGroup>()
+            val inventory = FileInventoryScanner().collect(root)
+            FileInventoryScanner().duplicatesProgressive(
+                inventory.files,
+                parallelism = 120,
+                onConfirmedGroup = { seen += it },
+            )
+            assertEquals(2, seen.size)
+            assertEquals(4_096L, seen.first().sizeBytes)
+            assertEquals(5L, seen.last().sizeBytes)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+
+    @Test
+    fun progressiveGroupsOnlyPublishFullyByteVerifiedMatches() = runBlocking {
+        val root = createTempDirectory("omni-progressive-verified-").toFile()
+        try {
+            val edge = ByteArray(64 * 1024) { (it % 127).toByte() }
+            val middle = ByteArray(32 * 1024) { 7 }
+            File(root, "one.bin").writeBytes(edge + middle + edge)
+            File(root, "two.bin").writeBytes(edge + middle + edge)
+            File(root, "same-edge-different.bin").writeBytes(
+                edge + ByteArray(32 * 1024) { 9 } + edge
+            )
+            val provisional = mutableListOf<DuplicateGroup>()
+            val inventory = FileInventoryScanner().collect(root)
+            val groups = FileInventoryScanner().duplicatesProgressive(
+                files = inventory.files,
+                onConfirmedGroup = { provisional += it },
+            )
+            assertEquals(groups.size, provisional.size)
+            assertEquals(1, provisional.size)
+            assertEquals(
+                setOf("one.bin", "two.bin"),
+                provisional.single().files.map { it.name }.toSet(),
+            )
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+
+    @Test
+    fun scanCacheSessionIsPreparedOnceAndFlushedAfterVerification() = runBlocking {
+        val root = createTempDirectory("omni-scan2-cache-").toFile()
+        try {
+            File(root, "a.bin").writeText("identical")
+            File(root, "b.bin").writeText("identical")
+            val inventory = FileInventoryScanner().collect(root)
+            var prepareCalls = 0
+            var preparedPaths = emptySet<String>()
+            var flushCalls = 0
+            val cache = object : DuplicateHashCache {
+                override fun prepare(items: List<IndexedFile>) {
+                    prepareCalls++
+                    preparedPaths = items.map { it.file.name }.toSet()
+                }
+                override fun flush() { flushCalls++ }
+                override fun sampleHash(item: IndexedFile): String? = null
+                override fun fullHash(item: IndexedFile): String? = null
+                override fun putSampleHash(item: IndexedFile, hash: String) = Unit
+                override fun putFullHash(item: IndexedFile, hash: String) = Unit
+            }
+            val result = FileInventoryScanner().duplicatesProgressive(
+                inventory.files, hashCache = cache,
+            )
+            assertEquals(1, result.size)
+            assertEquals(1, prepareCalls)
+            assertEquals(setOf("a.bin", "b.bin"), preparedPaths)
+            assertEquals(1, flushCalls)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
     @Test
     fun detectsByteIdenticalDuplicates() = runBlocking {
         val root = createTempDirectory("omni-duplicates-").toFile()
@@ -154,27 +243,27 @@ class FileInventoryScannerTest {
             val digest = scanner.digest(first)
 
             class FakeCache : DuplicateHashCache {
-                var sampleGets = 0
-                var fullGets = 0
-                var samplePuts = 0
-                var fullPuts = 0
+                val sampleGets = AtomicInteger()
+                val fullGets = AtomicInteger()
+                val samplePuts = AtomicInteger()
+                val fullPuts = AtomicInteger()
 
                 override fun sampleHash(item: IndexedFile): String? {
-                    sampleGets++
+                    sampleGets.incrementAndGet()
                     return digest.takeIf { item.revision != null }
                 }
 
                 override fun fullHash(item: IndexedFile): String? {
-                    fullGets++
+                    fullGets.incrementAndGet()
                     return digest.takeIf { item.revision != null }
                 }
 
                 override fun putSampleHash(item: IndexedFile, hash: String) {
-                    if (item.revision != null) samplePuts++
+                    if (item.revision != null) samplePuts.incrementAndGet()
                 }
 
                 override fun putFullHash(item: IndexedFile, hash: String) {
-                    if (item.revision != null) fullPuts++
+                    if (item.revision != null) fullPuts.incrementAndGet()
                 }
             }
 
@@ -187,10 +276,10 @@ class FileInventoryScannerTest {
 
             assertEquals(1, groups.size)
             assertEquals(2, groups.single().files.size)
-            assertTrue(cache.sampleGets >= 2)
-            assertTrue(cache.fullGets >= 2)
-            assertEquals(0, cache.samplePuts)
-            assertEquals(0, cache.fullPuts)
+            assertTrue(cache.sampleGets.get() >= 2)
+            assertTrue(cache.fullGets.get() >= 2)
+            assertEquals(0, cache.samplePuts.get())
+            assertEquals(0, cache.fullPuts.get())
             assertTrue(first.isFile)
             assertTrue(second.isFile)
         } finally {

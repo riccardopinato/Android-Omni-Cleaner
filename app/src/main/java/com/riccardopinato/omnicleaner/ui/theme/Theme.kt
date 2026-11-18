@@ -20,6 +20,16 @@ val OmniMint = Color(0xFF30C79B)
 val OmniOrange = Color(0xFFFF9F43)
 val OmniRose = Color(0xFFFF6B8A)
 
+/** Shared shape and spacing anchors for the Compose visual refresh. */
+object OmniVisualTokens {
+    val contentInset = 20.dp
+    val heroRadius = 30.dp
+    val tileRadius = 24.dp
+    val metricRadius = 22.dp
+    val glyphRadius = 14.dp
+    val minimumTouchTarget = 48.dp
+}
+
 private val LightColors = lightColorScheme(
     primary = OmniBlue,
     onPrimary = Color.White,
@@ -69,12 +79,14 @@ private val DarkColors = darkColorScheme(
 private val OmniTypography = Typography(
     headlineLarge = TextStyle(
         fontSize = 32.sp,
-        lineHeight = 36.sp,
+        lineHeight = 38.sp,
+        letterSpacing = (-0.6).sp,
         fontWeight = FontWeight.Bold,
     ),
     headlineMedium = TextStyle(
         fontSize = 26.sp,
-        lineHeight = 31.sp,
+        lineHeight = 32.sp,
+        letterSpacing = (-0.3).sp,
         fontWeight = FontWeight.Bold,
     ),
     titleLarge = TextStyle(

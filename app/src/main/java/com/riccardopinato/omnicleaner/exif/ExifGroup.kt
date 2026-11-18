@@ -79,3 +79,7 @@ enum class ExifGroup(
             groups.flatMapTo(LinkedHashSet()) { it.tags }
     }
 }
+
+/** LOCATION cleanup cannot verify XMP hidden inside the Exif TIFF block. */
+internal fun blocksEmbeddedXmpForGps(groups: Set<ExifGroup>, xmp: String?): Boolean =
+    ExifGroup.LOCATION in groups && !xmp.isNullOrBlank()

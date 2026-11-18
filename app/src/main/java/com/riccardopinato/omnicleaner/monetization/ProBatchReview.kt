@@ -9,17 +9,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,6 +45,15 @@ fun ProBatchReview(
     if (!state.hasCompletedScan) return
 
     var showResolveConfirmation by remember { mutableStateOf(false) }
+    var displayedFolders by remember { mutableStateOf(8) }
+    var displayedGroups by remember { mutableStateOf(6) }
+    var displayedGroupFiles by remember { mutableStateOf(5) }
+    var displayedLargeFiles by remember { mutableStateOf(10) }
+    var displayedThumbnails by remember { mutableStateOf(8) }
+    val hasAnySelection = state.selectedFolderPaths.isNotEmpty() ||
+        state.selectedDuplicatePaths.isNotEmpty() ||
+        state.selectedLargeFilePaths.isNotEmpty() ||
+        state.selectedThumbnailPaths.isNotEmpty()
 
     val systemTrashLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult(),
@@ -71,7 +83,7 @@ fun ProBatchReview(
 
         if (state.emptyFolders.isNotEmpty()) {
             Text(stringResource(R.string.pro_empty_folders), style = MaterialTheme.typography.labelLarge)
-            state.emptyFolders.take(8).forEach { item ->
+            state.emptyFolders.take(displayedFolders).forEach { item ->
                 ReviewCheckRow(
                     checked = item.path in state.selectedFolderPaths,
                     title = item.name,
@@ -81,6 +93,11 @@ fun ProBatchReview(
             }
         }
 
+        if (state.emptyFolders.size > displayedFolders) {
+            OutlinedButton(onClick = { displayedFolders += 30 }) {
+                Text(stringResource(R.string.audit_show_more))
+            }
+        }
         if (state.duplicateGroups.isNotEmpty()) {
             Text(stringResource(R.string.pro_duplicates), style = MaterialTheme.typography.labelLarge)
             Row(
@@ -96,13 +113,13 @@ fun ProBatchReview(
                     Text(stringResource(R.string.action_keep_newest))
                 }
             }
-            state.duplicateGroups.take(6).forEach { group ->
+            state.duplicateGroups.take(displayedGroups).forEach { group ->
                 Text(
                     stringResource(R.string.pro_duplicate_group, group.files.size, formatBytes(group.sizeBytes)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                group.files.take(5).forEach { file ->
+                group.files.take(displayedGroupFiles).forEach { file ->
                     ReviewCheckRow(
                         checked = file.path in state.selectedDuplicatePaths,
                         title = file.name,
@@ -113,9 +130,19 @@ fun ProBatchReview(
             }
         }
 
+        if (state.duplicateGroups.any { it.files.size > displayedGroupFiles }) {
+            OutlinedButton(onClick = { displayedGroupFiles += 24 }) {
+                Text(stringResource(R.string.audit_show_more))
+            }
+        }
+        if (state.duplicateGroups.size > displayedGroups) {
+            OutlinedButton(onClick = { displayedGroups += 24 }) {
+                Text(stringResource(R.string.audit_show_more))
+            }
+        }
         if (state.largeFiles.isNotEmpty()) {
             Text(stringResource(R.string.pro_large_files), style = MaterialTheme.typography.labelLarge)
-            state.largeFiles.take(10).forEach { item ->
+            state.largeFiles.take(displayedLargeFiles).forEach { item ->
                 ReviewCheckRow(
                     checked = item.path in state.selectedLargeFilePaths,
                     title = item.name,
@@ -125,9 +152,14 @@ fun ProBatchReview(
             }
         }
 
+        if (state.largeFiles.size > displayedLargeFiles) {
+            OutlinedButton(onClick = { displayedLargeFiles += 30 }) {
+                Text(stringResource(R.string.audit_show_more))
+            }
+        }
         if (state.thumbnails.isNotEmpty()) {
             Text(stringResource(R.string.pro_thumbnail_cache), style = MaterialTheme.typography.labelLarge)
-            state.thumbnails.take(8).forEach { item ->
+            state.thumbnails.take(displayedThumbnails).forEach { item ->
                 ReviewCheckRow(
                     checked = item.path in state.selectedThumbnailPaths,
                     title = item.name,
@@ -137,6 +169,11 @@ fun ProBatchReview(
             }
         }
 
+        if (state.thumbnails.size > displayedThumbnails) {
+            OutlinedButton(onClick = { displayedThumbnails += 30 }) {
+                Text(stringResource(R.string.audit_show_more))
+            }
+        }
         if (state.residues.isNotEmpty()) {
             Text(stringResource(R.string.pro_residues), style = MaterialTheme.typography.labelLarge)
             Text(
@@ -158,7 +195,7 @@ fun ProBatchReview(
 
         Button(
             onClick = { showResolveConfirmation = true },
-            enabled = !state.resolving && !state.awaitingSystemTrash,
+            enabled = hasAnySelection && !state.resolving && !state.awaitingSystemTrash,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(R.string.pro_resolve_selection))
@@ -181,7 +218,23 @@ fun ProBatchReview(
             onDismissRequest = { showResolveConfirmation = false },
             title = { Text(stringResource(R.string.pro_confirm_title)) },
             text = {
-                Text(stringResource(R.string.pro_confirm_body))
+                val reviewItems = (
+                    state.emptyFolders.filter { it.path in state.selectedFolderPaths }.map { it.path } +
+                    state.duplicateGroups.flatMap { it.files }.filter {
+                        it.path in state.selectedDuplicatePaths
+                    }.map { it.path } +
+                    state.largeFiles.filter { it.path in state.selectedLargeFilePaths }.map { it.path } +
+                    state.thumbnails.filter { it.path in state.selectedThumbnailPaths }.map { it.path }
+                ).distinct()
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.pro_confirm_body))
+                    Text(stringResource(R.string.audit_review_selected_count, reviewItems.size))
+                    LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                        items(reviewItems) { itemPath ->
+                            Text(itemPath, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
             },
             confirmButton = {
                 TextButton(
