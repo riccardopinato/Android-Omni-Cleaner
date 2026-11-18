@@ -64,6 +64,8 @@ internal fun OmniHeroCard(
 ) {
     val start = MaterialTheme.colorScheme.primary
     val end = MaterialTheme.colorScheme.secondary
+    // Material onPrimary adapts from white on saturated light theme to dark ink on pastel dark theme.
+    val heroInk = MaterialTheme.colorScheme.onPrimary
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
@@ -79,29 +81,29 @@ internal fun OmniHeroCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.White.copy(alpha = 0.84f),
+                color = heroInk.copy(alpha = 0.84f),
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.headlineLarge,
-                color = Color.White,
+                color = heroInk,
             )
             Text(
                 text = detail,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.82f),
+                color = heroInk.copy(alpha = 0.82f),
             )
             if (progress != null) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .progressSemantics(progress.coerceIn(0f, 1f))
-                        .background(Color.White.copy(alpha = 0.20f), RoundedCornerShape(99.dp)),
+                        .background(heroInk.copy(alpha = 0.20f), RoundedCornerShape(99.dp)),
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(progress.coerceIn(0f, 1f))
-                            .background(Color.White, RoundedCornerShape(99.dp))
+                            .background(heroInk, RoundedCornerShape(99.dp))
                             .padding(vertical = 3.dp),
                     )
                 }

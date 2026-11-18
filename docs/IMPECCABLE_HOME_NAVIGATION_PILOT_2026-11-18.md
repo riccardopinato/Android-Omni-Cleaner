@@ -19,3 +19,10 @@ Scope isolated to Compose UI, drawables, locale resources, and vector availabili
 6. Signed release, physical storage cleanup and Play/All-files-permission checks remain independent gates.
 
 Visual runtime status: NOT VERIFIED. Web HTML/CSS detectors do not certify native Android.
+
+## Runtime review — first captured pass (2026-11-18)
+- Exact source `900bde353fd15f3cc08742d456074f7a77db84fe`: Android CI PASS [44203633776](https://github.com/riccardopinato/Android-Omni-Cleaner/actions/runs/44203633776); Android emulator/Maestro PASS [44203633764](https://github.com/riccardopinato/Android-Omni-Cleaner/actions/runs/44203633764).
+- Screenshot artifact: `omni-impeccable-visual-900bde353fd15f3cc08742d456074f7a77db84fe` (artifact ID 14383476182); inspected eight Home/Clean/Gallery/Privacy/Pro/light/dark/large text/narrow captures.
+- Reviewer finding: 4 quick-action cards and navigation are visible, working, scrollable, without reported overflow. Narrow viewport falls back to a single column.
+- Reviewer finding requiring repair: dark mode gradient uses very light primary/secondary while text is white. Contrast inadequate despite navigation PASS. Fix hero foreground to scheme `onPrimary` and re-capture.
+- A matched before/after regression baseline is not yet registered. Do not label visual regression CERTIFIED on strength of these after-only screenshots.
