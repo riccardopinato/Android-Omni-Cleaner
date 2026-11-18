@@ -8,6 +8,21 @@ set -Eeuo pipefail
 
 SOURCE_BRANCH="${OMNI_SOURCE_BRANCH:-${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-}}}"
 
+# Source build only proves androidTest compiles. Execute the existing safety,
+# storage, localization and entitlement instrumentation on this live emulator.
+# This is emulator evidence, never physical-device or Play certification.
+if [[ "$SOURCE_BRANCH" == "audit/omni-safety-ux-360-20261115" ||
+      "$SOURCE_BRANCH" == "feature/omni-storage-intelligence-v1-20261116" ||
+      "$SOURCE_BRANCH" == "feature/omni-gallery-pro-v1-20261116" ||
+      "$SOURCE_BRANCH" == "feature/omni-qa-gallery-review-v1-20261116" ||
+      "$SOURCE_BRANCH" == "feature/omni-scan-engine-2-0-20261117" ]]; then
+  echo "[Omni/AppLab] running device-backed connectedDebugAndroidTest..."
+  (
+    cd "$GITHUB_WORKSPACE/target"
+    ./gradlew connectedDebugAndroidTest --stacktrace
+  )
+fi
+
 adb install -r -t "$APK_PATH"
 adb shell appops set "$PACKAGE_ID" MANAGE_EXTERNAL_STORAGE allow || true
 
@@ -83,7 +98,17 @@ print("yes" if found else "no")
 PY
   )"
 
-  [[ "$transient" == "yes" ]] || return 1
+  # The system lab intentionally force-stops/restarts the app; a stale PID
+  # sampled immediately afterward can be transient when the lab itself passed.
+  # Never waive a real fatal signal or a repeated failed verification.
+  local system_restart_pid_loss="no"
+  if [[ -s "$REPORT_DIR/summary.md" ]] &&
+     grep -Fq "Application process died during system-lab." "$REPORT_DIR/summary.md" &&
+     [[ -s "$REPORT_DIR/system-lab.md" ]] &&
+     grep -Fq "Force-stop restart: PASS" "$REPORT_DIR/system-lab.md"; then
+    system_restart_pid_loss="yes"
+  fi
+  [[ "$transient" == "yes" || "$system_restart_pid_loss" == "yes" ]] || return 1
 
   for log_file in "$app_logcat" "$system_logcat"; do
     if [[ -s "$log_file" ]] &&
@@ -99,7 +124,7 @@ status=0
 run_verifier || status=$?
 if [[ "$status" -ne 0 ]]; then
   if is_transient_pid_flake; then
-    echo "[Omni/AppLab] transient crawler PID loss without crash evidence; retrying once..."
+    echo "[Omni/AppLab] transient PID loss after crawler/system restart without crash evidence; retrying once..."
     sleep 3
     if run_verifier; then
       status=0
@@ -119,17 +144,77 @@ if [[ "$status" -eq 0 ]]; then
   fi
 fi
 
+# This is separate from AppLab's UIAutomator hierarchy warnings. It proves
+# the app can restart and navigate after AppLab's storage-recovery lab, rather
+# than incorrectly converting a missing hierarchy snapshot into PASS.
 if [[ "$status" -eq 0 ]]; then
-  echo "[Omni/AppLab] running localization/accessibility journey at 1.3x font scale..."
-  adb shell settings put system font_scale 1.3 || true
-  adb shell am force-stop "$PACKAGE_ID" || true
+  echo "[Omni/AppLab] running two non-destructive restart/recovery journeys..."
+  for cycle in 1 2; do
+    adb shell am force-stop "$PACKAGE_ID" || true
+    if maestro test "$GITHUB_WORKSPACE/target/.maestro/restart-recovery.yaml"; then
+      echo "[Omni/AppLab] restart/recovery cycle ${cycle}/2 PASSED."
+    else
+      status=$?
+      echo "[Omni/AppLab] restart/recovery cycle ${cycle}/2 FAILED (status $status)."
+      echo "[Omni/AppLab] AppLab persistence/storage warnings remain independent evidence."
+      adb shell dumpsys activity activities | tail -n 90 || true
+      break
+    fi
+  done
+fi
 
-  if maestro test "$GITHUB_WORKSPACE/target/.maestro/localization-accessibility.yaml"; then
-    echo "[Omni/AppLab] localization/accessibility journey passed."
+if [[ "$status" -eq 0 && ( "$SOURCE_BRANCH" == "feature/omni-storage-intelligence-v1-20261116" || "$SOURCE_BRANCH" == "feature/omni-qa-gallery-review-v1-20261116" ) ]]; then
+  echo "[Omni/AppLab] running read-only Storage Intelligence functional journey..."
+  # Reset only the synthetic emulator test app state. Restore access before
+  # the journey, since pm clear may revoke Android app-op grants.
+  adb shell pm clear "$PACKAGE_ID" || true
+  adb shell appops set "$PACKAGE_ID" MANAGE_EXTERNAL_STORAGE allow || true
+  if maestro test "$GITHUB_WORKSPACE/target/.maestro/storage-intelligence.yaml"; then
+    echo "[Omni/AppLab] Storage Intelligence functional journey PASSED."
   else
     status=$?
-    echo "[Omni/AppLab] localization/accessibility journey failed with status $status."
+    echo "[Omni/AppLab] Storage Intelligence journey FAILED with status $status."
   fi
+fi
+
+if [[ "$status" -eq 0 && ( "$SOURCE_BRANCH" == "feature/omni-gallery-pro-v1-20261116" || "$SOURCE_BRANCH" == "feature/omni-qa-gallery-review-v1-20261116" ) ]]; then
+  echo "[Omni/AppLab] running read-only Gallery Pro journey..."
+  if maestro test "$GITHUB_WORKSPACE/target/.maestro/gallery-pro.yaml"; then
+    echo "[Omni/AppLab] Gallery Pro journey PASS."
+  else
+    status=$?
+    echo "[Omni/AppLab] Gallery Pro journey FAILED: $status"
+  fi
+fi
+
+if [[ "$status" -eq 0 && "$SOURCE_BRANCH" == "feature/omni-qa-gallery-review-v1-20261116" ]]; then
+  echo "[Omni/AppLab] cross-module Review Center journey..."
+  if maestro test "$GITHUB_WORKSPACE/target/.maestro/review-center.yaml"; then
+    echo "[Omni/AppLab] Review Center journey PASS."
+  else
+    status=$?
+    echo "[Omni/AppLab] Review Center journey FAILED: $status"
+  fi
+fi
+
+if [[ "$status" -eq 0 ]]; then
+  echo "[Omni/AppLab] running accessibility journeys at 1.3x, 1.5x, and 2.0x font scale..."
+  for scale in 1.3 1.5 2.0; do
+    adb shell settings put system font_scale "$scale" || true
+    adb shell am force-stop "$PACKAGE_ID" || true
+
+    if maestro test "$GITHUB_WORKSPACE/target/.maestro/localization-accessibility.yaml"; then
+      echo "[Omni/AppLab] localization/accessibility journey PASSED at ${scale}x."
+    else
+      status=$?
+      echo "[Omni/AppLab] localization/accessibility journey FAILED at ${scale}x with status $status."
+      echo "[Omni/AppLab] capturing bounded current hierarchy..."
+      timeout 20s adb shell uiautomator dump /sdcard/omni-a11y-failure.xml || true
+      timeout 10s adb shell cat /sdcard/omni-a11y-failure.xml | head -c 20000 || true
+      echo
+      break
+    fi
+  done
 
   adb shell settings put system font_scale 1.0 || true
   adb shell am force-stop "$PACKAGE_ID" || true

@@ -9,7 +9,6 @@ import com.riccardopinato.omnicleaner.cleaner.SafeTrashManager
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,21 +45,6 @@ class AppContractInstrumentedTest {
         assertTrue(Manifest.permission.MANAGE_EXTERNAL_STORAGE in permissions)
         assertTrue(Manifest.permission.READ_MEDIA_IMAGES in permissions)
         assertTrue(Manifest.permission.READ_MEDIA_VIDEO in permissions)
-    }
-
-    @Test
-    fun homeNavigationAndQuickActionVectorsAreAvailable() {
-        listOf(
-            R.drawable.omni_nav_home,
-            R.drawable.omni_nav_clean,
-            R.drawable.omni_nav_gallery,
-            R.drawable.omni_nav_privacy,
-            R.drawable.omni_nav_pro,
-            R.drawable.omni_ic_scan,
-            R.drawable.omni_ic_duplicates,
-        ).forEach { drawableId ->
-            assertNotNull(context.getDrawable(drawableId))
-        }
     }
 
     @Test

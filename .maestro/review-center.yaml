@@ -1,0 +1,19 @@
+appId: com.riccardopinato.omnicleaner.debug
+---
+# Non-destructive cross-module review smoke.
+- launchApp:
+    clearState: false
+- tapOn:
+    id: "omni_nav_clean"
+- tapOn:
+    id: "omni_clean_tool_review"
+- assertVisible:
+    id: "omni_review_center"
+- scrollUntilVisible:
+    element:
+      id: "omni_review_open_gallery"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "omni_review_open_gallery"
+- assertVisible: "Full-screen review"

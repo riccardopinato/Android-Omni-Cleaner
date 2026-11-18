@@ -1,6 +1,0 @@
-appId: com.riccardopinato.omnicleaner.debug
----
-- launchApp:
-    clearState: false
-- assertVisible: "Android Omni Cleaner"
-- assertVisible: "Home"

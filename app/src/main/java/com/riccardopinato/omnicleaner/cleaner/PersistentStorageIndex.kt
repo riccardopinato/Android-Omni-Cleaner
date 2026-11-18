@@ -10,6 +10,10 @@ import java.io.File
 import java.util.Locale
 
 interface DuplicateHashCache {
+    // Per-scan cache lifecycle: one bounded read pass, short write transactions.
+    // Defaults keep test fakes and non-SQL implementations compatible.
+    fun prepare(items: List<IndexedFile>) {}
+    fun flush() {}
     fun sampleHash(item: IndexedFile): String?
     fun fullHash(item: IndexedFile): String?
     fun putSampleHash(item: IndexedFile, hash: String)
@@ -364,6 +368,126 @@ internal class PersistentStorageIndex(
         statePreferences.edit().putBoolean(KEY_DIRTY, true).apply()
     }
 
+
+    /**
+     * One isolated duplicate-scan session. Prepared SHA digests are revision-bound
+     * and never authorize deletion; the scanner still revalidates live bytes.
+     * A separate session avoids sharing unflushed state with a cancelled scan.
+     */
+    internal fun newScanCache(): DuplicateHashCache = ScanHashCache()
+
+    private data class ScanHashes(var sample: String? = null, var full: String? = null)
+    private data class ScanHashWrite(val item: IndexedFile, val column: String, val hash: String)
+
+    private inner class ScanHashCache : DuplicateHashCache {
+        private val hashes = HashMap<String, ScanHashes>()
+        private val pending = ArrayList<ScanHashWrite>(HASH_WRITE_BATCH)
+        private var prepared = false
+
+        override fun prepare(items: List<IndexedFile>) = synchronized(lock) {
+            check(!prepared) { "Duplicate scan cache can only be prepared once" }
+            prepared = true
+            val eligible = items.asSequence()
+                .filter { it.revision != null }
+                .distinctBy { it.file.absolutePath }
+                .toList()
+            if (eligible.isEmpty()) return@synchronized
+
+            val db = helper.readableDatabase
+            // SQLite's bind limit varies by Android release: stay well below 999.
+            for (batch in eligible.chunked(HASH_READ_BATCH)) {
+                val expected = batch.associateBy { it.file.absolutePath }
+                val placeholders = List(batch.size) { "?" }.joinToString(",")
+                db.query(
+                    TABLE_FILES,
+                    arrayOf(
+                        COL_PATH, COL_SIZE, COL_MODIFIED, COL_DEVICE_ID, COL_INODE,
+                        COL_CTIME_SECONDS, COL_CTIME_NANOS, COL_SAMPLE_HASH, COL_FULL_HASH,
+                    ),
+                    "$COL_PATH IN ($placeholders)",
+                    batch.map { it.file.absolutePath }.toTypedArray(),
+                    null, null, null,
+                ).use { cursor ->
+                    while (cursor.moveToNext()) {
+                        val path = cursor.getString(0)
+                        val item = expected[path] ?: continue
+                        val revision = item.revision ?: continue
+                        if (
+                            cursor.getLong(1) != item.size ||
+                            cursor.getLong(2) != item.modified ||
+                            cursor.isNull(3) || cursor.getLong(3) != revision.physicalIdentity.deviceId ||
+                            cursor.isNull(4) || cursor.getLong(4) != revision.physicalIdentity.inode ||
+                            cursor.isNull(5) || cursor.getLong(5) != revision.changeTimeSeconds ||
+                            cursor.isNull(6) || cursor.getLong(6) != revision.changeTimeNanos
+                        ) continue
+                        hashes[path] = ScanHashes(
+                            sample = if (cursor.isNull(7)) null else cursor.getString(7),
+                            full = if (cursor.isNull(8)) null else cursor.getString(8),
+                        )
+                    }
+                }
+            }
+        }
+
+        override fun sampleHash(item: IndexedFile): String? = synchronized(lock) {
+            if (item.revision == null) null else hashes[item.file.absolutePath]?.sample
+        }
+
+        override fun fullHash(item: IndexedFile): String? = synchronized(lock) {
+            if (item.revision == null) null else hashes[item.file.absolutePath]?.full
+        }
+
+        override fun putSampleHash(item: IndexedFile, hash: String) =
+            queue(item, COL_SAMPLE_HASH, hash)
+
+        override fun putFullHash(item: IndexedFile, hash: String) =
+            queue(item, COL_FULL_HASH, hash)
+
+        private fun queue(item: IndexedFile, column: String, hash: String) = synchronized(lock) {
+            if (!prepared || item.revision == null || hash.length != 64) return@synchronized
+            val record = hashes.getOrPut(item.file.absolutePath) { ScanHashes() }
+            if (column == COL_SAMPLE_HASH) record.sample = hash else record.full = hash
+            pending += ScanHashWrite(item, column, hash)
+            if (pending.size >= HASH_WRITE_BATCH) flushPending()
+        }
+
+        override fun flush() = synchronized(lock) { flushPending() }
+
+        private fun flushPending() {
+            if (pending.isEmpty()) return
+            val db = helper.writableDatabase
+            db.beginTransaction()
+            try {
+                for ((item, column, hash) in pending) {
+                    val revision = item.revision ?: continue
+                    val values = ContentValues().apply {
+                        put(column, hash)
+                        put(COL_LAST_VERIFIED_AT, System.currentTimeMillis())
+                    }
+                    db.update(
+                        TABLE_FILES, values,
+                        "$COL_PATH = ? AND $COL_SIZE = ? AND $COL_MODIFIED = ? " +
+                            "AND $COL_DEVICE_ID = ? AND $COL_INODE = ? " +
+                            "AND $COL_CTIME_SECONDS = ? AND $COL_CTIME_NANOS = ?",
+                        arrayOf(
+                            item.file.absolutePath,
+                            item.size.toString(),
+                            item.modified.toString(),
+                            revision.physicalIdentity.deviceId.toString(),
+                            revision.physicalIdentity.inode.toString(),
+                            revision.changeTimeSeconds.toString(),
+                            revision.changeTimeNanos.toString(),
+                        ),
+                    )
+                }
+                db.setTransactionSuccessful()
+            } finally {
+                db.endTransaction()
+            }
+            pending.clear()
+        }
+    }
+
     override fun sampleHash(item: IndexedFile): String? =
         boundHash(item, COL_SAMPLE_HASH)
 
@@ -547,6 +671,8 @@ internal class PersistentStorageIndex(
         const val INDEX_STATE_PREFERENCES_PREFIX = "storage_index_state_"
         const val KEY_DIRTY = "index_dirty"
         const val CANCELLATION_CHECK_INTERVAL = 128
+        const val HASH_READ_BATCH = 250
+        const val HASH_WRITE_BATCH = 64
 
         const val TABLE_FILES = "indexed_files"
         const val TABLE_DIRECTORIES = "indexed_directories"

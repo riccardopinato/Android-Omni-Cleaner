@@ -9,17 +9,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,12 +52,21 @@ private enum class CleanupDialog {
     FILES,
 }
 
+/** Keep uncommitted selections in the Activity-root owner across detail pages. */
+class CleanupSelectionUiState {
+    var lastDuplicateScanEpoch: Long = 0L
+    val selectedFolders = mutableStateOf<Set<String>>(emptySet())
+    val selectedBigFiles = mutableStateOf<Set<String>>(emptySet())
+    val selectedDuplicates = mutableStateOf<Set<String>>(emptySet())
+}
+
 @Composable
 fun StorageCleanupSection(
     folders: List<FolderItem>,
     bigFiles: List<BigFileItem>,
     duplicateGroups: List<DuplicateGroup>,
     onCleanupFinished: () -> Unit,
+    selectionState: CleanupSelectionUiState = remember { CleanupSelectionUiState() },
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -62,9 +74,13 @@ fun StorageCleanupSection(
         StorageCleanupEngine(context.applicationContext)
     }
 
-    var selectedFolders by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var selectedBigFiles by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var selectedDuplicates by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var visibleEmptyFolderLimit by remember { mutableStateOf(20) }
+    var visibleBigFileLimit by remember { mutableStateOf(20) }
+    var visibleDuplicateGroupLimit by remember { mutableStateOf(12) }
+    var visibleDuplicateFilesLimit by remember { mutableStateOf(6) }
+    var selectedFolders by selectionState.selectedFolders
+    var selectedBigFiles by selectionState.selectedBigFiles
+    var selectedDuplicates by selectionState.selectedDuplicates
     var dialog by remember { mutableStateOf<CleanupDialog?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var pendingPreparation by remember { mutableStateOf<FileCleanupPreparation?>(null) }
@@ -196,7 +212,7 @@ fun StorageCleanupSection(
 
                 if (emptyFolders.isNotEmpty()) {
                     Text(stringResource(R.string.cleanup_empty_folders), style = MaterialTheme.typography.titleMedium)
-                    emptyFolders.take(20).forEach { folder ->
+                    emptyFolders.take(visibleEmptyFolderLimit).forEach { folder ->
                         SelectionRow(
                             checked = folder.path in selectedFolders,
                             label = folder.name,
@@ -205,6 +221,11 @@ fun StorageCleanupSection(
                                 selectedFolders = selectedFolders.withToggle(folder.path, checked)
                             },
                         )
+                    }
+                    if (emptyFolders.size > visibleEmptyFolderLimit) {
+                        OutlinedButton(onClick = {
+                            visibleEmptyFolderLimit = (visibleEmptyFolderLimit + 40).coerceAtMost(emptyFolders.size)
+                        }) { Text(stringResource(R.string.audit_show_more)) }
                     }
                     Row(
                         modifier = Modifier
@@ -230,7 +251,7 @@ fun StorageCleanupSection(
 
                 if (bigFiles.isNotEmpty()) {
                     Text(stringResource(R.string.module_large_files), style = MaterialTheme.typography.titleMedium)
-                    bigFiles.take(20).forEach { file ->
+                    bigFiles.take(visibleBigFileLimit).forEach { file ->
                         SelectionRow(
                             checked = file.path in selectedBigFiles,
                             label = file.name,
@@ -242,6 +263,11 @@ fun StorageCleanupSection(
                     }
                 }
 
+                if (bigFiles.size > visibleBigFileLimit) {
+                    OutlinedButton(onClick = {
+                        visibleBigFileLimit = (visibleBigFileLimit + 40).coerceAtMost(bigFiles.size)
+                    }) { Text(stringResource(R.string.audit_show_more)) }
+                }
                 if (duplicateGroups.isNotEmpty()) {
                     Text(stringResource(R.string.module_duplicates), style = MaterialTheme.typography.titleMedium)
                     Row(
@@ -266,7 +292,7 @@ fun StorageCleanupSection(
                         }
                     }
 
-                    duplicateGroups.take(12).forEach { group ->
+                    duplicateGroups.take(visibleDuplicateGroupLimit).forEach { group ->
                         Text(
                             stringResource(
                                 R.string.pro_duplicate_group,
@@ -276,7 +302,7 @@ fun StorageCleanupSection(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        group.files.take(6).forEach { file ->
+                        group.files.take(visibleDuplicateFilesLimit).forEach { file ->
                             SelectionRow(
                                 checked = file.path in selectedDuplicates,
                                 label = file.name,
@@ -286,6 +312,17 @@ fun StorageCleanupSection(
                                 },
                             )
                         }
+                    }
+                    if (duplicateGroups.any { it.files.size > visibleDuplicateFilesLimit }) {
+                        OutlinedButton(onClick = { visibleDuplicateFilesLimit += 24 }) {
+                            Text(stringResource(R.string.audit_show_more))
+                        }
+                    }
+                    if (duplicateGroups.size > visibleDuplicateGroupLimit) {
+                        OutlinedButton(onClick = {
+                            visibleDuplicateGroupLimit =
+                                (visibleDuplicateGroupLimit + 24).coerceAtMost(duplicateGroups.size)
+                        }) { Text(stringResource(R.string.audit_show_more)) }
                     }
                 }
 
@@ -308,16 +345,21 @@ fun StorageCleanupSection(
         }
     }
 
-    ManualMaintenanceCard()
-
     when (dialog) {
         CleanupDialog.EMPTY_FOLDERS -> AlertDialog(
             onDismissRequest = { dialog = null },
             title = { Text(stringResource(R.string.cleanup_empty_confirm_title)) },
             text = {
-                Text(
-                    stringResource(R.string.cleanup_empty_confirm_body),
-                )
+                val selected = emptyFolders.filter { it.path in selectedFolders }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.cleanup_empty_confirm_body))
+                    Text(stringResource(R.string.audit_review_selected_count, selected.size))
+                    LazyColumn(modifier = Modifier.heightIn(max = 280.dp)) {
+                        items(selected, key = { it.path }) { folder ->
+                            Text(folder.displayPath, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
             },
             confirmButton = {
                 TextButton(
@@ -345,9 +387,22 @@ fun StorageCleanupSection(
             onDismissRequest = { dialog = null },
             title = { Text(stringResource(R.string.cleanup_confirm_title)) },
             text = {
-                Text(
-                    stringResource(R.string.cleanup_confirm_body),
-                )
+                val chosenBig = bigFiles.filter { it.path in selectedBigFiles }
+                val chosenDuplicates = duplicateGroups.flatMap { group ->
+                    group.files.filter { it.path in selectedDuplicates }
+                }
+                val chosen = (chosenBig.map { it.path to it.displayPath } +
+                    chosenDuplicates.map { it.path to it.displayPath })
+                    .distinctBy { it.first }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.cleanup_confirm_body))
+                    Text(stringResource(R.string.audit_review_selected_count, chosen.size))
+                    LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                        items(chosen, key = { it.first }) { entry ->
+                            Text(entry.second, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
             },
             confirmButton = {
                 TextButton(
@@ -367,7 +422,7 @@ fun StorageCleanupSection(
 }
 
 @Composable
-private fun ManualMaintenanceCard() {
+fun ManualMaintenanceCard() {
     val context = LocalContext.current
     var message by remember { mutableStateOf<String?>(null) }
     val clipboardUnavailable = stringResource(R.string.manual_clipboard_unavailable)
