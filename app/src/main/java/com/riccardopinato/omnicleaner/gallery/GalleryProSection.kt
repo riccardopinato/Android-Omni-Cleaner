@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton
+import com.riccardopinato.omnicleaner.ui.theme.OmniSecondaryButton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
@@ -166,7 +167,7 @@ internal fun GalleryProSection(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                OmniActionButton(onClick = onOpenReview, modifier = Modifier.fillMaxWidth()) {
+                OmniSecondaryButton(onClick = onOpenReview, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.gallery_open_review))
                 }
             }
