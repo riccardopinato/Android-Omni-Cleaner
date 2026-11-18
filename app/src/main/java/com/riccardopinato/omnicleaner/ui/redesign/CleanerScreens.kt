@@ -58,6 +58,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -163,7 +165,7 @@ internal fun CleanHubScreen(
                                 ?: stringResource(R.string.omni_scan_running),
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                        Button(onClick = controller::cancelScan) {
+                        OutlinedButton(onClick = controller::cancelScan) {
                             Text(stringResource(R.string.cancel))
                         }
                     }
@@ -252,7 +254,13 @@ private fun CleanHubToolGroup(
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold,
         )
-        val rows = if (singleColumn) tools.map { listOf(it) } else tools.chunked(2)
+        val rows = when {
+            singleColumn -> tools.map { listOf(it) }
+            // Storage overview is the true primary module, not just a random wide tile.
+            tools.firstOrNull() == CleanerToolRoute.OVERVIEW ->
+                listOf(listOf(CleanerToolRoute.OVERVIEW)) + tools.drop(1).chunked(2)
+            else -> tools.chunked(2)
+        }
         rows.forEach { pair ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -263,13 +271,15 @@ private fun CleanHubToolGroup(
                         onClick = { onOpenTool(tool) },
                         modifier = Modifier
                             .weight(1f)
-                            .heightIn(min = 92.dp)
+                            .heightIn(min = if (tool == CleanerToolRoute.OVERVIEW && !singleColumn) 108.dp else 92.dp)
                             .testTag("omni_clean_tool_${tool.name.lowercase(Locale.ROOT)}"),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
+                            containerColor = if (tool == CleanerToolRoute.OVERVIEW)
+                                MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surface,
                         ),
                         border = androidx.compose.foundation.BorderStroke(
-                            1.dp, accent.copy(alpha = 0.25f),
+                            1.dp, accent.copy(alpha = if (tool == CleanerToolRoute.OVERVIEW) 0.5f else 0.25f),
                         ),
                         shape = RoundedCornerShape(20.dp),
                     ) {
@@ -300,7 +310,7 @@ private fun CleanHubToolGroup(
                         }
                     }
                 }
-                if (pair.size == 1 && !singleColumn) {
+                if (pair.size == 1 && !singleColumn && pair.first() != CleanerToolRoute.OVERVIEW) {
                     Spacer(modifier = Modifier.weight(1f))
                 }
             }
@@ -441,7 +451,7 @@ internal fun CleanDetailScreen(
                                         style = MaterialTheme.typography.bodySmall,
                                     )
                                 }
-                                Button(onClick = controller::cancelScan) {
+                                OutlinedButton(onClick = controller::cancelScan) {
                                     Text(stringResource(R.string.cancel))
                                 }
                             } else {
@@ -1223,12 +1233,15 @@ private fun CleanFiltersCard(
                 horizontalArrangement = Arrangement.spacedBy(7.dp),
             ) {
                 BigFileSizeFilter.entries.forEach { filter ->
-                    if (filter == state.bigFileSizeFilter) {
-                        Button(onClick = { controller.updateBigFileSizeFilter(filter) }) {
-                            Text(filter.label)
+                    val isSelected = filter == state.bigFileSizeFilter
+                    if (isSelected) {
+                        Button(onClick = { controller.updateBigFileSizeFilter(filter) },
+                            modifier = Modifier.semantics { selected = true }) {
+                            Text("✓  " + filter.label)
                         }
                     } else {
-                        OutlinedButton(onClick = { controller.updateBigFileSizeFilter(filter) }) {
+                        OutlinedButton(onClick = { controller.updateBigFileSizeFilter(filter) },
+                            modifier = Modifier.semantics { selected = false }) {
                             Text(filter.label)
                         }
                     }
@@ -1245,14 +1258,20 @@ private fun CleanFiltersCard(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ThresholdUnit.entries.forEach { unit ->
-                    if (state.thresholdUnit == unit) {
-                        Button(onClick = { controller.updateThresholdUnit(unit) }) {
-                            Text(unit.label)
-                        }
+                    val isSelected = state.thresholdUnit == unit
+                    val choiceModifier = Modifier
+                        .testTag("omni_threshold_unit_${unit.name.lowercase(Locale.ROOT)}")
+                        .semantics { selected = isSelected }
+                    if (isSelected) {
+                        Button(
+                            onClick = { controller.updateThresholdUnit(unit) },
+                            modifier = choiceModifier,
+                        ) { Text("✓  " + unit.label) }
                     } else {
-                        OutlinedButton(onClick = { controller.updateThresholdUnit(unit) }) {
-                            Text(unit.label)
-                        }
+                        OutlinedButton(
+                            onClick = { controller.updateThresholdUnit(unit) },
+                            modifier = choiceModifier,
+                        ) { Text(unit.label) }
                     }
                 }
             }
