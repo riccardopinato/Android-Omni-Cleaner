@@ -192,12 +192,26 @@ appId: com.riccardopinato.omnicleaner.debug
 - tapOn:
     id: "omni_gallery_video_play"
 - takeScreenshot: 11-video-playing
+- tapOn:
+    id: "omni_gallery_immersive_open"
+- assertVisible:
+    id: "omni_gallery_immersive_content"
+- takeScreenshot: 15-video-immersive
+- tapOn:
+    id: "omni_gallery_immersive_close"
+- assertVisible:
+    id: "omni_gallery_media_full"
 VIDEO_FLOW
       mkdir -p "$OUTPUT/maestro-video"
       if maestro test --test-output-dir "$OUTPUT/maestro-video" "$OUTPUT/video-capture.yaml"; then
         screenshot="$(find "$OUTPUT/maestro-video" -type f -name '11-video-playing.png' -print -quit)"
         if [[ -n "$screenshot" ]]; then
           cp "$screenshot" "$OUTPUT/11-video-playing.png"
+          immersive="$(find "$OUTPUT/maestro-video" -type f -name '15-video-immersive.png' -print -quit)"
+          if [[ -n "$immersive" ]]; then
+            cp "$immersive" "$OUTPUT/15-video-immersive.png"
+            echo "VIDEO_IMMERSIVE_SMOKE_PASS: full-screen original-aspect player"
+          fi
           echo "VIDEO_PLAYBACK_SMOKE_PASS: synthetic original-aspect MP4"
         fi
       else
@@ -215,7 +229,7 @@ fi
 
 cat > "$OUTPUT/README.txt" <<EOF
 Android Omni Cleaner: five genuine Android emulator screenshots.
-Git commit: ${GITHUB_SHA:-unknown}
+Git commit: ${OMNI_SOURCE_SHA:-${GITHUB_SHA:-unknown}}
 Source: debug APK assembled from this commit on the workflow runner.
 Device: Google APIs x86_64, Pixel 7 Pro, Android API 35
 Theme: system light; font scale: 1.0; no personal user data.

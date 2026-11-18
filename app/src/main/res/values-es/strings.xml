@@ -483,4 +483,11 @@
     <string name="review_center_gallery_note">La papelera Android exige confirmación del sistema. Los medios en cola no son espacio recuperado.</string>
     <string name="review_center_open_gallery">Abrir revisión de galería</string>
     <string name="review_center_footer">Esta pantalla no elimina ni mueve archivos. Utiliza la confirmación segura de cada función.</string>
+    <string name="omni_clean_group_analyze">Explora el almacenamiento</string>
+    <string name="omni_clean_group_review">Revisa y recupera</string>
+    <string name="omni_clean_group_advanced">Herramientas avanzadas</string>
+    <string name="omni_scan_running">Analizando el dispositivo…</string>
+    <string name="omni_gallery_immersive_open">Ver a pantalla completa</string>
+    <string name="omni_gallery_immersive_close">Cerrar</string>
+    <string name="omni_gallery_immersive_hint">Se conservan las proporciones originales. La vista no modifica el archivo.</string>
 </resources>

@@ -486,4 +486,11 @@
     <string name="review_center_gallery_note">Il cestino Android richiede una conferma di sistema separata. I media in coda non sono spazio già liberato.</string>
     <string name="review_center_open_gallery">Apri revisione galleria</string>
     <string name="review_center_footer">Questa schermata non elimina, sposta o ripristina file. Usa la conferma già protetta nelle singole funzioni.</string>
+    <string name="omni_clean_group_analyze">Esplora la memoria</string>
+    <string name="omni_clean_group_review">Controlla e recupera</string>
+    <string name="omni_clean_group_advanced">Strumenti avanzati</string>
+    <string name="omni_scan_running">Scansione in corso…</string>
+    <string name="omni_gallery_immersive_open">Apri a schermo intero</string>
+    <string name="omni_gallery_immersive_close">Chiudi</string>
+    <string name="omni_gallery_immersive_hint">Proporzioni originali mantenute. La visualizzazione non modifica il file.</string>
 </resources>

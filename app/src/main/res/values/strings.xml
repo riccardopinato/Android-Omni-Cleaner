@@ -486,4 +486,11 @@
     <string name="review_center_gallery_note">The Android Trash queue requires its own system confirmation. Queued media are not counted as reclaimed bytes.</string>
     <string name="review_center_open_gallery">Open Gallery review</string>
     <string name="review_center_footer">This screen never deletes, moves or restores files. Use the existing reviewed confirmation in each module.</string>
+    <string name="omni_clean_group_analyze">Explore storage</string>
+    <string name="omni_clean_group_review">Review &amp; recover</string>
+    <string name="omni_clean_group_advanced">Advanced tools</string>
+    <string name="omni_scan_running">Scanning device…</string>
+    <string name="omni_gallery_immersive_open">View full screen</string>
+    <string name="omni_gallery_immersive_close">Close</string>
+    <string name="omni_gallery_immersive_hint">Original proportions preserved. Viewing does not change this file.</string>
 </resources>

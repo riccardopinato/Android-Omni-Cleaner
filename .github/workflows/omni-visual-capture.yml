@@ -2,6 +2,8 @@ name: Omni Cleaner — visual screenshots
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
   push:
     branches:
       - audit/omni-safety-ux-360-20261115
@@ -27,12 +29,14 @@ concurrency:
 jobs:
   capture:
     runs-on: ubuntu-latest
+    env:
+      OMNI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     timeout-minutes: 35
     steps:
       - name: Checkout exact source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           path: target
           persist-credentials: false
 
@@ -96,7 +100,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: omni-design-screenshots-${{ github.sha }}
+          name: omni-design-screenshots-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             omni-design-screenshots/01-home.png
             omni-design-screenshots/02-clean.png
@@ -109,6 +113,7 @@ jobs:
             omni-design-screenshots/09-privacy-batch.png
             omni-design-screenshots/10-pro-manage.png
             omni-design-screenshots/11-video-playing.png
+            omni-design-screenshots/15-video-immersive.png
             omni-design-screenshots/12-storage-intelligence.png
             omni-design-screenshots/13-gallery-pro.png
             omni-design-screenshots/14-review-center.png

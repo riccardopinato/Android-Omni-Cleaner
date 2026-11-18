@@ -483,4 +483,11 @@
     <string name="review_center_gallery_note">O lixo Android exige confirmação do sistema. Os itens na fila não representam espaço recuperado.</string>
     <string name="review_center_open_gallery">Abrir revisão da galeria</string>
     <string name="review_center_footer">Este ecrã não elimina nem move ficheiros. Utilize a confirmação protegida de cada função.</string>
+    <string name="omni_clean_group_analyze">Explorar o armazenamento</string>
+    <string name="omni_clean_group_review">Rever e recuperar</string>
+    <string name="omni_clean_group_advanced">Ferramentas avançadas</string>
+    <string name="omni_scan_running">A analisar o dispositivo…</string>
+    <string name="omni_gallery_immersive_open">Ver em ecrã inteiro</string>
+    <string name="omni_gallery_immersive_close">Fechar</string>
+    <string name="omni_gallery_immersive_hint">As proporções originais são preservadas. A visualização não altera o ficheiro.</string>
 </resources>
