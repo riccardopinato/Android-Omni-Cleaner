@@ -197,9 +197,15 @@ internal fun StorageIntelligenceSection(
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                             }
+                            // Progress is a share of indexed bytes, never a scan percentage.
                             LinearProgressIndicator(
                                 progress = { percent },
                                 modifier = Modifier.fillMaxWidth(),
+                            )
+                            Text(
+                                "${(percent * 100).toInt()}%",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
