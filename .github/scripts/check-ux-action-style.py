@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the single blue/white action button contract and native broom tab."""
+"""Check branded primary, quiet secondary, selected states and broom tab."""
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -25,14 +25,30 @@ for path in SCREEN_FILES:
         if f"{symbol}(" not in text:
             continue
         expected = f"import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as {symbol}"
-        if expected not in text:
-            raise SystemExit(f"{path}: {symbol} not using shared action style")
+        preferred = {
+            "Button": "OmniActionButton",
+            "OutlinedButton": "OmniSecondaryButton",
+            "TextButton": "OmniTextButton",
+        }[symbol]
+        adapted = f"import com.riccardopinato.omnicleaner.ui.theme.{preferred} as {symbol}"
+        if expected not in text and adapted not in text:
+            raise SystemExit(f"{path}: {symbol} not using first-party semantic action style")
         if f"import androidx.compose.material3.{symbol}\n" in text:
             raise SystemExit(f"{path}: direct Material3 {symbol} import remains")
 
 buttons = (UI / "ui/theme/OmniActionButtons.kt").read_text(encoding="utf-8")
 assert "Color(0xFF285DE5)" in buttons, "action blue changed"
 assert "contentColor = Color.White" in buttons, "action white text changed"
+assert "fun OmniSecondaryButton(" in buttons, "quiet secondary action missing"
+assert "fun OmniTextButton(" in buttons, "quiet tertiary action missing"
+assert "colors = colors ?: ButtonDefaults.buttonColors(" in buttons, "semantic color overrides ignored"
+gallery_controls = (UI / "gallery/GalleryCleanerSection.kt").read_text(encoding="utf-8")
+assert "FlowRow(" in gallery_controls and "omni_gallery_filter_" in gallery_controls, "gallery filters must wrap"
+assert "semantics { selected = selectedFilter }" in gallery_controls
+clean_controls = (UI / "ui/redesign/CleanerScreens.kt").read_text(encoding="utf-8")
+assert "omni_threshold_unit_" in clean_controls and 'Text("✓  " + unit.label)' in clean_controls
+assert "listOf(listOf(CleanerToolRoute.OVERVIEW))" in clean_controls, "bento primary hierarchy missing"
+
 
 broom = (UI / "ui/redesign/OmniNavigationIcon.kt").read_text(encoding="utf-8")
 assert "OmniNavigationSymbol.CLEAN -> {" in broom
@@ -48,4 +64,4 @@ assert "testTagsAsResourceId = true" in nav
 gallery = (UI / "gallery/GalleryMediaPreview.kt").read_text(encoding="utf-8")
 assert "BorderStroke(2.dp, TrashRed)" in gallery
 assert "BorderStroke(2.dp, KeepGreen)" in gallery
-print(f"OMNI_ACTIONS_AND_BROOM_PASS: {len(SCREEN_FILES)} Kotlin screens")
+print(f"OMNI_ACTIONS_BENTO_FILTERS_PASS: {len(SCREEN_FILES)} Kotlin screens")
