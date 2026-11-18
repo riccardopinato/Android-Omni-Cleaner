@@ -168,7 +168,7 @@ adb shell am start -a android.settings.SETTINGS >/dev/null
 sleep 3
 adb exec-out screencap -p > "$OUTPUT/video-fixture-reference.png"
 test -s "$OUTPUT/video-fixture-reference.png"
-if ! adb shell screenrecord --time-limit 4 --size 640x360 --bit-rate 800000 \
+if ! adb shell screenrecord --time-limit 18 --size 640x360 --bit-rate 800000 \
       /sdcard/Movies/OmniQA/omni-qa-landscape.mp4; then
   echo "::error::VIDEO_FIXTURE_FAILED: Android screenrecord could not encode native MP4"
   exit 1
@@ -179,6 +179,9 @@ if [[ ! "$video_bytes" =~ ^[0-9]+$ ]] || (( video_bytes < 2048 )); then
   exit 1
 fi
 echo "VIDEO_FIXTURE_OK: native MediaCodec MP4, $video_bytes bytes"
+# Preserve the actual encoded file for checking its frames, codec, and duration.
+adb pull /sdcard/Movies/OmniQA/omni-qa-landscape.mp4 "$OUTPUT/video-fixture.mp4" >/dev/null
+test -s "$OUTPUT/video-fixture.mp4"
 adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
    -d file:///sdcard/Movies/OmniQA/omni-qa-landscape.mp4 || true
 adb shell cmd media scan-file /sdcard/Movies/OmniQA/omni-qa-landscape.mp4 || true
@@ -210,7 +213,8 @@ appId: com.riccardopinato.omnicleaner.debug
     id: "omni_gallery_media_full"
 - tapOn:
     id: "omni_gallery_video_play"
-- waitForAnimationToEnd
+- waitForAnimationToEnd:
+    timeout: 1000
 - takeScreenshot: 11-video-playing
 - tapOn:
     id: "omni_gallery_immersive_open"
@@ -219,7 +223,8 @@ appId: com.riccardopinato.omnicleaner.debug
     id: "omni_gallery_immersive_content"
 - tapOn:
     id: "omni_gallery_video_play"
-- waitForAnimationToEnd
+- waitForAnimationToEnd:
+    timeout: 1000
 - takeScreenshot: 15-video-immersive
 - tapOn:
     id: "omni_gallery_immersive_close"
