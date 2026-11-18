@@ -14,6 +14,47 @@ import org.junit.Test
 class PersistentStorageIndexInstrumentedTest {
 
     @Test
+    fun reconciliationDiagnosticsCountWritesWithoutChangingIndexedResults() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val databaseName = "reconcile-metrics-${UUID.randomUUID()}.db"
+        val root = File(context.cacheDir, "reconcile-metrics-${UUID.randomUUID()}").apply { mkdirs() }
+        try {
+            File(root, "first.bin").writeText("first content")
+            File(root, "second.bin").writeText("second content")
+            val index = PersistentStorageIndex(context, databaseName)
+            val firstInventory = FileInventoryScanner().collect(root)
+            var first: IndexReconcileDiagnostics? = null
+            index.reconcileFull(root, firstInventory, System.currentTimeMillis())
+            // The ordinary path above retains the original reconciliation contract.
+            val metricsInventory = FileInventoryScanner().collect(root)
+            index.reconcileFull(
+                root, metricsInventory, System.currentTimeMillis(),
+                onMetrics = { first = it },
+            )
+            val measured = requireNotNull(first)
+            assertEquals(2, measured.filesReused + measured.filesReplaced)
+            assertEquals(metricsInventory.directories.size, measured.directoriesWritten)
+            assertTrue(measured.totalMillis >= 0L)
+            assertTrue(measured.fileRowsMillis >= 0L)
+            assertTrue(measured.directoryRowsMillis >= 0L)
+            assertTrue(measured.finalizationMillis >= 0L)
+            assertTrue(measured.commitMillis >= 0L)
+
+            val readBack = requireNotNull(index.loadReusableSnapshot(
+                root, nowMillis = System.currentTimeMillis(),
+                maxAgeMillis = 60_000L,
+            ))
+            assertEquals(2, readBack.inventory.files.size)
+        } finally {
+            root.deleteRecursively()
+            context.deleteDatabase(databaseName)
+            context.getSharedPreferences(
+                "storage_index_state_$databaseName", android.content.Context.MODE_PRIVATE,
+            ).edit().clear().commit()
+        }
+    }
+
+    @Test
     fun interruptedDuplicateScanMarkerSurvivesRestartAndScopesModeAndExtension() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val prefsName = "scan2-recovery-${UUID.randomUUID()}"
