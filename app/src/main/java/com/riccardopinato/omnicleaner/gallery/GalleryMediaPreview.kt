@@ -323,6 +323,7 @@ fun GalleryMediaPreview(
         )
     }
     if (showImmersivePreview) {
+        val immersiveBitmap = bitmap // snapshot of delegated Compose state; safe smart cast
         // Full screen is inspection-only: it never changes the current selection
         // or invokes trash/keep. Original aspect ratio is preserved for both media types.
         Dialog(
@@ -367,9 +368,9 @@ fun GalleryMediaPreview(
                 ) {
                     if (item.isVideo) {
                         GalleryVideoPlayer(item = item, thumbnail = bitmap)
-                    } else if (bitmap != null) {
+                    } else if (immersiveBitmap != null) {
                         Image(
-                            bitmap = bitmap.asImageBitmap(),
+                            bitmap = immersiveBitmap.asImageBitmap(),
                             contentDescription = item.name,
                             contentScale = ContentScale.Fit,
                             modifier = Modifier.fillMaxSize(),
