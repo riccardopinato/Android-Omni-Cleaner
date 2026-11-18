@@ -300,7 +300,7 @@ appId: com.riccardopinato.omnicleaner.debug
     id: "omni_nav_gallery"
 - scrollUntilVisible:
     element:
-      id: "omni_gallery_filter_all"
+      id: "omni_gallery_filter_videos"
     direction: DOWN
     timeout: 30000
 - assertVisible:
