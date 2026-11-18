@@ -29,6 +29,11 @@ appId: com.riccardopinato.omnicleaner.debug
 ---
 - launchApp:
     clearState: false
+# Some Android API35 emulator images display an *external* Pixel Launcher ANR
+# over the running Omni Cleaner. Dismiss only that launcher modal.
+- tapOn:
+    text: "Close app"
+    optional: true
 # Fresh install, do not revoke app-ops after granting storage access.
 # Default startup route IS Home. Do not tap a tab before Compose is ready.
 - extendedWaitUntil:
@@ -157,21 +162,38 @@ for name in 06-clean-duplicates 07-clean-filters 08-privacy-quick 09-privacy-bat
   test -s "$OUTPUT/$name.png"
 done
 
-# Produce an actual H.264/MP4 clip inside the disposable Android emulator.
-# Android screenrecord uses platform MediaCodec, so CI has no FFmpeg/apt dependency.
-# Recorded frames are app fixture pixels, never personal media.
+# Generate a deterministic, moving and BRIGHT H.264 fixture with hundreds
+# of actual video frames; Android screenrecord on a static screen produced ONE
+# frame despite an 18s wall-clock recording (PR #37 visual audit).
+# The fixture contains no personal media and the video stays read-only.
+# This is exact-head QA only, not a production playback implementation.
 adb shell mkdir -p /sdcard/Movies/OmniQA
-if ! adb shell screenrecord --time-limit 3 --size 640x360 --bit-rate 500000 \
-      /sdcard/Movies/OmniQA/omni-qa-landscape.mp4; then
-  echo "::error::VIDEO_FIXTURE_FAILED: Android screenrecord could not encode native MP4"
+if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+  echo "::error::VIDEO_FIXTURE_TOOL_UNAVAILABLE: ffmpeg and ffprobe required for deterministic visual QA"
   exit 1
 fi
+ffmpeg -hide_banner -loglevel error -nostdin \
+    -f lavfi -i 'testsrc2=size=640x360:rate=15' \
+    -t 24 -an -c:v libx264 -preset ultrafast -pix_fmt yuv420p \
+    -movflags +faststart -y "$OUTPUT/video-fixture.mp4"
+video_codec="$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 "$OUTPUT/video-fixture.mp4")"
+video_frames="$(ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of default=noprint_wrappers=1:nokey=1 "$OUTPUT/video-fixture.mp4")"
+video_duration="$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "$OUTPUT/video-fixture.mp4")"
+if [[ "$video_codec" != h264 || ! "$video_frames" =~ ^[0-9]+$ ]] || (( video_frames < 200 )); then
+  echo "::error::VIDEO_FIXTURE_FRAMES_INVALID: codec=$video_codec frames=$video_frames duration=$video_duration"
+  exit 1
+fi
+# Save one reference frame from the exact video fed to the native Android player.
+ffmpeg -hide_banner -loglevel error -nostdin -ss 3 \
+    -i "$OUTPUT/video-fixture.mp4" -frames:v 1 -y "$OUTPUT/video-fixture-reference.png"
+test -s "$OUTPUT/video-fixture-reference.png"
+echo "VIDEO_FIXTURE_FRAMES_OK: codec=$video_codec frames=$video_frames duration=$video_duration"
+adb push "$OUTPUT/video-fixture.mp4" /sdcard/Movies/OmniQA/omni-qa-landscape.mp4 >/dev/null
 video_bytes="$(adb shell stat -c %s /sdcard/Movies/OmniQA/omni-qa-landscape.mp4 2>/dev/null | tr -d '\r' || true)"
-if [[ ! "$video_bytes" =~ ^[0-9]+$ ]] || (( video_bytes < 2048 )); then
-  echo "::error::VIDEO_FIXTURE_EMPTY: native MP4 missing or too small ($video_bytes bytes)"
+if [[ ! "$video_bytes" =~ ^[0-9]+$ ]] || (( video_bytes < 10000 )); then
+  echo "::error::VIDEO_FIXTURE_TRANSFER_INVALID: bytes=$video_bytes"
   exit 1
 fi
-echo "VIDEO_FIXTURE_OK: native MediaCodec MP4, $video_bytes bytes"
 adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
    -d file:///sdcard/Movies/OmniQA/omni-qa-landscape.mp4 || true
 adb shell cmd media scan-file /sdcard/Movies/OmniQA/omni-qa-landscape.mp4 || true
@@ -203,6 +225,8 @@ appId: com.riccardopinato.omnicleaner.debug
     id: "omni_gallery_media_full"
 - tapOn:
     id: "omni_gallery_video_play"
+- waitForAnimationToEnd:
+    timeout: 1000
 - takeScreenshot: 11-video-playing
 - tapOn:
     id: "omni_gallery_immersive_open"
@@ -211,6 +235,8 @@ appId: com.riccardopinato.omnicleaner.debug
     id: "omni_gallery_immersive_content"
 - tapOn:
     id: "omni_gallery_video_play"
+- waitForAnimationToEnd:
+    timeout: 1000
 - takeScreenshot: 15-video-immersive
 - tapOn:
     id: "omni_gallery_immersive_close"
@@ -277,6 +303,37 @@ for name in 16-home-dark-large 17-clean-dark-large 18-gallery-dark-large 19-priv
 done
 adb shell settings put system font_scale 1.0
 adb shell cmd uimode night no || true
+
+# Narrow layout + large text must keep all three Gallery media filters visible.
+adb shell wm size 360x800
+adb shell wm density 160
+adb shell settings put system font_scale 1.5
+cat > "$OUTPUT/gallery-narrow.yaml" <<'NARROW_GALLERY'
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    id: "omni_nav_gallery"
+- scrollUntilVisible:
+    element:
+      id: "omni_gallery_filter_videos"
+    direction: DOWN
+    timeout: 30000
+- assertVisible:
+    id: "omni_gallery_filter_all"
+- assertVisible:
+    id: "omni_gallery_filter_images"
+- assertVisible:
+    id: "omni_gallery_filter_videos"
+- takeScreenshot: 21-gallery-360dp-large
+NARROW_GALLERY
+maestro test --test-output-dir "$OUTPUT/maestro-narrow" "$OUTPUT/gallery-narrow.yaml"
+test -s "$(find "$OUTPUT/maestro-narrow" -name 21-gallery-360dp-large.png -print -quit)"
+cp "$(find "$OUTPUT/maestro-narrow" -name 21-gallery-360dp-large.png -print -quit)" "$OUTPUT/21-gallery-360dp-large.png"
+adb shell settings put system font_scale 1.0
+adb shell wm size reset
+adb shell wm density reset
 
 cat > "$OUTPUT/README.txt" <<EOF
 Android Omni Cleaner: five genuine Android emulator screenshots.

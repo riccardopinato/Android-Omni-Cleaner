@@ -63,6 +63,18 @@ jobs:
             if [[ -d "$path" ]]; then rm -rf "$path"; fi
           done
 
+      # Host-runner-only QA tools. No dependency or binary is added to the APK.
+      # Android screenrecord encoded only one frame from a static screen;
+      # a deterministic 24s multiframe H.264 test clip is required.
+      - name: Install deterministic video QA tools
+        run: |
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends ffmpeg
+          fi
+          ffmpeg -hide_banner -version | head -n 1
+          ffprobe -hide_banner -version | head -n 1
+
       - name: Install Maestro
         run: |
           curl -fsSL https://get.maestro.mobile.dev | bash
@@ -110,6 +122,9 @@ jobs:
             omni-design-screenshots/18-gallery-dark-large.png
             omni-design-screenshots/19-privacy-dark-large.png
             omni-design-screenshots/20-pro-dark-large.png
+            omni-design-screenshots/21-gallery-360dp-large.png
+            omni-design-screenshots/video-fixture-reference.png
+            omni-design-screenshots/video-fixture.mp4
             omni-design-screenshots/12-storage-intelligence.png
             omni-design-screenshots/13-gallery-pro.png
             omni-design-screenshots/14-review-center.png

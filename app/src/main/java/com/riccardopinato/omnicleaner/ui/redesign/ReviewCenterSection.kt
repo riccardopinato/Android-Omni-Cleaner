@@ -30,6 +30,7 @@ import com.riccardopinato.omnicleaner.ui.CleanupSelectionUiState
 import com.riccardopinato.omnicleaner.ui.ReviewQueueEntry
 import com.riccardopinato.omnicleaner.ui.buildReviewCenterSnapshot
 import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton
+import com.riccardopinato.omnicleaner.ui.theme.OmniSecondaryButton
 
 /**
  * Cross-module selection overview, but NOT a new combined delete operation.
@@ -136,15 +137,19 @@ internal fun ReviewCenterSection(
                     )
                 }
                 if (preview.filesystemEntries.isEmpty() && preview.selectedFolders == 0) {
-                    Text(stringResource(R.string.review_center_none))
+                    Text(
+                        stringResource(R.string.review_center_none),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 OmniActionButton(onClick = onOpenLarge, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.scan_big_files))
                 }
-                OmniActionButton(onClick = onOpenDuplicates, modifier = Modifier.fillMaxWidth()) {
+                OmniSecondaryButton(onClick = onOpenDuplicates, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.scan_duplicates))
                 }
-                OmniActionButton(onClick = onOpenFolders, modifier = Modifier.fillMaxWidth()) {
+                OmniSecondaryButton(onClick = onOpenFolders, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.scan_folders))
                 }
                 if (selectedLarge.isNotEmpty() || selectedDup.isNotEmpty() ||

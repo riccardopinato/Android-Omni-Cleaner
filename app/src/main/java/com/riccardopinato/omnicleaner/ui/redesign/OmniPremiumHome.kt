@@ -230,6 +230,7 @@ private fun PremiumTile(
     symbol: OmniNavigationSymbol, title: String, subtitle: String,
     dark: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier,
 ) {
+    val compactText = LocalDensity.current.fontScale > 1.25f
     val accent = when (symbol) {
         OmniNavigationSymbol.CLEAN -> Color(0xFF02CBF6)
         OmniNavigationSymbol.GALLERY -> Color(0xFF9459FF)
@@ -254,7 +255,7 @@ private fun PremiumTile(
         elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().heightIn(min = 165.dp)
+            modifier = Modifier.fillMaxWidth().heightIn(min = if (compactText) 130.dp else 165.dp)
                 .background(Brush.linearGradient(card)).padding(15.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -268,10 +269,12 @@ private fun PremiumTile(
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(title, color = if (dark) Color.White else Color(0xFF101933),
-                    fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1,
+                    fontSize = 16.sp, fontWeight = FontWeight.ExtraBold,
+                    maxLines = if (compactText) 2 else 1,
                     overflow = TextOverflow.Ellipsis)
                 Text(subtitle, color = if (dark) Color(0xFFD8E0F5) else Color(0xFF34425F),
-                    fontSize = 12.sp, lineHeight = 15.sp, maxLines = 2,
+                    fontSize = 12.sp, lineHeight = 15.sp,
+                    maxLines = if (compactText) 3 else 2,
                     overflow = TextOverflow.Ellipsis)
             }
         }
@@ -302,7 +305,7 @@ internal fun OmniPremiumHome(
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(21.dp),
+        verticalArrangement = Arrangement.spacedBy(if (small) 14.dp else 21.dp),
     ) {
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
