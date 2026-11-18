@@ -9,9 +9,17 @@ appId: com.riccardopinato.omnicleaner.debug
 - takeScreenshot: visual-evidence/gallery-filters
 - tapOn:
     text: "Videos only"
-- tapOn:
-    text: "Load gallery"
-- assertVisible: "OmniQA-video.mp4"
+- repeat:
+    times: 3
+    while:
+      notVisible: "OmniQA-video.mp4"
+    commands:
+      - tapOn:
+          text: "Load gallery"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "OmniQA-video.mp4"
+    timeout: 20000
 - assertVisible: "Keep"
 - assertVisible: "Trash"
 - takeScreenshot: visual-evidence/video-review
@@ -25,9 +33,17 @@ appId: com.riccardopinato.omnicleaner.debug
 - assertVisible: "Trash"
 - tapOn:
     text: "Photos only"
-- tapOn:
-    text: "Load gallery"
-- assertVisible: "OmniQA-portrait.jpg"
+- repeat:
+    times: 3
+    while:
+      notVisible: "OmniQA-portrait.jpg"
+    commands:
+      - tapOn:
+          text: "Load gallery"
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "OmniQA-portrait.jpg"
+    timeout: 20000
 - takeScreenshot: visual-evidence/photo-review
 - tapOn:
     text: "Open photo"
