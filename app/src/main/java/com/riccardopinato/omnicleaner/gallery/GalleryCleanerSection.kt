@@ -4,16 +4,17 @@ import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -28,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
@@ -69,13 +71,8 @@ fun GalleryCleanerSection(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(stringResource(R.string.module_gallery_cleaner), style = MaterialTheme.typography.titleLarge)
-            Text(
-                stringResource(R.string.gallery_body),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
+            // Parent ModuleScreen already provides title and the safety explanation.
+            // Avoid duplicating that header, which pushes review controls below the fold.
             if (!state.hasAccess) {
                 Button(
                     onClick = { permissionLauncher.launch(GalleryAccess.requiredPermissions()) },
@@ -98,52 +95,74 @@ fun GalleryCleanerSection(
                     }
                 }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                // Wrapping chips keep every media filter discoverable at large font scales.
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     GalleryMediaFilter.entries.forEach { filter ->
-                        if (state.filter == filter) {
-                            Button(
-                                onClick = { controller.setFilter(filter) },
-                                enabled = filter.isAvailableFor(state.accessHealth),
-                            ) {
-                                Text(galleryFilterLabel(filter))
-                            }
-                        } else {
-                            OutlinedButton(
-                                onClick = { controller.setFilter(filter) },
-                                enabled = filter.isAvailableFor(state.accessHealth),
-                            ) {
-                                Text(galleryFilterLabel(filter))
-                            }
-                        }
+                        FilterChip(
+                            selected = state.filter == filter,
+                            onClick = { controller.setFilter(filter) },
+                            enabled = filter.isAvailableFor(state.accessHealth),
+                            label = { Text(galleryFilterLabel(filter)) },
+                        )
                     }
                 }
 
-                OutlinedButton(
-                    onClick = controller::cycleSortOrder,
+                Row(
                     modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(stringResource(R.string.gallery_sort, gallerySortLabel(state.sortOrder)))
-                }
+                    OutlinedButton(
+                        onClick = controller::cycleSortOrder,
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.gallery_sort, gallerySortLabel(state.sortOrder)),
+                            maxLines = 2,
+                        )
+                    }
 
-                Button(
-                    onClick = { controller.load() },
-                    enabled = !state.loading,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        if (state.items.isEmpty()) stringResource(R.string.gallery_load)
-                        else stringResource(R.string.gallery_reload),
-                    )
+                    Button(
+                        onClick = { controller.load() },
+                        enabled = !state.loading,
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    ) {
+                        Text(
+                            if (state.items.isEmpty()) stringResource(R.string.gallery_load)
+                            else stringResource(R.string.gallery_reload),
+                            maxLines = 2,
+                        )
+                    }
                 }
+            }
+
+            if (state.totalReviewedCount > 0) {
+                Text(
+                    stringResource(R.string.gallery_reviewed_count, state.totalReviewedCount),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
             if (state.loading) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            } else if (
+                state.hasAccess &&
+                !state.loadingNextPage &&
+                state.items.isEmpty() &&
+                !state.hasMore &&
+                state.error == null
+            ) {
+                // Also useful before the first load: never imply a full-device scan
+                // has run when the current filter simply has no loaded results.
+                Text(
+                    text = stringResource(R.string.gallery_empty_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
             state.currentItem?.let { current ->
@@ -153,12 +172,26 @@ fun GalleryCleanerSection(
                     stringResource(R.string.gallery_unknown_date)
                 }
 
+                Text(
+                    stringResource(
+                        R.string.gallery_current_loaded,
+                        state.currentIndex + 1,
+                        state.items.size,
+                    ),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
                 GalleryMediaPreview(
                     item = current,
                     onKeep = controller::keepCurrent,
                     onTrash = controller::trashCurrent,
                 )
-                Text(current.name, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    current.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(
                     buildString {
                         append(current.formattedSize)
@@ -176,22 +209,30 @@ fun GalleryCleanerSection(
                     style = MaterialTheme.typography.bodySmall,
                 )
 
+                // Deliberate actions stay visible; Trash only stages media for Android review.
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Button(onClick = controller::keepCurrent) {
+                    OutlinedButton(
+                        onClick = controller::keepCurrent,
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    ) {
                         Text(stringResource(R.string.action_keep))
                     }
-                    Button(onClick = controller::trashCurrent) {
+                    Button(
+                        onClick = controller::trashCurrent,
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    ) {
                         Text(stringResource(R.string.action_trash))
                     }
-                    if (state.history.isNotEmpty()) {
-                        OutlinedButton(onClick = controller::undoLastAction) {
-                            Text(stringResource(R.string.action_undo))
-                        }
+                }
+                if (state.history.isNotEmpty()) {
+                    OutlinedButton(
+                        onClick = controller::undoLastAction,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.action_undo))
                     }
                 }
             }
