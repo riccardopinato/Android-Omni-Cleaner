@@ -162,31 +162,38 @@ for name in 06-clean-duplicates 07-clean-filters 08-privacy-quick 09-privacy-bat
   test -s "$OUTPUT/$name.png"
 done
 
-# Produce an actual H.264/MP4 clip inside the disposable Android emulator.
-# Android screenrecord uses platform MediaCodec, so CI has no FFmpeg/apt dependency.
-# Record a known BRIGHT system settings screen instead of the previous
-# nearly black idle emulator frame. The clip remains synthetic and disposable.
-# Its PNG reference lets the visual reviewer distinguish fixture vs player failure.
+# Generate a deterministic, moving and BRIGHT H.264 fixture with hundreds
+# of actual video frames; Android screenrecord on a static screen produced ONE
+# frame despite an 18s wall-clock recording (PR #37 visual audit).
+# The fixture contains no personal media and the video stays read-only.
+# This is exact-head QA only, not a production playback implementation.
 adb shell mkdir -p /sdcard/Movies/OmniQA
-adb shell cmd uimode night no || true
-adb shell am start -a android.settings.SETTINGS >/dev/null
-sleep 3
-adb exec-out screencap -p > "$OUTPUT/video-fixture-reference.png"
+if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+  echo "::error::VIDEO_FIXTURE_TOOL_UNAVAILABLE: ffmpeg and ffprobe required for deterministic visual QA"
+  exit 1
+fi
+ffmpeg -hide_banner -loglevel error -nostdin \
+    -f lavfi -i 'testsrc2=size=640x360:rate=15' \
+    -t 24 -an -c:v libx264 -preset ultrafast -pix_fmt yuv420p \
+    -movflags +faststart -y "$OUTPUT/video-fixture.mp4"
+video_codec="$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 "$OUTPUT/video-fixture.mp4")"
+video_frames="$(ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of default=noprint_wrappers=1:nokey=1 "$OUTPUT/video-fixture.mp4")"
+video_duration="$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "$OUTPUT/video-fixture.mp4")"
+if [[ "$video_codec" != h264 || ! "$video_frames" =~ ^[0-9]+$ ]] || (( video_frames < 200 )); then
+  echo "::error::VIDEO_FIXTURE_FRAMES_INVALID: codec=$video_codec frames=$video_frames duration=$video_duration"
+  exit 1
+fi
+# Save one reference frame from the exact video fed to the native Android player.
+ffmpeg -hide_banner -loglevel error -nostdin -ss 3 \
+    -i "$OUTPUT/video-fixture.mp4" -frames:v 1 -y "$OUTPUT/video-fixture-reference.png"
 test -s "$OUTPUT/video-fixture-reference.png"
-if ! adb shell screenrecord --time-limit 18 --size 640x360 --bit-rate 800000 \
-      /sdcard/Movies/OmniQA/omni-qa-landscape.mp4; then
-  echo "::error::VIDEO_FIXTURE_FAILED: Android screenrecord could not encode native MP4"
-  exit 1
-fi
+echo "VIDEO_FIXTURE_FRAMES_OK: codec=$video_codec frames=$video_frames duration=$video_duration"
+adb push "$OUTPUT/video-fixture.mp4" /sdcard/Movies/OmniQA/omni-qa-landscape.mp4 >/dev/null
 video_bytes="$(adb shell stat -c %s /sdcard/Movies/OmniQA/omni-qa-landscape.mp4 2>/dev/null | tr -d '\r' || true)"
-if [[ ! "$video_bytes" =~ ^[0-9]+$ ]] || (( video_bytes < 2048 )); then
-  echo "::error::VIDEO_FIXTURE_EMPTY: native MP4 missing or too small ($video_bytes bytes)"
+if [[ ! "$video_bytes" =~ ^[0-9]+$ ]] || (( video_bytes < 10000 )); then
+  echo "::error::VIDEO_FIXTURE_TRANSFER_INVALID: bytes=$video_bytes"
   exit 1
 fi
-echo "VIDEO_FIXTURE_OK: native MediaCodec MP4, $video_bytes bytes"
-# Preserve the actual encoded file for checking its frames, codec, and duration.
-adb pull /sdcard/Movies/OmniQA/omni-qa-landscape.mp4 "$OUTPUT/video-fixture.mp4" >/dev/null
-test -s "$OUTPUT/video-fixture.mp4"
 adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
    -d file:///sdcard/Movies/OmniQA/omni-qa-landscape.mp4 || true
 adb shell cmd media scan-file /sdcard/Movies/OmniQA/omni-qa-landscape.mp4 || true
