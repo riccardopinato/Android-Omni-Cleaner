@@ -88,6 +88,8 @@ jobs:
             adb shell pm grant "$PACKAGE_ID" android.permission.READ_MEDIA_VIDEO
             bash .github/scripts/prepare-gallery-qa-media.sh
             maestro test --test-output-dir=visual-evidence/maestro .maestro/gallery-video-qa.yaml
+            # The custom shared navigation must still reach all five destinations.
+            maestro test --test-output-dir=visual-evidence/tabs .maestro/omni-impeccable-visual.yaml
             adb shell cmd uimode night yes
             maestro test --test-output-dir=visual-evidence/dark .maestro/gallery-ready.yaml
             adb exec-out screencap -p > visual-evidence/gallery-dark.png
