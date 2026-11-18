@@ -656,25 +656,31 @@ private fun OmniFunctionsHub(
                 }
             }
         }
+        // The destination actions are the primary content; the long onboarding
+        // checklist lives in the dedicated workflow. Keep truthful safety copy.
         if (showWelcome) {
-            OmniWelcomePanel(
-                kind = kind,
-                title = stringResource(titleRes),
-                message = stringResource(bodyRes),
-                highlights = when (kind) {
-                    OmniWelcomeKind.PRIVACY -> listOf(
-                        stringResource(R.string.welcome_privacy_step1),
-                        stringResource(R.string.welcome_privacy_step2),
-                        stringResource(R.string.welcome_privacy_step3),
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .48f),
+                ),
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        stringResource(titleRes),
+                        style = MaterialTheme.typography.titleMedium,
                     )
-                    OmniWelcomeKind.PRO -> listOf(
-                        stringResource(R.string.welcome_pro_step1),
-                        stringResource(R.string.welcome_pro_step2),
-                        stringResource(R.string.welcome_pro_step3),
+                    Text(
+                        stringResource(bodyRes),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    else -> emptyList()
-                },
-            )
+                }
+            }
         }
     }
 }
