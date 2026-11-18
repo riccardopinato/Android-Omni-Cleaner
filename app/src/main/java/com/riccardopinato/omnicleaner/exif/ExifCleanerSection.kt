@@ -163,7 +163,7 @@ internal fun ExifCleanerSection(
             }
 
             if (advancedPage != true) {
-            OutlinedButton(
+            Button(
                 onClick = { singleSourcePicker.launch(arrayOf("image/jpeg")) },
                 enabled = !busy,
                 modifier = Modifier.fillMaxWidth(),
@@ -253,6 +253,13 @@ internal fun ExifCleanerSection(
                 }
             }
 
+            if (sourceTree == null) {
+                Text(
+                    stringResource(R.string.exif_choose_photo_folder),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Button(
                 onClick = {
                     val source = sourceTree ?: return@Button
