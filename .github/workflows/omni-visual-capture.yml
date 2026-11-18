@@ -2,6 +2,15 @@ name: Omni Cleaner — visual screenshots
 
 on:
   workflow_dispatch:
+  # One-time promotion PR needs exact-source Android screenshot evidence.
+  # Retain this gate for later app UI changes targeting main.
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'app/src/main/**'
+      - '.github/workflows/omni-visual-capture.yml'
+      - '.github/scripts/capture-omni-screenshots.sh'
   push:
     branches:
       - audit/omni-safety-ux-360-20261115
@@ -20,6 +29,9 @@ on:
 permissions:
   contents: read
 
+env:
+  OMNI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
 concurrency:
   group: omni-visual-capture-${{ github.ref }}
   cancel-in-progress: true
@@ -32,7 +44,7 @@ jobs:
       - name: Checkout exact source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ env.OMNI_SOURCE_SHA }}
           path: target
           persist-credentials: false
 
@@ -96,7 +108,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: omni-design-screenshots-${{ github.sha }}
+          name: omni-design-screenshots-${{ env.OMNI_SOURCE_SHA }}
           path: |
             omni-design-screenshots/01-home.png
             omni-design-screenshots/02-clean.png

@@ -128,6 +128,53 @@ jobs:
         if: github.event_name != 'pull_request' && github.ref != 'refs/heads/feature/omni-scan-engine-2-0-20261117'
         run: ./gradlew lintDebug lintRelease testDebugUnitTest assembleDebug assembleDebugAndroidTest assembleRelease bundleRelease --stacktrace
 
+      # The user's original debug APK may have a different signing certificate
+      # from newer GitHub-hosted debug builds. Never promise an in-place update
+      # or advise uninstalling an app that may contain saved data.
+      - name: Verify user-APK debug signing compatibility
+        if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          REF_DIR="$RUNNER_TEMP/omni-user-reference"
+          mkdir -p "$REF_DIR"
+          gh release download fast-apk-837b66d8c860 \
+            --repo "$GITHUB_REPOSITORY" \
+            --dir "$REF_DIR" \
+            --pattern 'Android-Omni-Cleaner-837b66d8c860-debug.apk'
+          REFERENCE="$REF_DIR/Android-Omni-Cleaner-837b66d8c860-debug.apk"
+          GENERATED="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$REFERENCE" && test -s "$GENERATED"
+          ACTUAL="$(sha256sum "$REFERENCE" | awk '{print $1}')"
+          EXPECTED="7d5623a46439ddf87b52526aa5914fee5d32b571825fc48a220bdee1c4c0e68b"
+          if [[ "$ACTUAL" != "$EXPECTED" ]]; then
+            echo "::error::Uploaded user APK does not match pinned reference SHA-256"
+            exit 1
+          fi
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "$APKSIGNER"
+          REF_CERT="$("$APKSIGNER" verify --print-certs "$REFERENCE" | grep -m1 'Signer #1 certificate SHA-256 digest:' | awk '{print $NF}')"
+          NEXT_CERT="$("$APKSIGNER" verify --print-certs "$GENERATED" | grep -m1 'Signer #1 certificate SHA-256 digest:' | awk '{print $NF}')"
+          test -n "$REF_CERT" && test -n "$NEXT_CERT"
+          {
+            echo "## User-supplied APK signature compatibility"
+            echo
+            echo "- Baseline APK: \`837b66d8c860\`; checksum: \`$EXPECTED\`"
+            echo "- Baseline signing cert: \`$REF_CERT\`"
+            echo "- Candidate signing cert: \`$NEXT_CERT\`"
+            if [[ "$REF_CERT" == "$NEXT_CERT" ]]; then
+              echo "- Same-signature update: **POSSIBLE** (versionCode and runtime still require checking)."
+            else
+              echo "- Same-package in-place update: **BLOCKED — DIFFERENT DEBUG SIGNER**."
+              echo "- **DO NOT uninstall the user's app to install this build without verified backup/data preservation.**"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$REF_CERT" != "$NEXT_CERT" ]]; then
+            echo "::warning::Different debug signing certificates. In-place upgrade unsafe; no data-loss workaround authorized."
+          fi
+
       - name: Publish exact-head development APK
         if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'push' && (github.ref == 'refs/heads/audit/omni-safety-ux-360-20261115' || github.ref == 'refs/heads/feature/omni-storage-intelligence-v1-20261116' || github.ref == 'refs/heads/feature/omni-gallery-pro-v1-20261116' || github.ref == 'refs/heads/feature/omni-qa-gallery-review-v1-20261116' || github.ref == 'refs/heads/feature/omni-scan-engine-2-0-20261117'))
         shell: bash

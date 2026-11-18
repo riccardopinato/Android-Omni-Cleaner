@@ -2,6 +2,15 @@ name: AppLab Runtime Smoke
 
 on:
   workflow_dispatch:
+  # Full canonical-main promotion must have runtime evidence on its own PR head.
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'app/src/**'
+      - '.maestro/**'
+      - '.github/scripts/applab-runtime-smoke.sh'
+      - '.github/workflows/applab-runtime-smoke.yml'
   # This stacked audit PR is based on PR #22, not main. The normal
   # main-targeted PR gate does not run here. Execute an audit-only
   # emulator smoke when the audited sources or its journeys change.

@@ -215,7 +215,7 @@ fi
 
 cat > "$OUTPUT/README.txt" <<EOF
 Android Omni Cleaner: five genuine Android emulator screenshots.
-Git commit: ${GITHUB_SHA:-unknown}
+Source commit: ${OMNI_SOURCE_SHA:-${GITHUB_SHA:-unknown}}
 Source: debug APK assembled from this commit on the workflow runner.
 Device: Google APIs x86_64, Pixel 7 Pro, Android API 35
 Theme: system light; font scale: 1.0; no personal user data.
