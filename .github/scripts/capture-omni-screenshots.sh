@@ -29,6 +29,11 @@ appId: com.riccardopinato.omnicleaner.debug
 ---
 - launchApp:
     clearState: false
+# Some Android API35 emulator images display an *external* Pixel Launcher ANR
+# over the running Omni Cleaner. Dismiss only that launcher modal.
+- tapOn:
+    text: "Close app"
+    optional: true
 # Fresh install, do not revoke app-ops after granting storage access.
 # Default startup route IS Home. Do not tap a tab before Compose is ready.
 - extendedWaitUntil:
