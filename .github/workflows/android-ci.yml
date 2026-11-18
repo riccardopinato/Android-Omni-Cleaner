@@ -128,52 +128,87 @@ jobs:
         if: github.event_name != 'pull_request' && github.ref != 'refs/heads/feature/omni-scan-engine-2-0-20261117'
         run: ./gradlew lintDebug lintRelease testDebugUnitTest assembleDebug assembleDebugAndroidTest assembleRelease bundleRelease --stacktrace
 
-      # The user's original debug APK may have a different signing certificate
-      # from newer GitHub-hosted debug builds. Never promise an in-place update
-      # or advise uninstalling an app that may contain saved data.
+      # Compare signer cert with the verified user-provided APK signature.
+      # No APK download, external tool discovery, or signing key required.
       - name: Verify user-APK debug signing compatibility
         if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          set -Eeuo pipefail
-          REF_DIR="$RUNNER_TEMP/omni-user-reference"
-          mkdir -p "$REF_DIR"
-          gh release download fast-apk-837b66d8c860 \
-            --repo "$GITHUB_REPOSITORY" \
-            --dir "$REF_DIR" \
-            --pattern 'Android-Omni-Cleaner-837b66d8c860-debug.apk'
-          REFERENCE="$REF_DIR/Android-Omni-Cleaner-837b66d8c860-debug.apk"
-          GENERATED="app/build/outputs/apk/debug/app-debug.apk"
-          test -s "$REFERENCE" && test -s "$GENERATED"
-          ACTUAL="$(sha256sum "$REFERENCE" | awk '{print $1}')"
-          EXPECTED="7d5623a46439ddf87b52526aa5914fee5d32b571825fc48a220bdee1c4c0e68b"
-          if [[ "$ACTUAL" != "$EXPECTED" ]]; then
-            echo "::error::Uploaded user APK does not match pinned reference SHA-256"
-            exit 1
-          fi
-          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"
-          test -x "$APKSIGNER"
-          REF_CERT="$("$APKSIGNER" verify --print-certs "$REFERENCE" | grep -m1 'Signer #1 certificate SHA-256 digest:' | awk '{print $NF}')"
-          NEXT_CERT="$("$APKSIGNER" verify --print-certs "$GENERATED" | grep -m1 'Signer #1 certificate SHA-256 digest:' | awk '{print $NF}')"
-          test -n "$REF_CERT" && test -n "$NEXT_CERT"
-          {
-            echo "## User-supplied APK signature compatibility"
-            echo
-            echo "- Baseline APK: \`837b66d8c860\`; checksum: \`$EXPECTED\`"
-            echo "- Baseline signing cert: \`$REF_CERT\`"
-            echo "- Candidate signing cert: \`$NEXT_CERT\`"
-            if [[ "$REF_CERT" == "$NEXT_CERT" ]]; then
-              echo "- Same-signature update: **POSSIBLE** (versionCode and runtime still require checking)."
-            else
-              echo "- Same-package in-place update: **BLOCKED — DIFFERENT DEBUG SIGNER**."
-              echo "- **DO NOT uninstall the user's app to install this build without verified backup/data preservation.**"
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-          if [[ "$REF_CERT" != "$NEXT_CERT" ]]; then
-            echo "::warning::Different debug signing certificates. In-place upgrade unsafe; no data-loss workaround authorized."
-          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          import hashlib
+          import os
+          import struct
+
+          APK = Path("app/build/outputs/apk/debug/app-debug.apk")
+          # This fingerprint was extracted from the locally supplied APK whose
+          # SHA-256 exactly matched GitHub's 837b66d8 prerelease asset.
+          REFERENCE_APK_SHA256 = "7d5623a46439ddf87b52526aa5914fee5d32b571825fc48a220bdee1c4c0e68b"
+          REFERENCE_CERT_SHA256 = "6d5b6209f3f25e58286bd4b24ae7489780f1a65c052ed8e00d7328047ec1bca7"
+
+          def u32(buffer, offset):
+              return struct.unpack_from("<I", buffer, offset)[0]
+
+          def u64(buffer, offset):
+              return struct.unpack_from("<Q", buffer, offset)[0]
+
+          def lp(buffer, offset):
+              count = u32(buffer, offset)
+              begin = offset + 4
+              end = begin + count
+              if end > len(buffer):
+                  raise ValueError("Invalid APK signing block length")
+              return buffer[begin:end], end
+
+          def signer_sha256(apk):
+              data = apk.read_bytes()
+              with ZipFile(apk) as archive:
+                  directory = archive.start_dir
+              if data[directory - 16:directory] != b"APK Sig Block 42":
+                  raise ValueError("Missing APK Signing Block")
+              size = u64(data, directory - 24)
+              start = directory - size - 8
+              if start < 0 or u64(data, start) != size:
+                  raise ValueError("Malformed APK Signing Block")
+              entries = {}
+              cursor = start + 8
+              while cursor < directory - 24:
+                  pair_size = u64(data, cursor)
+                  if pair_size < 4 or cursor + pair_size + 8 > directory - 24:
+                      raise ValueError("Invalid APK Signing Block pair")
+                  key = u32(data, cursor + 8)
+                  entries[key] = data[cursor + 12:cursor + 8 + pair_size]
+                  cursor += 8 + pair_size
+              for key in (0x7109871A, 0xF05368C0):
+                  if key not in entries:
+                      continue
+                  signers, _ = lp(entries[key], 0)
+                  signer, _ = lp(signers, 0)
+                  signed_data, _ = lp(signer, 0)
+                  _, after_digests = lp(signed_data, 0)
+                  certificates, _ = lp(signed_data, after_digests)
+                  certificate, _ = lp(certificates, 0)
+                  return hashlib.sha256(certificate).hexdigest()
+              raise ValueError("No supported APK v2/v3 signature found")
+
+          actual = signer_sha256(APK)
+          compatible = actual == REFERENCE_CERT_SHA256
+          print("Baseline debug APK SHA-256:", REFERENCE_APK_SHA256)
+          print("Baseline signing certificate:", REFERENCE_CERT_SHA256)
+          print("Candidate signing certificate:", actual)
+          print("Same-signer compatibility:", compatible)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as report:
+              report.write("\\n## User-APK signing compatibility\\n\\n")
+              report.write(f"- Baseline APK SHA256: \`{REFERENCE_APK_SHA256}\`\\n")
+              report.write(f"- Baseline debug signer: \`{REFERENCE_CERT_SHA256}\`\\n")
+              report.write(f"- Candidate debug signer: \`{actual}\`\\n")
+              report.write(f"- Same signer: **{'YES' if compatible else 'NO — IN-PLACE UPDATE BLOCKED'}**\\n")
+              if not compatible:
+                  report.write("- **Do not uninstall without verified data backup.**\\n")
+          if not compatible:
+              print("::warning::Different APK debug signing certificates. In-place update blocked; preserve existing app data.")
+          PY
 
       - name: Publish exact-head development APK
         if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'push' && (github.ref == 'refs/heads/audit/omni-safety-ux-360-20261115' || github.ref == 'refs/heads/feature/omni-storage-intelligence-v1-20261116' || github.ref == 'refs/heads/feature/omni-gallery-pro-v1-20261116' || github.ref == 'refs/heads/feature/omni-qa-gallery-review-v1-20261116' || github.ref == 'refs/heads/feature/omni-scan-engine-2-0-20261117'))
