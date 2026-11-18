@@ -241,6 +241,12 @@ appId: com.riccardopinato.omnicleaner.debug
 ---
 - launchApp:
     clearState: false
+# Some Android 35 emulator images show a system Pixel Launcher ANR on top
+# of the correctly running app. Dismiss ONLY that launcher process, not
+# a genuine Android Omni Cleaner crash/ANR, before asserting product UI.
+- tapOn:
+    text: "Close app"
+    optional: true
 - extendedWaitUntil:
     visible: "Smart cleaning"
     timeout: 90000
