@@ -157,30 +157,42 @@ for name in 06-clean-duplicates 07-clean-filters 08-privacy-quick 09-privacy-bat
   test -s "$OUTPUT/$name.png"
 done
 
-# Optional emulator media proof: build a synthetic clip (not real user data),
-# index it via MediaStore, and exercise the native play control. This must not
-# mark the five/dedicated screen capture PASS if real video never ran.
-if command -v ffmpeg >/dev/null 2>&1; then
-  if ffmpeg -hide_banner -loglevel error -y \
-      -f lavfi -i "testsrc=size=640x360:rate=12" -t 4 \
-      -c:v libx264 -preset ultrafast -crf 28 -pix_fmt yuv420p \
-      -movflags +faststart "$OUTPUT/omni-qa-landscape.mp4"; then
-    adb shell mkdir -p /sdcard/Movies/OmniQA
-    adb push "$OUTPUT/omni-qa-landscape.mp4" /sdcard/Movies/OmniQA/omni-qa-landscape.mp4
-    adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
-       -d file:///sdcard/Movies/OmniQA/omni-qa-landscape.mp4 || true
-    adb shell cmd media scan-file /sdcard/Movies/OmniQA/omni-qa-landscape.mp4 || true
-    adb shell pm grant "$PKG" android.permission.READ_MEDIA_IMAGES || true
-    adb shell pm grant "$PKG" android.permission.READ_MEDIA_VIDEO || true
-    adb shell am force-stop "$PKG" || true
-    sleep 5
-    if adb shell content query --uri content://media/external/video/media \
-       --projection _display_name | grep -q "omni-qa-landscape.mp4"; then
-      cat > "$OUTPUT/video-capture.yaml" <<'VIDEO_FLOW'
+# Produce an actual H.264/MP4 clip inside the disposable Android emulator.
+# Android screenrecord uses platform MediaCodec, so CI has no FFmpeg/apt dependency.
+# Recorded frames are app fixture pixels, never personal media.
+adb shell mkdir -p /sdcard/Movies/OmniQA
+if ! adb shell screenrecord --time-limit 3 --size 640x360 --bit-rate 500000 \
+      /sdcard/Movies/OmniQA/omni-qa-landscape.mp4; then
+  echo "::error::VIDEO_FIXTURE_FAILED: Android screenrecord could not encode native MP4"
+  exit 1
+fi
+video_bytes="$(adb shell stat -c %s /sdcard/Movies/OmniQA/omni-qa-landscape.mp4 2>/dev/null | tr -d '\r' || true)"
+if [[ ! "$video_bytes" =~ ^[0-9]+$ ]] || (( video_bytes < 2048 )); then
+  echo "::error::VIDEO_FIXTURE_EMPTY: native MP4 missing or too small ($video_bytes bytes)"
+  exit 1
+fi
+echo "VIDEO_FIXTURE_OK: native MediaCodec MP4, $video_bytes bytes"
+adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
+   -d file:///sdcard/Movies/OmniQA/omni-qa-landscape.mp4 || true
+adb shell cmd media scan-file /sdcard/Movies/OmniQA/omni-qa-landscape.mp4 || true
+adb shell pm grant "$PKG" android.permission.READ_MEDIA_IMAGES || true
+adb shell pm grant "$PKG" android.permission.READ_MEDIA_VIDEO || true
+adb shell am force-stop "$PKG" || true
+sleep 5
+if ! adb shell content query --uri content://media/external/video/media \
+    --projection _display_name | grep -q "omni-qa-landscape.mp4"; then
+  echo "::error::VIDEO_NOT_INDEXED: synthetic MP4 missing from Android MediaStore"
+  exit 1
+fi
+cat > "$OUTPUT/video-capture.yaml" <<'VIDEO_FLOW'
 appId: com.riccardopinato.omnicleaner.debug
 ---
 - launchApp:
     clearState: false
+# Dismiss only the external Pixel Launcher ANR modal, if present.
+- tapOn:
+    text: "Close app"
+    optional: true
 - tapOn:
     id: "omni_nav_gallery"
 - tapOn: "Videos only"
@@ -192,35 +204,88 @@ appId: com.riccardopinato.omnicleaner.debug
 - tapOn:
     id: "omni_gallery_video_play"
 - takeScreenshot: 11-video-playing
+- tapOn:
+    id: "omni_gallery_immersive_open"
+- assertVisible: "Close"
+- assertVisible:
+    id: "omni_gallery_immersive_content"
+- tapOn:
+    id: "omni_gallery_video_play"
+- takeScreenshot: 15-video-immersive
+- tapOn:
+    id: "omni_gallery_immersive_close"
+- assertVisible:
+    id: "omni_gallery_media_full"
 VIDEO_FLOW
-      mkdir -p "$OUTPUT/maestro-video"
-      if maestro test --test-output-dir "$OUTPUT/maestro-video" "$OUTPUT/video-capture.yaml"; then
-        screenshot="$(find "$OUTPUT/maestro-video" -type f -name '11-video-playing.png' -print -quit)"
-        if [[ -n "$screenshot" ]]; then
-          cp "$screenshot" "$OUTPUT/11-video-playing.png"
-          echo "VIDEO_PLAYBACK_SMOKE_PASS: synthetic original-aspect MP4"
-        fi
-      else
-        echo "::warning::VIDEO_PLAYBACK_NOT_VERIFIED: media UI flow failed"
-      fi
-    else
-      echo "::warning::VIDEO_PLAYBACK_NOT_VERIFIED: synthetic video not indexed by MediaStore"
-    fi
-  else
-    echo "::warning::VIDEO_PLAYBACK_NOT_VERIFIED: ffmpeg could not generate synthetic video"
-  fi
-else
-  echo "::warning::VIDEO_PLAYBACK_NOT_VERIFIED: ffmpeg unavailable"
+mkdir -p "$OUTPUT/maestro-video"
+if ! maestro test --test-output-dir "$OUTPUT/maestro-video" "$OUTPUT/video-capture.yaml"; then
+  echo "::error::VIDEO_IMMERSIVE_QA_FAILED: native player or fullscreen review flow"
+  exit 1
 fi
+for name in 11-video-playing 15-video-immersive; do
+  found="$(find "$OUTPUT/maestro-video" -type f -name "$name.png" -print -quit)"
+  if [[ -z "$found" ]]; then
+    echo "::error::Missing required video screenshot: $name"
+    exit 1
+  fi
+  cp "$found" "$OUTPUT/$name.png"
+done
+echo "VIDEO_IMMERSIVE_SMOKE_PASS: native MediaStore MP4, playback, fullscreen, Close"
+
+# Visual regression coverage for the intended light/dark, large-font responsive
+# shell. This is an independent emulator flow, not Play/physical certification.
+adb shell settings put system font_scale 1.5
+adb shell cmd uimode night yes || true
+adb shell am force-stop "$PKG" || true
+cat > "$OUTPUT/dark-large-capture.yaml" <<'DARK_LARGE'
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+# Some Android 35 emulator images show a system Pixel Launcher ANR on top
+# of the correctly running app. Dismiss ONLY that launcher process, not
+# a genuine Android Omni Cleaner crash/ANR, before asserting product UI.
+- tapOn:
+    text: "Close app"
+    optional: true
+- extendedWaitUntil:
+    visible: "Smart cleaning"
+    timeout: 90000
+- takeScreenshot: 16-home-dark-large
+- tapOn:
+    id: "omni_nav_clean"
+- takeScreenshot: 17-clean-dark-large
+- tapOn:
+    id: "omni_nav_gallery"
+- takeScreenshot: 18-gallery-dark-large
+- tapOn:
+    id: "omni_nav_privacy"
+- takeScreenshot: 19-privacy-dark-large
+- tapOn:
+    id: "omni_nav_pro"
+- takeScreenshot: 20-pro-dark-large
+DARK_LARGE
+mkdir -p "$OUTPUT/maestro-dark-large"
+maestro test --test-output-dir "$OUTPUT/maestro-dark-large" "$OUTPUT/dark-large-capture.yaml"
+for name in 16-home-dark-large 17-clean-dark-large 18-gallery-dark-large 19-privacy-dark-large 20-pro-dark-large; do
+  screenshot="$(find "$OUTPUT/maestro-dark-large" -type f -name "$name.png" -print -quit)"
+  if [[ -z "$screenshot" ]]; then
+    echo "::error::Missing dark/large accessibility screenshot: $name"
+    exit 1
+  fi
+  cp "$screenshot" "$OUTPUT/$name.png"
+done
+adb shell settings put system font_scale 1.0
+adb shell cmd uimode night no || true
 
 cat > "$OUTPUT/README.txt" <<EOF
 Android Omni Cleaner: five genuine Android emulator screenshots.
-Git commit: ${GITHUB_SHA:-unknown}
+Git commit: ${OMNI_SOURCE_SHA:-${GITHUB_SHA:-unknown}}
 Source: debug APK assembled from this commit on the workflow runner.
 Device: Google APIs x86_64, Pixel 7 Pro, Android API 35
-Theme: system light; font scale: 1.0; no personal user data.
+Theme: light normal and dark font-scale 1.5; no personal user data.
 Screens: 01-home, 02-clean, 03-gallery, 04-privacy, 05-pro, dedicated tools, video, and Storage Intelligence.
 The storage map contains synthetic QA files only; numbers are not real device claims.
 Evidence: UI only. No real physical device or Play certification.
 EOF
-echo "Eleven navigation and intelligence screenshots captured; video playback optional if indexed."
+echo "Primary, detail, and dark/large screenshots captured; indexed video fullscreen is a hard QA gate."

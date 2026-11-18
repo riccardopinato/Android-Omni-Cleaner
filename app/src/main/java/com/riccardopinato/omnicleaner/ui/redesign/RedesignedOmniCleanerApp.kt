@@ -7,6 +7,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.animation.core.tween
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -619,28 +621,38 @@ private fun OmniFunctionsHub(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        // Tools must be reachable at the top: an onboarding card must not push
-        // the useful action below the first viewport.
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+        // Feature navigation is a set of distinct touch-friendly destinations,
+        // rather than full-width buttons inside another generic material card.
+        val accent = if (kind == OmniWelcomeKind.PRIVACY) OmniMint else OmniPurple
+        actions.forEach { (labelRes, open) ->
+            val tag = when (labelRes) {
+                R.string.nav_privacy_quick -> "omni_privacy_quick"
+                R.string.nav_privacy_batch -> "omni_privacy_batch"
+                R.string.nav_pro_manage -> "omni_pro_manage"
+                else -> "omni_tool_other"
+            }
+            Card(
+                onClick = open,
+                modifier = Modifier.fillMaxWidth().testTag(tag),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(20.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = .22f)),
             ) {
-                actions.forEach { (labelRes, open) ->
-                    val tag = when (labelRes) {
-                        R.string.nav_privacy_quick -> "omni_privacy_quick"
-                        R.string.nav_privacy_batch -> "omni_privacy_batch"
-                        R.string.nav_pro_manage -> "omni_pro_manage"
-                        else -> "omni_tool_other"
-                    }
-                    Button(
-                        onClick = open,
-                        modifier = Modifier.fillMaxWidth().testTag(tag),
-                    ) {
-                        Text(stringResource(labelRes) + "  ›")
-                    }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(18.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Box(
+                        modifier = Modifier.size(12.dp)
+                            .background(accent, RoundedCornerShape(6.dp)),
+                    )
+                    Text(
+                        stringResource(labelRes),
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text("›", color = accent, style = MaterialTheme.typography.titleLarge)
                 }
             }
         }

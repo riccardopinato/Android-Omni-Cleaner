@@ -2,6 +2,8 @@ name: Omni Cleaner — visual screenshots
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
   push:
     branches:
       - audit/omni-safety-ux-360-20261115
@@ -26,13 +28,15 @@ concurrency:
 
 jobs:
   capture:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    env:
+      OMNI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     timeout-minutes: 35
     steps:
       - name: Checkout exact source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           path: target
           persist-credentials: false
 
@@ -64,15 +68,6 @@ jobs:
           curl -fsSL https://get.maestro.mobile.dev | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
 
-      - name: Install local video generator for MediaStore QA
-        shell: bash
-        run: |
-          if ! command -v ffmpeg >/dev/null 2>&1; then
-            sudo apt-get update -qq
-            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg
-          fi
-          ffmpeg -hide_banner -version | head -n 1
-
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -96,7 +91,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: omni-design-screenshots-${{ github.sha }}
+          name: omni-design-screenshots-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             omni-design-screenshots/01-home.png
             omni-design-screenshots/02-clean.png
@@ -109,6 +104,12 @@ jobs:
             omni-design-screenshots/09-privacy-batch.png
             omni-design-screenshots/10-pro-manage.png
             omni-design-screenshots/11-video-playing.png
+            omni-design-screenshots/15-video-immersive.png
+            omni-design-screenshots/16-home-dark-large.png
+            omni-design-screenshots/17-clean-dark-large.png
+            omni-design-screenshots/18-gallery-dark-large.png
+            omni-design-screenshots/19-privacy-dark-large.png
+            omni-design-screenshots/20-pro-dark-large.png
             omni-design-screenshots/12-storage-intelligence.png
             omni-design-screenshots/13-gallery-pro.png
             omni-design-screenshots/14-review-center.png

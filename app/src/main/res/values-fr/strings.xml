@@ -483,4 +483,11 @@
     <string name="review_center_gallery_note">La corbeille Android demande une confirmation distincte. Les médias ne sont pas encore de espace libéré.</string>
     <string name="review_center_open_gallery">Ouvrir la vérification Galerie</string>
     <string name="review_center_footer">Cet écran ne supprime, déplace ni restaure de fichiers. Confirmez dans la fonction concernée.</string>
+    <string name="omni_clean_group_analyze">Explorer le stockage</string>
+    <string name="omni_clean_group_review">Vérifier et récupérer</string>
+    <string name="omni_clean_group_advanced">Outils avancés</string>
+    <string name="omni_scan_running">Analyse en cours…</string>
+    <string name="omni_gallery_immersive_open">Afficher en plein écran</string>
+    <string name="omni_gallery_immersive_close">Fermer</string>
+    <string name="omni_gallery_immersive_hint">Les proportions d’origine sont préservées. L’affichage ne modifie pas le fichier.</string>
 </resources>

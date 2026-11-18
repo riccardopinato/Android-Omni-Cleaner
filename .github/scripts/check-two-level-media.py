@@ -22,12 +22,29 @@ assert "ContentScale.Fit" in preview
 assert "VideoView(context)" in preview and "MediaController(context)" in preview
 assert "video.stopPlayback()" in preview and "Lifecycle.Event.ON_PAUSE" in preview
 assert "galleryFitHeightDp" in preview
+# First-party immersive viewer is read-only, keeps both media types at original
+# proportions and disposes the embedded player before opening its fullscreen peer.
+for expected in (
+    "omni_gallery_immersive_open",
+    "omni_gallery_immersive_close",
+    "omni_gallery_immersive_content",
+    "if (!showImmersivePreview)",
+    "DialogProperties(",
+    "WindowInsets.safeDrawing",
+):
+    assert expected in preview, f"missing immersive gallery contract: {expected}"
+assert "CleanHubToolGroup(" in clean and "CleanerToolRoute.TRASH" in clean
+assert "CleanerToolRoute.DUPLICATES" in clean and "controller::cancelScan" in clean
+
 assert "internal class ExifWorkflowState" in exif and "scope: CoroutineScope" in exif
 assert "onTrash()" in preview and "onKeep()" in preview
 keys = (
     "nav_back", "nav_gallery_review", "nav_privacy_quick",
     "nav_privacy_batch", "nav_pro_manage", "gallery_open_review",
     "gallery_video_play", "gallery_video_unavailable",
+    "omni_clean_group_analyze", "omni_clean_group_review", "omni_clean_group_advanced",
+    "omni_scan_running", "omni_gallery_immersive_open",
+    "omni_gallery_immersive_close", "omni_gallery_immersive_hint",
 )
 for lang in ("values","values-it","values-es","values-fr","values-pt"):
     doc = ET.parse(ROOT / "app/src/main/res" / lang / "strings.xml")

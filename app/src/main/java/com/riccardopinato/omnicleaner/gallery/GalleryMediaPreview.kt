@@ -7,6 +7,9 @@ import androidx.exifinterface.media.ExifInterface
 import android.widget.MediaController
 import android.widget.VideoView
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.platform.LocalConfiguration
@@ -72,10 +75,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.riccardopinato.omnicleaner.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -108,6 +114,7 @@ fun GalleryMediaPreview(
     var dragX by remember(item.id) { mutableFloatStateOf(0f) }
     var releaseX by remember(item.id) { mutableFloatStateOf(0f) }
     var pendingDecision by remember(item.id) { mutableStateOf<SwipeDirection?>(null) }
+    var showImmersivePreview by remember(item.id) { mutableStateOf(false) }
 
     // One decision at a time. The image moves to the same side as the chosen button.
     val exitTarget = galleryDecisionExitSign(pendingDecision).toFloat() * exitDistancePx
@@ -172,7 +179,18 @@ fun GalleryMediaPreview(
         ) {
             val currentBitmap = bitmap
             if (item.isVideo) {
-                GalleryVideoPlayer(item = item, thumbnail = currentBitmap)
+                // Dispose the embedded VideoView while the immersive player owns this URI.
+                // This prevents two simultaneous playback/audio sessions.
+                if (!showImmersivePreview) {
+                    GalleryVideoPlayer(item = item, thumbnail = currentBitmap)
+                } else if (currentBitmap != null) {
+                    Image(
+                        bitmap = currentBitmap.asImageBitmap(),
+                        contentDescription = item.name,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             } else if (currentBitmap != null) {
                 Image(
                     bitmap = currentBitmap.asImageBitmap(),
@@ -287,6 +305,13 @@ fun GalleryMediaPreview(
                 GalleryDecisionButtonLabel("✓", keepLabel)
             }
         }
+        OutlinedButton(
+            onClick = { showImmersivePreview = true },
+            enabled = pendingDecision == null,
+            modifier = Modifier.fillMaxWidth().testTag("omni_gallery_immersive_open"),
+        ) {
+            Text(stringResource(R.string.omni_gallery_immersive_open))
+        }
         Text(
             text = stringResource(R.string.gallery_swipe_hint),
             style = MaterialTheme.typography.bodySmall,
@@ -297,6 +322,76 @@ fun GalleryMediaPreview(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+    if (showImmersivePreview) {
+        val immersiveBitmap = bitmap // snapshot of delegated Compose state; safe smart cast
+        // Full screen is inspection-only: it never changes the current selection
+        // or invokes trash/keep. Original aspect ratio is preserved for both media types.
+        Dialog(
+            onDismissRequest = { showImmersivePreview = false },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false,
+            ),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF101827))
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .testTag("omni_gallery_immersive")
+                    .semantics { testTagsAsResourceId = true },
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        item.name,
+                        modifier = Modifier.weight(1f),
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    OutlinedButton(
+                        onClick = { showImmersivePreview = false },
+                        modifier = Modifier.testTag("omni_gallery_immersive_close"),
+                    ) {
+                        Text(stringResource(R.string.omni_gallery_immersive_close))
+                    }
+                }
+                Box(
+                    modifier = Modifier.fillMaxWidth().weight(1f)
+                        .testTag("omni_gallery_immersive_content"),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (item.isVideo) {
+                        GalleryVideoPlayer(item = item, thumbnail = bitmap)
+                    } else if (immersiveBitmap != null) {
+                        Image(
+                            bitmap = immersiveBitmap.asImageBitmap(),
+                            contentDescription = item.name,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else {
+                        Text(
+                            stringResource(R.string.gallery_preview_unavailable),
+                            color = Color.White,
+                        )
+                    }
+                }
+                Text(
+                    stringResource(R.string.omni_gallery_immersive_hint),
+                    color = Color(0xFFCDD8E8),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                )
+            }
+        }
     }
 }
 
