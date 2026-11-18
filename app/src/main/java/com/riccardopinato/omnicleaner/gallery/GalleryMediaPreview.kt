@@ -75,6 +75,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -249,13 +250,6 @@ fun GalleryMediaPreview(
                 modifier = Modifier.align(Alignment.CenterEnd),
             )
         }
-        OutlinedButton(
-            onClick = { showImmersivePreview = true },
-            enabled = pendingDecision == null,
-            modifier = Modifier.fillMaxWidth().testTag("omni_gallery_immersive_open"),
-        ) {
-            Text(stringResource(R.string.omni_gallery_immersive_open))
-        }
         // The action buttons now sit OUTSIDE the original-aspect media frame,
         // so neither the video controls nor the edge of portrait photos is covered.
         // Do not scroll or reorder these controls: spatial mapping must match swipes.
@@ -311,7 +305,7 @@ fun GalleryMediaPreview(
                 GalleryDecisionButtonLabel("✓", keepLabel)
             }
         }
-        Text(
+${openBlock}        Text(
             text = stringResource(R.string.gallery_swipe_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -338,7 +332,8 @@ fun GalleryMediaPreview(
                     .fillMaxSize()
                     .background(Color(0xFF101827))
                     .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .testTag("omni_gallery_immersive"),
+                    .testTag("omni_gallery_immersive")
+                    .semantics { testTagsAsResourceId = true },
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Row(

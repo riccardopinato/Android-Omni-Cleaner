@@ -17,8 +17,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as OutlinedButton
@@ -77,17 +75,12 @@ fun GalleryCleanerSection(
         if (success) CleanupEventBus.publishCompleted()
     }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    // The outer Material Card previously nested a second welcome card and a
+    // whole media workspace. Use a quiet product-owned surface: media is content.
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
             if (!reviewOnly) Text(
                 stringResource(R.string.gallery_body),
                 style = MaterialTheme.typography.bodySmall,
@@ -310,7 +303,6 @@ fun GalleryCleanerSection(
                     Text(stringResource(R.string.action_close))
                 }
             }
-        }
     }
 
     if (showQueueReview) {

@@ -194,8 +194,11 @@ appId: com.riccardopinato.omnicleaner.debug
 - takeScreenshot: 11-video-playing
 - tapOn:
     id: "omni_gallery_immersive_open"
+- assertVisible: "Close"
 - assertVisible:
     id: "omni_gallery_immersive_content"
+- tapOn:
+    id: "omni_gallery_video_play"
 - takeScreenshot: 15-video-immersive
 - tapOn:
     id: "omni_gallery_immersive_close"
@@ -215,7 +218,8 @@ VIDEO_FLOW
           echo "VIDEO_PLAYBACK_SMOKE_PASS: synthetic original-aspect MP4"
         fi
       else
-        echo "::warning::VIDEO_PLAYBACK_NOT_VERIFIED: media UI flow failed"
+        echo "::error::VIDEO_IMMERSIVE_QA_FAILED: the indexed video did not complete playback/fullscreen/close"
+        exit 1
       fi
     else
       echo "::warning::VIDEO_PLAYBACK_NOT_VERIFIED: synthetic video not indexed by MediaStore"
@@ -227,14 +231,54 @@ else
   echo "::warning::VIDEO_PLAYBACK_NOT_VERIFIED: ffmpeg unavailable"
 fi
 
+# Visual regression coverage for the intended light/dark, large-font responsive
+# shell. This is an independent emulator flow, not Play/physical certification.
+adb shell settings put system font_scale 1.5
+adb shell cmd uimode night yes || true
+adb shell am force-stop "$PKG" || true
+cat > "$OUTPUT/dark-large-capture.yaml" <<'DARK_LARGE'
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Smart cleaning"
+    timeout: 90000
+- takeScreenshot: 16-home-dark-large
+- tapOn:
+    id: "omni_nav_clean"
+- takeScreenshot: 17-clean-dark-large
+- tapOn:
+    id: "omni_nav_gallery"
+- takeScreenshot: 18-gallery-dark-large
+- tapOn:
+    id: "omni_nav_privacy"
+- takeScreenshot: 19-privacy-dark-large
+- tapOn:
+    id: "omni_nav_pro"
+- takeScreenshot: 20-pro-dark-large
+DARK_LARGE
+mkdir -p "$OUTPUT/maestro-dark-large"
+maestro test --test-output-dir "$OUTPUT/maestro-dark-large" "$OUTPUT/dark-large-capture.yaml"
+for name in 16-home-dark-large 17-clean-dark-large 18-gallery-dark-large 19-privacy-dark-large 20-pro-dark-large; do
+  screenshot="$(find "$OUTPUT/maestro-dark-large" -type f -name "$name.png" -print -quit)"
+  if [[ -z "$screenshot" ]]; then
+    echo "::error::Missing dark/large accessibility screenshot: $name"
+    exit 1
+  fi
+  cp "$screenshot" "$OUTPUT/$name.png"
+done
+adb shell settings put system font_scale 1.0
+adb shell cmd uimode night no || true
+
 cat > "$OUTPUT/README.txt" <<EOF
 Android Omni Cleaner: five genuine Android emulator screenshots.
 Git commit: ${OMNI_SOURCE_SHA:-${GITHUB_SHA:-unknown}}
 Source: debug APK assembled from this commit on the workflow runner.
 Device: Google APIs x86_64, Pixel 7 Pro, Android API 35
-Theme: system light; font scale: 1.0; no personal user data.
+Theme: light normal and dark font-scale 1.5; no personal user data.
 Screens: 01-home, 02-clean, 03-gallery, 04-privacy, 05-pro, dedicated tools, video, and Storage Intelligence.
 The storage map contains synthetic QA files only; numbers are not real device claims.
 Evidence: UI only. No real physical device or Play certification.
 EOF
-echo "Eleven navigation and intelligence screenshots captured; video playback optional if indexed."
+echo "Primary, detail, and dark/large screenshots captured; indexed video fullscreen is a hard QA gate."

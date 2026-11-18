@@ -243,6 +243,8 @@ private fun CleanHubToolGroup(
     accent: Color,
     onOpenTool: (CleanerToolRoute) -> Unit,
 ) {
+    val singleColumn = LocalConfiguration.current.screenWidthDp < 360 ||
+        LocalDensity.current.fontScale > 1.25f
     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
         Text(
             text = title,
@@ -250,7 +252,8 @@ private fun CleanHubToolGroup(
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold,
         )
-        tools.chunked(2).forEach { pair ->
+        val rows = if (singleColumn) tools.map { listOf(it) } else tools.chunked(2)
+        rows.forEach { pair ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -297,7 +300,9 @@ private fun CleanHubToolGroup(
                         }
                     }
                 }
-                if (pair.size == 1) Spacer(modifier = Modifier.weight(1f))
+                if (pair.size == 1 && !singleColumn) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
             }
         }
     }
