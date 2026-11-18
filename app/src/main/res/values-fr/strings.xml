@@ -235,6 +235,15 @@
     <string name="gallery_move_android_trash">Déplacer vers la Corbeille Android</string>
     <string name="gallery_trash_confirm_title">Confirmer la mise à la corbeille</string>
     <string name="gallery_trash_confirm_body">Android affichera une seconde confirmation système. Les éléments seront déplacés vers la corbeille multimédia, pas supprimés directement.</string>
+    <string name="gallery_current_loaded">Élément %1$d sur %2$d chargés</string>
+    <string name="gallery_reviewed_count">Examinés : %1$d</string>
+    <string name="gallery_preview_loading">Chargement de l’aperçu…</string>
+    <string name="gallery_close_to_review">Fermez l’aperçu pour choisir Conserver ou Corbeille. Aucun fichier n’est supprimé ici.</string>
+    <string name="gallery_player_seek">Position de la vidéo</string>
+    <string name="gallery_player_back">Reculer de 10 secondes</string>
+    <string name="gallery_player_forward">Avancer de 10 secondes</string>
+    <string name="gallery_player_pause">Pause</string>
+    <string name="gallery_player_play">Lecture</string>
     <string name="gallery_preview_unavailable">Aperçu indisponible</string>
     <string name="gallery_swipe_hint">← Corbeille · Conserver →</string>
     <string name="gallery_unknown_date">Date inconnue</string>

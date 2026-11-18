@@ -235,6 +235,15 @@
     <string name="gallery_move_android_trash">Mover a la Papelera de Android</string>
     <string name="gallery_trash_confirm_title">Confirmar papelera</string>
     <string name="gallery_trash_confirm_body">Android mostrará una segunda confirmación del sistema. Los elementos se moverán a la papelera multimedia, no se eliminarán directamente.</string>
+    <string name="gallery_current_loaded">Elemento %1$d de %2$d cargados</string>
+    <string name="gallery_reviewed_count">Revisados: %1$d</string>
+    <string name="gallery_preview_loading">Cargando vista previa…</string>
+    <string name="gallery_close_to_review">Cierra la vista previa para elegir Conservar o Papelera. Aquí no se elimina contenido.</string>
+    <string name="gallery_player_seek">Posición del vídeo</string>
+    <string name="gallery_player_back">Retroceder 10 segundos</string>
+    <string name="gallery_player_forward">Avanzar 10 segundos</string>
+    <string name="gallery_player_pause">Pausar</string>
+    <string name="gallery_player_play">Reproducir</string>
     <string name="gallery_preview_unavailable">Vista previa no disponible</string>
     <string name="gallery_swipe_hint">← Papelera · Conservar →</string>
     <string name="gallery_unknown_date">Fecha desconocida</string>

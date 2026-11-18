@@ -7,32 +7,45 @@ import android.graphics.Matrix
 import android.media.MediaMetadataRetriever
 import android.os.Build
 import android.util.Size
-import android.widget.MediaController
 import android.widget.VideoView
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -40,16 +53,29 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.exifinterface.media.ExifInterface
 import com.riccardopinato.omnicleaner.R
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import kotlin.math.max
+import java.util.Locale
+
+private sealed interface GalleryPreviewLoad {
+    data object Loading : GalleryPreviewLoad
+    data class Ready(val bitmap: Bitmap) : GalleryPreviewLoad
+    data object Unavailable : GalleryPreviewLoad
+}
 
 @Composable
 fun GalleryMediaPreview(
@@ -63,11 +89,19 @@ fun GalleryMediaPreview(
     var dragX by remember(item.id) { mutableFloatStateOf(0f) }
     var showFullScreen by remember(item.id) { mutableStateOf(false) }
 
-    val bitmap by produceState<Bitmap?>(initialValue = null, item.uri, item.id) {
-        value = withContext(Dispatchers.IO) {
+    // New media must never display the previous item's bitmap while the decoder is busy.
+    val previewState = remember(item.id, item.uri) {
+        mutableStateOf<GalleryPreviewLoad>(GalleryPreviewLoad.Loading)
+    }
+    LaunchedEffect(item.id, item.uri, context) {
+        val decoded = withContext(Dispatchers.IO) {
             loadPreviewBitmap(context, item)
         }
+        previewState.value = decoded?.let(GalleryPreviewLoad::Ready)
+            ?: GalleryPreviewLoad.Unavailable
     }
+    val previewLoad = previewState.value
+    val bitmap = (previewLoad as? GalleryPreviewLoad.Ready)?.bitmap
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val currentBitmap = bitmap
@@ -103,17 +137,31 @@ fun GalleryMediaPreview(
                         )
                     },
             )
-        } else if (!item.isVideo) {
-            Text(
-                text = stringResource(R.string.gallery_preview_unavailable),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(vertical = 36.dp),
-            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 180.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(18.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (previewLoad == GalleryPreviewLoad.Loading) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(30.dp))
+                        Text(stringResource(R.string.gallery_preview_loading))
+                    }
+                } else {
+                    Text(stringResource(R.string.gallery_preview_unavailable))
+                }
+            }
         }
 
         // Explicit action distinct from destructive swipe/Trash. Supports
         // accessibility users and never requires a hidden gesture.
-        if (currentBitmap != null || item.isVideo) {
+        if (previewLoad != GalleryPreviewLoad.Loading) {
             OutlinedButton(
                 onClick = { showFullScreen = true },
                 modifier = Modifier.fillMaxWidth(),
@@ -163,26 +211,47 @@ private fun GalleryFullScreenDialog(
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surface,
+            color = Color.Black,
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxSize().padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text(item.name, style = MaterialTheme.typography.titleMedium)
-                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = item.name,
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(
+                        onClick = onDismiss,
+                        colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
+                    ) {
+                        Text(stringResource(R.string.action_close))
+                    }
+                }
+                Box(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
                     if (item.isVideo) {
                         GalleryVideoPlayer(item)
                     } else {
                         GalleryFullPhoto(item, previewBitmap)
                     }
                 }
-                // Full-screen media inspection is non-destructive by design.
-                TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.action_close))
-                }
+                Text(
+                    text = stringResource(R.string.gallery_close_to_review),
+                    color = Color.White.copy(alpha = 0.78f),
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         }
     }
@@ -197,7 +266,7 @@ private fun GalleryFullPhoto(item: GalleryMediaItem, previewBitmap: Bitmap?) {
         } ?: previewBitmap
     }
     if (original == null) {
-        Text(stringResource(R.string.gallery_preview_unavailable))
+        Text(stringResource(R.string.gallery_preview_unavailable), color = Color.White)
     } else {
         Image(
             bitmap = original!!.asImageBitmap(),
@@ -212,32 +281,189 @@ private fun GalleryFullPhoto(item: GalleryMediaItem, previewBitmap: Bitmap?) {
 private fun GalleryVideoPlayer(item: GalleryMediaItem) {
     val context = LocalContext.current
     var failed by remember(item.uri) { mutableStateOf(false) }
-    val view = remember(item.uri) {
+    var prepared by remember(item.uri) { mutableStateOf(false) }
+    var playing by remember(item.uri) { mutableStateOf(false) }
+    var durationMs by remember(item.uri) { mutableIntStateOf(0) }
+    var positionMs by remember(item.uri) { mutableIntStateOf(0) }
+    var scrubbing by remember(item.uri) { mutableStateOf(false) }
+    var scrubFraction by remember(item.uri) { mutableFloatStateOf(0f) }
+
+    val view = remember(context, item.uri) {
         VideoView(context).apply {
-            val controls = MediaController(context)
-            controls.setAnchorView(this)
-            setMediaController(controls)
-            setVideoURI(item.uri)
             setOnPreparedListener { player ->
                 player.isLooping = false
+                durationMs = player.duration.coerceAtLeast(0)
+                prepared = true
                 start()
+                playing = true
+            }
+            setOnCompletionListener {
+                positionMs = durationMs
+                playing = false
             }
             setOnErrorListener { _, _, _ ->
                 failed = true
+                playing = false
                 true
             }
+            setVideoURI(item.uri)
         }
     }
     DisposableEffect(view) {
-        onDispose { view.stopPlayback() }
+        onDispose {
+            // Closing the inspection dialog must release decoding/audio immediately.
+            view.stopPlayback()
+        }
     }
+    LaunchedEffect(view, prepared) {
+        if (prepared) {
+            while (isActive) {
+                if (!scrubbing) {
+                    positionMs = view.currentPosition.coerceIn(0, durationMs.coerceAtLeast(0))
+                }
+                playing = view.isPlaying
+                delay(250)
+            }
+        }
+    }
+
     if (failed) {
-        Text(stringResource(R.string.gallery_video_playback_error))
-    } else {
-        AndroidView(
-            factory = { view },
-            modifier = Modifier.fillMaxSize(),
+        Text(
+            text = stringResource(R.string.gallery_video_playback_error),
+            color = Color.White,
         )
+    } else {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Box(
+                modifier = Modifier.weight(1f).fillMaxWidth().background(Color.Black),
+                contentAlignment = Alignment.Center,
+            ) {
+                AndroidView(
+                    factory = { view },
+                    modifier = Modifier.fillMaxSize(),
+                )
+                if (!prepared) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(30.dp))
+                }
+            }
+
+            val seekLabel = stringResource(R.string.gallery_player_seek)
+            Slider(
+                value = if (scrubbing) scrubFraction else galleryPlaybackFraction(positionMs, durationMs),
+                onValueChange = { fraction ->
+                    scrubbing = true
+                    scrubFraction = fraction
+                },
+                onValueChangeFinished = {
+                    val target = gallerySeekPositionMs(scrubFraction, durationMs)
+                    view.seekTo(target)
+                    positionMs = target
+                    scrubbing = false
+                },
+                enabled = prepared && durationMs > 0,
+                modifier = Modifier.fillMaxWidth().semantics { contentDescription = seekLabel },
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(
+                    onClick = {
+                        val target = gallerySkipPositionMs(positionMs, -10_000, durationMs)
+                        view.seekTo(target)
+                        positionMs = target
+                    },
+                    enabled = prepared,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.omni_media_back),
+                        contentDescription = stringResource(R.string.gallery_player_back),
+                        tint = Color.White,
+                    )
+                }
+                OutlinedButton(
+                    onClick = {
+                        if (view.isPlaying) {
+                            view.pause()
+                            playing = false
+                        } else {
+                            if (durationMs > 0 && positionMs >= durationMs - 200) {
+                                view.seekTo(0)
+                                positionMs = 0
+                            }
+                            view.start()
+                            playing = true
+                        }
+                    },
+                    enabled = prepared,
+                ) {
+                    Text(
+                        stringResource(
+                            if (playing) R.string.gallery_player_pause else R.string.gallery_player_play,
+                        ),
+                        color = Color.White,
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        val target = gallerySkipPositionMs(positionMs, 10_000, durationMs)
+                        view.seekTo(target)
+                        positionMs = target
+                    },
+                    enabled = prepared,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.omni_media_forward),
+                        contentDescription = stringResource(R.string.gallery_player_forward),
+                        tint = Color.White,
+                    )
+                }
+                Text(
+                    galleryTimeLabel(positionMs) + " / " + galleryTimeLabel(durationMs),
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+/** Pure playback UI math: invalid metadata never generates impossible seek targets. */
+internal fun galleryPlaybackFraction(positionMs: Int, durationMs: Int): Float =
+    if (durationMs > 0) {
+        (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+
+internal fun gallerySeekPositionMs(fraction: Float, durationMs: Int): Int =
+    if (durationMs > 0 && fraction.isFinite()) {
+        (fraction.coerceIn(0f, 1f) * durationMs).toInt().coerceIn(0, durationMs)
+    } else {
+        0
+    }
+
+internal fun gallerySkipPositionMs(positionMs: Int, deltaMs: Int, durationMs: Int): Int =
+    if (durationMs > 0) {
+        (positionMs.toLong() + deltaMs.toLong()).coerceIn(0L, durationMs.toLong()).toInt()
+    } else {
+        0
+    }
+
+internal fun galleryTimeLabel(ms: Int): String {
+    val seconds = (ms.coerceAtLeast(0) / 1000L)
+    val hours = seconds / 3600L
+    val minutes = (seconds % 3600L) / 60L
+    val remainder = seconds % 60L
+    return if (hours > 0) {
+        String.format(Locale.ROOT, "%d:%02d:%02d", hours, minutes, remainder)
+    } else {
+        String.format(Locale.ROOT, "%02d:%02d", minutes, remainder)
     }
 }
 

@@ -236,6 +236,15 @@
     <string name="gallery_move_android_trash">Move to Android Trash</string>
     <string name="gallery_trash_confirm_title">Confirm trash</string>
     <string name="gallery_trash_confirm_body">Android will show a second system confirmation. Items will be moved to media trash, not deleted directly.</string>
+    <string name="gallery_current_loaded">Item %1$d of %2$d loaded</string>
+    <string name="gallery_reviewed_count">Reviewed: %1$d</string>
+    <string name="gallery_preview_loading">Loading preview…</string>
+    <string name="gallery_close_to_review">Close the preview to choose Keep or Trash. No media is deleted here.</string>
+    <string name="gallery_player_seek">Video position</string>
+    <string name="gallery_player_back">Back 10 seconds</string>
+    <string name="gallery_player_forward">Forward 10 seconds</string>
+    <string name="gallery_player_pause">Pause</string>
+    <string name="gallery_player_play">Play</string>
     <string name="gallery_preview_unavailable">Preview unavailable</string>
     <string name="gallery_swipe_hint">← Trash · Keep →</string>
     <string name="gallery_unknown_date">Unknown date</string>

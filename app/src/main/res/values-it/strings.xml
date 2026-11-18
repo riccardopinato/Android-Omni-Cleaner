@@ -236,6 +236,15 @@
     <string name="gallery_move_android_trash">Sposta nel Cestino Android</string>
     <string name="gallery_trash_confirm_title">Conferma cestino</string>
     <string name="gallery_trash_confirm_body">Android mostrerà una seconda conferma di sistema. Gli elementi verranno spostati nel cestino multimediale, non eliminati direttamente.</string>
+    <string name="gallery_current_loaded">Elemento %1$d di %2$d caricati</string>
+    <string name="gallery_reviewed_count">Revisionati: %1$d</string>
+    <string name="gallery_preview_loading">Caricamento anteprima…</string>
+    <string name="gallery_close_to_review">Chiudi l’anteprima per scegliere Tieni o Cestino. Nessun file viene eliminato qui.</string>
+    <string name="gallery_player_seek">Posizione del video</string>
+    <string name="gallery_player_back">Indietro di 10 secondi</string>
+    <string name="gallery_player_forward">Avanti di 10 secondi</string>
+    <string name="gallery_player_pause">Pausa</string>
+    <string name="gallery_player_play">Riproduci</string>
     <string name="gallery_preview_unavailable">Anteprima non disponibile</string>
     <string name="gallery_swipe_hint">← Cestino · Tieni →</string>
     <string name="gallery_unknown_date">Data sconosciuta</string>
