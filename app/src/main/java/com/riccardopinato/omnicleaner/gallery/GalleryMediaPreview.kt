@@ -305,7 +305,13 @@ fun GalleryMediaPreview(
                 GalleryDecisionButtonLabel("✓", keepLabel)
             }
         }
-${openBlock}        Text(
+        OutlinedButton(
+            onClick = { showImmersivePreview = true },
+            enabled = pendingDecision == null,
+            modifier = Modifier.fillMaxWidth().testTag("omni_gallery_immersive_open"),
+        ) {
+            Text(stringResource(R.string.omni_gallery_immersive_open))
+        }        Text(
             text = stringResource(R.string.gallery_swipe_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
