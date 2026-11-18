@@ -230,6 +230,7 @@
     <string name="gallery_load">Load gallery</string>
     <string name="gallery_reload">Reload gallery</string>
     <string name="gallery_loading_next">Loading next page…</string>
+    <string name="gallery_empty_hint">Nothing to review yet. Load the gallery or choose another filter.</string>
     <string name="gallery_load_more">Load more items</string>
     <string name="gallery_review_complete">Review completed for all loaded items.</string>
     <string name="gallery_selected_for_trash">%1$d items selected for trash</string>

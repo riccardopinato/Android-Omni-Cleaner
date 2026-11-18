@@ -229,6 +229,7 @@
     <string name="gallery_load">Charger la galerie</string>
     <string name="gallery_reload">Recharger la galerie</string>
     <string name="gallery_loading_next">Chargement de la page suivante…</string>
+    <string name="gallery_empty_hint">Aucun élément à examiner pour le moment. Chargez la galerie ou changez de filtre.</string>
     <string name="gallery_load_more">Charger plus d’éléments</string>
     <string name="gallery_review_complete">Vérification terminée pour tous les éléments chargés.</string>
     <string name="gallery_selected_for_trash">%1$d éléments sélectionnés pour la corbeille</string>

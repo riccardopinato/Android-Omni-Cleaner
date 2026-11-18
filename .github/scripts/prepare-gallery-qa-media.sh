@@ -26,11 +26,14 @@ adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
 adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
   -d file:///sdcard/Movies/OmniQA-video.mp4
 
+# The Files table can publish a name before MediaScanner has classified
+# a newly pushed asset as an image or video. Wait for the typed collections,
+# which is what the actual Gallery MediaStore query relies on.
 found=0
-for attempt in $(seq 1 25); do
-  if adb shell content query --uri content://media/external/file \
+for attempt in $(seq 1 40); do
+  if adb shell content query --uri content://media/external/video/media \
       --projection _id:_display_name 2>/dev/null | grep -q "OmniQA-video.mp4" &&
-     adb shell content query --uri content://media/external/file \
+     adb shell content query --uri content://media/external/images/media \
       --projection _id:_display_name 2>/dev/null | grep -q "OmniQA-portrait.jpg"; then
     found=1
     break
@@ -39,7 +42,10 @@ for attempt in $(seq 1 25); do
 done
 
 if [[ "$found" != "1" ]]; then
-  echo "[Gallery QA] generated media were not indexed by MediaStore" >&2
+  echo "[Gallery QA] MediaStore typed image/video collections not ready" >&2
   exit 1
 fi
-echo "[Gallery QA] MediaStore found deterministic portrait JPG and MP4 fixtures"
+# The provider can be visible to the shell before app-side permission
+# and MediaStore caches settle on a freshly provisioned emulator.
+sleep 4
+echo "[Gallery QA] typed MediaStore collections contain both QA fixtures"

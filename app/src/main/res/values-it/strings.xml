@@ -230,6 +230,7 @@
     <string name="gallery_load">Carica galleria</string>
     <string name="gallery_reload">Ricarica galleria</string>
     <string name="gallery_loading_next">Caricamento pagina successiva…</string>
+    <string name="gallery_empty_hint">Nessun elemento da revisionare al momento. Carica la galleria o scegli un altro filtro.</string>
     <string name="gallery_load_more">Carica altri elementi</string>
     <string name="gallery_review_complete">Revisione completata per tutti gli elementi caricati.</string>
     <string name="gallery_selected_for_trash">%1$d elementi selezionati per il cestino</string>

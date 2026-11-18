@@ -149,6 +149,20 @@ fun GalleryCleanerSection(
 
             if (state.loading) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            } else if (
+                state.hasAccess &&
+                !state.loadingNextPage &&
+                state.items.isEmpty() &&
+                !state.hasMore &&
+                state.error == null
+            ) {
+                // Also useful before the first load: never imply a full-device scan
+                // has run when the current filter simply has no loaded results.
+                Text(
+                    text = stringResource(R.string.gallery_empty_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
             state.currentItem?.let { current ->
