@@ -5,6 +5,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +15,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -132,10 +135,7 @@ internal fun CleanHubScreen(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(22.dp),
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(9.dp),
-                    ) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                         Text(stringResource(R.string.redesign_deep_locked_title),
                             style = MaterialTheme.typography.titleMedium)
                         Text(stringResource(R.string.redesign_deep_locked_body),
@@ -149,62 +149,20 @@ internal fun CleanHubScreen(
                 }
             }
         }
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                shape = RoundedCornerShape(23.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(9.dp),
-                ) {
-                    Text(
-                        text = stringResource(R.string.scan_tools),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    // Compact dashboard: no accordion or seven-button timeline.
-                    CleanerToolRoute.entries.chunked(2).forEach { group ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            group.forEach { tool ->
-                                Button(
-                                    onClick = { onOpenTool(tool) },
-                                    modifier = Modifier.weight(1f).testTag(
-                                        "omni_clean_tool_${tool.name.lowercase(Locale.ROOT)}"
-                                    ),
-                                ) {
-                                    Text(stringResource(tool.labelRes))
-                                }
-                            }
-                            if (group.size == 1) {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        if (state.overview == null && !state.foldersScanned &&
-            !state.bigFilesScanned && !state.duplicatesScanned &&
-            !state.scanning && state.error == null
-        ) {
-            item { CleanWelcomePanel() }
-        }
         if (state.scanning) {
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                ) {
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
                     Column(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
+                        // Indeterminate until the scanner actually reports a bounded total.
                         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                        Text(state.currentOperation.orEmpty())
+                        Text(
+                            state.currentOperation?.takeIf { it.isNotBlank() }
+                                ?: stringResource(R.string.omni_scan_running),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
                         Button(onClick = controller::cancelScan) {
                             Text(stringResource(R.string.cancel))
                         }
@@ -213,7 +171,7 @@ internal fun CleanHubScreen(
             }
         }
         state.error?.let { error ->
-            item { Text(error, modifier = Modifier.padding(20.dp),
+            item { Text(error, modifier = Modifier.padding(horizontal = 20.dp),
                 color = MaterialTheme.colorScheme.error) }
         }
         state.overview?.let { overview ->
@@ -229,7 +187,119 @@ internal fun CleanHubScreen(
                 )
             }
         }
+        item {
+            Column(
+                modifier = Modifier.padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+            ) {
+                // Intentional bento, not nine indistinguishable blue actions.
+                // Every original route and its deterministic test tag is preserved.
+                CleanHubToolGroup(
+                    title = stringResource(R.string.omni_clean_group_analyze),
+                    tools = listOf(
+                        CleanerToolRoute.OVERVIEW,
+                        CleanerToolRoute.INTELLIGENCE,
+                        CleanerToolRoute.LARGE,
+                        CleanerToolRoute.DUPLICATES,
+                    ),
+                    accent = OmniBlue,
+                    onOpenTool = onOpenTool,
+                )
+                CleanHubToolGroup(
+                    title = stringResource(R.string.omni_clean_group_review),
+                    tools = listOf(
+                        CleanerToolRoute.REVIEW,
+                        CleanerToolRoute.FOLDERS,
+                        CleanerToolRoute.TRASH,
+                    ),
+                    accent = OmniMint,
+                    onOpenTool = onOpenTool,
+                )
+                CleanHubToolGroup(
+                    title = stringResource(R.string.omni_clean_group_advanced),
+                    tools = listOf(
+                        CleanerToolRoute.FILTERS,
+                        CleanerToolRoute.ADVANCED,
+                    ),
+                    accent = OmniPurple,
+                    onOpenTool = onOpenTool,
+                )
+            }
+        }
+        if (state.overview == null && !state.foldersScanned &&
+            !state.bigFilesScanned && !state.duplicatesScanned &&
+            !state.scanning && state.error == null
+        ) {
+            item { CleanWelcomePanel() }
+        }
         item { Spacer(Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+private fun CleanHubToolGroup(
+    title: String,
+    tools: List<CleanerToolRoute>,
+    accent: Color,
+    onOpenTool: (CleanerToolRoute) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Bold,
+        )
+        tools.chunked(2).forEach { pair ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                pair.forEach { tool ->
+                    Card(
+                        onClick = { onOpenTool(tool) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 92.dp)
+                            .testTag("omni_clean_tool_${tool.name.lowercase(Locale.ROOT)}"),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp, accent.copy(alpha = 0.25f),
+                        ),
+                        shape = RoundedCornerShape(20.dp),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(accent, RoundedCornerShape(50)),
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                            ) {
+                                Text(
+                                    stringResource(tool.labelRes),
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 3,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                )
+                                Text("›", color = accent, style = MaterialTheme.typography.titleLarge)
+                            }
+                        }
+                    }
+                }
+                if (pair.size == 1) Spacer(modifier = Modifier.weight(1f))
+            }
+        }
     }
 }
 
