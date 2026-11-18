@@ -1,0 +1,39 @@
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+- assertVisible: "Android Omni Cleaner"
+- tapOn:
+    text: "Gallery"
+- assertVisible: "Gallery Cleaner"
+- takeScreenshot: visual-evidence/gallery-filters
+- tapOn:
+    text: "Videos only"
+- tapOn:
+    text: "Load gallery"
+- assertVisible: "OmniQA-video.mp4"
+- assertVisible: "Keep"
+- assertVisible: "Trash"
+- takeScreenshot: visual-evidence/video-review
+- tapOn:
+    text: "Play video"
+- assertVisible: "Close"
+- takeScreenshot: visual-evidence/video-fullscreen
+- tapOn:
+    text: "Close"
+- assertVisible: "Keep"
+- assertVisible: "Trash"
+- tapOn:
+    text: "Photos only"
+- tapOn:
+    text: "Load gallery"
+- assertVisible: "OmniQA-portrait.jpg"
+- takeScreenshot: visual-evidence/photo-review
+- tapOn:
+    text: "Open photo"
+- assertVisible: "Close"
+- takeScreenshot: visual-evidence/photo-fullscreen
+- tapOn:
+    text: "Close"
+- assertVisible: "Keep"
+- assertVisible: "Trash"
