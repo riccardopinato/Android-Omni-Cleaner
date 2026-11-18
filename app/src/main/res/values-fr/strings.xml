@@ -65,6 +65,7 @@
     <string name="redesign_metric_large_files">Gros fichiers</string>
     <string name="redesign_metric_duplicates">Groupes de doublons</string>
     <string name="redesign_metric_folders">Dossiers analysés</string>
+    <string name="redesign_quick_actions_title">Actions rapides</string>
     <string name="redesign_quick_analyze">Analyser le stockage</string>
     <string name="redesign_quick_analyze_subtitle">Voyez où part votre espace</string>
     <string name="redesign_quick_duplicates">Rechercher les doublons</string>

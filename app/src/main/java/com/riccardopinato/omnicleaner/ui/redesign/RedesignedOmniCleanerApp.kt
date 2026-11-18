@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,6 +23,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -46,6 +48,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -81,13 +84,13 @@ import java.util.Locale
 
 private enum class OmniDestination(
     val labelRes: Int,
-    val glyph: String,
+    val iconRes: Int,
 ) {
-    HOME(R.string.nav_home, "H"),
-    CLEAN(R.string.nav_clean, "C"),
-    GALLERY(R.string.nav_gallery, "G"),
-    PRIVACY(R.string.nav_privacy, "P"),
-    PRO(R.string.nav_pro, "★"),
+    HOME(R.string.nav_home, R.drawable.omni_nav_home),
+    CLEAN(R.string.nav_clean, R.drawable.omni_nav_clean),
+    GALLERY(R.string.nav_gallery, R.drawable.omni_nav_gallery),
+    PRIVACY(R.string.nav_privacy, R.drawable.omni_nav_privacy),
+    PRO(R.string.nav_pro, R.drawable.omni_nav_pro),
 }
 
 @Composable
@@ -159,14 +162,10 @@ fun RedesignedOmniCleanerApp(viewModel: OmniCleanerViewModel) {
                         selected = destination == item,
                         onClick = { destinationName = item.name },
                         icon = {
-                            Text(
-                                item.glyph,
-                                fontWeight = FontWeight.Bold,
-                                color = if (destination == item) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
+                            Icon(
+                                painter = painterResource(item.iconRes),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
                             )
                         },
                         label = { Text(stringResource(item.labelRes)) },
