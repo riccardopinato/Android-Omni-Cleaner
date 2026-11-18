@@ -159,9 +159,16 @@ done
 
 # Produce an actual H.264/MP4 clip inside the disposable Android emulator.
 # Android screenrecord uses platform MediaCodec, so CI has no FFmpeg/apt dependency.
-# Recorded frames are app fixture pixels, never personal media.
+# Record a known BRIGHT system settings screen instead of the previous
+# nearly black idle emulator frame. The clip remains synthetic and disposable.
+# Its PNG reference lets the visual reviewer distinguish fixture vs player failure.
 adb shell mkdir -p /sdcard/Movies/OmniQA
-if ! adb shell screenrecord --time-limit 3 --size 640x360 --bit-rate 500000 \
+adb shell cmd uimode night no || true
+adb shell am start -a android.settings.SETTINGS >/dev/null
+sleep 3
+adb exec-out screencap -p > "$OUTPUT/video-fixture-reference.png"
+test -s "$OUTPUT/video-fixture-reference.png"
+if ! adb shell screenrecord --time-limit 4 --size 640x360 --bit-rate 800000 \
       /sdcard/Movies/OmniQA/omni-qa-landscape.mp4; then
   echo "::error::VIDEO_FIXTURE_FAILED: Android screenrecord could not encode native MP4"
   exit 1
@@ -203,6 +210,7 @@ appId: com.riccardopinato.omnicleaner.debug
     id: "omni_gallery_media_full"
 - tapOn:
     id: "omni_gallery_video_play"
+- waitForAnimationToEnd
 - takeScreenshot: 11-video-playing
 - tapOn:
     id: "omni_gallery_immersive_open"
@@ -211,6 +219,7 @@ appId: com.riccardopinato.omnicleaner.debug
     id: "omni_gallery_immersive_content"
 - tapOn:
     id: "omni_gallery_video_play"
+- waitForAnimationToEnd
 - takeScreenshot: 15-video-immersive
 - tapOn:
     id: "omni_gallery_immersive_close"
@@ -277,6 +286,32 @@ for name in 16-home-dark-large 17-clean-dark-large 18-gallery-dark-large 19-priv
 done
 adb shell settings put system font_scale 1.0
 adb shell cmd uimode night no || true
+
+# Narrow layout + large text must keep all three Gallery media filters visible.
+adb shell wm size 360x800
+adb shell wm density 160
+adb shell settings put system font_scale 1.5
+cat > "$OUTPUT/gallery-narrow.yaml" <<'NARROW_GALLERY'
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    id: "omni_nav_gallery"
+- assertVisible:
+    id: "omni_gallery_filter_all"
+- assertVisible:
+    id: "omni_gallery_filter_images"
+- assertVisible:
+    id: "omni_gallery_filter_videos"
+- takeScreenshot: 21-gallery-360dp-large
+NARROW_GALLERY
+maestro test --test-output-dir "$OUTPUT/maestro-narrow" "$OUTPUT/gallery-narrow.yaml"
+test -s "$(find "$OUTPUT/maestro-narrow" -name 21-gallery-360dp-large.png -print -quit)"
+cp "$(find "$OUTPUT/maestro-narrow" -name 21-gallery-360dp-large.png -print -quit)" "$OUTPUT/21-gallery-360dp-large.png"
+adb shell settings put system font_scale 1.0
+adb shell wm size reset
+adb shell wm density reset
 
 cat > "$OUTPUT/README.txt" <<EOF
 Android Omni Cleaner: five genuine Android emulator screenshots.
