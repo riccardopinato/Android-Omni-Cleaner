@@ -77,14 +77,18 @@ class FileScanner(
         extensionFilter: String? = null,
         onInventoryProgress: ((checked: Int, currentPath: String) -> Unit)? = null,
         onDuplicateProgress: ((processed: Int, total: Int) -> Unit)? = null,
+        forceRefreshInventory: Boolean = false,
+        onConfirmedGroup: ((DuplicateGroup) -> Unit)? = null,
     ): List<DuplicateGroup> {
         val inventory = StorageInventoryRepository.snapshot(
             root = root,
+            forceRefresh = forceRefreshInventory,
             onProgress = onInventoryProgress,
         ).inventory
         return findDuplicates(
             inventory = inventory,
             extensionFilter = extensionFilter,
+            onConfirmedGroup = onConfirmedGroup,
             onProgress = onDuplicateProgress,
         )
     }
@@ -92,6 +96,7 @@ class FileScanner(
     suspend fun findDuplicates(
         inventory: FileInventory,
         extensionFilter: String? = null,
+        onConfirmedGroup: ((DuplicateGroup) -> Unit)? = null,
         onProgress: ((processed: Int, total: Int) -> Unit)? = null,
     ): List<DuplicateGroup> {
         val normalizedExtension = extensionFilter
@@ -111,6 +116,7 @@ class FileScanner(
         return inventoryScanner.duplicatesProgressive(
             files = candidates,
             onProgress = onProgress,
+            onConfirmedGroup = onConfirmedGroup,
             hashCache = StorageInventoryRepository.duplicateHashCache(),
         )
     }

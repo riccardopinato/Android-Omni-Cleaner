@@ -1,0 +1,35 @@
+appId: com.riccardopinato.omnicleaner.debug
+---
+# Synthetic emulator-only read-only scan. No Android Trash approval or deletes.
+- launchApp:
+    clearState: false
+- assertVisible: "Smart cleaning"
+- tapOn:
+    id: "omni_nav_clean"
+- assertVisible: "Deep Cleaning"
+- tapOn:
+    id: "omni_clean_tool_intelligence"
+- assertVisible: "Storage Intelligence"
+- tapOn:
+    id: "omni_storage_intelligence_scan"
+- extendedWaitUntil:
+    visible: "Storage map"
+    timeout: 120000
+- scrollUntilVisible:
+    element:
+      id: "omni_storage_search"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "omni_storage_search"
+- inputText: ".apk"
+- pressKey: Back
+- scrollUntilVisible:
+    element:
+      id: "omni_storage_open_categories"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "omni_storage_open_categories"
+- assertVisible:
+    id: "omni_clean_detail_advanced"

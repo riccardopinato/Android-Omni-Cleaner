@@ -154,7 +154,7 @@ object StorageInventoryRepository {
         cached = null
     }
 
-    internal fun duplicateHashCache(): DuplicateHashCache? = persistentIndex
+    internal fun duplicateHashCache(): DuplicateHashCache? = persistentIndex?.newScanCache()
 
     internal fun currentForTests(): StorageInventorySnapshot? = cached
 

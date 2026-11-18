@@ -1,69 +1,42 @@
 appId: com.riccardopinato.omnicleaner.debug
 ---
+# Dedicated screen hierarchy; no destructive request is authorized here.
 - launchApp:
     clearState: false
 - assertVisible: "Android Omni Cleaner"
-- assertVisible: "Home"
+- assertVisible: "Smart cleaning"
 - assertVisible: "Analyze storage"
-
+- tapOn: "Settings"
+- assertVisible: "Appearance"
+- pressKey: Back
 - tapOn:
-    text: "Clean"
+    id: "omni_nav_clean"
 - assertVisible: "Deep Cleaning"
-- assertVisible: "Analyze storage"
 - tapOn:
-    text: "Analyze storage"
-- scrollUntilVisible:
-    element:
-      text: "Storage overview"
-    direction: DOWN
-    timeout: 120000
-    speed: 50
-- assertVisible: "Storage overview"
-
-- scrollUntilVisible:
-    element:
-      text: "Smart categories"
-    direction: UP
-    timeout: 30000
-- assertVisible: "Smart categories"
+    id: "omni_clean_tool_duplicates"
+- assertVisible: "Find duplicates"
+- pressKey: Back
 - tapOn:
-    text: "Scan smart categories"
-- assertVisible:
-    text: "Scan smart categories"
-
-- scrollUntilVisible:
-    element:
-      text: "Find duplicates"
-    direction: UP
-    timeout: 30000
+    id: "omni_nav_gallery"
+- assertVisible: "Gallery cleaner"
 - tapOn:
-    text: "Find duplicates"
-- scrollUntilVisible:
-    element:
-      text: "a.txt"
-    direction: DOWN
-    timeout: 120000
-    speed: 50
-- assertVisible: "a.txt"
-
+    id: "omni_nav_privacy"
+- assertVisible: "EXIF privacy"
 - tapOn:
-    text: "Gallery"
-- assertVisible: "Gallery Cleaner"
-
+    id: "omni_privacy_quick"
+- assertVisible: "Choose one JPEG photo"
+- pressKey: Back
 - tapOn:
-    text: "Privacy"
-- assertVisible: "EXIF Privacy"
-
+    id: "omni_privacy_batch"
+- assertVisible: "Choose photo folder"
+- pressKey: Back
 - tapOn:
-    text: "Pro"
+    id: "omni_nav_pro"
 - assertVisible: "Omni Cleaner Pro"
-- scrollUntilVisible:
-    element:
-      text: "Restore purchase"
-    direction: DOWN
-    timeout: 30000
-- assertVisible: "Restore purchase"
-
 - tapOn:
-    text: "Home"
-- assertVisible: "Android Omni Cleaner"
+    id: "omni_pro_manage"
+- assertVisible: "Restore purchase"
+- pressKey: Back
+- tapOn:
+    id: "omni_nav_home"
+- assertVisible: "Smart cleaning"

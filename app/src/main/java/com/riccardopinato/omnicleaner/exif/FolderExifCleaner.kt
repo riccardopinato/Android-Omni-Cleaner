@@ -3,6 +3,7 @@ package com.riccardopinato.omnicleaner.exif
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.DocumentsContract
 import androidx.documentfile.provider.DocumentFile
 import androidx.exifinterface.media.ExifInterface
 import kotlinx.coroutines.CancellationException
@@ -222,6 +223,77 @@ class FolderExifCleaner(
             incompleteCopies = incomplete.distinct(),
             errors = errors,
         )
+    }
+
+
+    /**
+     * One-JPEG SAF copy: destination is created by ACTION_CREATE_DOCUMENT.
+     * The source is opened read-only, and no selected EXIF operation writes to it.
+     */
+    suspend fun exportSingle(
+        source: Uri,
+        destination: Uri,
+        groups: Set<ExifGroup>,
+    ): ExifExport = withContext(Dispatchers.IO) {
+        var temporary: File? = null
+        try {
+            require(source != destination) { "Source and destination must differ" }
+            require(groups.isNotEmpty()) { "Select at least one metadata group" }
+            inspect(source, groups) // Fail closed on non-JPEG input before writing.
+
+            val working = File.createTempFile("omni-exif-single-", ".jpg", context.cacheDir)
+                .also { temporary = it }
+            val originalDigest = resolver.openInputStream(source)?.use { input ->
+                FileOutputStream(working).use { output ->
+                    val digest = copyWithDigest(input, output)
+                    output.fd.sync()
+                    digest
+                }
+            } ?: error("Source cannot be read")
+
+            val sourceRecheck = resolver.openInputStream(source)?.use { digestCancellable(it) }
+                ?: error("Source cannot be re-read")
+            check(originalDigest.contentEquals(sourceRecheck)) { "Source changed during copy" }
+
+            JpegExifEditor.cleanTemporaryCopy(
+                file = working,
+                groups = groups,
+                checkpoint = { coroutineContext.ensureActive() },
+            )
+
+            val writtenDigest = resolver.openOutputStream(destination, "w")?.use { output ->
+                FileInputStream(working).use { input -> copyWithDigest(input, output) }
+            } ?: error("Output cannot be written")
+            val persistedDigest = resolver.openInputStream(destination)?.use { digestCancellable(it) }
+                ?: error("Output cannot be verified")
+            check(writtenDigest.contentEquals(persistedDigest)) { "Exported copy is incomplete" }
+            check(inspect(destination, groups) == 0) {
+                "Selected EXIF metadata remains in exported copy"
+            }
+            val sourceAfter = resolver.openInputStream(source)?.use { digestCancellable(it) }
+                ?: error("Source cannot be rechecked")
+            check(originalDigest.contentEquals(sourceAfter)) { "Source changed during export" }
+
+            ExifExport(created = 1, failed = 0, incompleteCopies = emptyList(), errors = emptyList())
+        } catch (cancelled: CancellationException) {
+            if (source != destination) {
+                runCatching { DocumentsContract.deleteDocument(resolver, destination) }
+            }
+            throw cancelled
+        } catch (failure: Exception) {
+            // The created output is removed if validation failed; source is untouched.
+            if (source != destination) {
+                runCatching { DocumentsContract.deleteDocument(resolver, destination) }
+            }
+            ExifExport(
+                created = 0,
+                failed = 1,
+                incompleteCopies = emptyList(),
+                errors = listOf(failure.message ?: failure.javaClass.simpleName),
+            )
+        } finally {
+            temporary?.delete()
+        }
     }
 
     fun inspect(

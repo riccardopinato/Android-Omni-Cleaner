@@ -26,8 +26,11 @@ object JpegExifEditor {
         if (groups.isEmpty()) return
 
         checkpoint()
+        // Reject metadata that may carry separate XMP/IPTC location fields.
+        // Failing before any mutation leaves the selected original untouched.
+        val protectLocation = ExifGroup.LOCATION in groups
         val beforeDigest = file.inputStream().buffered().use {
-            JpegContentDigest.read(it, checkpoint)
+            JpegContentDigest.read(it, checkpoint, forbidAuxiliaryMetadata = protectLocation)
         }
 
         val before = ExifInterface(file.absolutePath)
@@ -37,6 +40,11 @@ object JpegExifEditor {
         validateOrientation(orientation)
 
         val xmp = before.getAttribute(XMP_TAG)
+        // An XMP TIFF attribute can contain coordinates outside the GPS IFD.
+        // Fail before writing an output rather than promising an unsafe copy.
+        if (blocksEmbeddedXmpForGps(groups, xmp)) {
+            error("JPEG contains embedded XMP metadata; GPS-clean export blocked")
+        }
         if (
             xmp?.contains("MotionPhoto", ignoreCase = true) == true ||
             xmp?.contains("MicroVideo", ignoreCase = true) == true
@@ -74,7 +82,7 @@ object JpegExifEditor {
         }
 
         val afterDigest = file.inputStream().buffered().use {
-            JpegContentDigest.read(it, checkpoint)
+            JpegContentDigest.read(it, checkpoint, forbidAuxiliaryMetadata = protectLocation)
         }
 
         if (!beforeDigest.contentEquals(afterDigest)) {

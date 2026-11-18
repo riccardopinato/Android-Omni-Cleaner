@@ -1,0 +1,90 @@
+name: Omni canonical APK baseline — exact-head visual gate
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'APPROVED_APK_CANONICAL_PROMOTION_20261118.md'
+      - '.github/workflows/omni-canonical-promotion-visual.yml'
+permissions:
+  contents: read
+concurrency:
+  group: omni-apk-promotion-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: true
+jobs:
+  approved-visual:
+    if: github.event.pull_request.head.ref == 'integration/omni-user-apk-baseline-to-main-20261118'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout immutable approved-lineage PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          path: target
+          persist-credentials: false
+
+      - name: Bind actual source to PR head and user's approved UI
+        shell: bash
+        working-directory: target
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test "$(git hash-object app/src/main/java/com/riccardopinato/omnicleaner/ui/redesign/OmniPremiumHome.kt)" = "8d8bfba144d080e5963ec22556bc9d23f4a33b3f"
+          test "$(git hash-object app/src/main/java/com/riccardopinato/omnicleaner/ui/redesign/RedesignedOmniCleanerApp.kt)" = "5e68f734d82d512d4639890670d06cb9492fd17e"
+          test "$(git hash-object app/src/main/java/com/riccardopinato/omnicleaner/gallery/GalleryMediaPreview.kt)" = "e4a8a68d4d16fe5eddf9edc98fee5aaf2d6e45ee"
+          test "$(git hash-object app/src/main/java/com/riccardopinato/omnicleaner/gallery/GalleryProSection.kt)" = "94504f506e4a5ee91085bff9d40df03ef4f78a51"
+
+      - name: Set up Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
+        with:
+          cache-provider: basic
+          add-job-summary: on-failure
+      - name: Build actual PR-head debug APK
+        run: cd target && ./gradlew assembleDebug --stacktrace
+      - name: Free room for emulator
+        run: |
+          for d in "$ANDROID_HOME/ndk" "$ANDROID_HOME/cmake"; do
+            if [[ -d "$d" ]]; then rm -rf "$d"; fi
+          done
+      - name: Install Maestro
+        run: |
+          curl -fsSL https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Ensure ffmpeg is available for video fixture
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -qq -y ffmpeg
+          fi
+      - name: KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Verify actual app screenshots and all detail routes
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        env:
+          APK_PATH: ${{ github.workspace }}/target/app/build/outputs/apk/debug/app-debug.apk
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          disk-size: 2048M
+          disable-animations: true
+          script: bash "$GITHUB_WORKSPACE/target/.github/scripts/capture-omni-screenshots.sh"
+      - name: Upload actual screenshots and failure evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: omni-canonical-apk-visual-${{ github.event.pull_request.head.sha }}
+          path: omni-design-screenshots/
+          retention-days: 30
+          if-no-files-found: error

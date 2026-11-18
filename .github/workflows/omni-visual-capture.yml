@@ -1,0 +1,120 @@
+name: Omni Cleaner — visual screenshots
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - audit/omni-safety-ux-360-20261115
+      - feature/omni-storage-intelligence-v1-20261116
+      - feature/omni-gallery-pro-v1-20261116
+      - feature/omni-qa-gallery-review-v1-20261116
+      - feature/omni-scan-engine-2-0-20261117
+    paths:
+      - 'app/src/main/java/com/riccardopinato/omnicleaner/ui/redesign/**'
+      - 'app/src/main/java/com/riccardopinato/omnicleaner/gallery/GalleryCleanerSection.kt'
+      - 'app/src/main/java/com/riccardopinato/omnicleaner/exif/ExifCleanerSection.kt'
+      - 'app/src/main/java/com/riccardopinato/omnicleaner/monetization/MonetizationSection.kt'
+      - '.github/workflows/omni-visual-capture.yml'
+      - '.github/scripts/capture-omni-screenshots.sh'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: omni-visual-capture-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          path: target
+          persist-credentials: false
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
+        with:
+          cache-provider: basic
+          add-job-summary: on-failure
+
+      - name: Build exact-head debug APK
+        working-directory: target
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Free runner disk for emulator
+        shell: bash
+        run: |
+          for path in "$ANDROID_HOME/ndk" "$ANDROID_HOME/cmake"; do
+            if [[ -d "$path" ]]; then rm -rf "$path"; fi
+          done
+
+      - name: Install Maestro
+        run: |
+          curl -fsSL https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Install local video generator for MediaStore QA
+        shell: bash
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg
+          fi
+          ffmpeg -hide_banner -version | head -n 1
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Capture five main screens
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        env:
+          APK_PATH: ${{ github.workspace }}/target/app/build/outputs/apk/debug/app-debug.apk
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          disk-size: 2048M
+          disable-animations: true
+          script: bash "$GITHUB_WORKSPACE/target/.github/scripts/capture-omni-screenshots.sh"
+
+      - name: Upload genuine PNG screenshots
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: omni-design-screenshots-${{ github.sha }}
+          path: |
+            omni-design-screenshots/01-home.png
+            omni-design-screenshots/02-clean.png
+            omni-design-screenshots/03-gallery.png
+            omni-design-screenshots/04-privacy.png
+            omni-design-screenshots/05-pro.png
+            omni-design-screenshots/06-clean-duplicates.png
+            omni-design-screenshots/07-clean-filters.png
+            omni-design-screenshots/08-privacy-quick.png
+            omni-design-screenshots/09-privacy-batch.png
+            omni-design-screenshots/10-pro-manage.png
+            omni-design-screenshots/11-video-playing.png
+            omni-design-screenshots/12-storage-intelligence.png
+            omni-design-screenshots/13-gallery-pro.png
+            omni-design-screenshots/14-review-center.png
+            omni-design-screenshots/failure-screen.png
+            omni-design-screenshots/failure-logcat.txt
+            omni-design-screenshots/failure-window.xml
+            omni-design-screenshots/README.txt
+          if-no-files-found: error
+          retention-days: 30

@@ -45,6 +45,43 @@ class JpegContentDigestTest {
         JpegContentDigest.read(ByteArrayInputStream(bytes))
     }
 
+
+    @Test(expected = IllegalStateException::class)
+    fun blocksXmpGpsSidecarBeforeClaimingCleanLocation() {
+        val xmpHeader = "http://ns.adobe.com/xap/1.0/\u0000".toByteArray(Charsets.US_ASCII)
+        val xmp = "<rdf:Description exif:GPSLatitude=\"45,30\" />"
+            .toByteArray(Charsets.UTF_8)
+        JpegContentDigest.read(
+            ByteArrayInputStream(jpegWithAuxiliarySegment(0xE1, xmpHeader + xmp)),
+            forbidAuxiliaryMetadata = true,
+        )
+    }
+
+    @Test(expected = IllegalStateException::class)
+    fun blocksIptcLocationSegments() {
+        JpegContentDigest.read(
+            ByteArrayInputStream(jpegWithAuxiliarySegment(0xED, byteArrayOf(1, 2, 3))),
+            forbidAuxiliaryMetadata = true,
+        )
+    }
+
+    @Test
+    fun permitsCleanExifOnlyJpegInGpsPrivacyMode() {
+        val bytes = jpeg(exifPayload = byteArrayOf(1, 2, 3), imagePayload = byteArrayOf(3, 2, 1))
+        assertArrayEquals(
+            JpegContentDigest.read(ByteArrayInputStream(bytes)),
+            JpegContentDigest.read(ByteArrayInputStream(bytes), forbidAuxiliaryMetadata = true),
+        )
+    }
+
+    private fun jpegWithAuxiliarySegment(marker: Int, segment: ByteArray): ByteArray {
+        val length = segment.size + 2
+        return byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), marker.toByte(),
+            (length shr 8).toByte(), length.toByte()) +
+            segment +
+            byteArrayOf(0xFF.toByte(), 0xDA.toByte(), 0x00, 0x02, 0x31,
+                0xFF.toByte(), 0xD9.toByte())
+    }
     private fun jpeg(
         exifPayload: ByteArray,
         imagePayload: ByteArray,

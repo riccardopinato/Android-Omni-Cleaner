@@ -2,6 +2,7 @@ package com.riccardopinato.omnicleaner.exif
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class ExifGroupContractTest {
@@ -15,6 +16,14 @@ class ExifGroupContractTest {
         assertTrue("DateTimeOriginal" in ExifGroup.DATES.tags)
         assertTrue("LensSerialNumber" in ExifGroup.DEVICE.tags)
         assertTrue("UserComment" in ExifGroup.COMMENTS.tags)
+    }
+
+    @Test
+    fun locationExportRejectsEmbeddedXmpButOtherGroupsAreIndependent() {
+        assertTrue(blocksEmbeddedXmpForGps(setOf(ExifGroup.LOCATION), "<x:xmpmeta/>"))
+        assertFalse(blocksEmbeddedXmpForGps(setOf(ExifGroup.LOCATION), null))
+        assertFalse(blocksEmbeddedXmpForGps(setOf(ExifGroup.LOCATION), ""))
+        assertFalse(blocksEmbeddedXmpForGps(setOf(ExifGroup.DATES), "<x:xmpmeta/>"))
     }
 
     @Test

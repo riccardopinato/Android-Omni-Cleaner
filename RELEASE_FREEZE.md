@@ -1,3 +1,5 @@
+> **Aggiornamento 18/11/2026 — distinzione sviluppo/release:** il congelamento RC1 descritto qui protegge lo snapshot storico e la sua identità di firma, **non** impone che la nuova linea di sviluppo v1.1 ritorni alla vecchia UI. Lo snapshot di `main` precedente alla promozione è conservato in `backup/omni-main-before-apk-baseline-20261118`; il commit esatto dell'APK fornito dall'utente è conservato in `backup/omni-user-approved-apk-837b66d8-20261118`. La nuova baseline di sviluppo proviene da `1f626905a58b124b41fff6be535ede5aa8f62e86`. Questa promozione NON costituisce una release certificata, NON autorizza modifiche distruttive e NON completa signing, Play, MediaStore OEM o validazione fisica. Per qualunque RC1 di produzione il freeze resta vincolante.
+
 # Android Omni Cleaner — v1.0 RC1 Release Freeze
 
 Status: **SOURCE FREEZE ACTIVE / SIGNED ARTIFACT PENDING**
