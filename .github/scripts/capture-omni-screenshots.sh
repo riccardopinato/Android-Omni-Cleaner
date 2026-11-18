@@ -298,6 +298,11 @@ appId: com.riccardopinato.omnicleaner.debug
     clearState: false
 - tapOn:
     id: "omni_nav_gallery"
+- scrollUntilVisible:
+    element:
+      id: "omni_gallery_filter_all"
+    direction: DOWN
+    timeout: 30000
 - assertVisible:
     id: "omni_gallery_filter_all"
 - assertVisible:
