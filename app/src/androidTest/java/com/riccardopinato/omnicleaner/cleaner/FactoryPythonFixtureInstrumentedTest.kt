@@ -1,8 +1,6 @@
 package com.riccardopinato.omnicleaner.cleaner
 
 import android.os.Build
-import android.os.Environment
-import android.os.ParcelFileDescriptor
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import java.io.FileInputStream
@@ -31,17 +29,26 @@ class FactoryPythonFixtureInstrumentedTest {
             Build.PRODUCT.contains("sdk_gphone") ||
             Build.FINGERPRINT.contains("emulator", ignoreCase = true)
         assertTrue("This cross-app fixture gate runs only on a disposable emulator", emulator)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            ParcelFileDescriptor.AutoCloseInputStream(
-                instrumentation.uiAutomation.executeShellCommand(
-                    "appops set " + context.packageName + " MANAGE_EXTERNAL_STORAGE allow",
-                ),
-            ).use { it.readBytes() }
-            assertTrue("Debug All files access must be authorized", Environment.isExternalStorageManager())
-        }
-
-        val root = File(StorageAccess.primaryRoot(), "Download/omni-python-qa-fixture")
-        assertTrue("Python fixture was not pushed into the emulator", root.isDirectory)
+        // The immutable Python fixture is bundled in the instrumentation
+        // APK assets by CI. Copy only to a fresh app-private cache directory:
+        // Android 35/FUSE may deny hundreds of direct adb pushes into Downloads.
+        // This test never requests MANAGE_EXTERNAL_STORAGE or touches user media.
+        val root = File.createTempFile("omni-python-fixture-", "", context.cacheDir)
+        assertTrue(root.delete())
+        assertTrue(root.mkdir())
+        try {
+            val assetRoot = "omni-python-qa-fixture"
+            val assets = instrumentation.context.assets
+            val names = assets.list(assetRoot).orEmpty().toList()
+            assertEquals("Python fixture assets must be injected at build time", 513, names.size)
+            for (name in names) {
+                assertTrue("Unexpected asset name", name == "manifest.json" ||
+                    Regex("synthetic_[0-9]{6}\\.bin").matches(name))
+                assets.open("$assetRoot/$name").use { input ->
+                    File(root, name).outputStream().use { output -> input.copyTo(output) }
+                }
+            }
+            assertTrue("Python fixture was not staged in app-private cache", root.isDirectory)
         val manifest = JSONObject(File(root, "manifest.json").readText())
         assertEquals(1, manifest.getInt("schema_version"))
         assertEquals(512, manifest.getInt("files"))
@@ -76,7 +83,10 @@ class FactoryPythonFixtureInstrumentedTest {
         assertEquals(8, groups.size)
         assertEquals(expectedDuplicateHashes, groups.map { it.hash }.toSet())
         assertTrue(groups.all { it.files.size == 2 })
-        // Read-only test. No permanent deletions, Safe Trash mutation or MediaStore request.
+        // Read-only scan: only the synthetic app-private cache is temporary.
+        } finally {
+            assertTrue("Only app-private synthetic test cache is removed", root.deleteRecursively())
+        }
     }
 
     private fun hash(file: File): String {
