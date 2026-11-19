@@ -97,7 +97,13 @@ class NativeVideoPlaybackInstrumentedTest {
             assertTrue("Playback reported MediaPlayer failure: ${failure.get()}", failure.get() == null)
             assertTrue("Media not playing in both samples", isPlaying1 && isPlaying2)
             assertTrue("Video position did not advance: $position1 -> $position2", position2 >= position1 + 600)
-            println("OMNI_VIDEO_NATIVE_RENDER_PASS position1=$position1 position2=$position2 assetBytes=${clip.length()}")
+            // Instrumentation println goes to device stdout/logcat, not to the
+            // host's 'am instrument -w' result file. Emit an explicit Android
+            // logcat record so CI can verify actual player metrics separately.
+            android.util.Log.i(
+                "OMNI_VIDEO_NATIVE_RENDER_PASS",
+                "position1=$position1 position2=$position2 assetBytes=${clip.length()}",
+            )
         } finally {
             val activity = activityRef.get()
             if (activity != null) {
