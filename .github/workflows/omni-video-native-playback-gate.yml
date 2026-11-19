@@ -73,10 +73,13 @@ jobs:
           script: |
             adb install -r -t app/build/outputs/apk/debug/app-debug.apk
             adb install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            adb logcat -c
             adb shell am instrument -w -e class com.riccardopinato.omnicleaner.gallery.NativeVideoPlaybackInstrumentedTest com.riccardopinato.omnicleaner.debug.test/androidx.test.runner.AndroidJUnitRunner > "$GITHUB_WORKSPACE/omni-video-native-result.txt"
             cat "$GITHUB_WORKSPACE/omni-video-native-result.txt"
+            adb logcat -d -s 'OMNI_VIDEO_NATIVE_RENDER_PASS:I' '*:S' > "$GITHUB_WORKSPACE/omni-video-native-logcat.txt"
+            cat "$GITHUB_WORKSPACE/omni-video-native-logcat.txt"
             grep -Fq "OK (1 test)" "$GITHUB_WORKSPACE/omni-video-native-result.txt"
-            grep -Fq "OMNI_VIDEO_NATIVE_RENDER_PASS" "$GITHUB_WORKSPACE/omni-video-native-result.txt"
+            grep -Eq 'OMNI_VIDEO_NATIVE_RENDER_PASS.*position1=[0-9]+ position2=[0-9]+' "$GITHUB_WORKSPACE/omni-video-native-logcat.txt"
 
       - name: Fail closed if video was not played/rendered
         shell: bash
@@ -87,8 +90,16 @@ jobs:
           if not path.is_file():
               raise SystemExit("FAIL: native playback instrumentation not observed")
           text = path.read_text(encoding="utf-8")
-          if "OK (1 test)" not in text or "OMNI_VIDEO_NATIVE_RENDER_PASS" not in text or "FAILURES" in text:
+          log_file = Path("omni-video-native-logcat.txt")
+          if not log_file.is_file():
+              raise SystemExit("FAIL: native playback logcat metrics missing")
+          log = log_file.read_text(encoding="utf-8")
+          import re
+          values = re.search(r"OMNI_VIDEO_NATIVE_RENDER_PASS.*position1=(\d+) position2=(\d+)", log)
+          if "OK (1 test)" not in text or "FAILURES" in text or not values:
               raise SystemExit("FAIL: native H264 rendered/advancing test did not pass")
+          if int(values.group(2)) < int(values.group(1)) + 600:
+              raise SystemExit("FAIL: native video position did not advance sufficiently")
           print("PASS: actual native Android H264 rendered-frame callback and position advancement")
           PY
 
