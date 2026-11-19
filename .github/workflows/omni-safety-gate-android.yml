@@ -61,6 +61,7 @@ jobs:
           disk-size: 4096M
           disable-animations: true
           script: |
+            adb shell appops set com.riccardopinato.omnicleaner.debug MANAGE_EXTERNAL_STORAGE allow
             ./gradlew connectedDebugAndroidTest --stacktrace \
               -Pandroid.testInstrumentationRunnerArguments.class=com.riccardopinato.omnicleaner.cleaner.OmniSafetyGateInstrumentedTest
 
