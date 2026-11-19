@@ -74,8 +74,18 @@ internal fun GalleryProSection(
             )
         }
     }
-    val videoMatches = remember(videos, videoFilter, videoQuery) {
-        filterGalleryVideos(videos, videoFilter, videoQuery)
+    // A page/permission/filter-source change invalidates the previous custom range.
+    // Existing 100MB+, 5min+ and 4K presets remain independent, combinable filters.
+    val sliderMaximumMiB = remember(videos) { galleryVideoSliderMaximumMiB(videos) }
+    var draftSizeMiB by remember(videos) { mutableStateOf(0f..sliderMaximumMiB) }
+    var appliedSizeRange by remember(videos) { mutableStateOf<GalleryVideoSizeRange?>(null) }
+    val videoMatches = remember(videos, videoFilter, videoQuery, appliedSizeRange) {
+        filterGalleryVideos(
+            videos,
+            videoFilter,
+            text = videoQuery,
+            sizeRange = appliedSizeRange,
+        )
     }
 
     Column(
@@ -143,6 +153,21 @@ internal fun GalleryProSection(
                         )
                     }
                 }
+                OmniProfessionalVideoSizeFilter(
+                    maximumMiB = sliderMaximumMiB,
+                    draftMiB = draftSizeMiB,
+                    hasAppliedRange = appliedSizeRange != null,
+                    onDraftChange = { draftSizeMiB = it },
+                    onApply = {
+                        appliedSizeRange = appliedGalleryVideoSizeRange(
+                            draftSizeMiB, sliderMaximumMiB,
+                        )
+                    },
+                    onReset = {
+                        draftSizeMiB = 0f..sliderMaximumMiB
+                        appliedSizeRange = null
+                    },
+                )
                 OutlinedTextField(
                     value = videoQuery,
                     onValueChange = { videoQuery = it },
