@@ -43,18 +43,20 @@ internal fun OmniGentlefaceAnimatedCheck(
 ) {
     val motionAllowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
         ValueAnimator.areAnimatorsEnabled()
-    val transition = rememberInfiniteTransition(label = "Gentleface check cycle")
-    val time = transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "Gentleface check stroke reveal",
-    ).value
-    // The static result is always the complete check and never disappears.
-    val t = if (motionAllowed && animated) time else 1f
+    // Do not even start an infinite animation when device motion is disabled,
+    // or when this glyph is used as a static decision-feedback mark.
+    val t = if (motionAllowed && animated) {
+        val transition = rememberInfiniteTransition(label = "Gentleface check cycle")
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 2200, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+            label = "Gentleface check stroke reveal",
+        ).value
+    } else 1f
     val progress = when {
         t < .136f -> 1f
         t < .234f -> 1f - smoothPhase(t, .136f, .234f)
