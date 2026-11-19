@@ -457,6 +457,7 @@
     <string name="gp_size_apply">Aplicar filtro</string>
     <string name="gp_size_inactive">Sem filtro de tamanho personalizado</string>
     <string name="gp_size_active">Filtro de tamanho aplicado aos vídeos carregados.</string>
+    <string name="gp_video_clear_search">Limpar pesquisa de vídeos</string>
     <string name="gp_video_search">Nome ou álbum</string>
     <string name="gp_video_count">%1$d vídeos · %2$s</string>
     <string name="gp_video_details">%1$s · %2$d×%3$d · %4$d s</string>
