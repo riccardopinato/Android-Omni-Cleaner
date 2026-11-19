@@ -72,3 +72,34 @@ and `file_rows_ms`. These must be measured, **not filled with example values**.
 - New Core comparison protocol returns exit 2 for missing/mixed/incomparable evidence and exit 3 for a policy regression. Even a non-regressing result remains `NOT_CERTIFIED` without physical safety, thermal and OEM gates.
 - Do not use 1,200-file emulator timings (116/66/52 ms) as a numerical baseline for the Xiaomi's ~88k-file physical scan.
 - Always preserve the APK's signing identity and data; do not uninstall a populated app to run benchmarks.
+
+
+## Machine-readable physical report conversion — controlled gate
+
+New reusable local-only adapter:
+`.github/scripts/omni-perf-report-to-jsonl.py` (unit tested by
+`omni-r1-physical-evidence-contract.yml`).
+
+It consumes real **copied** `OMNI_PERF_V1` reports and writes JSONL accepted
+by App-Factory-Core's pinned Python comparator. Sample command with
+**placeholders to replace by real measured values**:
+
+```bash
+python3 .github/scripts/omni-perf-report-to-jsonl.py \
+  --input xiaomi-r1-1.txt --input xiaomi-r1-2.txt --input xiaomi-r1-3.txt \
+  --source-sha FULL_40_HEX_SOURCE_COMMIT \
+  --fixture-id VERIFIED_UNCHANGED_LIBRARY_ID \
+  --integrity-sha256 VERIFIED_64_HEX_INVENTORY_SHA256 \
+  --output xiaomi-r1-cold-reused.jsonl
+```
+
+**Never substitute the example ID or invent the integrity SHA.** It must be
+computed independently over the same canonical file inventory/snapshot under
+a documented protocol. If no trustworthy unchanged-library digest exists,
+**STOP / evidence unavailable**, rather than derive it from a count or claim
+the R0 and R1 datasets are identical. The tool rejects missing SQLite phase,
+emulator reports, non-read-only operations, inconsistent counts, duplicated
+run timestamps, mixed device metadata or reused/replaced rows, and refuses to
+overwrite pre-existing output. Only it can normalize the fields, not certify
+their physical provenance. The Core comparator still demands ≥3 matched
+samples per candidate, a real same-device baseline and independent QA.
