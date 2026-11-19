@@ -133,20 +133,9 @@ class FileInventoryScanner {
         onConfirmedGroup: ((DuplicateGroup) -> Unit)? = null,
         onProgress: ((processed: Int, total: Int) -> Unit)? = null,
     ): List<DuplicateGroup> = withContext(Dispatchers.IO) {
-        val bySize = uniquePhysicalFiles(files)
-            .asSequence()
-            .filter { it.size > 0L }
-            .groupBy { it.size }
-            .values
-            .filter { it.size > 1 }
-            // Prioritize the highest verified potential saving: a confirmed
-            // large-file group appears sooner without skipping other groups.
-            .sortedWith(compareByDescending<List<IndexedFile>> { group ->
-                val size = group.first().size
-                val extra = (group.size - 1).toLong()
-                if (size > 0L && extra > Long.MAX_VALUE / size) Long.MAX_VALUE
-                else size * extra
-            }.thenBy { group -> group.minOf { it.file.absolutePath } })
+        // Most inventory sizes are singletons. Avoid allocating a List for
+        // every singleton size just to discard it at the next filtering stage.
+        val bySize = duplicateCandidateSizeGroups(files)
 
         val totalCandidates = bySize.sumOf { it.size }
         val result = ArrayList<DuplicateGroup>()
@@ -438,6 +427,39 @@ class FileInventoryScanner {
 }
 
 
+
+/**
+ * Candidate-only grouping: a distinct size consumes one map entry, but no
+ * per-size List. Allocate a group only when the second file of that size is
+ * observed. All destructive duplicate decisions are still SHA-256 + byte
+ * verified by duplicatesProgressive; this is only a cheap candidate filter.
+ */
+internal fun duplicateCandidateSizeGroups(files: List<IndexedFile>): List<List<IndexedFile>> {
+    val firstBySize = HashMap<Long, IndexedFile>()
+    val groups = HashMap<Long, MutableList<IndexedFile>>()
+    for (item in uniquePhysicalFiles(files)) {
+        if (item.size <= 0L) continue
+        val existingGroup = groups[item.size]
+        if (existingGroup != null) {
+            existingGroup.add(item)
+            continue
+        }
+        val first = firstBySize.remove(item.size)
+        if (first == null) {
+            firstBySize[item.size] = item
+        } else {
+            groups[item.size] = arrayListOf(first, item)
+        }
+    }
+    // Retain the previous priority/overflow/tie-breaking contract.
+    return groups.values.sortedWith(
+        compareByDescending<List<IndexedFile>> { group ->
+            val size = group.first().size
+            val extra = (group.size - 1).toLong()
+            if (size > Long.MAX_VALUE / extra) Long.MAX_VALUE else size * extra
+        }.thenBy { group -> group.minOf { it.file.absolutePath } },
+    )
+}
 
 internal fun uniquePhysicalFiles(files: List<IndexedFile>): List<IndexedFile> =
     files.distinctBy { item ->
