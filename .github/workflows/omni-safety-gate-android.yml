@@ -61,9 +61,31 @@ jobs:
           disk-size: 4096M
           disable-animations: true
           script: |
-            adb install -r app/build/outputs/apk/debug/app-debug.apk
-            adb shell appops set com.riccardopinato.omnicleaner.debug MANAGE_EXTERNAL_STORAGE allow
             ./gradlew connectedDebugAndroidTest --stacktrace -Pandroid.testInstrumentationRunnerArguments.class=com.riccardopinato.omnicleaner.cleaner.OmniSafetyGateInstrumentedTest
+
+      - name: Fail closed if safety instrumentation did not execute
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          root = Path("app/build/outputs/androidTest-results/connected")
+          cases = []
+          for path in root.rglob("*.xml"):
+              try:
+                  tree = ET.parse(path)
+              except ET.ParseError:
+                  continue
+              for case in tree.iter("testcase"):
+                  if "OmniSafetyGateInstrumentedTest" in case.attrib.get("classname", ""):
+                      cases.append(case)
+          if len(cases) != 3:
+              raise SystemExit("FAIL: expected 3 executed safety tests, found " + str(len(cases)))
+          for case in cases:
+              if any(case.find(t) is not None for t in ("failure", "error", "skipped")):
+                  raise SystemExit("FAIL safety: " + str(case.attrib))
+          print("PASS: exactly 3 safety instrumentation tests executed without failure")
+          PY
 
       - name: Summarize evidence and limitations
         if: always()
