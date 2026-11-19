@@ -96,6 +96,38 @@ class GalleryProAnalysisTest {
     }
 
     @Test
+    fun sliderUpperBoundCoversLargestIndexedVideoAndSafelyHandlesLargerFiles() {
+        val mib = 1024L * 1024L
+        val empty = emptyList<GalleryVideoCandidate>()
+        assertEquals(5120f, galleryVideoSliderMaximumMiB(empty), 0f)
+        val videos = listOf(
+            GalleryVideoCandidate(1, "large.mp4", 6000L * mib + 1L, 0L, 0, 0, null),
+        )
+        assertEquals(6001f, galleryVideoSliderMaximumMiB(videos), 0f)
+        val untouched = appliedGalleryVideoSizeRange(0f..5120f, 5120f)
+        assertEquals(null, untouched)
+
+        val lowerBound = appliedGalleryVideoSizeRange(100f..5120f, 5120f)
+        assertEquals(100L * mib, lowerBound?.minimumBytes)
+        assertEquals(Long.MAX_VALUE, lowerBound?.maximumBytes)
+        val sizeBounded = appliedGalleryVideoSizeRange(100f..200f, 5120f)
+        assertEquals(100L * mib, sizeBounded?.minimumBytes)
+        assertEquals(200L * mib, sizeBounded?.maximumBytes)
+
+        val displayRounded = appliedGalleryVideoSizeRange(100.6f..200.6f, 5120f)
+        assertEquals(101L * mib, displayRounded?.minimumBytes)
+        assertEquals(201L * mib, displayRounded?.maximumBytes)
+        val oversized = listOf(
+            GalleryVideoCandidate(7, "huge.mov", Long.MAX_VALUE, 0L, 0, 0, null),
+        )
+        assertEquals(1_048_576f, galleryVideoSliderMaximumMiB(oversized), 0f)
+        val overCap = appliedGalleryVideoSizeRange(
+            100f..1_048_576f, 1_048_576f,
+        )
+        assertTrue(overCap?.contains(Long.MAX_VALUE) == true)
+    }
+
+    @Test
     fun perceptualGroupingRequiresBothTemporalAndVisualSimilarity() {
         val base = 1_700_000_000_000L
         val photos = listOf(
