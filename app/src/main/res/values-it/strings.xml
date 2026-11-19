@@ -460,6 +460,7 @@
     <string name="gp_size_apply">Applica filtro</string>
     <string name="gp_size_inactive">Nessun filtro dimensione attivo</string>
     <string name="gp_size_active">Filtro dimensione applicato ai video caricati.</string>
+    <string name="gp_video_clear_search">Cancella la ricerca video</string>
     <string name="gp_video_search">Nome video o album</string>
     <string name="gp_video_count">%1$d video · %2$s</string>
     <string name="gp_video_details">%1$s · %2$d×%3$d · %4$d sec</string>
