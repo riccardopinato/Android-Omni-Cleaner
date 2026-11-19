@@ -43,7 +43,7 @@ class GalleryProAnalysisTest {
         val combined = filterGalleryVideos(
             videos,
             GalleryVideoReviewFilter.LONG_5_MIN,
-            text = "trip",
+            text = "long_trip",
             sizeRange = range,
         )
         assertEquals(listOf(2L), combined.results.map { it.id })
