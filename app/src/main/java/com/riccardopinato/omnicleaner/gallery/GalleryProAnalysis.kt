@@ -52,7 +52,7 @@ internal fun appliedGalleryVideoSizeRange(
     maximumMiB: Float,
 ): GalleryVideoSizeRange? {
     val bound = maximumMiB.toLong().coerceAtLeast(1L)
-    val minimum = selectedMiB.start.toLong().coerceIn(0L, bound)
+    val minimum = kotlin.math.round(selectedMiB.start).toLong().coerceIn(0L, bound)
     val maximum = kotlin.math.round(selectedMiB.endInclusive).toLong()
         .coerceIn(minimum, bound)
     if (minimum == 0L && maximum == bound) return null
