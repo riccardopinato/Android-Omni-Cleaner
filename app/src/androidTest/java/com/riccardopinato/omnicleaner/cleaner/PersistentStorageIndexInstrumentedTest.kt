@@ -25,6 +25,10 @@ class PersistentStorageIndexInstrumentedTest {
             val firstInventory = FileInventoryScanner().collect(root)
             var first: IndexReconcileDiagnostics? = null
             index.reconcileFull(root, firstInventory, System.currentTimeMillis())
+            val originalFirst = firstInventory.files.single { it.file.name == "first.bin" }
+            val expectedHash = "a".repeat(64)
+            // Preserve a real cached hash when this exact revision is reused.
+            if (originalFirst.revision != null) index.putFullHash(originalFirst, expectedHash)
             // The ordinary path above retains the original reconciliation contract.
             val metricsInventory = FileInventoryScanner().collect(root)
             index.reconcileFull(
@@ -33,6 +37,11 @@ class PersistentStorageIndexInstrumentedTest {
             )
             val measured = requireNotNull(first)
             assertEquals(2, measured.filesReused + measured.filesReplaced)
+            if (metricsInventory.files.all { it.revision != null }) {
+                assertEquals("Unchanged revisions must reuse the existing rows", 2, measured.filesReused)
+                assertEquals("No unnecessary replacements", 0, measured.filesReplaced)
+                assertEquals(expectedHash, index.fullHash(originalFirst))
+            }
             assertEquals(metricsInventory.directories.size, measured.directoriesWritten)
             assertTrue(measured.totalMillis >= 0L)
             assertTrue(measured.fileRowsMillis >= 0L)
@@ -45,6 +54,31 @@ class PersistentStorageIndexInstrumentedTest {
                 maxAgeMillis = 60_000L,
             ))
             assertEquals(2, readBack.inventory.files.size)
+
+            // Changed content must replace its row (and invalidate any derived
+            // hash); newly added content must be indexed without data loss.
+            File(root, "second.bin").writeText("second content with a different size")
+            File(root, "third.bin").writeText("third content")
+            val changedInventory = FileInventoryScanner().collect(root)
+            var changed: IndexReconcileDiagnostics? = null
+            index.reconcileFull(
+                root, changedInventory, System.currentTimeMillis(),
+                onMetrics = { changed = it },
+            )
+            val updated = requireNotNull(changed)
+            assertEquals(3, updated.filesReused + updated.filesReplaced)
+            if (changedInventory.files.all { it.revision != null }) {
+                assertEquals(1, updated.filesReused)
+                assertEquals(2, updated.filesReplaced)
+                assertEquals(expectedHash, index.fullHash(originalFirst))
+            }
+            val changedSecond = changedInventory.files.single { it.file.name == "second.bin" }
+            assertNull(index.fullHash(changedSecond))
+            val afterMutation = requireNotNull(index.loadReusableSnapshot(
+                root, nowMillis = System.currentTimeMillis(),
+                maxAgeMillis = 60_000L,
+            ))
+            assertEquals(3, afterMutation.inventory.files.size)
         } finally {
             root.deleteRecursively()
             context.deleteDatabase(databaseName)
