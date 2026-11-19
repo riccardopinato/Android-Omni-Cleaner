@@ -153,21 +153,23 @@ internal fun GalleryProSection(
                         )
                     }
                 }
-                OmniProfessionalVideoSizeFilter(
-                    maximumMiB = sliderMaximumMiB,
-                    draftMiB = draftSizeMiB,
-                    hasAppliedRange = appliedSizeRange != null,
-                    onDraftChange = { draftSizeMiB = it },
-                    onApply = {
-                        appliedSizeRange = appliedGalleryVideoSizeRange(
-                            draftSizeMiB, sliderMaximumMiB,
-                        )
-                    },
-                    onReset = {
-                        draftSizeMiB = 0f..sliderMaximumMiB
-                        appliedSizeRange = null
-                    },
-                )
+                if (videos.isNotEmpty()) {
+                    OmniProfessionalVideoSizeFilter(
+                        maximumMiB = sliderMaximumMiB,
+                        draftMiB = draftSizeMiB,
+                        hasAppliedRange = appliedSizeRange != null,
+                        onDraftChange = { draftSizeMiB = it },
+                        onApply = {
+                            appliedSizeRange = appliedGalleryVideoSizeRange(
+                                draftSizeMiB, sliderMaximumMiB,
+                            )
+                        },
+                        onReset = {
+                            draftSizeMiB = 0f..sliderMaximumMiB
+                            appliedSizeRange = null
+                        },
+                    )
+                }
                 OutlinedTextField(
                     value = videoQuery,
                     onValueChange = { videoQuery = it },
