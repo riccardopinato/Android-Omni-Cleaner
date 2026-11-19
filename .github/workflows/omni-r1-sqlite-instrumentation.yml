@@ -63,6 +63,13 @@ jobs:
           disable-animations: true
           script: |
             ./gradlew connectedDebugAndroidTest --stacktrace -Pandroid.testInstrumentationRunnerArguments.class=com.riccardopinato.omnicleaner.cleaner.PersistentStorageIndexInstrumentedTest
+            # Gradle UTP may uninstall both test packages after its connected run.
+            # Reinstall exact build artifacts only on the disposable emulator.
+            adb uninstall com.riccardopinato.omnicleaner.debug.test || true
+            adb uninstall com.riccardopinato.omnicleaner.debug || true
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            adb shell pm list instrumentation | grep -F 'com.riccardopinato.omnicleaner.debug.test'
             adb shell am instrument -w -e class com.riccardopinato.omnicleaner.cleaner.OmniR1IndexStressInstrumentedTest com.riccardopinato.omnicleaner.debug.test/androidx.test.runner.AndroidJUnitRunner | tee /tmp/omni-r1-stress.txt
             grep -Fq 'OK (1 test)' /tmp/omni-r1-stress.txt
             echo "===== OMNI R1 measured emulator SQL metrics ====="
