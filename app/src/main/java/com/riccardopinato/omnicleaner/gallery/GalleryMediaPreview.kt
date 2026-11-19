@@ -305,7 +305,7 @@ fun GalleryMediaPreview(
                     contentColor = Color.White,
                 ),
             ) {
-                GalleryDecisionButtonLabel("✓", keepLabel)
+                GalleryKeepButtonLabel(keepLabel)
             }
         }
         OutlinedButton(
@@ -536,6 +536,22 @@ private fun GalleryDecisionButtonLabel(symbol: String, label: String) {
 }
 
 @Composable
+private fun GalleryKeepButtonLabel(label: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        // User-provided 2.2s check drawing; button keeps the existing
+        // selection callback, 170ms commit delay and localized semantics.
+        OmniGentlefaceAnimatedCheck(tint = Color.White)
+        Text(
+            label, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
 private fun GalleryDecisionBadge(
     label: String,
     symbol: String,
@@ -552,7 +568,11 @@ private fun GalleryDecisionBadge(
         if (symbol == "✕") {
             GalleryTrashIcon()
         } else {
-            Text(symbol, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+            OmniGentlefaceAnimatedCheck(
+                tint = Color.White,
+                animated = false,
+                modifier = Modifier.size(21.dp),
+            )
         }
         Text(
             label, color = Color.White, fontSize = 13.sp,
