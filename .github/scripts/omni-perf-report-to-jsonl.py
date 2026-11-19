@@ -106,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
         args.output.write_text(
             "".join(json.dumps(r, sort_keys=True) + "\n" for r in rows), encoding="utf-8"
         )
-        print(f"OMNI_PERF_EVIDENCE_EXPORTED: ${len(rows)} reports; still NOT_CERTIFIED")
+        print(f"OMNI_PERF_EVIDENCE_EXPORTED: {len(rows)} reports; still NOT_CERTIFIED")
         return 0
     except (OSError, ValueError) as error:
         print("BLOCKED_PERFORMANCE_EVIDENCE: " + str(error), file=sys.stderr)
