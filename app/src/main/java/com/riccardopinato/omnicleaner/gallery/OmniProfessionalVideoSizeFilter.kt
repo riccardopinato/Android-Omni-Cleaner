@@ -49,7 +49,8 @@ internal fun OmniProfessionalVideoSizeFilter(
 ) {
     val surface = MaterialTheme.colorScheme
     val minimumText = displayVideoSizeBound(draftMiB.start)
-    val maximumText = displayVideoSizeBound(draftMiB.endInclusive)
+    val maximumText = displayVideoSizeBound(draftMiB.endInclusive) +
+        if (draftMiB.endInclusive >= maximumMiB) "+" else ""
     val canReset = hasAppliedRange || draftMiB.start > 0f ||
         draftMiB.endInclusive < maximumMiB
 
@@ -132,7 +133,7 @@ internal fun OmniProfessionalVideoSizeFilter(
                 color = surface.onSurfaceVariant,
             )
             Text(
-                text = displayVideoSizeBound(maximumMiB),
+                text = displayVideoSizeBound(maximumMiB) + "+",
                 style = MaterialTheme.typography.bodySmall,
                 color = surface.onSurfaceVariant,
             )
