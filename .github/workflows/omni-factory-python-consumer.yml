@@ -78,29 +78,24 @@ jobs:
           disable-animations: true
           script: |
             adb push "$RUNNER_TEMP/omni-python-qa-fixture" /sdcard/Download/
-            ./gradlew connectedDebugAndroidTest --stacktrace -Pandroid.testInstrumentationRunnerArguments.class=com.riccardopinato.omnicleaner.cleaner.FactoryPythonFixtureInstrumentedTest
+            adb install -r -t app/build/outputs/apk/debug/app-debug.apk
+            adb install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            adb shell am instrument -w -e class com.riccardopinato.omnicleaner.cleaner.FactoryPythonFixtureInstrumentedTest com.riccardopinato.omnicleaner.debug.test/androidx.test.runner.AndroidJUnitRunner > "$GITHUB_WORKSPACE/omni-factory-consumer-result.txt"
+            cat "$GITHUB_WORKSPACE/omni-factory-consumer-result.txt"
+            grep -Fq "OK (1 test)" "$GITHUB_WORKSPACE/omni-factory-consumer-result.txt"
 
-      - name: Require actual, successful Android testcase
+      - name: Require observed runner execution, never only a green build
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import xml.etree.ElementTree as ET
-          root = Path("app/build/outputs/androidTest-results/connected")
-          cases = []
-          for path in root.rglob("*.xml"):
-              try:
-                  tree = ET.parse(path)
-              except ET.ParseError:
-                  continue
-              for case in tree.iter("testcase"):
-                  if "FactoryPythonFixtureInstrumentedTest" in case.attrib.get("classname", ""):
-                      cases.append(case)
-          if len(cases) != 1:
-              raise SystemExit(f"FAIL: expected 1 native Python consumer testcase, got {len(cases)}")
-          if any(case.find(tag) is not None for case in cases for tag in ("failure", "error", "skipped")):
-              raise SystemExit("FAIL: native consumer Android test failed or was skipped")
-          print("PASS: Python fixture cross-checked against native Android scanner")
+          result = Path("omni-factory-consumer-result.txt")
+          if not result.is_file():
+              raise SystemExit("FAIL: no native Android instrumentation result")
+          text = result.read_text(encoding="utf-8")
+          if "OK (1 test)" not in text or "FAILURES" in text or "INSTRUMENTATION_FAILED" in text:
+              raise SystemExit("FAIL: exact native Python consumer testcase did not pass")
+          print("PASS: one real Android native Python fixture testcase executed successfully")
           PY
 
       - name: Evidence boundary
