@@ -272,7 +272,9 @@ class FileInventoryScannerTest {
                 // Force an absent strong revision independently of host's statx/ctime
                 // implementation. This is the actual property under test;
                 // relying on host timestamps made the assertion platform-specific.
-                files = inventory.files.map { it.copy(revision = null) },\n                hashCache = cache,\n                parallelism = 2,
+                files = inventory.files.map { it.copy(revision = null) },
+                hashCache = cache,
+                parallelism = 2,
             )
 
             assertEquals(1, groups.size)
