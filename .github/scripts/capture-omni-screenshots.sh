@@ -331,6 +331,35 @@ NARROW_GALLERY
 maestro test --test-output-dir "$OUTPUT/maestro-narrow" "$OUTPUT/gallery-narrow.yaml"
 test -s "$(find "$OUTPUT/maestro-narrow" -name 21-gallery-360dp-large.png -print -quit)"
 cp "$(find "$OUTPUT/maestro-narrow" -name 21-gallery-360dp-large.png -print -quit)" "$OUTPUT/21-gallery-360dp-large.png"
+# Extra accessibility QA at 200% text on the same 360dp viewport.
+# Use genuine Android screenshot evidence, not a resized mockup.
+adb shell settings put system font_scale 2.0
+cat > "$OUTPUT/gallery-200pct.yaml" <<'NARROW_GALLERY_200'
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    id: "omni_nav_gallery"
+- scrollUntilVisible:
+    element:
+      id: "omni_gallery_filter_videos"
+    direction: DOWN
+    timeout: 30000
+- assertVisible:
+    id: "omni_gallery_filter_all"
+- assertVisible:
+    id: "omni_gallery_filter_images"
+- assertVisible:
+    id: "omni_gallery_filter_videos"
+- takeScreenshot: 22-gallery-360dp-200pct
+NARROW_GALLERY_200
+maestro test --test-output-dir "$OUTPUT/maestro-200pct" "$OUTPUT/gallery-200pct.yaml"
+image_200="$(find "$OUTPUT/maestro-200pct" -name 22-gallery-360dp-200pct.png -print -quit)"
+test -n "$image_200"
+test -s "$image_200"
+cp "$image_200" "$OUTPUT/22-gallery-360dp-200pct.png"
+
 adb shell settings put system font_scale 1.0
 adb shell wm size reset
 adb shell wm density reset
