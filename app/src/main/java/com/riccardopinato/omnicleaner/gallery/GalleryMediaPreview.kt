@@ -51,6 +51,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
 import com.riccardopinato.omnicleaner.ui.theme.OmniSecondaryButton as OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -74,6 +75,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
@@ -310,8 +312,23 @@ fun GalleryMediaPreview(
             onClick = { showImmersivePreview = true },
             enabled = pendingDecision == null,
             modifier = Modifier.fillMaxWidth().testTag("omni_gallery_immersive_open"),
+            shape = RoundedCornerShape(10.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         ) {
-            Text(stringResource(R.string.omni_gallery_immersive_open))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // The exact MIT Gentleface Eye outline is decorative; the
+                // localized text remains the single accessible action label.
+                Icon(
+                    painter = painterResource(R.drawable.ic_gentleface_eye),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(stringResource(R.string.omni_gallery_immersive_open))
+            }
         }
         Text(
             text = stringResource(R.string.gallery_swipe_hint),
