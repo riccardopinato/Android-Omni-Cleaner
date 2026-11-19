@@ -1,6 +1,7 @@
 package com.riccardopinato.omnicleaner.cleaner
 
-import android.os.ParcelFileDescriptor
+import android.os.Build
+import android.os.Environment
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import java.io.FileInputStream
@@ -136,15 +137,15 @@ class OmniSafetyGateInstrumentedTest {
     }
 
     private fun syntheticSharedStorageRoot(): File {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val packageName = instrumentation.targetContext.packageName
-        // The debug-only test package is authorized in the emulator; never touch
-        // a production app's permissions or files.
-        ParcelFileDescriptor.AutoCloseInputStream(
-            instrumentation.uiAutomation.executeShellCommand(
-                "appops set " + packageName + " MANAGE_EXTERNAL_STORAGE allow",
-            ),
-        ).use { it.readBytes() }
+        // Do not silently alter device permissions from instrumentation.
+        // The emulator workflow grants access to the debug test package only;
+        // a physical-device operator must explicitly authorize this beforehand.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            assertTrue(
+                "Authorize All files access for the DEBUG QA app before physical testing",
+                Environment.isExternalStorageManager(),
+            )
+        }
         val root = File(
             StorageAccess.primaryRoot(), "OmniCleanerSafetyQA-" + UUID.randomUUID().toString(),
         )
