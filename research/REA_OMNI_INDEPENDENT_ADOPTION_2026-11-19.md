@@ -27,8 +27,19 @@ If failed/unavailable, record `NOT_VERIFIED` and the blocking reason; preserve t
 
 Only the locally built APK from this owned repo is analyzed. The workflow is read-only, has `contents: read`, does not request device, Google Play, storage-media or emulator permissions, does not send personal content to GitHub artifacts, does not alter `PRODUCT_BIBLE.md`, RC1 freeze, cleaning logic, APK signature, feature flags or provider settings. No third-party app decompilation or protected asset copying.
 
-## Live evidence
+## Live execution evidence — verified
 
-**Pending exact-head workflow run:** results to be completed after the pull request's checks, not fabricated in this document.
+**Second independent real REA CLI + JADX pilot: [run #44626294217 PASS](https://github.com/riccardopinato/Android-Omni-Cleaner/actions/runs/44626294217)**
+
+- Source head at run: `riccardopinato/Android-Omni-Cleaner@b594adc670bce482d0768638648196d92a3b8eaf`.
+- Exact APK built from that head: `app-debug.apk`, **19,324,653 bytes**, SHA-256 `b2cb75cd332f1261ba5bfee69c47c994fd8acc0d64df88886be81c32fa14e977`; 263 ZIP entries.
+- Engine: `rea-agents@6.9.0` / Node 24.22.2; Java 21 plus separately SHA-256-verified `jadx-headless-mcp-0.7.1-all.jar` v0.7.1 (`6e5eacf500b64292bfb73c49797c1958f6ee44646e43e868039ae7feb573ff75`). This external component is a prerequisite, **not part of the APK**.
+- Actual `inspect-android-package` exit 0: compact report 28,517 bytes, SHA-256 `6423982f6146121acec9accc87cd521b786c8d4c65238019e8c94c3e0b282fa7`; full evidence locally retained at 60,054 bytes, SHA-256 `1bdd889aa718c48b5c3a923c6cdb2076ab63c84fe564e8b30d42a8c5a58b7677`.
+- Actual `identify-flutter-build` on Kotlin native APK exit 0; **no** `libapp.so` AOT entries; negative test on deliberately wrong expected SHA also **PASS (reject)**.
+- Earlier [run #44625530368](https://github.com/riccardopinato/Android-Omni-Cleaner/actions/runs/44625530368) failed after successful APK build because the external JADX JAR prerequisite was absent. Corrected by explicitly fetching and verifying the official JAR, then **successful independent rerun**. Failure retained in history; no falsified success.
+- Saved GitHub artifact `omni-rea-independent-research-receipts` contains **only restricted receipt/version JSON**; full report and APK were not uploaded. This repository's product code, storage behavior, permissions, signing identity, releases and cleanups remain untouched.
+
+**Evidence boundary:** the CLI completed static inspection, not a behavioral Android lifecycle or user's cleanup/safety acceptance. This satisfies a genuine separate consumer **execution pilot** but does not by itself promote the Core Golden to `CERTIFIED PROCESS`; that decision requires separate admission and assessment of incremental findings.
+
 
 Proven previous source research: AppLab public Deskland experiment [#44615407360](https://github.com/riccardopinato/AppLab/actions/runs/44615407360). This prior run is **not** the independent Omni consumer evidence.
