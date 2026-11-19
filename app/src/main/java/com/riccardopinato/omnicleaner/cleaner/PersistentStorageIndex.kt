@@ -288,7 +288,7 @@ internal class PersistentStorageIndex(
                     } else {
                         0
                     }
-    
+
                     if (unchanged == 0) {
                         filesReplaced++
                         val values = ContentValues().apply {
@@ -325,7 +325,8 @@ internal class PersistentStorageIndex(
                     } else {
                         filesReused++
                     }
-                }            }
+                }
+            }
             val filesFinishedNanos = if (onMetrics != null) SystemClock.elapsedRealtimeNanos() else 0L
 
             for ((directoryIndex, directory) in inventory.directories.withIndex()) {
