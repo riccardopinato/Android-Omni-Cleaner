@@ -5,8 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -31,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton
+import com.riccardopinato.omnicleaner.ui.theme.OmniSecondaryButton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
@@ -92,9 +92,21 @@ internal fun GalleryProSection(
             style = MaterialTheme.typography.bodySmall,
         )
         if (state.items.isEmpty()) {
-            Text(stringResource(R.string.gp_load_first))
-            OmniActionButton(onClick = { controller.load() }, enabled = state.hasAccess && !state.loading) {
-                Text(stringResource(R.string.gallery_load))
+            Text(
+                stringResource(R.string.gp_load_first),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (state.hasAccess) {
+                OmniActionButton(
+                    onClick = { controller.load() },
+                    enabled = !state.loading,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.gallery_load)) }
+            } else {
+                OmniSecondaryButton(onClick = onOpenReview, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.gallery_allow_media))
+                }
             }
         }
         if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -111,9 +123,10 @@ internal fun GalleryProSection(
                     fontWeight = FontWeight.Bold,
                 )
                 Text(stringResource(R.string.gp_video_scope), style = MaterialTheme.typography.bodySmall)
-                Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     GalleryVideoReviewFilter.entries.forEach { choice ->
                         val label = when (choice) {
@@ -166,7 +179,7 @@ internal fun GalleryProSection(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                OmniActionButton(onClick = onOpenReview, modifier = Modifier.fillMaxWidth()) {
+                OmniSecondaryButton(onClick = onOpenReview, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.gallery_open_review))
                 }
             }

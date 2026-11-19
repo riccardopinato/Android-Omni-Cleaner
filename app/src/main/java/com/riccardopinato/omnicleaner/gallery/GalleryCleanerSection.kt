@@ -4,24 +4,22 @@ import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as OutlinedButton
+import com.riccardopinato.omnicleaner.ui.theme.OmniSecondaryButton as OutlinedButton
 import androidx.compose.material3.Text
-import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as TextButton
+import com.riccardopinato.omnicleaner.ui.theme.OmniTextButton as TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -30,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.platform.LocalContext
@@ -41,6 +38,7 @@ import com.riccardopinato.omnicleaner.cleaner.MediaTrashBatchPolicy
 import com.riccardopinato.omnicleaner.ui.redesign.OmniWelcomeKind
 import com.riccardopinato.omnicleaner.ui.redesign.OmniWelcomePanel
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
+import java.util.Locale
 
 @Composable
 fun GalleryCleanerSection(
@@ -107,7 +105,7 @@ fun GalleryCleanerSection(
             }
 
             if (!reviewOnly && onOpenInsights != null) {
-                Button(
+                OutlinedButton(
                     onClick = onOpenInsights,
                     modifier = Modifier.fillMaxWidth().testTag("omni_gallery_open_pro"),
                 ) { Text(stringResource(R.string.gp_open_insights)) }
@@ -144,25 +142,45 @@ fun GalleryCleanerSection(
                 }
 
                 if (!reviewOnly && (showGalleryOptions || state.items.isEmpty())) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
+                Button(
+                    onClick = { controller.load() },
+                    enabled = !state.loading,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        if (state.items.isEmpty()) stringResource(R.string.gallery_load)
+                        else stringResource(R.string.gallery_reload),
+                    )
+                }
+
+                // DCL-007 / UIX-STYLE-009: all options remain in the viewport at 360dp
+                // and font scale 1.5–2.0; a checked item differs without color alone.
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     GalleryMediaFilter.entries.forEach { filter ->
                         val selectedFilter = state.filter == filter
-                        Button(
-                            onClick = { controller.setFilter(filter) },
-                            modifier = Modifier.semantics { selected = selectedFilter },
-                            enabled = filter.isAvailableFor(state.accessHealth),
-                            border = BorderStroke(
-                                if (selectedFilter) 2.dp else 1.dp,
-                                if (selectedFilter) Color(0xFF9DD8FF)
-                                else Color.White.copy(alpha = 0.28f),
-                            ),
-                        ) {
-                            Text((if (selectedFilter) "✓  " else "") + galleryFilterLabel(filter))
+                        val itemModifier = Modifier
+                            .testTag("omni_gallery_filter_${filter.name.lowercase(Locale.ROOT)}")
+                            .semantics { selected = selectedFilter }
+                        if (selectedFilter) {
+                            Button(
+                                onClick = { controller.setFilter(filter) },
+                                modifier = itemModifier,
+                                enabled = filter.isAvailableFor(state.accessHealth),
+                            ) {
+                                Text("✓  " + galleryFilterLabel(filter))
+                            }
+                        } else {
+                            OutlinedButton(
+                                onClick = { controller.setFilter(filter) },
+                                modifier = itemModifier,
+                                enabled = filter.isAvailableFor(state.accessHealth),
+                            ) {
+                                Text(galleryFilterLabel(filter))
+                            }
                         }
                     }
                 }
@@ -174,16 +192,6 @@ fun GalleryCleanerSection(
                     Text(stringResource(R.string.gallery_sort, gallerySortLabel(state.sortOrder)))
                 }
 
-                Button(
-                    onClick = { controller.load() },
-                    enabled = !state.loading,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        if (state.items.isEmpty()) stringResource(R.string.gallery_load)
-                        else stringResource(R.string.gallery_reload),
-                    )
-                }
                 }
             }
 

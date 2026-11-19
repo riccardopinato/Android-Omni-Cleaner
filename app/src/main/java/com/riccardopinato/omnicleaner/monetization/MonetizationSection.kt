@@ -12,7 +12,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as OutlinedButton
+import com.riccardopinato.omnicleaner.ui.theme.OmniSecondaryButton as OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -158,15 +158,28 @@ fun MonetizationSection(
                 }
             }
 
+            // Explicit provider failure state: no fake checkout and no automatic retry.
             billingState.error?.let { error ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                    ),
+                ) {
+                    Text(
+                        billingErrorMessage(error),
+                        modifier = Modifier.padding(14.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            }
+            purchaseMessage?.let { message ->
                 Text(
-                    billingErrorMessage(error),
-                    style = MaterialTheme.typography.bodySmall,
+                    message,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
-            }
-            purchaseMessage?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall)
             }
 
             if (premium) {

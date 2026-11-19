@@ -15,7 +15,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as OutlinedButton
+import com.riccardopinato.omnicleaner.ui.theme.OmniSecondaryButton as OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -163,7 +163,7 @@ internal fun ExifCleanerSection(
             }
 
             if (advancedPage != true) {
-            OutlinedButton(
+            Button(
                 onClick = { singleSourcePicker.launch(arrayOf("image/jpeg")) },
                 enabled = !busy,
                 modifier = Modifier.fillMaxWidth(),
@@ -253,6 +253,13 @@ internal fun ExifCleanerSection(
                 }
             }
 
+            if (sourceTree == null) {
+                Text(
+                    stringResource(R.string.exif_choose_photo_folder),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Button(
                 onClick = {
                     val source = sourceTree ?: return@Button
