@@ -242,6 +242,9 @@
     <string name="gallery_load_more">Load more items</string>
     <string name="gallery_review_complete">Review completed for all loaded items.</string>
     <string name="gallery_trash_batches">The system will ask you to confirm the first %1$d items. Later selections stay in the queue for another confirmation.</string>
+    <string name="gallery_queue_photo">Photo</string>
+    <string name="gallery_queue_video">Video</string>
+    <string name="gallery_queue_android_notice">Android will ask for confirmation before moving these selected files to Trash.</string>
     <string name="gallery_selected_for_trash">%1$d items selected for trash</string>
     <string name="gallery_move_android_trash">Move to Android Trash</string>
     <string name="gallery_trash_confirm_title">Confirm trash</string>

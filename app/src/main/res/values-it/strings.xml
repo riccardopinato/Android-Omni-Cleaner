@@ -242,6 +242,9 @@
     <string name="gallery_load_more">Carica altri elementi</string>
     <string name="gallery_review_complete">Revisione completata per tutti gli elementi caricati.</string>
     <string name="gallery_trash_batches">Android chiederà conferma per i primi %1$d elementi. Gli altri rimangono in coda per una seconda conferma.</string>
+    <string name="gallery_queue_photo">Foto</string>
+    <string name="gallery_queue_video">Video</string>
+    <string name="gallery_queue_android_notice">Android chiederà conferma prima di spostare i file selezionati nel Cestino.</string>
     <string name="gallery_selected_for_trash">%1$d elementi selezionati per il cestino</string>
     <string name="gallery_move_android_trash">Sposta nel Cestino Android</string>
     <string name="gallery_trash_confirm_title">Conferma cestino</string>

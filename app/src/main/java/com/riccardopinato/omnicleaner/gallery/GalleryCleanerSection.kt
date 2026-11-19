@@ -316,31 +316,46 @@ fun GalleryCleanerSection(
     if (showQueueReview) {
         AlertDialog(
             onDismissRequest = { showQueueReview = false },
-            title = { Text(stringResource(R.string.audit_gallery_review_title)) },
+            modifier = Modifier.testTag("omni_gallery_queue_dialog"),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+            title = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(stringResource(R.string.audit_gallery_review_title))
+                    Text(
+                        text = stringResource(
+                            R.string.gallery_selected_for_trash,
+                            state.selectedForTrash.size,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
             text = {
-                LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
-                    items(state.selectedForTrash, key = { it.id }) { media ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(media.name, style = MaterialTheme.typography.bodyMedium)
-                                Text(
-                                    media.uri.toString(),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2,
-                                )
-                            }
-                            TextButton(onClick = {
-                                controller.removeFromTrashSelection(media.id)
-                                if (state.selectedForTrash.isEmpty()) showQueueReview = false
-                            }) {
-                                Text(stringResource(R.string.audit_gallery_unmark))
-                            }
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 360.dp)
+                            .testTag("omni_gallery_queue_list"),
+                    ) {
+                        items(state.selectedForTrash, key = { it.id }) { media ->
+                            OmniTrashQueueItem(
+                                media = media,
+                                onRemove = {
+                                    controller.removeFromTrashSelection(media.id)
+                                    // This dialog only edits the pending selection.
+                                    // It never invokes Android Trash or deletes a file.
+                                    if (controller.state.selectedForTrash.isEmpty()) {
+                                        showQueueReview = false
+                                    }
+                                },
+                            )
                         }
                     }
+                    Text(
+                        text = stringResource(R.string.gallery_queue_android_notice),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             },
             confirmButton = {
