@@ -5,11 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -134,25 +132,10 @@ internal fun GalleryProSection(
                     fontWeight = FontWeight.Bold,
                 )
                 Text(stringResource(R.string.gp_video_scope), style = MaterialTheme.typography.bodySmall)
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    GalleryVideoReviewFilter.entries.forEach { choice ->
-                        val label = when (choice) {
-                            GalleryVideoReviewFilter.ALL -> R.string.gp_video_all
-                            GalleryVideoReviewFilter.LARGE_100_MB -> R.string.gp_video_large
-                            GalleryVideoReviewFilter.LONG_5_MIN -> R.string.gp_video_long
-                            GalleryVideoReviewFilter.UHD_4K -> R.string.gp_video_4k
-                        }
-                        FilterChip(
-                            selected = videoFilter == choice,
-                            onClick = { videoFilter = choice },
-                            label = { Text(stringResource(label)) },
-                        )
-                    }
-                }
+                OmniProfessionalVideoFilters(
+                    selected = videoFilter,
+                    onSelect = { videoFilter = it },
+                )
                 if (videos.isNotEmpty()) {
                     OmniProfessionalVideoSizeFilter(
                         maximumMiB = sliderMaximumMiB,
