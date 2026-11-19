@@ -269,9 +269,7 @@ class FileInventoryScannerTest {
 
             val cache = FakeCache()
             val groups = scanner.duplicatesProgressive(
-                files = inventory.files,
-                hashCache = cache,
-                parallelism = 2,
+                // Force an absent strong revision independently of host\'s statx/ctime\n                // implementation. This is the actual property under test;\n                // relying on host timestamps made the assertion platform-specific.\n                files = inventory.files.map { it.copy(revision = null) },\n                hashCache = cache,\n                parallelism = 2,
             )
 
             assertEquals(1, groups.size)
