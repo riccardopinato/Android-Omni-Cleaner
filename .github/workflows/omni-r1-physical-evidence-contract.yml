@@ -1,0 +1,32 @@
+name: Omni Cleaner — R1 physical benchmark evidence contract
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/scripts/omni-perf-report-to-jsonl.py'
+      - '.github/scripts/test_omni_perf_report_to_jsonl.py'
+      - '.github/workflows/omni-r1-physical-evidence-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evidence-parser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Exact-head checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: No-invention physical report conversion tests
+        run: python3 -m unittest discover -s .github/scripts -p 'test_omni_perf_report_to_jsonl.py' -v
+
+      - name: Evidence limitations
+        run: |
+          echo "This only tests the deterministic converter contract on synthetic inputs." >> "$GITHUB_STEP_SUMMARY"
+          echo "No physical Android R0/R1 reports are generated or certified by this workflow." >> "$GITHUB_STEP_SUMMARY"
