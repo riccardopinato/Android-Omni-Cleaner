@@ -29,7 +29,12 @@ internal fun OmniNavigationIcon(
     symbol: OmniNavigationSymbol,
     tint: Color,
     modifier: Modifier = Modifier,
+    animateOnEnter: Boolean = false,
 ) {
+    if (symbol == OmniNavigationSymbol.GALLERY) {
+        OmniAnimatedGalleryIcon(tint = tint, modifier = modifier, active = animateOnEnter)
+        return
+    }
     Canvas(modifier = modifier.size(24.dp).clearAndSetSemantics { }) {
         val w = size.width
         val h = size.height
@@ -120,28 +125,7 @@ internal fun OmniNavigationIcon(
                 }
                 drawPath(sparkle, tint.copy(alpha = .83f))
             }
-            OmniNavigationSymbol.GALLERY -> {
-                drawRoundRect(
-                    color = tint,
-                    topLeft = Offset(w * .11f, h * .19f),
-                    size = Size(w * .78f, h * .62f),
-                    cornerRadius = CornerRadius(w * .09f, h * .09f),
-                    style = line,
-                )
-                drawCircle(
-                    color = tint,
-                    radius = w * .07f,
-                    center = Offset(w * .67f, h * .38f),
-                )
-                val mountains = Path().apply {
-                    moveTo(w * .17f, h * .72f)
-                    lineTo(w * .37f, h * .48f)
-                    lineTo(w * .52f, h * .64f)
-                    lineTo(w * .62f, h * .54f)
-                    lineTo(w * .82f, h * .75f)
-                }
-                drawPath(mountains, tint, style = line)
-            }
+            OmniNavigationSymbol.GALLERY -> Unit // Native Gentleface-style icon above.
             OmniNavigationSymbol.PRIVACY -> {
                 val shield = Path().apply {
                     moveTo(w * .50f, h * .12f)
