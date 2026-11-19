@@ -11,6 +11,11 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,7 +44,9 @@ internal fun OmniVideoScrubControls(
 ) {
     val duration = durationMs.coerceAtLeast(0)
     val position = positionMs.coerceIn(0, duration)
-    val colors = MaterialTheme.colorScheme
+    var dragging by remember { mutableStateOf(false) }
+    var draggedPosition by remember { mutableIntStateOf(0) }
+    val selected = if (dragging) draggedPosition.coerceIn(0, duration) else position
     val seekLabel = stringResource(R.string.gallery_video_seek)
     Column(
         modifier = Modifier.fillMaxWidth()
@@ -52,7 +59,7 @@ internal fun OmniVideoScrubControls(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                videoTimelineTimestamp(position),
+                videoTimelineTimestamp(selected),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Medium,
                 color = Color.White,
@@ -64,8 +71,17 @@ internal fun OmniVideoScrubControls(
             )
         }
         Slider(
-            value = position.toFloat(),
-            onValueChange = { onSeek(it.roundToInt().coerceIn(0, duration)) },
+            value = selected.toFloat(),
+            onValueChange = {
+                if (!dragging) dragging = true
+                draggedPosition = it.roundToInt().coerceIn(0, duration)
+            },
+            onValueChangeFinished = {
+                if (dragging) {
+                    onSeek(boundedVideoSeekPosition(draggedPosition, duration))
+                    dragging = false
+                }
+            },
             valueRange = 0f..duration.coerceAtLeast(1).toFloat(),
             enabled = duration > 0,
             modifier = Modifier.fillMaxWidth()
