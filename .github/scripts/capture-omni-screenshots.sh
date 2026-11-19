@@ -228,6 +228,7 @@ appId: com.riccardopinato.omnicleaner.debug
 - waitForAnimationToEnd:
     timeout: 1000
 - takeScreenshot: 11-video-playing
+- takeScreenshot: 11-video-playing-later
 - tapOn:
     id: "omni_gallery_immersive_open"
 - assertVisible: "Close"
@@ -238,6 +239,7 @@ appId: com.riccardopinato.omnicleaner.debug
 - waitForAnimationToEnd:
     timeout: 1000
 - takeScreenshot: 15-video-immersive
+- takeScreenshot: 15-video-immersive-later
 - tapOn:
     id: "omni_gallery_immersive_close"
 - assertVisible:
@@ -248,7 +250,7 @@ if ! maestro test --test-output-dir "$OUTPUT/maestro-video" "$OUTPUT/video-captu
   echo "::error::VIDEO_IMMERSIVE_QA_FAILED: native player or fullscreen review flow"
   exit 1
 fi
-for name in 11-video-playing 15-video-immersive; do
+for name in 11-video-playing 11-video-playing-later 15-video-immersive 15-video-immersive-later; do
   found="$(find "$OUTPUT/maestro-video" -type f -name "$name.png" -print -quit)"
   if [[ -z "$found" ]]; then
     echo "::error::Missing required video screenshot: $name"
@@ -256,6 +258,9 @@ for name in 11-video-playing 15-video-immersive; do
   fi
   cp "$found" "$OUTPUT/$name.png"
 done
+python3 "$GITHUB_WORKSPACE/target/.github/scripts/check-gallery-video-motion.py" \
+  "$OUTPUT/11-video-playing.png" "$OUTPUT/11-video-playing-later.png" \
+  "$OUTPUT/15-video-immersive.png" "$OUTPUT/15-video-immersive-later.png"
 echo "VIDEO_IMMERSIVE_SMOKE_PASS: native MediaStore MP4, playback, fullscreen, Close"
 
 # Visual regression coverage for the intended light/dark, large-font responsive
@@ -331,6 +336,35 @@ NARROW_GALLERY
 maestro test --test-output-dir "$OUTPUT/maestro-narrow" "$OUTPUT/gallery-narrow.yaml"
 test -s "$(find "$OUTPUT/maestro-narrow" -name 21-gallery-360dp-large.png -print -quit)"
 cp "$(find "$OUTPUT/maestro-narrow" -name 21-gallery-360dp-large.png -print -quit)" "$OUTPUT/21-gallery-360dp-large.png"
+# Extra accessibility QA at 200% text on the same 360dp viewport.
+# Use genuine Android screenshot evidence, not a resized mockup.
+adb shell settings put system font_scale 2.0
+cat > "$OUTPUT/gallery-200pct.yaml" <<'NARROW_GALLERY_200'
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    id: "omni_nav_gallery"
+- scrollUntilVisible:
+    element:
+      id: "omni_gallery_filter_videos"
+    direction: DOWN
+    timeout: 30000
+- assertVisible:
+    id: "omni_gallery_filter_all"
+- assertVisible:
+    id: "omni_gallery_filter_images"
+- assertVisible:
+    id: "omni_gallery_filter_videos"
+- takeScreenshot: 22-gallery-360dp-200pct
+NARROW_GALLERY_200
+maestro test --test-output-dir "$OUTPUT/maestro-200pct" "$OUTPUT/gallery-200pct.yaml"
+image_200="$(find "$OUTPUT/maestro-200pct" -name 22-gallery-360dp-200pct.png -print -quit)"
+test -n "$image_200"
+test -s "$image_200"
+cp "$image_200" "$OUTPUT/22-gallery-360dp-200pct.png"
+
 adb shell settings put system font_scale 1.0
 adb shell wm size reset
 adb shell wm density reset
