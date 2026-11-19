@@ -228,6 +228,7 @@ appId: com.riccardopinato.omnicleaner.debug
 - waitForAnimationToEnd:
     timeout: 1000
 - takeScreenshot: 11-video-playing
+- takeScreenshot: 11-video-playing-later
 - tapOn:
     id: "omni_gallery_immersive_open"
 - assertVisible: "Close"
@@ -238,6 +239,7 @@ appId: com.riccardopinato.omnicleaner.debug
 - waitForAnimationToEnd:
     timeout: 1000
 - takeScreenshot: 15-video-immersive
+- takeScreenshot: 15-video-immersive-later
 - tapOn:
     id: "omni_gallery_immersive_close"
 - assertVisible:
@@ -248,7 +250,7 @@ if ! maestro test --test-output-dir "$OUTPUT/maestro-video" "$OUTPUT/video-captu
   echo "::error::VIDEO_IMMERSIVE_QA_FAILED: native player or fullscreen review flow"
   exit 1
 fi
-for name in 11-video-playing 15-video-immersive; do
+for name in 11-video-playing 11-video-playing-later 15-video-immersive 15-video-immersive-later; do
   found="$(find "$OUTPUT/maestro-video" -type f -name "$name.png" -print -quit)"
   if [[ -z "$found" ]]; then
     echo "::error::Missing required video screenshot: $name"
@@ -256,6 +258,9 @@ for name in 11-video-playing 15-video-immersive; do
   fi
   cp "$found" "$OUTPUT/$name.png"
 done
+python3 "$GITHUB_WORKSPACE/target/.github/scripts/check-gallery-video-motion.py" \
+  "$OUTPUT/11-video-playing.png" "$OUTPUT/11-video-playing-later.png" \
+  "$OUTPUT/15-video-immersive.png" "$OUTPUT/15-video-immersive-later.png"
 echo "VIDEO_IMMERSIVE_SMOKE_PASS: native MediaStore MP4, playback, fullscreen, Close"
 
 # Visual regression coverage for the intended light/dark, large-font responsive
