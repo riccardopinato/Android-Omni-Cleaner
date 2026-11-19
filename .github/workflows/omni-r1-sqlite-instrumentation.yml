@@ -62,8 +62,7 @@ jobs:
           disk-size: 4096M
           disable-animations: true
           script: |
-            ./gradlew connectedDebugAndroidTest --stacktrace \
-              -Pandroid.testInstrumentationRunnerArguments.class=com.riccardopinato.omnicleaner.cleaner.PersistentStorageIndexInstrumentedTest,com.riccardopinato.omnicleaner.cleaner.OmniR1IndexStressInstrumentedTest
+            ./gradlew connectedDebugAndroidTest --stacktrace -Pandroid.testInstrumentationRunnerArguments.class=com.riccardopinato.omnicleaner.cleaner.PersistentStorageIndexInstrumentedTest,com.riccardopinato.omnicleaner.cleaner.OmniR1IndexStressInstrumentedTest
 
       - name: Evidence boundary
         if: always()
