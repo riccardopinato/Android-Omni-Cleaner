@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
+import com.riccardopinato.omnicleaner.ui.redesign.OmniAccordionLoader
 import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton
 import com.riccardopinato.omnicleaner.ui.theme.OmniSecondaryButton
 import kotlinx.coroutines.CancellationException
@@ -230,7 +231,11 @@ internal fun GalleryProSection(
                 ) {
                     Text(stringResource(R.string.gp_scan_similar))
                 }
-                if (analyzing) LinearProgressIndicator(Modifier.fillMaxWidth())
+                if (analyzing) {
+                    OmniAccordionLoader(
+                        modifier = Modifier.testTag("omni_gallery_similar_accordion_scan"),
+                    )
+                }
                 if (photoError) {
                     Text(stringResource(R.string.gp_photo_error), color = MaterialTheme.colorScheme.error)
                 }
