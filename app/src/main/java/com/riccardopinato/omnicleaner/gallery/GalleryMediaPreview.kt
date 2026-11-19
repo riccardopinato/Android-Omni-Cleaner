@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.ImageDecoder
 import android.graphics.Matrix
 import androidx.exifinterface.media.ExifInterface
-import android.widget.MediaController
 import android.widget.VideoView
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.layout.WindowInsets
@@ -423,14 +422,27 @@ private fun GalleryVideoPlayer(item: GalleryMediaItem, thumbnail: Bitmap?) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var started by remember(item.uri) { mutableStateOf(false) }
+    var ready by remember(item.uri) { mutableStateOf(false) }
+    var playing by remember(item.uri) { mutableStateOf(false) }
+    var positionMs by remember(item.uri) { androidx.compose.runtime.mutableIntStateOf(0) }
+    var durationMs by remember(item.uri) { androidx.compose.runtime.mutableIntStateOf(0) }
     var error by remember(item.uri) { mutableStateOf(false) }
     val video = remember(context, item.uri) {
         VideoView(context).apply {
-            val controls = MediaController(context)
-            controls.setAnchorView(this)
-            setMediaController(controls)
+            // WML-003: one genuine controller instead of overlapping Android
+            // MediaController chrome. VideoView remains the actual codec engine.
+            setOnPreparedListener {
+                durationMs = duration.coerceAtLeast(0).takeIf { it > 0 }
+                    ?: item.durationMs.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+                ready = true
+            }
+            setOnCompletionListener {
+                playing = false
+                positionMs = durationMs
+            }
             setOnErrorListener { _, _, _ ->
                 error = true
+                playing = false
                 true
             }
             runCatching { setVideoURI(item.uri) }.onFailure { error = true }
@@ -440,6 +452,7 @@ private fun GalleryVideoPlayer(item: GalleryMediaItem, thumbnail: Bitmap?) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
                 video.pause()
+                playing = false
             }
         }
         lifecycle.addObserver(observer)
@@ -448,44 +461,88 @@ private fun GalleryVideoPlayer(item: GalleryMediaItem, thumbnail: Bitmap?) {
             video.stopPlayback()
         }
     }
-    LaunchedEffect(started) {
-        if (started) {
-            runCatching { video.start() }.onFailure { error = true }
+    LaunchedEffect(video, started, ready) {
+        if (started && ready) {
+            runCatching {
+                video.start()
+                playing = true
+            }.onFailure { error = true }
         }
     }
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        if (started && !error) {
-            AndroidView(
-                factory = { video },
-                modifier = Modifier.fillMaxSize(),
-            )
-        } else if (thumbnail != null) {
-            Image(
-                bitmap = thumbnail.asImageBitmap(),
-                contentDescription = item.name,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-        if (!started && !error) {
-            OmniActionButton(
-                onClick = { started = true },
-                modifier = Modifier.testTag("omni_gallery_video_play"),
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OmniAnimatedVideoIcon(tint = MaterialTheme.colorScheme.onPrimary)
-                    Text(stringResource(R.string.gallery_video_play))
-                }
+    // Observe the real engine rather than estimating elapsed playback time.
+    LaunchedEffect(video, started, ready) {
+        if (started && ready) {
+            while (true) {
+                positionMs = video.currentPosition.coerceIn(0, durationMs.coerceAtLeast(0))
+                delay(250L)
             }
         }
-        if (error) {
-            Text(
-                text = stringResource(R.string.gallery_video_unavailable),
-                color = Color.White,
-                modifier = Modifier.padding(16.dp),
+    }
+    Column(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (started && !error) {
+                AndroidView(
+                    factory = { video },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else if (thumbnail != null) {
+                Image(
+                    bitmap = thumbnail.asImageBitmap(),
+                    contentDescription = item.name,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            if (!started && !error) {
+                OmniActionButton(
+                    onClick = { started = true },
+                    modifier = Modifier.testTag("omni_gallery_video_play"),
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        OmniAnimatedVideoIcon(tint = MaterialTheme.colorScheme.onPrimary)
+                        Text(stringResource(R.string.gallery_video_play))
+                    }
+                }
+            }
+            if (error) {
+                Text(
+                    text = stringResource(R.string.gallery_video_unavailable),
+                    color = Color.White,
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
+        }
+        if (started && ready && !error) {
+            OmniVideoScrubControls(
+                durationMs = durationMs,
+                positionMs = positionMs,
+                playing = playing,
+                onSeek = { requested ->
+                    val target = boundedVideoSeekPosition(requested, durationMs)
+                    runCatching {
+                        video.seekTo(target)
+                        positionMs = target
+                    }.onFailure { error = true }
+                },
+                onPlayPause = {
+                    runCatching {
+                        if (video.isPlaying) {
+                            video.pause()
+                            playing = false
+                        } else {
+                            // Android VideoView resumes the same media and URI;
+                            // no extra decoder or implicit read/write access.
+                            video.start()
+                            playing = true
+                        }
+                    }.onFailure { error = true }
+                },
             )
         }
     }
