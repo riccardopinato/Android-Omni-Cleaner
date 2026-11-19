@@ -1,0 +1,48 @@
+name: Omni Cleaner — repeat hash-cache regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/src/main/java/com/riccardopinato/omnicleaner/cleaner/FileInventoryScanner.kt'
+      - 'app/src/test/java/com/riccardopinato/omnicleaner/cleaner/FileInventoryScannerTest.kt'
+      - '.github/workflows/omni-flaky-hash-cache-replay.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Exact-head checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
+        with:
+          cache-provider: basic
+
+      - name: Repeat historical flaky test on same SHA without hiding failures
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          for iteration in 1 2 3 4 5; do
+            echo "::group::Hash-cache integrity targeted replay ${iteration}/5"
+            ./gradlew :app:testDebugUnitTest \
+              --tests 'com.riccardopinato.omnicleaner.cleaner.FileInventoryScannerTest.duplicateScanDoesNotTrustPersistedHashesWithoutStrongRevision' \
+              --rerun-tasks --stacktrace --console=plain
+            echo "::endgroup::"
+          done
+          echo "PASS: targeted cache integrity test completed five independent Gradle invocations"

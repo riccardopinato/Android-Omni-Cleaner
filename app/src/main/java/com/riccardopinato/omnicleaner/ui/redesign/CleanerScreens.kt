@@ -158,8 +158,10 @@ internal fun CleanHubScreen(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        // Indeterminate until the scanner actually reports a bounded total.
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        // AMX-006 only while the real scanner is active.
+                        OmniAccordionLoader(
+                            modifier = Modifier.testTag("omni_scan_accordion_hub"),
+                        )
                         Text(
                             state.currentOperation?.takeIf { it.isNotBlank() }
                                 ?: stringResource(R.string.omni_scan_running),
@@ -434,7 +436,10 @@ internal fun CleanDetailScreen(
                                         style = MaterialTheme.typography.bodySmall,
                                     )
                                 } else {
-                                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                    // A known total uses the real determinate indicator above.
+                                    OmniAccordionLoader(
+                                        modifier = Modifier.testTag("omni_scan_accordion_detail"),
+                                    )
                                     Text(
                                         when {
                                             tool == CleanerToolRoute.DUPLICATES &&
@@ -907,7 +912,21 @@ private fun CleanActionsCard(
         ) {
             Text(stringResource(R.string.scan_tools), style = MaterialTheme.typography.titleLarge)
             if (state.scanning) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                if (state.duplicateProgressTotal > 0 &&
+                    state.duplicateProgressProcessed < state.duplicateProgressTotal
+                ) {
+                    LinearProgressIndicator(
+                        progress = {
+                            (state.duplicateProgressProcessed.toFloat() /
+                                state.duplicateProgressTotal).coerceIn(0f, 1f)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    OmniAccordionLoader(
+                        modifier = Modifier.testTag("omni_scan_accordion_actions"),
+                    )
+                }
                 Text(
                     state.currentOperation.orEmpty(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

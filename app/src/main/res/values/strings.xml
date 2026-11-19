@@ -452,6 +452,14 @@
     <string name="gp_video_large">100 MB+</string>
     <string name="gp_video_long">5 min+</string>
     <string name="gp_video_4k">4K</string>
+    <string name="gp_size_title">Filter by size</string>
+    <string name="gp_size_description">Show only videos within the selected size range.</string>
+    <string name="gp_size_min">Minimum size</string>
+    <string name="gp_size_max">Maximum size</string>
+    <string name="gp_size_reset">Reset</string>
+    <string name="gp_size_apply">Apply filter</string>
+    <string name="gp_size_inactive">No custom size filter</string>
+    <string name="gp_size_active">Custom size filter applied to the loaded gallery page.</string>
     <string name="gp_video_search">Video name or album</string>
     <string name="gp_video_count">%1$d videos · %2$s</string>
     <string name="gp_video_details">%1$s · %2$d×%3$d · %4$d sec</string>

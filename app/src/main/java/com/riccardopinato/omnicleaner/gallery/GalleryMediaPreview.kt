@@ -19,6 +19,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton
+import com.riccardopinato.omnicleaner.ui.redesign.OmniAnimatedVideoIcon
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
@@ -454,7 +455,13 @@ private fun GalleryVideoPlayer(item: GalleryMediaItem, thumbnail: Bitmap?) {
                 onClick = { started = true },
                 modifier = Modifier.testTag("omni_gallery_video_play"),
             ) {
-                Text(stringResource(R.string.gallery_video_play))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OmniAnimatedVideoIcon(tint = MaterialTheme.colorScheme.onPrimary)
+                    Text(stringResource(R.string.gallery_video_play))
+                }
             }
         }
         if (error) {

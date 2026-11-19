@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
+import com.riccardopinato.omnicleaner.ui.redesign.OmniAccordionLoader
 import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton
 import com.riccardopinato.omnicleaner.ui.theme.OmniSecondaryButton
 import kotlinx.coroutines.CancellationException
@@ -73,8 +74,18 @@ internal fun GalleryProSection(
             )
         }
     }
-    val videoMatches = remember(videos, videoFilter, videoQuery) {
-        filterGalleryVideos(videos, videoFilter, videoQuery)
+    // A page/permission/filter-source change invalidates the previous custom range.
+    // Existing 100MB+, 5min+ and 4K presets remain independent, combinable filters.
+    val sliderMaximumMiB = remember(videos) { galleryVideoSliderMaximumMiB(videos) }
+    var draftSizeMiB by remember(videos) { mutableStateOf(0f..sliderMaximumMiB) }
+    var appliedSizeRange by remember(videos) { mutableStateOf<GalleryVideoSizeRange?>(null) }
+    val videoMatches = remember(videos, videoFilter, videoQuery, appliedSizeRange) {
+        filterGalleryVideos(
+            videos,
+            videoFilter,
+            text = videoQuery,
+            sizeRange = appliedSizeRange,
+        )
     }
 
     Column(
@@ -141,6 +152,23 @@ internal fun GalleryProSection(
                             label = { Text(stringResource(label)) },
                         )
                     }
+                }
+                if (videos.isNotEmpty()) {
+                    OmniProfessionalVideoSizeFilter(
+                        maximumMiB = sliderMaximumMiB,
+                        draftMiB = draftSizeMiB,
+                        hasAppliedRange = appliedSizeRange != null,
+                        onDraftChange = { draftSizeMiB = it },
+                        onApply = {
+                            appliedSizeRange = appliedGalleryVideoSizeRange(
+                                draftSizeMiB, sliderMaximumMiB,
+                            )
+                        },
+                        onReset = {
+                            draftSizeMiB = 0f..sliderMaximumMiB
+                            appliedSizeRange = null
+                        },
+                    )
                 }
                 OutlinedTextField(
                     value = videoQuery,
@@ -230,7 +258,11 @@ internal fun GalleryProSection(
                 ) {
                     Text(stringResource(R.string.gp_scan_similar))
                 }
-                if (analyzing) LinearProgressIndicator(Modifier.fillMaxWidth())
+                if (analyzing) {
+                    OmniAccordionLoader(
+                        modifier = Modifier.testTag("omni_gallery_similar_accordion_scan"),
+                    )
+                }
                 if (photoError) {
                     Text(stringResource(R.string.gp_photo_error), color = MaterialTheme.colorScheme.error)
                 }

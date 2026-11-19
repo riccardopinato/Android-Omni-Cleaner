@@ -16,7 +16,7 @@ import androidx.compose.material3.AlertDialog
 import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.LinearProgressIndicator
+import com.riccardopinato.omnicleaner.ui.redesign.OmniAccordionLoader
 import androidx.compose.material3.MaterialTheme
 import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as OutlinedButton
 import androidx.compose.material3.Text
@@ -197,7 +197,9 @@ fun SmartCategoriesSection(
             )
 
             if (scanning) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                OmniAccordionLoader(
+                    modifier = Modifier,
+                )
                 Text(
                     stringResource(R.string.smart_categories_scanning),
                     style = MaterialTheme.typography.bodySmall,
