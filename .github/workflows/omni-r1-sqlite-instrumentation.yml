@@ -64,7 +64,7 @@ jobs:
           script: |
             ./gradlew connectedDebugAndroidTest --stacktrace -Pandroid.testInstrumentationRunnerArguments.class=com.riccardopinato.omnicleaner.cleaner.PersistentStorageIndexInstrumentedTest
             adb shell am instrument -w -e class com.riccardopinato.omnicleaner.cleaner.OmniR1IndexStressInstrumentedTest com.riccardopinato.omnicleaner.debug.test/androidx.test.runner.AndroidJUnitRunner | tee /tmp/omni-r1-stress.txt
-            grep -Eq 'OK \\(1 test\\)' /tmp/omni-r1-stress.txt
+            grep -Fq 'OK (1 test)' /tmp/omni-r1-stress.txt
             echo "===== OMNI R1 measured emulator SQL metrics ====="
             adb logcat -d -s 'OMNI_R1_INDEX_METRICS:I' '*:S' | tail -n 15
 
