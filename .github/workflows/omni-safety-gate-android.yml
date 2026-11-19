@@ -45,6 +45,9 @@ jobs:
       - name: Assemble app and instrumentation APK
         run: ./gradlew assembleDebug assembleDebugAndroidTest --stacktrace
 
+      - name: Set up Android SDK commandline tools (sdkmanager)
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+
       # GitHub-hosted runner image downloads can fail before any Android tests
       # execute (observed corrupt SeekableByteChannel ZIP on API35 Google APIs).
       # Retry ONLY SDK image provisioning; never retry or mask a failing test.
