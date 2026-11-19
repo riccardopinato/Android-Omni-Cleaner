@@ -33,6 +33,36 @@ internal data class GalleryVideoSizeRange(
     fun contains(bytes: Long): Boolean = bytes in minimumBytes..maximumBytes
 }
 
+internal const val VIDEO_SIZE_MIB: Long = 1024L * 1024L
+
+/** Start at 5 GiB but include larger files actually present in this loaded page. */
+internal fun galleryVideoSliderMaximumMiB(
+    candidates: List<GalleryVideoCandidate>,
+): Float {
+    val largest = candidates.maxOfOrNull { it.bytes.coerceAtLeast(0L) } ?: 0L
+    val ceiling = largest / VIDEO_SIZE_MIB + if (largest % VIDEO_SIZE_MIB == 0L) 0L else 1L
+    // 1 TiB of UI precision is sufficient: reaching the right edge includes
+    // files beyond the cap, rather than silently dropping them.
+    return maxOf(5120L, ceiling).coerceAtMost(1_048_576L).toFloat()
+}
+
+/** Converts two measured slider endpoints to an optional inclusive filter. */
+internal fun appliedGalleryVideoSizeRange(
+    selectedMiB: ClosedFloatingPointRange<Float>,
+    maximumMiB: Float,
+): GalleryVideoSizeRange? {
+    val bound = maximumMiB.toLong().coerceAtLeast(1L)
+    val minimum = selectedMiB.start.toLong().coerceIn(0L, bound)
+    val maximum = kotlin.math.round(selectedMiB.endInclusive).toLong()
+        .coerceIn(minimum, bound)
+    if (minimum == 0L && maximum == bound) return null
+    return GalleryVideoSizeRange(
+        minimumBytes = minimum * VIDEO_SIZE_MIB,
+        maximumBytes = if (maximum == bound) Long.MAX_VALUE
+            else maximum * VIDEO_SIZE_MIB,
+    )
+}
+
 internal data class GalleryVideoReviewResult(
     val totalMatching: Int,
     val results: List<GalleryVideoCandidate>,
