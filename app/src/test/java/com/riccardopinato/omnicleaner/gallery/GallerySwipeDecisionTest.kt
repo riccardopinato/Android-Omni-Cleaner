@@ -35,6 +35,18 @@ class GallerySwipeDecisionTest {
     }
 
     @Test
+    fun videoScrubberClampsRealSeekAndDisplaysHours() {
+        assertEquals(0, boundedVideoSeekPosition(-12, 90000))
+        assertEquals(15000, boundedVideoSeekPosition(15000, 90000))
+        assertEquals(90000, boundedVideoSeekPosition(100000, 90000))
+        assertEquals(0, boundedVideoSeekPosition(500, -1))
+        assertEquals("00:00", videoTimelineTimestamp(-10))
+        assertEquals("01:13", videoTimelineTimestamp(73000))
+        assertEquals("01:01:01", videoTimelineTimestamp(3661000))
+        assertEquals("27:00:00", videoTimelineTimestamp(97200000))
+    }
+
+    @Test
     fun shortSwipeDoesNothing() {
         assertNull(gallerySwipeDirection(40f, 100f))
         assertNull(gallerySwipeDirection(-40f, 100f))
