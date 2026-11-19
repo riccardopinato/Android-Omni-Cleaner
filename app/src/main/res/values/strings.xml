@@ -408,6 +408,11 @@
     <string name="nav_privacy_batch">Batch EXIF tools</string>
     <string name="nav_pro_manage">Manage Pro</string>
     <string name="gallery_open_review">Open full-size photo or video</string>
+    <string name="gallery_video_seek">Seek through video</string>
+    <string name="gallery_video_back_10">Back 10 seconds</string>
+    <string name="gallery_video_forward_10">Forward 10 seconds</string>
+    <string name="gallery_video_pause">Pause</string>
+    <string name="gallery_video_resume">Play</string>
     <string name="gallery_video_play">Play video</string>
     <string name="gallery_video_unavailable">This video cannot be played on this device</string>
     <!-- Read-only Storage Intelligence: shared inventory, never auto-delete. -->
