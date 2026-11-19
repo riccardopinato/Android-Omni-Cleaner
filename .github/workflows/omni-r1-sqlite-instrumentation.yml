@@ -62,7 +62,11 @@ jobs:
           disk-size: 4096M
           disable-animations: true
           script: |
-            ./gradlew connectedDebugAndroidTest --stacktrace -Pandroid.testInstrumentationRunnerArguments.class=com.riccardopinato.omnicleaner.cleaner.PersistentStorageIndexInstrumentedTest,com.riccardopinato.omnicleaner.cleaner.OmniR1IndexStressInstrumentedTest
+            ./gradlew connectedDebugAndroidTest --stacktrace -Pandroid.testInstrumentationRunnerArguments.class=com.riccardopinato.omnicleaner.cleaner.PersistentStorageIndexInstrumentedTest
+            adb shell am instrument -w -e class com.riccardopinato.omnicleaner.cleaner.OmniR1IndexStressInstrumentedTest com.riccardopinato.omnicleaner.debug.test/androidx.test.runner.AndroidJUnitRunner | tee /tmp/omni-r1-stress.txt
+            grep -Eq 'OK \\(1 test\\)' /tmp/omni-r1-stress.txt
+            echo "===== OMNI R1 measured emulator SQL metrics ====="
+            adb logcat -d -s 'OMNI_R1_INDEX_METRICS:I' '*:S' | tail -n 15
 
       - name: Verify Android actually executed both index test classes
         shell: bash
@@ -71,10 +75,9 @@ jobs:
           from pathlib import Path
           import xml.etree.ElementTree as ET
           root = Path("app/build/outputs/androidTest-results/connected")
-          required = {
-              "PersistentStorageIndexInstrumentedTest": 1,
-              "OmniR1IndexStressInstrumentedTest": 1,
-          }
+          # The stress class runs via an independent AndroidJUnitRunner
+          # invocation above, which must emit OK (1 test).
+          required = {"PersistentStorageIndexInstrumentedTest": 1}
           matches = {key: [] for key in required}
           for path in root.rglob("*.xml"):
               try:
