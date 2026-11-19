@@ -206,7 +206,6 @@ internal fun CleanHubScreen(
                         CleanerToolRoute.LARGE,
                         CleanerToolRoute.DUPLICATES,
                     ),
-                    accent = OmniBlue,
                     onOpenTool = onOpenTool,
                 )
                 CleanHubToolGroup(
@@ -216,7 +215,6 @@ internal fun CleanHubScreen(
                         CleanerToolRoute.FOLDERS,
                         CleanerToolRoute.TRASH,
                     ),
-                    accent = OmniMint,
                     onOpenTool = onOpenTool,
                 )
                 CleanHubToolGroup(
@@ -225,7 +223,6 @@ internal fun CleanHubScreen(
                         CleanerToolRoute.FILTERS,
                         CleanerToolRoute.ADVANCED,
                     ),
-                    accent = OmniPurple,
                     onOpenTool = onOpenTool,
                 )
             }
@@ -244,7 +241,6 @@ internal fun CleanHubScreen(
 private fun CleanHubToolGroup(
     title: String,
     tools: List<CleanerToolRoute>,
-    accent: Color,
     onOpenTool: (CleanerToolRoute) -> Unit,
 ) {
     val singleColumn = LocalConfiguration.current.screenWidthDp < 360 ||
@@ -253,8 +249,8 @@ private fun CleanHubToolGroup(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.SemiBold,
         )
         val rows = when {
             singleColumn -> tools.map { listOf(it) }
@@ -276,23 +272,20 @@ private fun CleanHubToolGroup(
                             .heightIn(min = if (tool == CleanerToolRoute.OVERVIEW && !singleColumn) 108.dp else 92.dp)
                             .testTag("omni_clean_tool_${tool.name.lowercase(Locale.ROOT)}"),
                         colors = CardDefaults.cardColors(
-                            containerColor = if (tool == CleanerToolRoute.OVERVIEW)
-                                MaterialTheme.colorScheme.primaryContainer
-                            else MaterialTheme.colorScheme.surface,
+                            containerColor = MaterialTheme.colorScheme.surface,
                         ),
                         border = androidx.compose.foundation.BorderStroke(
-                            1.dp, accent.copy(alpha = if (tool == CleanerToolRoute.OVERVIEW) 0.5f else 0.25f),
+                            1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .72f),
                         ),
-                        shape = RoundedCornerShape(20.dp),
+                        shape = RoundedCornerShape(12.dp),
                     ) {
                         Column(
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .background(accent, RoundedCornerShape(50)),
+                            OmniCleanToolIcon(
+                                tool = tool,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -307,7 +300,8 @@ private fun CleanHubToolGroup(
                                     maxLines = 3,
                                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                 )
-                                Text("›", color = accent, style = MaterialTheme.typography.titleLarge)
+                                Text("›", color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.titleLarge)
                             }
                         }
                     }
