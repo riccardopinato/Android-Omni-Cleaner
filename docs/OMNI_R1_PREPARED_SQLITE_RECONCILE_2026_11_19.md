@@ -46,3 +46,29 @@ No schema version or persisted-data migration, permissions, delete rules, Safe T
 - Rust is not included; this is Kotlin/SQLite optimization.
 
 Factory baseline for this work: App-Factory-Core `63c3ecba07dafdf46e27e175bd973ee05107fecb` Master v27, Golden Index 29; relevant indexing/hashing Goldens are still draft.
+
+
+## App Factory Python performance evidence gate — 19/11/2026
+
+The reusable **Python Factory Performance QA v1** engine is now in
+[App-Factory-Core@cac009697970490e45f9aaa9e7e7634016607273](https://github.com/riccardopinato/App-Factory-Core/commit/cac009697970490e45f9aaa9e7e7634016607273).
+Use the **merged, immutable** commit for real-device R0/R1 evidence comparison; do not vendor Python into the Android APK.
+
+Example once BOTH R0 and R1 have at least three same-library, same-Xiaomi, same-API, same-mode, same-count and same-integrity rows:
+
+```bash
+python3 reference_engines/performance_qa/factory_performance_qa.py compare \
+  --baseline omni-r0-cold-reused.jsonl --candidate omni-r1-cold-reused.jsonl \
+  --metric file_rows_ms --min-runs 3 --max-regression-pct 5 \
+  --report omni-r1-sqlite-evidence.json
+```
+
+Each JSONL row requires `schema_version=1`, `fixture_id`, exact full `source_sha` (40 hex),
+`device`, `environment=physical`, `api_level`, `mode=cold`, `file_count`,
+`rows_reused`, `rows_replaced`, `integrity_digest=sha256:<64hex>`,
+and `file_rows_ms`. These must be measured, **not filled with example values**.
+
+- Current historical R0 provides just **one reused-row physical sample at 9,840 ms**. The Python comparator will intentionally refuse this input until additional matched R0 samples exist.
+- New Core comparison protocol returns exit 2 for missing/mixed/incomparable evidence and exit 3 for a policy regression. Even a non-regressing result remains `NOT_CERTIFIED` without physical safety, thermal and OEM gates.
+- Do not use 1,200-file emulator timings (116/66/52 ms) as a numerical baseline for the Xiaomi's ~88k-file physical scan.
+- Always preserve the APK's signing identity and data; do not uninstall a populated app to run benchmarks.
