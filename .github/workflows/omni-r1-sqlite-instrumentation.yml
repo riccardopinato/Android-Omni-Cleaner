@@ -1,0 +1,78 @@
+name: Omni Cleaner — R1 SQLite instrumentation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'app/src/main/java/com/riccardopinato/omnicleaner/cleaner/PersistentStorageIndex.kt'
+      - 'app/src/androidTest/java/com/riccardopinato/omnicleaner/cleaner/PersistentStorageIndexInstrumentedTest.kt'
+      - 'app/src/androidTest/java/com/riccardopinato/omnicleaner/cleaner/OmniR1IndexStressInstrumentedTest.kt'
+      - '.github/workflows/omni-r1-sqlite-instrumentation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  OMNI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+concurrency:
+  group: omni-r1-sqlite-${{ github.event.pull_request.head.ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sqlite-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - name: Checkout immutable PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.OMNI_SOURCE_SHA }}
+          persist-credentials: false
+
+      - name: JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
+        with:
+          cache-provider: basic
+
+      - name: Compile debug and instrumentation APKs
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --stacktrace
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Execute SQLite migration, cache and stress cases on Android
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          disk-size: 4096M
+          disable-animations: true
+          script: |
+            ./gradlew connectedDebugAndroidTest --stacktrace \
+              -Pandroid.testInstrumentationRunnerArguments.class=com.riccardopinato.omnicleaner.cleaner.PersistentStorageIndexInstrumentedTest,com.riccardopinato.omnicleaner.cleaner.OmniR1IndexStressInstrumentedTest
+
+      - name: Evidence boundary
+        if: always()
+        run: |
+          {
+            echo "## Omni R1 SQLite instrumentation"
+            echo "- Exact source SHA: $OMNI_SOURCE_SHA"
+            echo "- Fixture: 1,200 synthetic small files, 3 repeated reconciliations."
+            echo "- Android API 35 emulator only. No physical speedup is asserted."
+            echo "- Physical Xiaomi matched R0/R1 cold/warm timing and OEM destructive QA remain separate gates."
+            echo "- The job outcome, not this summary, determines test PASS/FAIL."
+          } >> "$GITHUB_STEP_SUMMARY"
