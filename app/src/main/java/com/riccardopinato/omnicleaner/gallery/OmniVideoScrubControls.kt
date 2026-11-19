@@ -137,7 +137,7 @@ internal fun videoTimelineTimestamp(milliseconds: Int): String {
     val h = seconds / 3600L
     val m = (seconds / 60L) % 60L
     val s = seconds % 60L
-    return if (h > 0L) String.format(Locale.ROOT, "%d:%02d:%02d", h, m, s)
+    return if (h > 0L) String.format(Locale.ROOT, "%02d:%02d:%02d", h, m, s)
     else String.format(Locale.ROOT, "%02d:%02d", m, s)
 }
 
