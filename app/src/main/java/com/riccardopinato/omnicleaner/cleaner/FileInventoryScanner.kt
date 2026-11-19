@@ -437,7 +437,14 @@ class FileInventoryScanner {
 internal fun duplicateCandidateSizeGroups(files: List<IndexedFile>): List<List<IndexedFile>> {
     val firstBySize = HashMap<Long, IndexedFile>()
     val groups = HashMap<Long, MutableList<IndexedFile>>()
-    for (item in uniquePhysicalFiles(files)) {
+    // Deduplicate physical aliases and discover candidate size groups in ONE
+    // pass. Avoid allocating an intermediate unique-files list and formatted
+    // "physical:dev:inode" String for every file in a large inventory.
+    // Tagged type (PhysicalFileIdentity vs String path) cannot collide.
+    val identities = HashSet<Any>()
+    for (item in files) {
+        val key: Any = item.physicalIdentity ?: item.file.absolutePath
+        if (!identities.add(key)) continue
         if (item.size <= 0L) continue
         val existingGroup = groups[item.size]
         if (existingGroup != null) {
