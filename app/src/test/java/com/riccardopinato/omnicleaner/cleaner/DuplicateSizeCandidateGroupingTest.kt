@@ -61,6 +61,29 @@ class DuplicateSizeCandidateGroupingTest {
     }
 
     @Test
+    fun singlePassPreservesFirstPhysicalAliasAndPathDedupAcrossLargeInventory() {
+        val identityA = PhysicalFileIdentity(deviceId = 500L, inode = 12L)
+        val identityB = PhysicalFileIdentity(deviceId = 500L, inode = 13L)
+        val files = (0 until 40_000).map { i ->
+            virtualFile(i, (i % 12_001 + 1L))
+        }.toMutableList()
+        files += IndexedFile(File("/synthetic/physical-first.bin"), 8000L, 1L, physicalIdentity = identityA)
+        files += IndexedFile(File("/synthetic/physical-alias.bin"), 8000L, 1L, physicalIdentity = identityA)
+        files += IndexedFile(File("/synthetic/physical-second.bin"), 8000L, 1L, physicalIdentity = identityB)
+        files += IndexedFile(File("/synthetic/physical-second-alias.bin"), 8000L, 1L, physicalIdentity = identityB)
+        files += virtualFile(20, 30_000L) // Same absolute path as an earlier item: first wins.
+        files += virtualFile(40_001, 0L)
+        files += virtualFile(40_002, -5L)
+
+        assertEquals(
+            snapshot(baseline(files)),
+            snapshot(duplicateCandidateSizeGroups(files)),
+        )
+        val groups = duplicateCandidateSizeGroups(files)
+        assertTrue(groups.all { group -> group.all { it.size > 0L } })
+    }
+
+    @Test
     fun veryLargePotentialWasteSaturatesWithoutOverflow() {
         val huge = Long.MAX_VALUE - 1L
         val files = listOf(
