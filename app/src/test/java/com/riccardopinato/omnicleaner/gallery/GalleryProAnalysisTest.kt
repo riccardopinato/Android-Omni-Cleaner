@@ -26,6 +26,26 @@ class GalleryProAnalysisTest {
     }
 
     @Test
+    fun clearingSearchRestoresMatchesWithoutChangingAppliedSizeAndPreset() {
+        val mib = 1024L * 1024L
+        val videos = listOf(
+            GalleryVideoCandidate(1, "trip.mp4", 150L * mib, 400_000, 1920, 1080, "Travel"),
+            GalleryVideoCandidate(2, "family.mov", 180L * mib, 350_000, 1920, 1080, "Home"),
+            GalleryVideoCandidate(3, "small.mp4", 60L * mib, 350_000, 1920, 1080, "Travel"),
+        )
+        val range = GalleryVideoSizeRange(100L * mib, 200L * mib)
+        val searched = filterGalleryVideos(
+            videos, GalleryVideoReviewFilter.LONG_5_MIN, text = "trip", sizeRange = range,
+        )
+        val cleared = filterGalleryVideos(
+            videos, GalleryVideoReviewFilter.LONG_5_MIN, text = "", sizeRange = range,
+        )
+        assertEquals(listOf(1L), searched.results.map { it.id })
+        assertEquals(listOf(2L, 1L), cleared.results.map { it.id })
+        assertEquals(330L * mib, cleared.bytesMatching)
+    }
+
+    @Test
     fun sizeRangeUsesInclusiveRealBytesAndCombinesWithPresetAndSearch() {
         val mib = 1024L * 1024L
         val videos = listOf(

@@ -174,6 +174,12 @@ internal fun GalleryProSection(
                     value = videoQuery,
                     onValueChange = { videoQuery = it },
                     label = { Text(stringResource(R.string.gp_video_search)) },
+                    leadingIcon = { OmniGentlefaceSearchGlyph() },
+                    trailingIcon = {
+                        if (videoQuery.isNotEmpty()) {
+                            OmniClearVideoSearchButton(onClick = { videoQuery = "" })
+                        }
+                    },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("omni_gallery_pro_video_search"),
                 )
