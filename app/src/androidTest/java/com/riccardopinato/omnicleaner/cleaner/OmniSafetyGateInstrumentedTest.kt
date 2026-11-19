@@ -137,9 +137,21 @@ class OmniSafetyGateInstrumentedTest {
     }
 
     private fun syntheticSharedStorageRoot(): File {
-        // Do not silently alter device permissions from instrumentation.
-        // The emulator workflow grants access to the debug test package only;
-        // a physical-device operator must explicitly authorize this beforehand.
+        // Only the Android Emulator may grant the DEBUG test package access
+        // automatically. On a real phone, authorization must be explicit.
+        val emulator = Build.HARDWARE == "ranchu" ||
+            Build.HARDWARE == "goldfish" ||
+            Build.PRODUCT.contains("sdk_gphone") ||
+            Build.FINGERPRINT.contains("emulator", ignoreCase = true)
+        if (emulator && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val instrumentation = InstrumentationRegistry.getInstrumentation()
+            val packageName = instrumentation.targetContext.packageName
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(
+                instrumentation.uiAutomation.executeShellCommand(
+                    "appops set " + packageName + " MANAGE_EXTERNAL_STORAGE allow",
+                ),
+            ).use { it.readBytes() }
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             assertTrue(
                 "Authorize All files access for the DEBUG QA app before physical testing",
