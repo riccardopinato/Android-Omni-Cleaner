@@ -484,8 +484,10 @@ internal suspend fun boundedHashFiles(
 
     val nextIndex = AtomicInteger(0)
     val inFlight = AtomicInteger(0)
-    val results = ArrayList<IndexedHashResult>()
-    val resultLock = Any()
+    // Every worker owns a unique atomic index. Write only its dedicated slot:
+    // no contended append lock, allocation per result, or O(n log n) re-sort.
+    // After joinAll, publish in the exact input order as before.
+    val hashesByIndex = arrayOfNulls<String>(items.size)
     val workers = boundedHashWorkerLaunchCount(items.size, parallelism)
 
     List(workers) {
@@ -500,11 +502,7 @@ internal suspend fun boundedHashFiles(
                 onInFlightChanged?.invoke(active)
                 try {
                     val hash = transform(item)
-                    if (hash != null) {
-                        synchronized(resultLock) {
-                            results += IndexedHashResult(index, item, hash)
-                        }
-                    }
+                    if (hash != null) hashesByIndex[index] = hash
                 } finally {
                     val remaining = inFlight.decrementAndGet()
                     onInFlightChanged?.invoke(remaining)
@@ -513,7 +511,12 @@ internal suspend fun boundedHashFiles(
         }
     }.joinAll()
 
-    results.sortedBy { it.index }
+    val ordered = ArrayList<IndexedHashResult>()
+    for (index in hashesByIndex.indices) {
+        val hash = hashesByIndex[index] ?: continue
+        ordered += IndexedHashResult(index, items[index], hash)
+    }
+    ordered
 }
 
 internal fun boundedHashWorkerLaunchCount(
