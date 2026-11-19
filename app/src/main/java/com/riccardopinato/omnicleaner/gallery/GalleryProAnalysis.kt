@@ -17,6 +17,22 @@ internal enum class GalleryVideoReviewFilter {
     ALL, LARGE_100_MB, LONG_5_MIN, UHD_4K,
 }
 
+/**
+ * Inclusive, metadata-only size bounds for advisory Gallery Pro filtering.
+ * Never represents recoverable space or a deletion selection.
+ */
+internal data class GalleryVideoSizeRange(
+    val minimumBytes: Long,
+    val maximumBytes: Long,
+) {
+    init {
+        require(minimumBytes >= 0L) { "Minimum video size must be non-negative" }
+        require(maximumBytes >= minimumBytes) { "Maximum must not precede minimum" }
+    }
+
+    fun contains(bytes: Long): Boolean = bytes in minimumBytes..maximumBytes
+}
+
 internal data class GalleryVideoReviewResult(
     val totalMatching: Int,
     val results: List<GalleryVideoCandidate>,
@@ -28,6 +44,7 @@ internal fun filterGalleryVideos(
     filter: GalleryVideoReviewFilter,
     text: String = "",
     maxVisible: Int = 100,
+    sizeRange: GalleryVideoSizeRange? = null,
 ): GalleryVideoReviewResult {
     val query = text.trim().lowercase(Locale.ROOT)
     val max = maxVisible.coerceIn(0, 200)
@@ -40,6 +57,7 @@ internal fun filterGalleryVideos(
                 GalleryVideoReviewFilter.UHD_4K -> maxOf(video.width, video.height) >= 3840
             }
         }
+        .filter { sizeRange == null || sizeRange.contains(it.bytes) }
         .filter { it.name.lowercase(Locale.ROOT).contains(query) ||
             it.album.orEmpty().lowercase(Locale.ROOT).contains(query) }
         .sortedWith(compareByDescending<GalleryVideoCandidate> { it.bytes }.thenBy { it.id })
