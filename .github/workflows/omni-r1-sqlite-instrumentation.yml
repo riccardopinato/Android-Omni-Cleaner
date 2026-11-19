@@ -64,6 +64,38 @@ jobs:
           script: |
             ./gradlew connectedDebugAndroidTest --stacktrace -Pandroid.testInstrumentationRunnerArguments.class=com.riccardopinato.omnicleaner.cleaner.PersistentStorageIndexInstrumentedTest,com.riccardopinato.omnicleaner.cleaner.OmniR1IndexStressInstrumentedTest
 
+      - name: Verify Android actually executed both index test classes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          root = Path("app/build/outputs/androidTest-results/connected")
+          required = {
+              "PersistentStorageIndexInstrumentedTest": 1,
+              "OmniR1IndexStressInstrumentedTest": 1,
+          }
+          matches = {key: [] for key in required}
+          for path in root.rglob("*.xml"):
+              try:
+                  tree = ET.parse(path)
+              except ET.ParseError:
+                  continue
+              for case in tree.iter("testcase"):
+                  classname = case.attrib.get("classname", "")
+                  for key in required:
+                      if key in classname:
+                          matches[key].append(case)
+          for key, minimum in required.items():
+              tests = matches[key]
+              if len(tests) < minimum:
+                  raise SystemExit("FAIL: " + key + " tests not executed (" + str(len(tests)) + ")")
+              for case in tests:
+                  if any(case.find(t) is not None for t in ("failure", "error", "skipped")):
+                      raise SystemExit("FAIL: " + key + " " + str(case.attrib))
+              print("PASS: " + key + " executed " + str(len(tests)) + " tests")
+          PY
+
       - name: Evidence boundary
         if: always()
         run: |
