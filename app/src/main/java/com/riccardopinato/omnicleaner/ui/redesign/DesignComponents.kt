@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 internal fun OmniSectionHeader(
-    eyebrow: String,
+    eyebrow: String?,
     title: String,
     subtitle: String,
     modifier: Modifier = Modifier,
@@ -47,11 +47,13 @@ internal fun OmniSectionHeader(
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
-        Text(
-            text = eyebrow.uppercase(),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-        )
+        if (!eyebrow.isNullOrBlank()) {
+            Text(
+                text = eyebrow.uppercase(),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
         Text(text = title, style = MaterialTheme.typography.headlineMedium)
         Text(
             text = subtitle,
