@@ -1,41 +1,45 @@
 appId: com.riccardopinato.omnicleaner.debug
 ---
-# Hub -> dedicated tool -> scan -> filters -> another tab -> return.
-# Deliberately non-destructive; never confirms any Trash request.
+# Single Home parity: direct scan, filter page, gallery, and return.
+# Never approves an Android Trash or deletion request.
 - launchApp:
     clearState: false
+- assertVisible:
+    id: "omni_bento_v2_storage"
 - tapOn:
-    id: "omni_nav_clean"
-- assertVisible: "Deep Cleaning"
-- assertVisible: "Scan tools"
-- tapOn:
-    id: "omni_clean_tool_overview"
-- assertVisible: "Analyze storage"
-- tapOn:
-    id: "omni_scan_overview"
-- scrollUntilVisible:
-    element:
-      text: "Storage overview"
-    direction: DOWN
+    id: "omni_bento_v2_storage"
+- extendedWaitUntil:
+    visible: "Open results"
     timeout: 120000
-    speed: 45
-- assertVisible: "Storage overview"
-- pressKey: Back
 - tapOn:
-    id: "omni_clean_tool_filters"
+    id: "omni_bento_v2_storage"
+- assertVisible:
+    id: "omni_clean_detail_overview"
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
 - scrollUntilVisible:
     element:
-      text: "Search folders"
+      id: "omni_bento_v2_filters"
     direction: DOWN
     timeout: 30000
-- assertVisible: "Search folders"
-# Domain scan state survives as we navigate through a different top-level tab.
+- tapOn:
+    id: "omni_bento_v2_filters"
+- assertVisible:
+    id: "omni_clean_detail_filters"
 - pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_gallery"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_gallery"
+    id: "omni_bento_v2_gallery"
 - assertVisible: "Gallery cleaner"
-- tapOn:
-    id: "omni_nav_clean"
-- tapOn:
-    id: "omni_clean_tool_overview"
-- assertVisible: "Storage overview"
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- assertVisible:
+    id: "omni_bento_v2_storage"

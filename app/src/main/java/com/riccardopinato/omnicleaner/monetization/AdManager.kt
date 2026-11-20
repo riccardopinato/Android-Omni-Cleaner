@@ -150,6 +150,8 @@ object AdManager {
         }
 
         val context = LocalContext.current
+        // Anchored adaptive height fits the persistent scaffold bottom bar;
+        // inline adaptive banners would expand beyond the intended footer.
         BoxWithConstraints(
             modifier = modifier.fillMaxWidth().wrapContentHeight(),
         ) {
@@ -157,7 +159,7 @@ object AdManager {
             val adView = remember(context, adWidthDp, BuildConfig.ADMOB_BANNER_UNIT_ID) {
                 AdView(context).apply {
                     setAdSize(
-                        AdSize.getCurrentOrientationInlineAdaptiveBannerAdSize(
+                        AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(
                             context,
                             adWidthDp,
                         ),

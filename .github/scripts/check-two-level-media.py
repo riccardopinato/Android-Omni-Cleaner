@@ -10,8 +10,10 @@ clean = (JAVA / "ui/redesign/CleanerScreens.kt").read_text(encoding="utf-8")
 preview = (JAVA / "gallery/GalleryMediaPreview.kt").read_text(encoding="utf-8")
 gallery = (JAVA / "gallery/GalleryCleanerSection.kt").read_text(encoding="utf-8")
 exif = (JAVA / "exif/ExifCleanerSection.kt").read_text(encoding="utf-8")
-assert "OmniDetailRoute" in root and "BackHandler(enabled = activeDetail != null)" in root
-assert "if (activeDetail == null)" in root
+assert "OmniDetailRoute" in root and "BackHandler(enabled = destination != OmniDestination.HOME)" in root
+assert "NavigationBar(" not in root, "single-Home UI must not retain the five-tab bar"
+assert "omni_home_back" in root, "dedicated pages require an explicit Home back button"
+assert 'AdManager.Banner(' in root, "eligible Free users need the anchored bottom banner"
 assert "OmniDetailRoute.GALLERY_REVIEW" in root
 assert "CleanHubScreen(" in root and "CleanDetailScreen(" in root
 assert "CleanHubScreen(" in clean and "CleanDetailScreen(" in clean

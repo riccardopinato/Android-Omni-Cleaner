@@ -1,22 +1,24 @@
 appId: com.riccardopinato.omnicleaner.debug
 ---
-# Settings/language controls were moved from Pro to Home in AUD-0010.
-# Executed under 1.3x system font in AppLab script.
+# Single Home navigation under 1.3x font scale and locale switching.
 - launchApp:
     clearState: false
-# Address the clickable NavigationBarItem, not its nested Text child.
-# At larger font scales, a label-only tap may land in a non-clickable gap.
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_review"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_home"
-- assertVisible: "Smart cleaning"
-# Verify repeated navigation with the exact same density before opening Settings.
+    id: "omni_bento_v2_review"
+- assertVisible:
+    id: "omni_review_center"
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
 - tapOn:
-    id: "omni_nav_clean"
-- assertVisible: "Deep Cleaning"
-- tapOn:
-    id: "omni_nav_home"
-- assertVisible: "Smart cleaning"
-- tapOn: "Settings"
+    id: "omni_home_settings"
 - assertVisible: "Appearance"
 - scrollUntilVisible:
     element:

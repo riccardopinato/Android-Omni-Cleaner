@@ -108,6 +108,7 @@ internal enum class CleanerToolRoute(val labelRes: Int) {
     FILTERS(R.string.redesign_filters_title),
     TRASH(R.string.module_safe_trash),
     ADVANCED(R.string.audit_advanced_maintenance),
+    CATEGORIES(R.string.smart_categories_title),
 }
 
 @Composable
@@ -222,6 +223,7 @@ internal fun CleanHubScreen(
                     tools = listOf(
                         CleanerToolRoute.FILTERS,
                         CleanerToolRoute.ADVANCED,
+                        CleanerToolRoute.CATEGORIES,
                     ),
                     onOpenTool = onOpenTool,
                 )
@@ -488,7 +490,7 @@ internal fun CleanDetailScreen(
                 }
                 CleanerToolRoute.INTELLIGENCE -> item {
                     StorageIntelligenceSection(
-                        onOpenAdvanced = { onOpenTool(CleanerToolRoute.ADVANCED) },
+                        onOpenAdvanced = { onOpenTool(CleanerToolRoute.CATEGORIES) },
                         onOpenLargeFiles = { onOpenTool(CleanerToolRoute.LARGE) },
                     )
                 }
@@ -622,8 +624,10 @@ internal fun CleanDetailScreen(
                 CleanerToolRoute.TRASH -> item {
                     SafeTrashSection()
                 }
+                CleanerToolRoute.CATEGORIES -> item {
+                    SmartCategoriesSection(onCleanupFinished = onCleanupFinished)
+                }
                 CleanerToolRoute.ADVANCED -> {
-                    item { SmartCategoriesSection(onCleanupFinished = onCleanupFinished) }
                     item { MaintenanceSection() }
                     item { ManualMaintenanceCard() }
                     if (BuildConfig.DEBUG) {
