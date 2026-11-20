@@ -243,8 +243,7 @@ fun RedesignedOmniCleanerApp(
                     val itemLabel = stringResource(item.labelRes)
                     val textLabel: @Composable () -> Unit = { Text(itemLabel) }
                     NavigationBarItem(
-                        modifier = Modifier
-                            .testTag("omni_nav_${item.name.lowercase(Locale.ROOT)}")
+                        modifier = Modifier.testTag("omni_nav_${item.name.lowercase(Locale.ROOT)}")
                             .semantics { contentDescription = itemLabel },
                         selected = destination == item,
                         onClick = {
