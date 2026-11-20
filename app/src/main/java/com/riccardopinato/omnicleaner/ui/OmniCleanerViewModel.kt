@@ -27,7 +27,7 @@ class OmniCleanerViewModel(application: Application) : AndroidViewModel(applicat
         CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     internal val cleanerController =
-        CleanerController(application.applicationContext, controllerScope)
+        BentoScanRuntime.controller(application.applicationContext)
 
     internal val galleryController =
         GalleryController(application.applicationContext, controllerScope)
@@ -50,7 +50,8 @@ class OmniCleanerViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     override fun onCleared() {
-        cleanerController.cancelScan()
+        // Bento scans belong to the application-scoped foreground service,
+        // not to the Activity lifecycle. Never cancel them on rotation/exit.
         proBatchController.cancel()
         controllerScope.cancel()
         super.onCleared()
