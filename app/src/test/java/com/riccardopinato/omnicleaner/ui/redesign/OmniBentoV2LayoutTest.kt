@@ -8,6 +8,20 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OmniBentoV2LayoutTest {
+
+    @Test fun colorataPaletteHasExactUserApprovedNineSwatches() {
+        val palette = OmniColorBentoV2Palette
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF8BC45C), palette.tileColor("storage"))
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFEFBD51), palette.tileColor("duplicates"))
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFFFD371), palette.tileColor("large"))
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF88C0F8), palette.tileColor("gallery"))
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFE72F63), palette.tileColor("privacy"))
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFF6B1CF), palette.tileColor("trash"))
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFB3CF8C), palette.tileColor("folders"))
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF597ED1), palette.tileColor("review"))
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFFDF7E8), palette.tileColor("intelligence"))
+    }
+
     @Test fun defaultsHaveNoDuplicatesAndFitThreeColumns() {
         val entries = bentoV2Defaults()
         assertEquals(18, entries.size)
