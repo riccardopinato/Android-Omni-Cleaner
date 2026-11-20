@@ -47,6 +47,15 @@ class GallerySwipeDecisionTest {
     }
 
     @Test
+    fun readOnlyCarouselIndexIsBoundedAndEmptyPageIsSafe() {
+        assertEquals(0, boundedCarouselIndex(-40, 12))
+        assertEquals(11, boundedCarouselIndex(100, 12))
+        assertEquals(4, boundedCarouselIndex(4, 12))
+        assertEquals(0, boundedCarouselIndex(3, 0))
+        assertTrue(carouselWindow(emptyList()).isEmpty())
+    }
+
+    @Test
     fun shortSwipeDoesNothing() {
         assertNull(gallerySwipeDirection(40f, 100f))
         assertNull(gallerySwipeDirection(-40f, 100f))
