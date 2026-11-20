@@ -586,4 +586,6 @@
     <string name="bento_v2_open">Open</string>
     <string name="bento_v2_premium_active">Pro active</string>
     <string name="bento_v2_stale">Previous result · Refresh recommended</string>
+    <string name="smart_category_temporary">Temporary files · 14d+</string>
+    <string name="smart_category_logs">Old log files · 30d+</string>
 </resources>
