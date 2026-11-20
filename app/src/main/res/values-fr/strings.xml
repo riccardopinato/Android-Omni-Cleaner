@@ -241,8 +241,8 @@
     <string name="gallery_load_more">Charger plus d’éléments</string>
     <string name="gallery_finish_page_title">Page chargée examinée</string>
     <string name="gallery_finish_title">Révision terminée</string>
-    <string name="gallery_finish_page_description">Vous avez examiné la page chargée. D'autres éléments sont disponibles.</string>
-    <string name="gallery_finish_description">Vous avez examiné tous les éléments chargés. Cela ne signifie pas que tous les fichiers de l'appareil ont été analysés.</string>
+    <string name="gallery_finish_page_description">Vous avez examiné la page chargée. D\'autres éléments sont disponibles.</string>
+    <string name="gallery_finish_description">Vous avez examiné tous les éléments chargés. Cela ne signifie pas que tous les fichiers de l\'appareil ont été analysés.</string>
     <string name="gallery_finish_reviewed">Examinés</string>
     <string name="gallery_finish_selected">Sélectionnés pour la corbeille</string>
     <string name="gallery_finish_safety">Les éléments sélectionnés ne sont pas supprimés. Android demandera confirmation avant de les déplacer dans la corbeille.</string>
