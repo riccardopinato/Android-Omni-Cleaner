@@ -42,3 +42,41 @@ internal object OmniColorBento {
     )
     val body = FontFamily(Font(R.font.manrope_variable))
 }
+
+/**
+ * User-approved "A — Colorata" palette, 20 November 2026.
+ * These exact nine swatches are used as tile backgrounds; neutral ink is
+ * permitted only for accessibility-critical text, borders and dark mode.
+ */
+internal object OmniColorBentoV2Palette {
+    val green = Color(0xFF8BC45C)
+    val sage = Color(0xFFB3CF8C)
+    val gold = Color(0xFFEFBD51)
+    val yellow = Color(0xFFFFD371)
+    val blue = Color(0xFF597ED1)
+    val sky = Color(0xFF88C0F8)
+    val raspberry = Color(0xFFE72F63)
+    val blush = Color(0xFFF6B1CF)
+    val cream = Color(0xFFFDF7E8)
+
+    // White or ordinary charcoal on blue/raspberry has insufficient
+    // contrast for small text. This near-black yields >=4.5:1 throughout.
+    val legibleInk = Color(0xFF070D13)
+
+    /** One function, one canonical colour; no random/unstable colours. */
+    fun tileColor(id: String): Color = when (id) {
+        "storage" -> green
+        "duplicates" -> gold
+        "large" -> yellow
+        "gallery" -> sky
+        "privacy", "privacyQuick" -> raspberry
+        "trash", "privacyBatch" -> blush
+        "folders", "categories" -> sage
+        "review", "galleryPro", "advanced" -> blue
+        "intelligence", "settings" -> cream
+        "galleryReview" -> sky
+        "filters" -> yellow
+        "pro" -> raspberry
+        else -> cream
+    }
+}
