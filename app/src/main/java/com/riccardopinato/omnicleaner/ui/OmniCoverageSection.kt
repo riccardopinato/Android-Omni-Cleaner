@@ -21,6 +21,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -64,6 +65,7 @@ internal fun OmniCoverageSection() {
     var selected by remember { mutableStateOf<Map<String, OmniDiscoveredMedia>>(emptyMap()) }
     var quickLook by remember { mutableStateOf<OmniDiscoveredMedia?>(null) }
     var visible by remember { mutableStateOf(50) }
+    var nameQuery by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf(false) }
     var acceptIrreversible by remember { mutableStateOf(false) }
     var pendingMediaCount by remember { mutableStateOf(0) }
@@ -90,7 +92,7 @@ internal fun OmniCoverageSection() {
             selected = emptyMap()
             visible = 50
             try {
-                report = scanner.discover(context.applicationContext)
+                report = scanner.discover(context.applicationContext, nameQuery = nameQuery)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
@@ -116,6 +118,13 @@ internal fun OmniCoverageSection() {
                 "Cerca anche nei media Android, nelle cartelle SAF autorizzate e nelle memorie SD/USB accessibili. " +
                     "Le sorgenti protette vengono dichiarate, non considerate vuote.",
                 style = MaterialTheme.typography.bodySmall,
+            )
+            OutlinedTextField(
+                value = nameQuery,
+                onValueChange = { nameQuery = it },
+                label = { Text("Cerca per nome in tutte le sorgenti") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().testTag("omni_coverage_query"),
             )
             Button(
                 onClick = ::scan,
