@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -41,7 +42,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.consumeAllChanges
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -67,6 +67,7 @@ import kotlin.math.roundToInt
  * trigger Android trash requests, or claim speculative savings.
  */
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 internal fun OmniBentoV2Home(
     state: CleanerUiState,
     galleryController: GalleryController,
@@ -215,11 +216,8 @@ internal fun OmniBentoV2Home(
                                     translationY = dragging.y
                                     rotationZ = if (dragging != Offset.Zero) 0f else wiggle
                                 }
-                                .then(
-                                    Modifier
-                                        .padding(0.dp)
-                                        .width(w).height(h)
-                                )
+                                .offset(x = x, y = y)
+                                .width(w).height(h)
                                 .then(
                                     if (editing) Modifier.pointerInput(tile.id, editing, cellPx) {
                                         detectDragGesturesAfterLongPress(
@@ -415,6 +413,7 @@ internal fun OmniBentoV2Home(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun BentoV2Action(label: String, bg: Color, fg: Color, onClick: () -> Unit) {
     Box(
         Modifier.clip(RoundedCornerShape(13.dp)).background(bg)
@@ -425,6 +424,7 @@ private fun BentoV2Action(label: String, bg: Color, fg: Color, onClick: () -> Un
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun BentoV2MiniAction(text: String, onClick: () -> Unit) {
     Box(
         Modifier.size(30.dp).clip(CircleShape).background(Color(0xEAF3F3F1))
@@ -453,7 +453,7 @@ private fun BentoV2Card(
         "large", "categories" -> colors.lime
         "gallery", "galleryPro", "galleryReview" -> colors.cobalt
         "privacy", "privacyQuick", "privacyBatch" -> colors.sageBackground
-        "trash", "advanced" -> colors.burgundy
+        "trash", "advanced" -> colors.panel
         "review", "intelligence" -> colors.blue
         "pro", "settings" -> colors.pink
         else -> colors.panel
