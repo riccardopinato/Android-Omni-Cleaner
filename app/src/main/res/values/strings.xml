@@ -249,6 +249,13 @@
     <string name="gallery_move_android_trash">Move to Android Trash</string>
     <string name="gallery_trash_confirm_title">Confirm trash</string>
     <string name="gallery_trash_confirm_body">Android will show a second system confirmation. Items will be moved to media trash, not deleted directly.</string>
+    <string name="gallery_details_photo">Photo</string>
+    <string name="gallery_details_video">Video</string>
+    <string name="gallery_details_size">Size</string>
+    <string name="gallery_details_date">Date</string>
+    <string name="gallery_details_album">Album</string>
+    <string name="gallery_details_resolution">Resolution</string>
+    <string name="gallery_details_duration">Duration</string>
     <string name="gallery_preview_unavailable">Preview unavailable</string>
     <string name="gallery_swipe_hint">← Trash · Keep →</string>
     <string name="gallery_selection_explainer">Trash marks this item only. Android asks for confirmation before moving it to Trash.</string>
