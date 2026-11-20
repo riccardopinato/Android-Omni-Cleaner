@@ -106,6 +106,7 @@ jobs:
           name: omni-design-screenshots-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             omni-design-screenshots/01-home.png
+            omni-design-screenshots/23-home-deck-expanded.png
             omni-design-screenshots/02-clean.png
             omni-design-screenshots/03-gallery.png
             omni-design-screenshots/04-privacy.png
