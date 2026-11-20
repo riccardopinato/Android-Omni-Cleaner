@@ -122,9 +122,10 @@ internal class OmniSourceCoverageScanner {
                 val whereArgs = if (needle.isNotEmpty()) arrayOf("%$needle%") else null
                 try {
                     var checked = 0
-                    context.contentResolver.query(
+                    val cursor = context.contentResolver.query(
                         base, projection, where, whereArgs, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC",
-                    )?.use { cursor ->
+                    ) ?: throw SecurityException("MediaStore provider returned no cursor")
+                    cursor.use { cursor ->
                         val ixId = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
                         val ixName = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
                         val ixSize = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
