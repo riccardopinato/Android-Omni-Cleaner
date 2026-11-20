@@ -418,7 +418,7 @@ fun GalleryMediaPreview(
  * Video surface consumes its own taps (seek/play) instead of triggering photo swipes.
  */
 @Composable
-private fun GalleryVideoPlayer(item: GalleryMediaItem, thumbnail: Bitmap?) {
+internal fun GalleryVideoPlayer(item: GalleryMediaItem, thumbnail: Bitmap?) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var started by remember(item.uri) { mutableStateOf(false) }

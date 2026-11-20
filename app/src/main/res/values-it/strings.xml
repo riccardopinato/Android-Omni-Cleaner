@@ -407,6 +407,10 @@
     <string name="nav_privacy_quick">Privacy per una foto</string>
     <string name="nav_privacy_batch">Strumenti EXIF in blocco</string>
     <string name="nav_pro_manage">Gestisci Pro</string>
+    <string name="gallery_carousel_title">Anteprime recenti</string>
+    <string name="gallery_carousel_previous">Anteprima precedente</string>
+    <string name="gallery_carousel_next">Anteprima successiva</string>
+    <string name="gallery_carousel_open">Visualizza a schermo intero</string>
     <string name="gallery_open_review">Apri foto o video a grandezza intera</string>
     <string name="gallery_video_seek">Sposta il punto di riproduzione</string>
     <string name="gallery_video_back_10">Indietro di 10 secondi</string>
