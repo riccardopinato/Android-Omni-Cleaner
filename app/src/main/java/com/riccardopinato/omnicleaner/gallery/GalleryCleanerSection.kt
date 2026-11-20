@@ -268,17 +268,22 @@ fun GalleryCleanerSection(
                 Text(stringResource(R.string.gallery_loading_next), style = MaterialTheme.typography.bodySmall)
             }
 
-            if (state.hasMore && !state.loadingNextPage) {
+            val finished = galleryReviewFinishState(state)
+            if (finished != null) {
+                OmniGalleryReviewFinish(
+                    finish = finished,
+                    onReviewQueue = { showQueueReview = true },
+                    onLoadMore = controller::loadNextPage,
+                )
+            }
+
+            if (finished == null && state.hasMore && !state.loadingNextPage) {
                 OutlinedButton(
                     onClick = controller::loadNextPage,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.gallery_load_more))
                 }
-            }
-
-            if (state.items.isNotEmpty() && state.currentItem == null && !state.hasMore) {
-                Text(stringResource(R.string.gallery_review_complete))
             }
 
             if (state.selectedForTrash.isNotEmpty()) {
@@ -295,11 +300,13 @@ fun GalleryCleanerSection(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                OutlinedButton(
-                    onClick = { showQueueReview = true },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.audit_gallery_review_queue, state.selectedForTrash.size))
+                if (finished == null) {
+                    OutlinedButton(
+                        onClick = { showQueueReview = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.audit_gallery_review_queue, state.selectedForTrash.size))
+                    }
                 }
                 Button(
                     onClick = { showTrashConfirmation = true },
