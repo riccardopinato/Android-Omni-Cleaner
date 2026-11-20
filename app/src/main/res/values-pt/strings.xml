@@ -244,6 +244,10 @@
     <string name="gallery_queue_photo">Foto</string>
     <string name="gallery_queue_video">Vídeo</string>
     <string name="gallery_queue_android_notice">O Android pedirá confirmação antes de mover os ficheiros selecionados para o lixo.</string>
+    <string name="gallery_session_reviewed">Revistos</string>
+    <string name="gallery_session_selected">Selecionados para o lixo</string>
+    <string name="gallery_session_recent_kept">Mantidos · recentes</string>
+    <string name="gallery_session_android_confirmation">Os ficheiros selecionados não foram eliminados. O Android pedirá confirmação antes de os mover para o lixo.</string>
     <string name="gallery_selected_for_trash">%1$d itens selecionados para a lixeira</string>
     <string name="gallery_move_android_trash">Mover para a Lixeira do Android</string>
     <string name="gallery_trash_confirm_title">Confirmar lixeira</string>
