@@ -44,6 +44,9 @@ internal data class BentoV2Definition(
 
 /** All destinations are already present in the app; tiles do not introduce new cleanup actions. */
 internal val BENTO_V2_LIBRARY = listOf(
+    // Every distinct feature is visible on the unified Home by default.
+    // Privacy opens the single-photo workflow; batch privacy is a separate tile.
+    // Settings remains in the Home header, not as a duplicate tile.
     BentoV2Definition("storage", R.string.module_storage_overview, 2, 2, true, true),
     BentoV2Definition("duplicates", R.string.scan_duplicates, 1, 1, true, true),
     BentoV2Definition("large", R.string.scan_big_files, 1, 1, true, true),
@@ -52,16 +55,15 @@ internal val BENTO_V2_LIBRARY = listOf(
     BentoV2Definition("trash", R.string.module_safe_trash, 2, 1, true),
     BentoV2Definition("folders", R.string.scan_folders, 2, 1, true, true),
     BentoV2Definition("review", R.string.review_center_title, 1, 1, true),
+    BentoV2Definition("galleryReview", R.string.nav_gallery_review, 2, 1, true),
     BentoV2Definition("intelligence", R.string.si_title, 3, 2, true),
-    BentoV2Definition("galleryPro", R.string.gp_title, 2, 2, false),
-    BentoV2Definition("galleryReview", R.string.nav_gallery_review, 2, 1, false),
-    BentoV2Definition("privacyQuick", R.string.nav_privacy_quick, 1, 1, false),
-    BentoV2Definition("privacyBatch", R.string.nav_privacy_batch, 2, 1, false),
-    BentoV2Definition("filters", R.string.redesign_filters_title, 1, 1, false),
-    BentoV2Definition("categories", R.string.smart_categories_title, 2, 2, false),
-    BentoV2Definition("advanced", R.string.audit_advanced_maintenance, 2, 1, false),
-    BentoV2Definition("pro", R.string.nav_pro, 1, 1, false),
-    BentoV2Definition("settings", R.string.audit_settings, 1, 1, false),
+    BentoV2Definition("galleryPro", R.string.gp_title, 2, 2, true),
+    BentoV2Definition("filters", R.string.redesign_filters_title, 1, 1, true),
+    BentoV2Definition("pro", R.string.nav_pro, 1, 1, true),
+    BentoV2Definition("categories", R.string.smart_categories_title, 2, 2, true),
+    BentoV2Definition("advanced", R.string.audit_advanced_maintenance, 1, 1, true),
+    BentoV2Definition("privacyBatch", R.string.nav_privacy_batch, 1, 1, true),
+
 )
 
 internal fun bentoV2Defaults() = BENTO_V2_LIBRARY.map {
@@ -125,6 +127,12 @@ internal class BentoV2Preferences(context: Context) {
 
     fun load(): List<BentoV2Tile> {
         val raw = prefs.getString("tiles", null) ?: return bentoV2Defaults()
+        // Migrate only the untouched legacy preset. Personal layouts keep
+        // their chosen tile visibility, sizes and positions.
+        if (raw == "storage,2,2,1;duplicates,1,1,1;large,1,1,1;gallery,3,1,1;privacy,1,2,1;trash,2,1,1;folders,2,1,1;review,1,1,1;intelligence,3,2,1;galleryPro,2,2,0;galleryReview,2,1,0;privacyQuick,1,1,0;privacyBatch,2,1,0;filters,1,1,0;categories,2,2,0;advanced,2,1,0;pro,1,1,0;settings,1,1,0") {
+            reset()
+            return bentoV2Defaults()
+        }
         val definitions = BENTO_V2_LIBRARY.associateBy { it.id }
         val loaded = raw.split(";").mapNotNull { chunk ->
             val p = chunk.split(",")
