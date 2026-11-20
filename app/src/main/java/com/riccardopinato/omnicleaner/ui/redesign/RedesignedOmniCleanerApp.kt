@@ -518,6 +518,7 @@ fun RedesignedOmniCleanerApp(
                             )
                             }
                         }
+                        } // End mainScreen composable lambda; keep route selection outside it.
                         if (item == OmniDestination.HOME) {
                             mainScreen()
                         } else {
