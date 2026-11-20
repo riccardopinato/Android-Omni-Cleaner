@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import com.riccardopinato.omnicleaner.cleaner.MediaStoreHelper
+import com.riccardopinato.omnicleaner.cleaner.MediaTrashBatchPolicy
 import com.riccardopinato.omnicleaner.cleaner.OmniDiscoveredMedia
 import com.riccardopinato.omnicleaner.cleaner.OmniScanCoverageResult
 import com.riccardopinato.omnicleaner.cleaner.OmniSourceCoverageScanner
@@ -203,6 +204,8 @@ internal fun OmniCoverageSection() {
         val media = chosen.filter { it.sourceId.startsWith("media:") }
         val saf = chosen.filter { it.sourceId.startsWith("saf:") }
         val unsupported = chosen.filter { !it.sourceId.startsWith("media:") && !it.sourceId.startsWith("saf:") }
+        val mixedBackends = media.isNotEmpty() && saf.isNotEmpty()
+        val oversizedMediaBatch = media.size > MediaTrashBatchPolicy.MAX_URIS_PER_REQUEST
         AlertDialog(
             onDismissRequest = { confirm = false },
             title = { Text("Revisione eliminazione") },
@@ -217,6 +220,15 @@ internal fun OmniCoverageSection() {
                             Text(file.name + " · " + file.sourceId.substringBefore(':'))
                         }
                     }
+                    if (mixedBackends) {
+                        Text("Per sicurezza seleziona file MediaStore o SAF separatamente.")
+                    }
+                    if (oversizedMediaBatch) {
+                        Text("Selezione troppo grande per una singola richiesta Android: riduci i media selezionati.")
+                    }
+                    if (unsupported.isNotEmpty()) {
+                        Text("I file sulle memorie secondarie richiedono un percorso di eliminazione con autorizzazione SAF.")
+                    }
                     if (saf.isNotEmpty()) {
                         Row {
                             Checkbox(
@@ -230,7 +242,9 @@ internal fun OmniCoverageSection() {
             },
             confirmButton = {
                 TextButton(
-                    enabled = chosen.isNotEmpty() && (saf.isEmpty() || acceptIrreversible),
+                    enabled = chosen.isNotEmpty() &&
+                        !mixedBackends && !oversizedMediaBatch && unsupported.isEmpty() &&
+                        (saf.isEmpty() || acceptIrreversible),
                     onClick = {
                         confirm = false
                         scope.launch {
@@ -243,7 +257,8 @@ internal fun OmniCoverageSection() {
                                     for (item in saf) {
                                         try {
                                             val doc = DocumentFile.fromSingleUri(context, item.uri)
-                                            val unchanged = doc != null && doc.isFile &&
+                                            val unchanged = item.modifiedMillis > 0L &&
+                                                doc != null && doc.isFile &&
                                                 doc.name == item.name &&
                                                 doc.length() == item.sizeBytes &&
                                                 doc.lastModified() == item.modifiedMillis &&
@@ -264,10 +279,10 @@ internal fun OmniCoverageSection() {
                             if (media.isNotEmpty()) {
                                 val request = MediaStoreHelper.trashMediaFiles(
                                     context.contentResolver,
-                                    media.take(2000).map { it.uri },
+                                    media.map { it.uri },
                                 )
                                 if (request != null) {
-                                    pendingMediaCount = media.take(2000).size
+                                    pendingMediaCount = media.size
                                     launcher.launch(IntentSenderRequest.Builder(request.intentSender).build())
                                 } else {
                                     message = "Cestino Android non disponibile; file media invariati."
