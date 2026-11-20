@@ -199,6 +199,10 @@ fun GalleryCleanerSection(
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
 
+            if (!reviewOnly && state.items.isNotEmpty()) {
+                OmniReadOnlyMediaCarousel(loadedItems = state.items)
+            }
+
             state.currentItem?.let { current ->
                 Text(
                     stringResource(R.string.audit_review_progress, state.totalReviewedCount),
