@@ -1,5 +1,7 @@
 package com.riccardopinato.omnicleaner.ui.redesign
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -25,12 +28,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
+import com.riccardopinato.omnicleaner.cleaner.CleanupFileSnapshot
+import com.riccardopinato.omnicleaner.ui.OmniFileTrashReview
+import com.riccardopinato.omnicleaner.ui.OmniMediaQuickLook
+import com.riccardopinato.omnicleaner.ui.omniQuickLookForFile
 import com.riccardopinato.omnicleaner.cleaner.SmartCategory
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.StorageFileSearchPage
@@ -42,12 +50,14 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.Locale
 
 /**
  * Read-only Storage Intelligence; the parent Clean route already enforces
  * Deep Cleaning access before this composable can run.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun StorageIntelligenceSection(
     onOpenAdvanced: () -> Unit,
@@ -62,6 +72,9 @@ internal fun StorageIntelligenceSection(
     var minimumBytes by rememberSaveable { mutableStateOf(0L) }
     var visibleLimit by rememberSaveable { mutableStateOf(20) }
     var searchPage by remember { mutableStateOf<StorageFileSearchPage?>(null) }
+    var selectedFiles by remember { mutableStateOf<Map<String, CleanupFileSnapshot>>(emptyMap()) }
+    var previewFile by remember { mutableStateOf<File?>(null) }
+    LaunchedEffect(report) { selectedFiles = emptyMap() }
 
     LaunchedEffect(report, query, folder, minimumBytes, visibleLimit) {
         val snapshot = report
