@@ -194,8 +194,8 @@ internal fun OmniBentoV2Home(
                 Box(Modifier.fillMaxWidth().height(height)) {
                     displayed.forEachIndexed { index, placement ->
                         val tile = placement.tile
-                        val x by animateDpAsState(placement.column * (cell + gap), tween(210), label = "tile-x-${tile.id}")
-                        val y by animateDpAsState(placement.row * (cell + gap), tween(210), label = "tile-y-${tile.id}")
+                        val x by animateDpAsState((cell + gap) * placement.column, tween(210), label = "tile-x-${tile.id}")
+                        val y by animateDpAsState((cell + gap) * placement.row, tween(210), label = "tile-y-${tile.id}")
                         val w = cell * tile.columns + gap * (tile.columns - 1)
                         val h = cell * tile.rows + gap * (tile.rows - 1)
                         var dragging by remember(tile.id) { mutableStateOf(Offset.Zero) }
