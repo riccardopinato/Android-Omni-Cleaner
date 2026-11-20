@@ -227,23 +227,29 @@ fun GalleryCleanerSection(
                         onUndo = controller::undoLastAction,
                     )
                 }
-                Text(current.name, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    buildString {
-                        append(current.formattedSize)
-                        append(" · ")
-                        append(displayDate)
-                        current.album?.takeIf { it.isNotBlank() }?.let {
+                if (reviewOnly) {
+                    // A quiet, informational panel below the original Tinder
+                    // gesture surface; Keep/Trash and confirmation are unchanged.
+                    OmniTinderMediaDetails(media = current)
+                } else {
+                    Text(current.name, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        buildString {
+                            append(current.formattedSize)
                             append(" · ")
-                            append(it)
-                        }
-                        if (current.isVideo && current.formattedDuration.isNotBlank()) {
-                            append(" · ")
-                            append(current.formattedDuration)
-                        }
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                            append(displayDate)
+                            current.album?.takeIf { it.isNotBlank() }?.let {
+                                append(" · ")
+                                append(it)
+                            }
+                            if (current.isVideo && current.formattedDuration.isNotBlank()) {
+                                append(" · ")
+                                append(current.formattedDuration)
+                            }
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
 
                 // Controls belong to the photo preview, next to its directional animations.
             }
