@@ -24,6 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -153,6 +155,70 @@ internal fun OmniBentoStorageCard(
     }
 }
 
+/**
+ * Compact first-party pictograms composed with vector primitives.
+ * They replace recycled broom and platform-font glyphs in the Bento UI.
+ * 1 = document / large file, 2 = duplicates, 4 = trash queue.
+ */
+@Composable
+internal fun OmniBentoUtilityIcon(
+    kind: Int,
+    tint: Color,
+    modifier: Modifier = Modifier,
+) {
+    Canvas(modifier.size(27.dp)) {
+        val w = size.width
+        val h = size.height
+        val stroke = Stroke(width = 2.0.dp.toPx(), cap = StrokeCap.Round)
+        when (kind) {
+            1 -> {
+                val paper = Path().apply {
+                    moveTo(w * .18f, h * .06f)
+                    lineTo(w * .63f, h * .06f)
+                    lineTo(w * .85f, h * .30f)
+                    lineTo(w * .85f, h * .94f)
+                    lineTo(w * .18f, h * .94f)
+                    close()
+                }
+                drawPath(paper, tint, style = stroke)
+                drawLine(tint, Offset(w * .63f, h * .06f), Offset(w * .63f, h * .30f), stroke.width)
+                drawLine(tint, Offset(w * .63f, h * .30f), Offset(w * .85f, h * .30f), stroke.width)
+                drawLine(tint, Offset(w * .29f, h * .55f), Offset(w * .70f, h * .55f), stroke.width)
+                drawLine(tint, Offset(w * .29f, h * .70f), Offset(w * .61f, h * .70f), stroke.width)
+            }
+            2 -> {
+                drawRoundRect(
+                    color = tint,
+                    topLeft = Offset(w * .09f, h * .09f),
+                    size = Size(w * .60f, h * .66f),
+                    cornerRadius = CornerRadius(w * .12f),
+                    style = stroke,
+                )
+                drawRoundRect(
+                    color = tint,
+                    topLeft = Offset(w * .31f, h * .28f),
+                    size = Size(w * .60f, h * .66f),
+                    cornerRadius = CornerRadius(w * .12f),
+                    style = stroke,
+                )
+            }
+            4 -> {
+                drawLine(tint, Offset(w * .15f, h * .27f), Offset(w * .85f, h * .27f), stroke.width)
+                drawLine(tint, Offset(w * .38f, h * .14f), Offset(w * .62f, h * .14f), stroke.width)
+                drawRoundRect(
+                    color = tint,
+                    topLeft = Offset(w * .25f, h * .34f),
+                    size = Size(w * .50f, h * .57f),
+                    cornerRadius = CornerRadius(w * .06f),
+                    style = stroke,
+                )
+                drawLine(tint, Offset(w * .40f, h * .49f), Offset(w * .40f, h * .75f), stroke.width)
+                drawLine(tint, Offset(w * .60f, h * .49f), Offset(w * .60f, h * .75f), stroke.width)
+            }
+        }
+    }
+}
+
 @Composable
 internal fun OmniBentoMetricCard(
     value: String,
@@ -173,7 +239,11 @@ internal fun OmniBentoMetricCard(
             .padding(horizontal = 13.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
-        OmniNavigationIcon(symbol = symbol, tint = foreground, modifier = Modifier.size(28.dp))
+        if (tag == "omni_bento_duplicates") {
+            OmniBentoUtilityIcon(kind = 2, tint = foreground, modifier = Modifier.size(28.dp))
+        } else {
+            OmniNavigationIcon(symbol = symbol, tint = foreground, modifier = Modifier.size(28.dp))
+        }
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
                 value,
