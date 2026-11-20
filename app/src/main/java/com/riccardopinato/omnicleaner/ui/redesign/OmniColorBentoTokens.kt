@@ -44,39 +44,42 @@ internal object OmniColorBento {
 }
 
 /**
- * User-approved "A — Colorata" palette, 20 November 2026.
- * These exact nine swatches are used as tile backgrounds; neutral ink is
- * permitted only for accessibility-critical text, borders and dark mode.
+ * Pop Fresh 2027 — nine user-selected swatches, 20 November 2026.
+ * Color-only alternative to the previous Linktree Color Bento v2 palette.
+ * Neutral off-white and dark navy are accessibility surfaces/ink, not extra tiles.
+ * Keep screen structure, routes, motion and scan behavior unchanged.
  */
 internal object OmniColorBentoV2Palette {
-    val green = Color(0xFF8BC45C)
-    val sage = Color(0xFFB3CF8C)
-    val gold = Color(0xFFEFBD51)
-    val yellow = Color(0xFFFFD371)
-    val blue = Color(0xFF597ED1)
-    val sky = Color(0xFF88C0F8)
-    val raspberry = Color(0xFFE72F63)
-    val blush = Color(0xFFF6B1CF)
-    val cream = Color(0xFFFDF7E8)
+    val green = Color(0xFFC9F25D)      // Lime Pop — duplicates
+    val sage = Color(0xFF87DEAA)       // Spring Green — folders/categories
+    val gold = Color(0xFFFFAE58)       // Tangerine — Safe Trash
+    val yellow = Color(0xFFFFE066)     // Sunshine — quick/edit actions
+    val blue = Color(0xFF3C55E8)       // Electric Blue — storage
+    val sky = Color(0xFF5EDBD5)        // Aqua Fresh — gallery
+    val raspberry = Color(0xFFFF83C2)  // Bubblegum — Pro
+    val blush = Color(0xFFFF7A73)      // Coral Pop — large files
+    val violet = Color(0xFFC4A2FF)     // Soft Violet — Privacy
+    val cream = Color(0xFFF7F7F4)      // Neutral surface
+    val legibleInk = Color(0xFF192033)
+    val white = Color(0xFFFFFFFF)
 
-    // White or ordinary charcoal on blue/raspberry has insufficient
-    // contrast for small text. This near-black yields >=4.5:1 throughout.
-    val legibleInk = Color(0xFF070D13)
-
-    /** One function, one canonical colour; no random/unstable colours. */
+    /** Deterministic semantic-to-color mapping; no random colors. */
     fun tileColor(id: String): Color = when (id) {
-        "storage" -> green
-        "duplicates" -> gold
-        "large" -> yellow
-        "gallery" -> sky
-        "privacy", "privacyQuick" -> raspberry
-        "trash", "privacyBatch" -> blush
+        "storage" -> blue
+        "duplicates" -> green
+        "large" -> blush
+        "gallery", "galleryReview" -> sky
+        "privacy", "privacyQuick", "privacyBatch" -> violet
+        "trash" -> gold
         "folders", "categories" -> sage
-        "review", "galleryPro", "advanced" -> blue
-        "intelligence", "settings" -> cream
-        "galleryReview" -> sky
+        "review", "galleryPro", "advanced" -> yellow
         "filters" -> yellow
+        "intelligence", "settings" -> cream
         "pro" -> raspberry
         else -> cream
     }
+
+    /** Electric Blue needs white ink; all other swatches use dark navy. */
+    fun tileForeground(id: String): Color =
+        if (tileColor(id) == blue) white else legibleInk
 }
