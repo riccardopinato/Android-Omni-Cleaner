@@ -204,11 +204,15 @@ fun GalleryCleanerSection(
             }
 
             state.currentItem?.let { current ->
-                Text(
-                    stringResource(R.string.audit_review_progress, state.totalReviewedCount),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                if (reviewOnly) {
+                    OmniTinderSessionSummary(state = state)
+                } else {
+                    Text(
+                        stringResource(R.string.audit_review_progress, state.totalReviewedCount),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 val displayDate = if (current.dateTaken > 0L) {
                     current.formattedDate
                 } else {
@@ -231,23 +235,29 @@ fun GalleryCleanerSection(
                         onUndo = controller::undoLastAction,
                     )
                 }
-                Text(current.name, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    buildString {
-                        append(current.formattedSize)
-                        append(" · ")
-                        append(displayDate)
-                        current.album?.takeIf { it.isNotBlank() }?.let {
+                if (reviewOnly) {
+                    // A quiet, informational panel below the original Tinder
+                    // gesture surface; Keep/Trash and confirmation are unchanged.
+                    OmniTinderMediaDetails(media = current)
+                } else {
+                    Text(current.name, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        buildString {
+                            append(current.formattedSize)
                             append(" · ")
-                            append(it)
-                        }
-                        if (current.isVideo && current.formattedDuration.isNotBlank()) {
-                            append(" · ")
-                            append(current.formattedDuration)
-                        }
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                            append(displayDate)
+                            current.album?.takeIf { it.isNotBlank() }?.let {
+                                append(" · ")
+                                append(it)
+                            }
+                            if (current.isVideo && current.formattedDuration.isNotBlank()) {
+                                append(" · ")
+                                append(current.formattedDuration)
+                            }
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
 
                 // Controls belong to the photo preview, next to its directional animations.
             }
@@ -268,17 +278,22 @@ fun GalleryCleanerSection(
                 Text(stringResource(R.string.gallery_loading_next), style = MaterialTheme.typography.bodySmall)
             }
 
-            if (state.hasMore && !state.loadingNextPage) {
+            val finished = galleryReviewFinishState(state)
+            if (finished != null) {
+                OmniGalleryReviewFinish(
+                    finish = finished,
+                    onReviewQueue = { showQueueReview = true },
+                    onLoadMore = { controller.loadNextPage() },
+                )
+            }
+
+            if (finished == null && state.hasMore && !state.loadingNextPage) {
                 OutlinedButton(
                     onClick = controller::loadNextPage,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.gallery_load_more))
                 }
-            }
-
-            if (state.items.isNotEmpty() && state.currentItem == null && !state.hasMore) {
-                Text(stringResource(R.string.gallery_review_complete))
             }
 
             if (state.selectedForTrash.isNotEmpty()) {
@@ -295,11 +310,13 @@ fun GalleryCleanerSection(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                OutlinedButton(
-                    onClick = { showQueueReview = true },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.audit_gallery_review_queue, state.selectedForTrash.size))
+                if (finished == null) {
+                    OutlinedButton(
+                        onClick = { showQueueReview = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.audit_gallery_review_queue, state.selectedForTrash.size))
+                    }
                 }
                 Button(
                     onClick = { showTrashConfirmation = true },
