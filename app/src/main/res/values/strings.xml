@@ -242,8 +242,8 @@
     <string name="gallery_load_more">Load more items</string>
     <string name="gallery_finish_page_title">Loaded page reviewed</string>
     <string name="gallery_finish_title">Review completed</string>
-    <string name="gallery_finish_page_description">You've reviewed the current loaded page. More items are available.</string>
-    <string name="gallery_finish_description">You've reviewed all currently loaded items. This does not mean that every file on your device was scanned.</string>
+    <string name="gallery_finish_page_description">You\'ve reviewed the current loaded page. More items are available.</string>
+    <string name="gallery_finish_description">You\'ve reviewed all currently loaded items. This does not mean that every file on your device was scanned.</string>
     <string name="gallery_finish_reviewed">Reviewed</string>
     <string name="gallery_finish_selected">Selected for Trash</string>
     <string name="gallery_finish_safety">Selected items have not been deleted. Android will request confirmation before moving them to Trash.</string>
