@@ -41,10 +41,13 @@ appId: com.riccardopinato.omnicleaner.debug
     timeout: 90000
 - takeScreenshot: 01-home
 # Color Bento 2.0: capture real editor mode and return without changing layout.
-- tapOn: "Modifica"
-- assertVisible: "Fine"
+- tapOn:
+    id: "omni_bento_v2_editor_toggle"
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
 - takeScreenshot: 23-home-deck-expanded
-- tapOn: "Fine"
+- tapOn:
+    id: "omni_bento_v2_editor_toggle"
 - tapOn:
     id: "omni_nav_clean"
 - assertVisible: "Deep Cleaning"
