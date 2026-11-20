@@ -5,6 +5,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,7 +38,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -51,6 +55,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
+import kotlin.math.cos
+import kotlin.math.sin
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.gallery.GalleryController
 import com.riccardopinato.omnicleaner.ui.CleanerUiState
@@ -168,7 +175,7 @@ internal fun OmniColorBentoHome(
                         .semantics { contentDescription = settingsLabel },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("⚙", color = colors.white, fontSize = 23.sp)
+                    OmniBentoSettingsGlyph()
                 }
             }
         }
@@ -480,6 +487,7 @@ private fun BentoToolDeck(
                             .width(cardWidth)
                             .height(if (expanded) 113.dp else 137.dp)
                             .graphicsLayer { rotationZ = rotation }
+                            .zIndex(if (expanded) 0f else (tools.size - index).toFloat())
                             .clip(RoundedCornerShape(17.dp))
                             .background(tool.color)
                             .clickable(role = Role.Button) {
@@ -558,4 +566,35 @@ private fun BentoSafetyAction(title: String, onClick: () -> Unit) {
             .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
     )
+}
+
+/** First-party settings glyph. Never render a platform-dependent emoji icon. */
+@Composable
+private fun OmniBentoSettingsGlyph() {
+    Canvas(Modifier.size(23.dp)) {
+        val radius = size.minDimension * .47f
+        val line = 2.2.dp.toPx()
+        for (tooth in 0 until 8) {
+            val angle = tooth * (Math.PI / 4.0)
+            val dx = cos(angle).toFloat()
+            val dy = sin(angle).toFloat()
+            drawLine(
+                color = OmniColorBento.white,
+                start = center + Offset(dx * radius * .68f, dy * radius * .68f),
+                end = center + Offset(dx * radius, dy * radius),
+                strokeWidth = line,
+                cap = StrokeCap.Round,
+            )
+        }
+        drawCircle(
+            color = OmniColorBento.white,
+            radius = radius * .72f,
+            style = Stroke(width = line),
+        )
+        drawCircle(
+            color = OmniColorBento.white,
+            radius = radius * .21f,
+            style = Stroke(width = line),
+        )
+    }
 }
