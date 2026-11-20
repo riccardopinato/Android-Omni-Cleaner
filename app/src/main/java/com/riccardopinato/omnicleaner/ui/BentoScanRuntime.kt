@@ -10,16 +10,20 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import com.riccardopinato.omnicleaner.MainActivity
 import com.riccardopinato.omnicleaner.cleaner.StorageInventoryRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -126,8 +130,10 @@ internal object BentoScanRuntime {
         if (processing?.isActive == true) return
         processing = scope.launch {
             while (isActive && pending.isNotEmpty()) {
-                // Do not cancel a manual scan already running in the Clean section.
-                while (isActive && scanner.state.scanning) delay(400)
+                // Suspend until a manually started scan finishes; no polling wakeups.
+                if (scanner.state.scanning) {
+                    snapshotFlow { scanner.state.scanning }.first { !it }
+                }
                 val id = pending.firstOrNull() ?: break
                 pending = pending.drop(1)
                 activeId = id
@@ -139,12 +145,22 @@ internal object BentoScanRuntime {
                     "large" -> scanner.scanBigFiles()
                     "folders" -> scanner.scanFolders()
                 }
-                // runScan starts on Main.immediate; one dispatcher turn still prevents
-                // treating an unstarted operation as a completed operation.
-                delay(180)
-                while (isActive && scanner.state.scanning && activeId == id) {
-                    service.updateNotice(id, pending.size, scanner.state.indexedFilesChecked)
-                    delay(850)
+                // CleanerController.runScan launches on Main.immediate, so the
+                // mutableState is already set when we return from the scan call.
+                // Observe transitions rather than waking once per 850ms.
+                val noticeJob = scope.launch {
+                    snapshotFlow { scanner.state.indexedFilesChecked to scanner.state.scanning }
+                        .distinctUntilChanged()
+                        .collect { (files, _) ->
+                            if (activeId == id) service.updateNotice(id, pending.size, files)
+                        }
+                }
+                try {
+                    if (scanner.state.scanning) {
+                        snapshotFlow { scanner.state.scanning }.first { !it }
+                    }
+                } finally {
+                    noticeJob.cancel()
                 }
                 if (activeId != id) break // explicit user cancellation
                 if (scanner.state.error == null && isComplete(id, scanner.state)) {
@@ -176,6 +192,7 @@ internal object BentoScanRuntime {
 internal class BentoScanService : Service() {
     private val channel = "omni_bento_scans"
     private val notificationId = 8102
+    private var lastNoticeAt = 0L
 
     override fun onCreate() {
         super.onCreate()
@@ -203,6 +220,9 @@ internal class BentoScanService : Service() {
     }
 
     fun updateNotice(id: String, queued: Int, files: Int) {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastNoticeAt < 900L) return
+        lastNoticeAt = now
         val label = when (id) {
             "storage" -> "Memoria"
             "duplicates" -> "Duplicati"
