@@ -1,5 +1,26 @@
 <resources>
     <string name="app_name">Android Omni Cleaner</string>
+    <string name="bento_app_title">Omni Cleaner</string>
+    <string name="bento_storage_used">Espacio utilizado</string>
+    <string name="bento_storage_capacity">de %1$s · %2$d%%</string>
+    <string name="bento_storage_unavailable">Espacio no disponible</string>
+    <string name="bento_loaded_media">Archivos multimedia cargados</string>
+    <string name="bento_duplicates_verified">Duplicados verificados</string>
+    <string name="bento_gallery_title">Revisar galería</string>
+    <string name="bento_gallery_subtitle">Revisa fotos y vídeos antes de decidir</string>
+    <string name="bento_large_title">Archivos grandes</string>
+    <string name="bento_large_verified">Total encontrado en el análisis</string>
+    <string name="bento_scan_required">Analiza para ver el total</string>
+    <string name="bento_quick_tools">Herramientas rápidas</string>
+    <string name="bento_deck_tap_to_open">Toca la pila para abrirla</string>
+    <string name="bento_deck_opened">Elige una herramienta para continuar</string>
+    <string name="bento_explore_title">Explorar herramientas</string>
+    <string name="bento_safety_title">Limpieza bajo tu control</string>
+    <string name="bento_tool_clean">Limpieza</string>
+    <string name="bento_tool_large">Archivos grandes</string>
+    <string name="bento_tool_duplicates">Duplicados</string>
+    <string name="bento_tool_gallery">Galería</string>
+    <string name="bento_tool_trash">Cola de papelera</string>
     <string name="home_subtitle">Análisis seguro del almacenamiento. Nada se elimina sin revisión.</string>
     <string name="storage">Almacenamiento</string>
     <string name="storage_usage">%1$s usados de %2$s</string>
