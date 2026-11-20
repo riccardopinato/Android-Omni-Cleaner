@@ -3,11 +3,13 @@ appId: com.riccardopinato.omnicleaner.debug
 # Read-only Gallery Pro verification, with no Trash action.
 - launchApp:
     clearState: false
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_galleryPro"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_gallery"
-- assertVisible: "Gallery cleaner"
-- tapOn:
-    id: "omni_gallery_open_pro"
+    id: "omni_bento_v2_galleryPro"
 - assertVisible: "Gallery Pro"
 - assertVisible: "Video analysis"
 - tapOn:
