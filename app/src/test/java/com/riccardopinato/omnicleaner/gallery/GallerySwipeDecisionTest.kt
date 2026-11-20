@@ -47,6 +47,17 @@ class GallerySwipeDecisionTest {
     }
 
     @Test
+    fun tinderMetadataOmitsUnavailableDimensionsAndMimeTypes() {
+        assertEquals("4032 × 3024", galleryDisplayResolution(4032, 3024))
+        assertNull(galleryDisplayResolution(0, 3024))
+        assertNull(galleryDisplayResolution(4032, -1))
+        assertEquals("JPEG", galleryDisplayMimeSubtype("image/jpeg"))
+        assertEquals("MP4", galleryDisplayMimeSubtype("video/mp4"))
+        assertEquals("", galleryDisplayMimeSubtype("application"))
+        assertEquals("", galleryDisplayMimeSubtype(""))
+    }
+
+    @Test
     fun shortSwipeDoesNothing() {
         assertNull(gallerySwipeDirection(40f, 100f))
         assertNull(gallerySwipeDirection(-40f, 100f))
