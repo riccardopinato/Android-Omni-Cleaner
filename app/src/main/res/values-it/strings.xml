@@ -245,6 +245,10 @@
     <string name="gallery_queue_photo">Foto</string>
     <string name="gallery_queue_video">Video</string>
     <string name="gallery_queue_android_notice">Android chiederà conferma prima di spostare i file selezionati nel Cestino.</string>
+    <string name="gallery_session_reviewed">Esaminati</string>
+    <string name="gallery_session_selected">Selezionati per il Cestino</string>
+    <string name="gallery_session_recent_kept">Mantenuti · recenti</string>
+    <string name="gallery_session_android_confirmation">I file selezionati non sono stati eliminati. Android richiederà conferma prima di spostarli nel Cestino.</string>
     <string name="gallery_selected_for_trash">%1$d elementi selezionati per il cestino</string>
     <string name="gallery_move_android_trash">Sposta nel Cestino Android</string>
     <string name="gallery_trash_confirm_title">Conferma cestino</string>
