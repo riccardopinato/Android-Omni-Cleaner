@@ -13,17 +13,25 @@ import com.riccardopinato.omnicleaner.R
  * gradients and fake numbers are not part of this design system.
  */
 internal object OmniColorBento {
-    val background = Color(0xFF76001D)
-    val backgroundDark = Color(0xFF420014)
-    val panel = Color(0xFF8A1735)
-    val olive = Color(0xFF70774F)
-    val pink = Color(0xFFF0C5EB)
+    // Palette confirmed against the user's 20 Nov 2026 Linktree Lens references.
+    // Chalk is the main canvas; burgundy is an accent, not a blanket overlay.
+    val background = Color(0xFFF3F3F1)
+    val sageBackground = Color(0xFFE8EFD6)
+    val backgroundDark = Color(0xFF240A15)
+    val panel = Color(0xFF780016)
+    val olive = Color(0xFF70774F) // olive from the user's first screenshot
+    val forest = Color(0xFF254F1A)
+    val pink = Color(0xFFE9C0E9)
     val magenta = Color(0xFFD20CDF)
-    val cobalt = Color(0xFF0B1A94)
-    val lime = Color(0xFFD9ED27)
-    val cream = Color(0xFFF1F1DF)
-    val ink = Color(0xFF151729)
-    val white = Color(0xFFFEFDF8)
+    val cobalt = Color(0xFF061492)
+    val blue = Color(0xFF2665D6)
+    val lime = Color(0xFFD2E823)
+    val ochre = Color(0xFFE8B838)
+    val violet = Color(0xFF502274)
+    val cyan = Color(0xFF13A8C9)
+    val cream = Color(0xFFF3F3F1)
+    val ink = Color(0xFF1E2330)
+    val white = Color(0xFFFFFFFF)
 
     val display = FontFamily(Font(R.font.space_grotesk_variable))
     val body = FontFamily(Font(R.font.manrope_variable))
