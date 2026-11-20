@@ -231,7 +231,7 @@ fun RedesignedOmniCleanerApp(
             if (activeDetail == null) {
             NavigationBar(
                 containerColor = if (destination == OmniDestination.HOME && activeDetail == null)
-                    (if (darkTheme) OmniColorBento.backgroundDark else OmniColorBento.background)
+                    (if (darkTheme) OmniColorBentoV2Palette.legibleInk else OmniColorBentoV2Palette.cream)
                 else if (darkTheme) Color(0xFF111B38) else Color(0xFFF7FAFF),
                 tonalElevation = 0.dp,
             ) {
@@ -293,7 +293,7 @@ fun RedesignedOmniCleanerApp(
             if (destination == OmniDestination.HOME && activeDetail == null) {
                 Box(
                     Modifier.fillMaxSize().background(
-                        if (darkTheme) OmniColorBento.backgroundDark else OmniColorBento.background,
+                        if (darkTheme) OmniColorBentoV2Palette.legibleInk else OmniColorBentoV2Palette.cream,
                     ),
                 )
             } else {
