@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -21,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -109,14 +112,30 @@ internal fun OmniVideoScrubControls(
                 onClick = onPlayPause,
                 modifier = Modifier.testTag("omni_video_toggle_play"),
             ) {
-                Text(
-                    stringResource(
-                        if (playing) R.string.gallery_video_pause
-                        else R.string.gallery_video_resume,
-                    ),
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // Direct vector ports of the archived Gentleface ICO-020/021:
+                    // reflect the REAL player state, without decorative motion.
+                    Icon(
+                        painter = painterResource(
+                            if (playing) R.drawable.ic_gentleface_pause
+                            else R.drawable.ic_gentleface_play,
+                        ),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(
+                        stringResource(
+                            if (playing) R.string.gallery_video_pause
+                            else R.string.gallery_video_resume,
+                        ),
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }
             TextButton(
                 onClick = {
