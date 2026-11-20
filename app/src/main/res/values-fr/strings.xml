@@ -244,6 +244,10 @@
     <string name="gallery_queue_photo">Photo</string>
     <string name="gallery_queue_video">Vidéo</string>
     <string name="gallery_queue_android_notice">Android demandera confirmation avant de déplacer les fichiers sélectionnés dans la corbeille.</string>
+    <string name="gallery_session_reviewed">Examinés</string>
+    <string name="gallery_session_selected">Sélectionnés pour la corbeille</string>
+    <string name="gallery_session_recent_kept">Conservés · récents</string>
+    <string name="gallery_session_android_confirmation">Les fichiers sélectionnés ne sont pas supprimés. Android demandera confirmation avant de les placer dans la corbeille.</string>
     <string name="gallery_selected_for_trash">%1$d éléments sélectionnés pour la corbeille</string>
     <string name="gallery_move_android_trash">Déplacer vers la Corbeille Android</string>
     <string name="gallery_trash_confirm_title">Confirmer la mise à la corbeille</string>
