@@ -377,11 +377,14 @@ private fun SmartCandidateRow(
             } else {
                 null
             }
+            val temporary = if (SmartCategory.TEMPORARY_FILES in item.categories) {
+                stringResource(R.string.smart_category_temporary)
+            } else null
+            val logs = if (SmartCategory.OLD_LOGS in item.categories) {
+                stringResource(R.string.smart_category_logs)
+            } else null
             val categoryText = listOfNotNull(
-                oldDownloads,
-                installers,
-                archives,
-                screenshots,
+                oldDownloads, installers, archives, screenshots, temporary, logs,
             ).joinToString(" · ")
 
             Text(
@@ -419,6 +422,8 @@ private fun categoryLabel(category: SmartCategory): String = when (category) {
     SmartCategory.INSTALLERS -> stringResource(R.string.smart_category_installers)
     SmartCategory.ARCHIVES -> stringResource(R.string.smart_category_archives)
     SmartCategory.SCREENSHOTS -> stringResource(R.string.smart_category_screenshots)
+    SmartCategory.TEMPORARY_FILES -> stringResource(R.string.smart_category_temporary)
+    SmartCategory.OLD_LOGS -> stringResource(R.string.smart_category_logs)
 }
 
 private fun buildCleanupMessage(
