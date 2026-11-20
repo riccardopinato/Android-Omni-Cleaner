@@ -239,6 +239,14 @@
     <string name="gallery_reload">Recarregar galeria</string>
     <string name="gallery_loading_next">A carregar página seguinte…</string>
     <string name="gallery_load_more">Carregar mais itens</string>
+    <string name="gallery_finish_page_title">Página carregada revista</string>
+    <string name="gallery_finish_title">Revisão concluída</string>
+    <string name="gallery_finish_page_description">Revisteste a página carregada. Existem mais elementos disponíveis.</string>
+    <string name="gallery_finish_description">Revisteste todos os elementos carregados. Isto não significa que todos os ficheiros do dispositivo tenham sido analisados.</string>
+    <string name="gallery_finish_reviewed">Revistos</string>
+    <string name="gallery_finish_selected">Selecionados para o lixo</string>
+    <string name="gallery_finish_safety">Os ficheiros selecionados não foram eliminados. O Android pedirá confirmação antes de os mover para o lixo.</string>
+    <string name="gallery_finish_review_queue">Rever seleção</string>
     <string name="gallery_review_complete">Revisão concluída para todos os itens carregados.</string>
     <string name="gallery_trash_batches">Android pedirá confirmação para os primeiros %1$d itens. Os restantes continuarão na fila.</string>
     <string name="gallery_queue_photo">Foto</string>
