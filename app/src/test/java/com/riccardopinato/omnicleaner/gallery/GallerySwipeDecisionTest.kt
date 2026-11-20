@@ -56,6 +56,14 @@ class GallerySwipeDecisionTest {
     }
 
     @Test
+    fun completionPanelNeverAppearsBeforeMediaIsLoaded() {
+        assertNull(galleryReviewFinishState(GalleryUiState()))
+        assertNull(galleryReviewFinishState(GalleryUiState(totalReviewedCount = 8)))
+        assertNull(galleryReviewFinishState(GalleryUiState(loading = true)))
+        assertNull(galleryReviewFinishState(GalleryUiState(loadingNextPage = true)))
+    }
+
+    @Test
     fun shortSwipeDoesNothing() {
         assertNull(gallerySwipeDirection(40f, 100f))
         assertNull(gallerySwipeDirection(-40f, 100f))
