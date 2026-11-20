@@ -59,7 +59,7 @@ jobs:
       - name: Verify launcher icon across Android API levels
         run: python3 .github/scripts/check-launcher-icon.py
 
-      - name: Verify blue action styles and native broom tab
+      - name: Verify branded action styles and unified Bento Home
         run: python3 .github/scripts/check-ux-action-style.py
 
       - name: Verify illustrated initial states and translations
