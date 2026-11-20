@@ -3,6 +3,7 @@ package com.riccardopinato.omnicleaner.ui.redesign
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import com.riccardopinato.omnicleaner.R
 
 /**
@@ -33,6 +34,11 @@ internal object OmniColorBento {
     val ink = Color(0xFF1E2330)
     val white = Color(0xFFFFFFFF)
 
-    val display = FontFamily(Font(R.font.space_grotesk_variable))
+    val display = FontFamily(
+        Font(R.font.space_grotesk_variable, weight = FontWeight.Normal),
+        // A true bold face avoids variable-font default weight appearing thin
+        // on Android emulators/devices even when Text requests Bold.
+        Font(R.font.space_grotesk_bold, weight = FontWeight.Bold),
+    )
     val body = FontFamily(Font(R.font.manrope_variable))
 }
