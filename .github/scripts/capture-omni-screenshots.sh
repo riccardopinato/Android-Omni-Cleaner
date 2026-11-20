@@ -37,9 +37,20 @@ appId: com.riccardopinato.omnicleaner.debug
 # Fresh install, do not revoke app-ops after granting storage access.
 # Default startup route IS Home. Do not tap a tab before Compose is ready.
 - extendedWaitUntil:
-    visible: "Smart cleaning"
+    visible: "Omni Cleaner"
     timeout: 90000
 - takeScreenshot: 01-home
+# New Color Bento visual acceptance: inspect the actual *expanded* tool deck.
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_deck_toggle"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "omni_bento_deck_toggle"
+- assertVisible:
+    id: "omni_bento_tool_0"
+- takeScreenshot: 23-home-deck-expanded
 - tapOn:
     id: "omni_nav_clean"
 - assertVisible: "Deep Cleaning"
@@ -62,7 +73,7 @@ maestro test --test-output-dir "$OUTPUT/maestro" "$OUTPUT/visual-capture.yaml"
 
 # Maestro stores takeScreenshot images in a nested per-flow artifact folder.
 # Copy those actual pixels into a stable, user-friendly artifact layout.
-for name in 01-home 02-clean 03-gallery 04-privacy 05-pro; do
+for name in 01-home 23-home-deck-expanded 02-clean 03-gallery 04-privacy 05-pro; do
   candidate="$(find "$OUTPUT/maestro" -type f -name "$name.png" -print -quit)"
   if [[ -z "$candidate" ]]; then
     echo "::error::Missing Maestro screenshot $name.png"
@@ -275,7 +286,7 @@ appId: com.riccardopinato.omnicleaner.debug
     text: "Close app"
     optional: true
 - extendedWaitUntil:
-    visible: "Smart cleaning"
+    visible: "Omni Cleaner"
     timeout: 90000
 - takeScreenshot: 16-home-dark-large
 - tapOn:
