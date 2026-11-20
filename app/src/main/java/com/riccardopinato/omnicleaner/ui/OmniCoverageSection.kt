@@ -1,6 +1,7 @@
 package com.riccardopinato.omnicleaner.ui
 
 import android.app.Activity
+import android.content.Intent
 import android.provider.DocumentsContract
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
@@ -85,6 +86,24 @@ internal fun OmniCoverageSection() {
         pendingMediaCount = 0
     }
 
+    val openSafTree = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        if (uri != null) {
+            val resolver = context.contentResolver
+            val read = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            val write = Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            val saved = runCatching {
+                resolver.takePersistableUriPermission(uri, read or write)
+            }.recoverCatching {
+                resolver.takePersistableUriPermission(uri, read)
+            }.isSuccess
+            message = if (saved) "Cartella autorizzata. Tocca Controlla tutte le sorgenti."
+                else "Il provider non permette di conservare l'accesso alla cartella."
+            report = null
+        }
+    }
+
     fun scan() {
         if (scanning) return
         scope.launch {
@@ -120,6 +139,10 @@ internal fun OmniCoverageSection() {
                     "Le sorgenti protette vengono dichiarate, non considerate vuote.",
                 style = MaterialTheme.typography.bodySmall,
             )
+            Button(
+                onClick = { openSafTree.launch(null) },
+                modifier = Modifier.fillMaxWidth().testTag("omni_coverage_grant_saf"),
+            ) { Text("Aggiungi una cartella autorizzata (SAF)") }
             OutlinedTextField(
                 value = nameQuery,
                 onValueChange = { nameQuery = it },
