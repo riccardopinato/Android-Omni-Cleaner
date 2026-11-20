@@ -56,6 +56,40 @@ class GallerySwipeDecisionTest {
     }
 
     @Test
+    fun tinderMetadataOmitsUnavailableDimensionsAndMimeTypes() {
+        assertEquals("4032 × 3024", galleryDisplayResolution(4032, 3024))
+        assertNull(galleryDisplayResolution(0, 3024))
+        assertNull(galleryDisplayResolution(4032, -1))
+        assertEquals("JPEG", galleryDisplayMimeSubtype("image/jpeg"))
+        assertEquals("MP4", galleryDisplayMimeSubtype("video/mp4"))
+        assertEquals("", galleryDisplayMimeSubtype("application"))
+        assertEquals("", galleryDisplayMimeSubtype(""))
+    }
+
+    @Test
+    fun sessionSummaryUsesVerifiedPersistedAndRecentCounters() {
+        val empty = gallerySessionSummary(GalleryUiState())
+        assertEquals(0, empty.reviewedTotal)
+        assertEquals(0, empty.selectedForAndroidTrash)
+        assertNull(empty.recentKept)
+
+        // No real media URI required in a local JVM test. The review counter
+        // is independently persisted; it cannot be interpreted as kept media.
+        val summary = gallerySessionSummary(GalleryUiState(totalReviewedCount = 250))
+        assertEquals(250, summary.reviewedTotal)
+        assertEquals(0, summary.selectedForAndroidTrash)
+        assertNull(summary.recentKept)
+    }
+
+    @Test
+    fun completionPanelNeverAppearsBeforeMediaIsLoaded() {
+        assertNull(galleryReviewFinishState(GalleryUiState()))
+        assertNull(galleryReviewFinishState(GalleryUiState(totalReviewedCount = 8)))
+        assertNull(galleryReviewFinishState(GalleryUiState(loading = true)))
+        assertNull(galleryReviewFinishState(GalleryUiState(loadingNextPage = true)))
+    }
+
+    @Test
     fun shortSwipeDoesNothing() {
         assertNull(gallerySwipeDirection(40f, 100f))
         assertNull(gallerySwipeDirection(-40f, 100f))
