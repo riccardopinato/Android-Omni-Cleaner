@@ -248,6 +248,13 @@
     <string name="gallery_move_android_trash">Déplacer vers la Corbeille Android</string>
     <string name="gallery_trash_confirm_title">Confirmer la mise à la corbeille</string>
     <string name="gallery_trash_confirm_body">Android affichera une seconde confirmation système. Les éléments seront déplacés vers la corbeille multimédia, pas supprimés directement.</string>
+    <string name="gallery_details_photo">Photo</string>
+    <string name="gallery_details_video">Vidéo</string>
+    <string name="gallery_details_size">Taille</string>
+    <string name="gallery_details_date">Date</string>
+    <string name="gallery_details_album">Album</string>
+    <string name="gallery_details_resolution">Résolution</string>
+    <string name="gallery_details_duration">Durée</string>
     <string name="gallery_preview_unavailable">Aperçu indisponible</string>
     <string name="gallery_swipe_hint">← Corbeille · Conserver →</string>
     <string name="gallery_selection_explainer">Corbeille marque seulement cet élément. Android demandera confirmation avant le déplacement.</string>
