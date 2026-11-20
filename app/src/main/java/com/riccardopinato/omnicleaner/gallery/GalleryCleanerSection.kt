@@ -273,7 +273,7 @@ fun GalleryCleanerSection(
                 OmniGalleryReviewFinish(
                     finish = finished,
                     onReviewQueue = { showQueueReview = true },
-                    onLoadMore = controller::loadNextPage,
+                    onLoadMore = { controller.loadNextPage() },
                 )
             }
 
