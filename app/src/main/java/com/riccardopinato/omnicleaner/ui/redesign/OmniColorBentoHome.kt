@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -442,7 +443,7 @@ private fun BentoToolDeck(
                     .background(colors.lime)
                     .clickable(role = Role.Button) { expanded = !expanded }
                     .testTag("omni_bento_deck_toggle")
-                    .wrapContentCentered(),
+                    .wrapContentSize(Alignment.Center),
             )
         }
         BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -450,20 +451,20 @@ private fun BentoToolDeck(
             val step = (maxWidth - cardWidth - 12.dp) / 4f
             val rowHeight = 115.dp
             val totalHeight by animateDpAsState(
-                targetValue = if (expanded) 3 * rowHeight + 22.dp else 166.dp,
+                targetValue = if (expanded) rowHeight * 3 + 22.dp else 166.dp,
                 animationSpec = tween(420),
                 label = "deck-height",
             )
             Box(Modifier.fillMaxWidth().height(totalHeight)) {
                 tools.forEachIndexed { index, tool ->
                     val x by animateDpAsState(
-                        targetValue = if (expanded) (index % 2) * (cardWidth + 12.dp)
-                        else index * step,
+                        targetValue = if (expanded) (cardWidth + 12.dp) * (index % 2)
+                        else step * index,
                         animationSpec = tween(420),
                         label = "deck-x-$index",
                     )
                     val y by animateDpAsState(
-                        targetValue = if (expanded) (index / 2) * (rowHeight + 10.dp)
+                        targetValue = if (expanded) (rowHeight + 10.dp) * (index / 2)
                         else if (index % 2 == 0) 12.dp else 23.dp,
                         animationSpec = tween(420),
                         label = "deck-y-$index",
@@ -513,8 +514,6 @@ private fun BentoToolDeck(
         }
     }
 }
-
-private fun Modifier.wrapContentCentered() = this.then(Modifier)
 
 @Composable
 private fun BentoShortcut(
