@@ -490,7 +490,7 @@ internal fun CleanDetailScreen(
                 }
                 CleanerToolRoute.INTELLIGENCE -> item {
                     StorageIntelligenceSection(
-                        onOpenAdvanced = { onOpenTool(CleanerToolRoute.ADVANCED) },
+                        onOpenAdvanced = { onOpenTool(CleanerToolRoute.CATEGORIES) },
                         onOpenLargeFiles = { onOpenTool(CleanerToolRoute.LARGE) },
                     )
                 }
