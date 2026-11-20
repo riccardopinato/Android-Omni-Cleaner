@@ -407,6 +407,10 @@
     <string name="nav_privacy_quick">One-photo privacy</string>
     <string name="nav_privacy_batch">Batch EXIF tools</string>
     <string name="nav_pro_manage">Manage Pro</string>
+    <string name="gallery_carousel_title">Recent previews</string>
+    <string name="gallery_carousel_previous">Previous preview</string>
+    <string name="gallery_carousel_next">Next preview</string>
+    <string name="gallery_carousel_open">Open full screen</string>
     <string name="gallery_open_review">Open full-size photo or video</string>
     <string name="gallery_video_seek">Seek through video</string>
     <string name="gallery_video_back_10">Back 10 seconds</string>
