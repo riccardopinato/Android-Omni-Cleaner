@@ -22,7 +22,7 @@ internal object OmniColorBento {
     val olive = Color(0xFF70774F) // olive from the user's first screenshot
     val forest = Color(0xFF254F1A)
     val pink = Color(0xFFE9C0E9)
-    val magenta = Color(0xFFD20CDF)
+    val magenta = Color(0xFFC20CD7) // 4.85:1 contrast with white (normal text)
     val cobalt = Color(0xFF061492)
     val blue = Color(0xFF2665D6)
     val lime = Color(0xFFD2E823)
