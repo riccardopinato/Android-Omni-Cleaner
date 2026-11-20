@@ -75,7 +75,7 @@ jobs:
           python3 -m json.tool .maestro/applab-persistence.json >/dev/null
           python3 -m json.tool .maestro/applab-storage.json >/dev/null
           grep -Fq 'restart-recovery.yaml' .github/scripts/applab-runtime-smoke.sh
-          grep -Fq 'omni_nav_clean' .maestro/restart-recovery.yaml
+          grep -Fq 'omni_bento_v2_review' .maestro/restart-recovery.yaml
 
       - name: Verify read-only Storage Intelligence contract
         run: python3 .github/scripts/check-storage-intelligence.py
