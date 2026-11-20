@@ -82,6 +82,9 @@ class SmartCategoryScanner {
             val lowerSegments = segments.map { it.lowercase(Locale.ROOT) }
             val lowerName = indexed.file.name.lowercase(Locale.ROOT)
             val extension = indexed.file.extension.lowercase(Locale.ROOT)
+            // Aged downloads are review candidates, NOT verified junk.
+            // Never propose obvious backups, credentials or app vault files.
+            if (PROTECTED_FILENAME_FRAGMENTS.any { lowerName.contains(it) }) return@mapNotNull null
             val categories = linkedSetOf<SmartCategory>()
 
             val isDownload = topLevel in DOWNLOAD_DIRECTORIES
