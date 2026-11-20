@@ -164,7 +164,7 @@ internal fun OmniBentoV2Home(
                         editing = !editing
                         selectedId = null
                     }
-                    if (!editing) BentoV2Action("⚙", colors.panel, colors.white, onOpenSettings)
+                    if (!editing) BentoV2Action("⚙", colors.panel, colors.white, onClick = onOpenSettings)
                 }
                 if (editing) {
                     Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -310,9 +310,9 @@ internal fun OmniBentoV2Home(
                 Text(accessStatus, color = if (dark) colors.white else colors.forest, fontSize = 12.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (state.storageCapability.canRequestDeepAccess) {
-                        BentoV2Action(stringResource(R.string.grant_deep_access), colors.lime, colors.ink, onEnableDeepClean)
+                        BentoV2Action(stringResource(R.string.grant_deep_access), colors.lime, colors.ink, onClick = onEnableDeepClean)
                     }
-                    BentoV2Action(stringResource(R.string.refresh), colors.white, colors.ink, onRefresh)
+                    BentoV2Action(stringResource(R.string.refresh), colors.white, colors.ink, onClick = onRefresh)
                 }
             }
         }
