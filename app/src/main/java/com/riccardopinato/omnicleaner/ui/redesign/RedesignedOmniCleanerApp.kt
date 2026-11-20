@@ -60,6 +60,8 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -233,9 +235,17 @@ fun RedesignedOmniCleanerApp(
                 else if (darkTheme) Color(0xFF111B38) else Color(0xFFF7FAFF),
                 tonalElevation = 0.dp,
             ) {
+                // 200% Android font scale cannot fit five textual labels within
+                // 360dp. Use full-size icon-only destinations with explicit
+                // localized TalkBack names instead of clipped syllables.
+                val compactNav = LocalDensity.current.fontScale >= 1.6f
                 OmniDestination.entries.forEach { item ->
+                    val itemLabel = stringResource(item.labelRes)
+                    val textLabel: @Composable () -> Unit = { Text(itemLabel) }
                     NavigationBarItem(
-                        modifier = Modifier.testTag("omni_nav_${item.name.lowercase(Locale.ROOT)}"),
+                        modifier = Modifier
+                            .testTag("omni_nav_${item.name.lowercase(Locale.ROOT)}")
+                            .semantics { contentDescription = itemLabel },
                         selected = destination == item,
                         onClick = {
                             detailName = null
@@ -256,7 +266,7 @@ fun RedesignedOmniCleanerApp(
                                 },
                             )
                         },
-                        label = { Text(stringResource(item.labelRes)) },
+                        label = if (compactNav) null else textLabel,
                         colors = NavigationBarItemDefaults.colors(
                             indicatorColor = if (destination == OmniDestination.HOME && activeDetail == null)
                                 OmniColorBento.lime
