@@ -644,7 +644,8 @@ private fun OmniDetailFrame(
     Column(modifier = Modifier.fillMaxSize()) {
         Button(
             onClick = onBack,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                .testTag("omni_home_back"),
         ) {
             Text("‹  " + stringResource(R.string.nav_back))
         }
