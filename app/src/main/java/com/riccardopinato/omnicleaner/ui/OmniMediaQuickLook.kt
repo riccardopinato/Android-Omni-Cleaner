@@ -8,6 +8,9 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.widget.VideoView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -199,6 +202,7 @@ internal fun loadOmniQuickLookBitmap(context: Context, uri: Uri): Bitmap? = try 
 @Composable
 private fun OmniQuickLookVideo(target: OmniQuickLookTarget) {
     val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     var playing by remember(target.uri) { mutableStateOf(false) }
     var error by remember(target.uri) { mutableStateOf(false) }
     val video = remember(target.uri) {
@@ -208,8 +212,18 @@ private fun OmniQuickLookVideo(target: OmniQuickLookTarget) {
             runCatching { setVideoURI(target.uri) }.onFailure { error = true }
         }
     }
-    DisposableEffect(video) {
-        onDispose { video.stopPlayback() }
+    DisposableEffect(video, lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                video.pause()
+                playing = false
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.removeObserver(observer)
+            video.stopPlayback()
+        }
     }
     Column(
         Modifier.fillMaxWidth(),
@@ -244,11 +258,19 @@ private fun OmniQuickLookVideo(target: OmniQuickLookTarget) {
 @Composable
 private fun OmniQuickLookAudio(target: OmniQuickLookTarget) {
     val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     var ready by remember(target.uri) { mutableStateOf(false) }
     var playing by remember(target.uri) { mutableStateOf(false) }
     var failed by remember(target.uri) { mutableStateOf(false) }
     val player = remember(target.uri) { MediaPlayer() }
-    DisposableEffect(player, target.uri) {
+    DisposableEffect(player, target.uri, lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                if (player.isPlaying) player.pause()
+                playing = false
+            }
+        }
+        lifecycle.addObserver(observer)
         player.setOnPreparedListener { ready = true }
         player.setOnCompletionListener { playing = false }
         player.setOnErrorListener { _, _, _ -> failed = true; playing = false; true }
@@ -256,7 +278,10 @@ private fun OmniQuickLookAudio(target: OmniQuickLookTarget) {
             player.setDataSource(context, target.uri)
             player.prepareAsync()
         }.onFailure { failed = true }
-        onDispose { player.release() }
+        onDispose {
+            lifecycle.removeObserver(observer)
+            player.release()
+        }
     }
     Column(
         modifier = Modifier.fillMaxWidth().padding(24.dp),
