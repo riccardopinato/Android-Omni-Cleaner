@@ -403,7 +403,7 @@ private fun BentoToolDeck(
     )
     val tools = listOf(
         BentoTool(R.string.bento_tool_clean, OmniNavigationSymbol.CLEAN, colors.blue, colors.white),
-        BentoTool(R.string.bento_tool_large, OmniNavigationSymbol.CLEAN, Color(0xFFFF432D), colors.white),
+        BentoTool(R.string.bento_tool_large, OmniNavigationSymbol.CLEAN, Color(0xFFC02D25), colors.white),
         BentoTool(R.string.bento_tool_duplicates, OmniNavigationSymbol.GALLERY, colors.olive, colors.white),
         BentoTool(R.string.bento_tool_gallery, OmniNavigationSymbol.GALLERY, colors.magenta, colors.white),
         BentoTool(R.string.bento_tool_trash, OmniNavigationSymbol.CLEAN, colors.pink, colors.ink),
