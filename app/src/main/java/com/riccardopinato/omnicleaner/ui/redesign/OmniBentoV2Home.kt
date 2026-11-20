@@ -8,6 +8,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -40,7 +41,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -189,7 +193,15 @@ internal fun OmniBentoV2Home(
             BoxWithConstraints(Modifier.fillMaxWidth()) {
                 val gap = 8.dp
                 val cell = (maxWidth - gap * 2) / 3
-                val height = cell * rowCount + gap * (rowCount - 1).coerceAtLeast(0)
+                // Keep a ghost layout only while the user drags the resize handle.
+                // Preview is never written to preferences before release.
+                var resizePreview by remember { mutableStateOf<Triple<String, Int, Int>?>(null) }
+                val previewPosition = displayed.firstOrNull { it.tile.id == resizePreview?.first }
+                val previewRowEnd = if (previewPosition != null && resizePreview != null) {
+                    previewPosition.row + resizePreview!!.third
+                } else 0
+                val renderedRows = maxOf(rowCount, previewRowEnd)
+                val height = cell * renderedRows + gap * (renderedRows - 1).coerceAtLeast(0)
                 val density = LocalDensity.current
                 val cellPx = with(density) { (cell + gap).toPx() }
                 Box(Modifier.fillMaxWidth().height(height)) {
@@ -204,7 +216,7 @@ internal fun OmniBentoV2Home(
                             val transition = rememberInfiniteTransition(label = "wiggle-${tile.id}")
                             val a by transition.animateFloat(
                                 initialValue = -0.85f, targetValue = 0.85f,
-                                animationSpec = infiniteRepeatable(tween(320 + (index % 3) * 45), RepeatMode.Reverse),
+                                animationSpec = infiniteRepeatable(tween(640 + (index % 3) * 90), RepeatMode.Reverse),
                                 label = "wiggle-angle-${tile.id}",
                             )
                             if (index % 2 == 0) a else -a
@@ -274,22 +286,111 @@ internal fun OmniBentoV2Home(
                                         .background(colors.lime)
                                         .pointerInput(tile.id, cellPx) {
                                             detectDragGestures(
+                                                onDragStart = {
+                                                    resizeDelta = Offset.Zero
+                                                    resizePreview = Triple(tile.id, tile.columns, tile.rows)
+                                                },
                                                 onDrag = { change, amount ->
                                                     change.consume()
                                                     resizeDelta += amount
+                                                    val (previewCols, previewRows) = bentoV2ResizeFromDrag(
+                                                        tile, resizeDelta.x, resizeDelta.y, cellPx,
+                                                    )
+                                                    resizePreview = Triple(tile.id, previewCols, previewRows)
                                                 },
                                                 onDragEnd = {
-                                                    val cw = (tile.columns + (resizeDelta.x / cellPx).roundToInt()).coerceIn(1, 3)
-                                                    val rh = (tile.rows + (resizeDelta.y / cellPx).roundToInt()).coerceIn(1, 2)
+                                                    val (columns, rows) = bentoV2ResizeFromDrag(
+                                                        tile, resizeDelta.x, resizeDelta.y, cellPx,
+                                                    )
                                                     resizeDelta = Offset.Zero
-                                                    resize(tile.id, cw, rh)
+                                                    resizePreview = null
+                                                    resize(tile.id, columns, rows)
                                                 },
-                                                onDragCancel = { resizeDelta = Offset.Zero },
+                                                onDragCancel = {
+                                                    resizeDelta = Offset.Zero
+                                                    resizePreview = null
+                                                },
                                             )
                                         },
                                     contentAlignment = Alignment.Center,
                                 ) { Text("⤡", fontSize = 22.sp, color = colors.forest) }
                             }
+                        }
+                    }
+                    // Overlay is drawn on the mosaic (not inside the clipped tile),
+                    // so the dashed guide remains visible when enlarging a 1×1 tile.
+                    val preview = resizePreview
+                    val origin = previewPosition
+                    if (preview != null && origin != null) {
+                        val previewCols = preview.second
+                        val previewRows = preview.third
+                        val visualColumn = origin.column.coerceAtMost(3 - previewCols)
+                        val guideWidth = cell * previewCols + gap * (previewCols - 1)
+                        val guideHeight = cell * previewRows + gap * (previewRows - 1)
+                        val borderColor = colors.lime
+                        Box(
+                            Modifier
+                                .offset(
+                                    x = (cell + gap) * visualColumn,
+                                    y = (cell + gap) * origin.row,
+                                )
+                                .width(guideWidth).height(guideHeight)
+                                .zIndex(30f)
+                                .testTag("omni_bento_v2_resize_guide"),
+                        ) {
+                            Canvas(Modifier.fillMaxSize()) {
+                                val dash = PathEffect.dashPathEffect(
+                                    floatArrayOf(9.dp.toPx(), 6.dp.toPx()),
+                                )
+                                val guideStroke = 2.5.dp.toPx()
+                                val rounding = CornerRadius(19.dp.toPx())
+                                drawRoundRect(
+                                    color = Color.Black.copy(alpha = 0.2f),
+                                    cornerRadius = rounding,
+                                )
+                                drawRoundRect(
+                                    color = Color.Black.copy(alpha = .85f),
+                                    cornerRadius = rounding,
+                                    style = Stroke(width = 5.dp.toPx(), pathEffect = dash),
+                                )
+                                drawRoundRect(
+                                    color = borderColor,
+                                    cornerRadius = rounding,
+                                    style = Stroke(width = guideStroke, pathEffect = dash),
+                                )
+                                val stride = cellPx
+                                val lineOffset = gap.toPx() / 2f
+                                for (c in 1 until previewCols) {
+                                    val xx = stride * c - lineOffset
+                                    drawLine(
+                                        color = borderColor, start = Offset(xx, 0f),
+                                        end = Offset(xx, size.height),
+                                        strokeWidth = guideStroke, pathEffect = dash,
+                                    )
+                                }
+                                for (r in 1 until previewRows) {
+                                    val yy = stride * r - lineOffset
+                                    drawLine(
+                                        color = borderColor, start = Offset(0f, yy),
+                                        end = Offset(size.width, yy),
+                                        strokeWidth = guideStroke, pathEffect = dash,
+                                    )
+                                }
+                            }
+                            Text(
+                                "${previewCols}×${previewRows}",
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(8.dp)
+                                    .clip(RoundedCornerShape(9.dp))
+                                    .background(colors.ink)
+                                    .testTag("omni_bento_v2_resize_size")
+                                    .padding(horizontal = 11.dp, vertical = 6.dp),
+                                color = colors.white,
+                                fontFamily = colors.display,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                            )
                         }
                     }
                 }
