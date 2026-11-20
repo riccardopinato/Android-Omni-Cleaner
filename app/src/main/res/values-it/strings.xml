@@ -586,4 +586,6 @@
     <string name="bento_v2_open">Apri</string>
     <string name="bento_v2_premium_active">Pro attivo</string>
     <string name="bento_v2_stale">Risultato precedente · Aggiornamento consigliato</string>
+    <string name="smart_category_temporary">File temporanei · 14g+</string>
+    <string name="smart_category_logs">Log vecchi · 30g+</string>
 </resources>
