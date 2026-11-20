@@ -405,6 +405,11 @@
     <string name="nav_privacy_batch">Outils EXIF par lots</string>
     <string name="nav_pro_manage">Gérer Pro</string>
     <string name="gallery_open_review">Ouvrir la photo ou vidéo sans recadrage</string>
+    <string name="gallery_video_seek">Se déplacer dans la vidéo</string>
+    <string name="gallery_video_back_10">Reculer de 10 secondes</string>
+    <string name="gallery_video_forward_10">Avancer de 10 secondes</string>
+    <string name="gallery_video_pause">Pause</string>
+    <string name="gallery_video_resume">Lecture</string>
     <string name="gallery_video_play">Lire la vidéo</string>
     <string name="gallery_video_unavailable">Impossible de lire cette vidéo sur cet appareil</string>
     <!-- Read-only Storage Intelligence: shared inventory, never auto-delete. -->

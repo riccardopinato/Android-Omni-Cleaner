@@ -405,6 +405,11 @@
     <string name="nav_privacy_batch">Ferramentas EXIF em lote</string>
     <string name="nav_pro_manage">Gerir Pro</string>
     <string name="gallery_open_review">Abrir foto ou vídeo sem cortes</string>
+    <string name="gallery_video_seek">Avançar ou recuar no vídeo</string>
+    <string name="gallery_video_back_10">Recuar 10 segundos</string>
+    <string name="gallery_video_forward_10">Avançar 10 segundos</string>
+    <string name="gallery_video_pause">Pausa</string>
+    <string name="gallery_video_resume">Reproduzir</string>
     <string name="gallery_video_play">Reproduzir vídeo</string>
     <string name="gallery_video_unavailable">Não é possível reproduzir este vídeo neste dispositivo</string>
     <!-- Read-only Storage Intelligence: shared inventory, never auto-delete. -->
