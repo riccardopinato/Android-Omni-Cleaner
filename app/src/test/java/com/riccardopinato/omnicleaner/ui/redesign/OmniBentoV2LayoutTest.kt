@@ -15,6 +15,16 @@ class OmniBentoV2LayoutTest {
         assertNotNull(bentoV2Pack(entries))
     }
 
+    @Test fun resizePreviewSnapsToCellSizesAndNeverExceedsGrid() {
+        val tile = BentoV2Tile("example", 1, 1)
+        assertEquals(1 to 1, bentoV2ResizeFromDrag(tile, 0f, 0f, 100f))
+        assertEquals(2 to 1, bentoV2ResizeFromDrag(tile, 65f, 5f, 100f))
+        assertEquals(3 to 2, bentoV2ResizeFromDrag(tile, 200f, 100f, 100f))
+        assertEquals(1 to 1, bentoV2ResizeFromDrag(tile, -500f, -500f, 100f))
+        assertEquals(3 to 2, bentoV2ResizeFromDrag(tile, 1000f, 1000f, 100f))
+        assertEquals(1 to 1, bentoV2ResizeFromDrag(tile, 1000f, 1000f, 0f))
+    }
+
     @Test fun everyApprovedSizeIsSupported() {
         assertEquals(
             setOf(1 to 1, 2 to 1, 1 to 2, 2 to 2, 3 to 1, 3 to 2),
