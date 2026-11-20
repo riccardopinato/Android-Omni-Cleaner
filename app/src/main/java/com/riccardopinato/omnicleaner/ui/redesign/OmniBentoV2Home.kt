@@ -10,6 +10,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -86,6 +87,7 @@ internal fun OmniBentoV2Home(
 ) {
     val context = LocalContext.current
     val colors = OmniColorBento
+    val palette = OmniColorBentoV2Palette
     val preferences = remember(context) { BentoV2Preferences(context) }
     var tiles by remember(context) { mutableStateOf(preferences.load()) }
     var editing by remember { mutableStateOf(false) }
@@ -102,8 +104,8 @@ internal fun OmniBentoV2Home(
     val definitions = remember { BENTO_V2_LIBRARY.associateBy { it.id } }
     val displayed = remember(tiles) { bentoV2Pack(tiles) ?: emptyList() }
     val rowCount = displayed.maxOfOrNull { it.row + it.tile.rows } ?: 0
-    val bg = if (dark) colors.backgroundDark else colors.background
-    val fg = if (dark) colors.white else colors.ink
+    val bg = if (dark) palette.legibleInk else palette.cream
+    val fg = if (dark) colors.white else palette.legibleInk
     val invalidLayoutText = stringResource(R.string.bento_v2_invalid_layout)
     val reducedMotion = remember(context) {
         runCatching { Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }
@@ -164,27 +166,27 @@ internal fun OmniBentoV2Home(
                         Text("Omni Cleaner", color = fg, fontFamily = colors.display, fontSize = 25.sp, fontWeight = FontWeight.Bold)
                         Text(if (editing) stringResource(R.string.bento_v2_subtitle) else "Color Bento 2.0", color = fg.copy(alpha = .7f), fontFamily = colors.body, fontSize = 12.sp)
                     }
-                    BentoV2Action(if (editing) stringResource(R.string.bento_v2_done) else stringResource(R.string.bento_v2_edit), colors.lime, colors.forest, tag = "omni_bento_v2_editor_toggle") {
+                    BentoV2Action(if (editing) stringResource(R.string.bento_v2_done) else stringResource(R.string.bento_v2_edit), palette.yellow, palette.legibleInk, tag = "omni_bento_v2_editor_toggle") {
                         editing = !editing
                         selectedId = null
                     }
-                    if (!editing) BentoV2Action("⚙", colors.panel, colors.white, onClick = onOpenSettings)
+                    if (!editing) BentoV2Action("⚙", palette.blue, palette.legibleInk, onClick = onOpenSettings)
                 }
                 if (editing) {
                     Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        BentoV2Action(stringResource(R.string.bento_v2_add), colors.lime, colors.forest) { showLibrary = true }
-                        BentoV2Action(stringResource(R.string.bento_v2_reset), colors.pink, colors.ink) { showRestore = true }
+                        BentoV2Action(stringResource(R.string.bento_v2_add), palette.yellow, palette.legibleInk) { showLibrary = true }
+                        BentoV2Action(stringResource(R.string.bento_v2_reset), palette.blush, palette.legibleInk) { showRestore = true }
                     }
                 }
                 if (!editing && (BentoScanRuntime.activeId != null || BentoScanRuntime.pending.isNotEmpty())) {
                     Row(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
-                            .background(colors.panel).combinedClickable(onClick = { showQueue = true })
+                            .background(palette.blue).combinedClickable(onClick = { showQueue = true })
                             .padding(13.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(stringResource(R.string.bento_v2_scanning), color = colors.white, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        Text(stringResource(R.string.bento_v2_queue_count, BentoScanRuntime.pending.size) + "  ›", color = colors.lime, fontSize = 12.sp)
+                        Text(stringResource(R.string.bento_v2_scanning), color = palette.legibleInk, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.bento_v2_queue_count, BentoScanRuntime.pending.size) + "  ›", color = palette.legibleInk, fontSize = 12.sp)
                     }
                 }
             }
@@ -283,7 +285,7 @@ internal fun OmniBentoV2Home(
                                     Modifier.align(Alignment.BottomEnd)
                                         .size(37.dp)
                                         .clip(RoundedCornerShape(topStart = 15.dp, bottomEnd = 18.dp))
-                                        .background(colors.lime)
+                                        .background(palette.yellow)
                                         .pointerInput(tile.id, cellPx) {
                                             detectDragGestures(
                                                 onDragStart = {
@@ -313,7 +315,7 @@ internal fun OmniBentoV2Home(
                                             )
                                         },
                                     contentAlignment = Alignment.Center,
-                                ) { Text("⤡", fontSize = 22.sp, color = colors.forest) }
+                                ) { Text("⤡", fontSize = 22.sp, color = palette.legibleInk) }
                             }
                         }
                     }
@@ -327,7 +329,7 @@ internal fun OmniBentoV2Home(
                         val visualColumn = origin.column.coerceAtMost(3 - previewCols)
                         val guideWidth = cell * previewCols + gap * (previewCols - 1)
                         val guideHeight = cell * previewRows + gap * (previewRows - 1)
-                        val borderColor = colors.lime
+                        val borderColor = palette.raspberry
                         Box(
                             Modifier
                                 .offset(
@@ -383,10 +385,10 @@ internal fun OmniBentoV2Home(
                                     .align(Alignment.TopStart)
                                     .padding(8.dp)
                                     .clip(RoundedCornerShape(9.dp))
-                                    .background(colors.ink)
+                                    .background(palette.legibleInk)
                                     .testTag("omni_bento_v2_resize_size")
                                     .padding(horizontal = 11.dp, vertical = 6.dp),
-                                color = colors.white,
+                                color = palette.cream,
                                 fontFamily = colors.display,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 15.sp,
@@ -399,21 +401,21 @@ internal fun OmniBentoV2Home(
         item("bento_access") {
             Column(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
-                    .background(if (dark) colors.panel else colors.sageBackground).padding(14.dp),
+                    .background(if (dark) palette.blue else palette.sage).padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text(stringResource(R.string.bento_v2_access), color = if (dark) colors.white else colors.forest, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.bento_v2_access), color = palette.legibleInk, fontWeight = FontWeight.Bold)
                 val accessStatus = when {
                     state.hasBroadAccess -> stringResource(R.string.access_ready)
                     state.storageCapability.standardCleaningAvailable -> stringResource(R.string.redesign_standard_ready)
                     else -> stringResource(R.string.standard_cleaning_unavailable)
                 }
-                Text(accessStatus, color = if (dark) colors.white else colors.forest, fontSize = 12.sp)
+                Text(accessStatus, color = palette.legibleInk, fontSize = 12.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (state.storageCapability.canRequestDeepAccess) {
-                        BentoV2Action(stringResource(R.string.grant_deep_access), colors.lime, colors.ink, onClick = onEnableDeepClean)
+                        BentoV2Action(stringResource(R.string.grant_deep_access), palette.yellow, palette.legibleInk, onClick = onEnableDeepClean)
                     }
-                    BentoV2Action(stringResource(R.string.refresh), colors.white, colors.ink, onClick = onRefresh)
+                    BentoV2Action(stringResource(R.string.refresh), palette.cream, palette.legibleInk, onClick = onRefresh)
                 }
             }
         }
@@ -434,8 +436,8 @@ internal fun OmniBentoV2Home(
                                 row.forEach { (w, h) ->
                                     BentoV2Action(
                                         "${w}×${h}",
-                                        if (selectedTile.columns == w && selectedTile.rows == h) colors.lime else colors.pink,
-                                        colors.ink,
+                                        if (selectedTile.columns == w && selectedTile.rows == h) palette.yellow else palette.blush,
+                                        palette.legibleInk,
                                     ) { resize(selectedTile.id, w, h); selectedId = null }
                                 }
                             }
@@ -530,10 +532,10 @@ private fun BentoV2Action(label: String, bg: Color, fg: Color, tag: String? = nu
 @OptIn(ExperimentalFoundationApi::class)
 private fun BentoV2MiniAction(text: String, onClick: () -> Unit) {
     Box(
-        Modifier.size(30.dp).clip(CircleShape).background(Color(0xEAF3F3F1))
+        Modifier.size(30.dp).clip(CircleShape).background(OmniColorBentoV2Palette.cream)
             .combinedClickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { Text(text, color = OmniColorBento.ink, fontWeight = FontWeight.Bold, fontSize = 18.sp) }
+    ) { Text(text, color = OmniColorBentoV2Palette.legibleInk, fontWeight = FontWeight.Bold, fontSize = 18.sp) }
 }
 
 @Composable
@@ -550,19 +552,9 @@ private fun BentoV2Card(
 ) {
     val spec = BENTO_V2_LIBRARY.first { it.id == tile.id }
     val colors = OmniColorBento
-    val bg = when (tile.id) {
-        "storage", "folders" -> colors.olive
-        "duplicates", "filters" -> colors.magenta
-        "large", "categories" -> colors.lime
-        "gallery", "galleryPro", "galleryReview" -> colors.cobalt
-        "privacy", "privacyQuick", "privacyBatch" -> colors.sageBackground
-        "trash", "advanced" -> colors.panel
-        "review", "intelligence" -> colors.blue
-        "pro", "settings" -> colors.pink
-        else -> colors.panel
-    }
-    val fg = if (bg == colors.lime || bg == colors.sageBackground || bg == colors.pink)
-        colors.ink else colors.white
+    val palette = OmniColorBentoV2Palette
+    val bg = palette.tileColor(tile.id)
+    val fg = palette.legibleInk
     val scanDone = when (tile.id) {
         "storage" -> state.overview != null
         "duplicates" -> state.duplicatesScanned
@@ -590,7 +582,13 @@ private fun BentoV2Card(
         else -> stringResource(R.string.bento_v2_open)
     }
     Column(
-        modifier = modifier.background(bg).padding(if (compact) 9.dp else 14.dp),
+        modifier = modifier.background(bg)
+            .then(
+                if (tile.id == "intelligence" || tile.id == "settings") {
+                    Modifier.border(1.dp, palette.sage, RoundedCornerShape(22.dp))
+                } else Modifier
+            )
+            .padding(if (compact) 9.dp else 14.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.SpaceBetween) {
@@ -601,7 +599,7 @@ private fun BentoV2Card(
                 "settings" -> OmniNavigationSymbol.HOME
                 else -> OmniNavigationSymbol.CLEAN
             }
-            OmniNavigationIcon(symbol = icon, tint = if (bg == colors.lime) colors.forest else fg,
+            OmniNavigationIcon(symbol = icon, tint = fg,
                 modifier = Modifier.size(if (compact) 24.dp else 32.dp))
             if (!editing && scanDone && spec.scan && !showScan && !queued) {
                 Text("↗", color = fg, fontSize = 20.sp, fontWeight = FontWeight.Bold)
