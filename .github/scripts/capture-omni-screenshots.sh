@@ -40,17 +40,11 @@ appId: com.riccardopinato.omnicleaner.debug
     visible: "Omni Cleaner"
     timeout: 90000
 - takeScreenshot: 01-home
-# New Color Bento visual acceptance: inspect the actual *expanded* tool deck.
-- scrollUntilVisible:
-    element:
-      id: "omni_bento_deck_toggle"
-    direction: DOWN
-    timeout: 30000
-- tapOn:
-    id: "omni_bento_deck_toggle"
-- assertVisible:
-    id: "omni_bento_tool_0"
+# Color Bento 2.0: capture real editor mode and return without changing layout.
+- tapOn: "Modifica"
+- assertVisible: "Fine"
 - takeScreenshot: 23-home-deck-expanded
+- tapOn: "Fine"
 - tapOn:
     id: "omni_nav_clean"
 - assertVisible: "Deep Cleaning"
