@@ -242,6 +242,7 @@ fun RedesignedOmniCleanerApp(
                         icon = {
                             OmniNavigationIcon(
                                 symbol = item.icon,
+                                animateOnEnter = destination == item,
                                 tint = if (destination == item) {
                                     MaterialTheme.colorScheme.primary
                                 } else {

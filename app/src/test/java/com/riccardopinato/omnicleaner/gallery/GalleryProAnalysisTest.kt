@@ -26,6 +26,128 @@ class GalleryProAnalysisTest {
     }
 
     @Test
+    fun clearingSearchRestoresMatchesWithoutChangingAppliedSizeAndPreset() {
+        val mib = 1024L * 1024L
+        val videos = listOf(
+            GalleryVideoCandidate(1, "trip.mp4", 150L * mib, 400_000, 1920, 1080, "Travel"),
+            GalleryVideoCandidate(2, "family.mov", 180L * mib, 350_000, 1920, 1080, "Home"),
+            GalleryVideoCandidate(3, "small.mp4", 60L * mib, 350_000, 1920, 1080, "Travel"),
+        )
+        val range = GalleryVideoSizeRange(100L * mib, 200L * mib)
+        val searched = filterGalleryVideos(
+            videos, GalleryVideoReviewFilter.LONG_5_MIN, text = "trip", sizeRange = range,
+        )
+        val cleared = filterGalleryVideos(
+            videos, GalleryVideoReviewFilter.LONG_5_MIN, text = "", sizeRange = range,
+        )
+        assertEquals(listOf(1L), searched.results.map { it.id })
+        assertEquals(listOf(2L, 1L), cleared.results.map { it.id })
+        assertEquals(330L * mib, cleared.bytesMatching)
+    }
+
+    @Test
+    fun sizeRangeUsesInclusiveRealBytesAndCombinesWithPresetAndSearch() {
+        val mib = 1024L * 1024L
+        val videos = listOf(
+            GalleryVideoCandidate(1L, "holiday.mp4", 100L * mib, 480_000L, 3840, 2160, "Trip"),
+            GalleryVideoCandidate(2L, "long_trip.mp4", 150L * mib, 350_000L, 1920, 1080, "Trip"),
+            GalleryVideoCandidate(3L, "family.mov", 200L * mib, 30_000L, 1920, 1080, "Family"),
+            GalleryVideoCandidate(4L, "large.mp4", 900L * mib, 480_000L, 3840, 2160, "Trip"),
+        )
+        val range = GalleryVideoSizeRange(100L * mib, 200L * mib)
+        val result = filterGalleryVideos(videos, GalleryVideoReviewFilter.ALL, sizeRange = range)
+        assertEquals(3, result.totalMatching)
+        assertEquals(listOf(3L, 2L, 1L), result.results.map { it.id })
+        assertEquals(450L * mib, result.bytesMatching)
+
+        val combined = filterGalleryVideos(
+            videos,
+            GalleryVideoReviewFilter.LONG_5_MIN,
+            text = "long_trip",
+            sizeRange = range,
+        )
+        assertEquals(listOf(2L), combined.results.map { it.id })
+        assertEquals(150L * mib, combined.bytesMatching)
+        val capped = filterGalleryVideos(
+            videos,
+            GalleryVideoReviewFilter.ALL,
+            maxVisible = 1,
+            sizeRange = range,
+        )
+        assertEquals(3, capped.totalMatching)
+        assertEquals(1, capped.results.size)
+        assertEquals(450L * mib, capped.bytesMatching)
+    }
+
+    @Test
+    fun sizeRangeDefaultIsInactiveAndRejectsInvalidBounds() {
+        val single = listOf(
+            GalleryVideoCandidate(9L, "video.mp4", 0L, 0L, 0, 0, null),
+        )
+        assertEquals(1, filterGalleryVideos(single, GalleryVideoReviewFilter.ALL).totalMatching)
+        assertEquals(
+            1,
+            filterGalleryVideos(
+                single,
+                GalleryVideoReviewFilter.ALL,
+                sizeRange = GalleryVideoSizeRange(0L, 0L),
+            ).totalMatching,
+        )
+        assertEquals(
+            0,
+            filterGalleryVideos(
+                single,
+                GalleryVideoReviewFilter.ALL,
+                sizeRange = GalleryVideoSizeRange(1L, Long.MAX_VALUE),
+            ).totalMatching,
+        )
+        try {
+            GalleryVideoSizeRange(2L, 1L)
+            org.junit.Assert.fail("Inverted size bounds should be rejected")
+        } catch (_: IllegalArgumentException) {
+            // Correct
+        }
+        try {
+            GalleryVideoSizeRange(-1L, 1L)
+            org.junit.Assert.fail("Negative size bounds should be rejected")
+        } catch (_: IllegalArgumentException) {
+            // Correct
+        }
+    }
+
+    @Test
+    fun sliderUpperBoundCoversLargestIndexedVideoAndSafelyHandlesLargerFiles() {
+        val mib = 1024L * 1024L
+        val empty = emptyList<GalleryVideoCandidate>()
+        assertEquals(5120f, galleryVideoSliderMaximumMiB(empty), 0f)
+        val videos = listOf(
+            GalleryVideoCandidate(1, "large.mp4", 6000L * mib + 1L, 0L, 0, 0, null),
+        )
+        assertEquals(6001f, galleryVideoSliderMaximumMiB(videos), 0f)
+        val untouched = appliedGalleryVideoSizeRange(0f..5120f, 5120f)
+        assertEquals(null, untouched)
+
+        val lowerBound = appliedGalleryVideoSizeRange(100f..5120f, 5120f)
+        assertEquals(100L * mib, lowerBound?.minimumBytes)
+        assertEquals(Long.MAX_VALUE, lowerBound?.maximumBytes)
+        val sizeBounded = appliedGalleryVideoSizeRange(100f..200f, 5120f)
+        assertEquals(100L * mib, sizeBounded?.minimumBytes)
+        assertEquals(200L * mib, sizeBounded?.maximumBytes)
+
+        val displayRounded = appliedGalleryVideoSizeRange(100.6f..200.6f, 5120f)
+        assertEquals(101L * mib, displayRounded?.minimumBytes)
+        assertEquals(201L * mib, displayRounded?.maximumBytes)
+        val oversized = listOf(
+            GalleryVideoCandidate(7, "huge.mov", Long.MAX_VALUE, 0L, 0, 0, null),
+        )
+        assertEquals(1_048_576f, galleryVideoSliderMaximumMiB(oversized), 0f)
+        val overCap = appliedGalleryVideoSizeRange(
+            100f..1_048_576f, 1_048_576f,
+        )
+        assertTrue(overCap?.contains(Long.MAX_VALUE) == true)
+    }
+
+    @Test
     fun perceptualGroupingRequiresBothTemporalAndVisualSimilarity() {
         val base = 1_700_000_000_000L
         val photos = listOf(

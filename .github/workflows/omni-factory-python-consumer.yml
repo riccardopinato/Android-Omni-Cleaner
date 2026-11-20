@@ -1,0 +1,120 @@
+name: Omni Cleaner — Python Factory QA consumer
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/src/main/java/com/riccardopinato/omnicleaner/cleaner/FileInventoryScanner.kt'
+      - 'app/src/androidTest/java/com/riccardopinato/omnicleaner/cleaner/FactoryPythonFixtureInstrumentedTest.kt'
+      - '.github/workflows/omni-factory-python-consumer.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  OMNI_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+concurrency:
+  group: omni-factory-python-consumer-${{ github.event.pull_request.head.ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-consumer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - name: Checkout exact app head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.OMNI_SHA }}
+          persist-credentials: false
+
+      - name: Checkout immutable merged App Factory Python engine
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: riccardopinato/App-Factory-Core
+          ref: 39a5144f2b0d22dc8928970ca13b226fab17a05f
+          path: .factory-core
+          persist-credentials: false
+
+      - name: Generate and verify synthetic manifest with pinned Python
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 .factory-core/reference_engines/performance_qa/factory_performance_qa.py fixture \
+            --output "$RUNNER_TEMP/omni-python-qa-fixture" --files 512 --duplicate-pairs 8 --seed 19
+          python3 .factory-core/reference_engines/performance_qa/factory_performance_qa.py verify \
+            --input "$RUNNER_TEMP/omni-python-qa-fixture"
+
+      - name: Bundle verified synthetic fixture as Android instrumentation assets
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p app/src/androidTest/assets
+          cp -R "$RUNNER_TEMP/omni-python-qa-fixture" app/src/androidTest/assets/
+          test "$(find app/src/androidTest/assets/omni-python-qa-fixture -type f | wc -l)" -eq 513
+          echo "PYTHON_FACTORY_ASSETS_READY: 512 files plus SHA-256 manifest"
+
+      - name: JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
+        with:
+          cache-provider: basic
+
+      - name: Compile app and Android instrumentation APK
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --stacktrace
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Verify Python fixture with native Android scanner on emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          disk-size: 4096M
+          disable-animations: true
+          script: |
+            adb install -r -t app/build/outputs/apk/debug/app-debug.apk
+            adb install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            adb shell am instrument -w -e class com.riccardopinato.omnicleaner.cleaner.FactoryPythonFixtureInstrumentedTest com.riccardopinato.omnicleaner.debug.test/androidx.test.runner.AndroidJUnitRunner > "$GITHUB_WORKSPACE/omni-factory-consumer-result.txt"
+            cat "$GITHUB_WORKSPACE/omni-factory-consumer-result.txt"
+            grep -Fq "OK (1 test)" "$GITHUB_WORKSPACE/omni-factory-consumer-result.txt"
+
+      - name: Require observed runner execution, never only a green build
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          result = Path("omni-factory-consumer-result.txt")
+          if not result.is_file():
+              raise SystemExit("FAIL: no native Android instrumentation result")
+          text = result.read_text(encoding="utf-8")
+          if "OK (1 test)" not in text or "FAILURES" in text or "INSTRUMENTATION_FAILED" in text:
+              raise SystemExit("FAIL: exact native Python consumer testcase did not pass")
+          print("PASS: one real Android native Python fixture testcase executed successfully")
+          PY
+
+      - name: Evidence boundary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Python Factory QA consumer"
+            echo "- App source SHA: $OMNI_SHA"
+            echo "- Factory Core source: 39a5144f2b0d22dc8928970ca13b226fab17a05f"
+            echo "- 512 synthetic bytes-verified files, eight expected duplicate pairs packaged in instrumentation-only assets; staged to app-private cache, no Downloads/FUSE/All-Files write"
+            echo "- This is a single Android-emulator consumer, not Golden certification or physical performance."
+            echo "- FAIL if native testcase did not actually execute; check job outcome."
+          } >> "$GITHUB_STEP_SUMMARY"

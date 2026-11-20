@@ -331,6 +331,34 @@ NARROW_GALLERY
 maestro test --test-output-dir "$OUTPUT/maestro-narrow" "$OUTPUT/gallery-narrow.yaml"
 test -s "$(find "$OUTPUT/maestro-narrow" -name 21-gallery-360dp-large.png -print -quit)"
 cp "$(find "$OUTPUT/maestro-narrow" -name 21-gallery-360dp-large.png -print -quit)" "$OUTPUT/21-gallery-360dp-large.png"
+# Accessibility: all Gallery filters must fit on a genuine 360dp screen
+# even at 200% text scale. Separate from experimental video-motion QA.
+adb shell settings put system font_scale 2.0
+cat > "$OUTPUT/gallery-200pct.yaml" <<'NARROW_GALLERY_200'
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    id: "omni_nav_gallery"
+- scrollUntilVisible:
+    element:
+      id: "omni_gallery_filter_videos"
+    direction: DOWN
+    timeout: 30000
+- assertVisible:
+    id: "omni_gallery_filter_all"
+- assertVisible:
+    id: "omni_gallery_filter_images"
+- assertVisible:
+    id: "omni_gallery_filter_videos"
+- takeScreenshot: 22-gallery-360dp-200pct
+NARROW_GALLERY_200
+maestro test --test-output-dir "$OUTPUT/maestro-200pct" "$OUTPUT/gallery-200pct.yaml"
+picture_200="$(find "$OUTPUT/maestro-200pct" -type f -name 22-gallery-360dp-200pct.png -print -quit)"
+test -n "$picture_200" && test -s "$picture_200"
+cp "$picture_200" "$OUTPUT/22-gallery-360dp-200pct.png"
+
 adb shell settings put system font_scale 1.0
 adb shell wm size reset
 adb shell wm density reset

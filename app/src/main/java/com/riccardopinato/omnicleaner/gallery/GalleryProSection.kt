@@ -5,11 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -29,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
+import com.riccardopinato.omnicleaner.ui.redesign.OmniAccordionLoader
 import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton
 import com.riccardopinato.omnicleaner.ui.theme.OmniSecondaryButton
 import kotlinx.coroutines.CancellationException
@@ -73,8 +72,18 @@ internal fun GalleryProSection(
             )
         }
     }
-    val videoMatches = remember(videos, videoFilter, videoQuery) {
-        filterGalleryVideos(videos, videoFilter, videoQuery)
+    // A page/permission/filter-source change invalidates the previous custom range.
+    // Existing 100MB+, 5min+ and 4K presets remain independent, combinable filters.
+    val sliderMaximumMiB = remember(videos) { galleryVideoSliderMaximumMiB(videos) }
+    var draftSizeMiB by remember(videos) { mutableStateOf(0f..sliderMaximumMiB) }
+    var appliedSizeRange by remember(videos) { mutableStateOf<GalleryVideoSizeRange?>(null) }
+    val videoMatches = remember(videos, videoFilter, videoQuery, appliedSizeRange) {
+        filterGalleryVideos(
+            videos,
+            videoFilter,
+            text = videoQuery,
+            sizeRange = appliedSizeRange,
+        )
     }
 
     Column(
@@ -123,29 +132,37 @@ internal fun GalleryProSection(
                     fontWeight = FontWeight.Bold,
                 )
                 Text(stringResource(R.string.gp_video_scope), style = MaterialTheme.typography.bodySmall)
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    GalleryVideoReviewFilter.entries.forEach { choice ->
-                        val label = when (choice) {
-                            GalleryVideoReviewFilter.ALL -> R.string.gp_video_all
-                            GalleryVideoReviewFilter.LARGE_100_MB -> R.string.gp_video_large
-                            GalleryVideoReviewFilter.LONG_5_MIN -> R.string.gp_video_long
-                            GalleryVideoReviewFilter.UHD_4K -> R.string.gp_video_4k
-                        }
-                        FilterChip(
-                            selected = videoFilter == choice,
-                            onClick = { videoFilter = choice },
-                            label = { Text(stringResource(label)) },
-                        )
-                    }
+                OmniProfessionalVideoFilters(
+                    selected = videoFilter,
+                    onSelect = { videoFilter = it },
+                )
+                if (videos.isNotEmpty()) {
+                    OmniProfessionalVideoSizeFilter(
+                        maximumMiB = sliderMaximumMiB,
+                        draftMiB = draftSizeMiB,
+                        hasAppliedRange = appliedSizeRange != null,
+                        onDraftChange = { draftSizeMiB = it },
+                        onApply = {
+                            appliedSizeRange = appliedGalleryVideoSizeRange(
+                                draftSizeMiB, sliderMaximumMiB,
+                            )
+                        },
+                        onReset = {
+                            draftSizeMiB = 0f..sliderMaximumMiB
+                            appliedSizeRange = null
+                        },
+                    )
                 }
                 OutlinedTextField(
                     value = videoQuery,
                     onValueChange = { videoQuery = it },
                     label = { Text(stringResource(R.string.gp_video_search)) },
+                    leadingIcon = { OmniGentlefaceSearchGlyph() },
+                    trailingIcon = {
+                        if (videoQuery.isNotEmpty()) {
+                            OmniClearVideoSearchButton(onClick = { videoQuery = "" })
+                        }
+                    },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("omni_gallery_pro_video_search"),
                 )
@@ -230,7 +247,11 @@ internal fun GalleryProSection(
                 ) {
                     Text(stringResource(R.string.gp_scan_similar))
                 }
-                if (analyzing) LinearProgressIndicator(Modifier.fillMaxWidth())
+                if (analyzing) {
+                    OmniAccordionLoader(
+                        modifier = Modifier.testTag("omni_gallery_similar_accordion_scan"),
+                    )
+                }
                 if (photoError) {
                     Text(stringResource(R.string.gp_photo_error), color = MaterialTheme.colorScheme.error)
                 }

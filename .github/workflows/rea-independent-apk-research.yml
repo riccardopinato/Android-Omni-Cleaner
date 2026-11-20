@@ -1,0 +1,151 @@
+name: REA independent Omni APK research (CLI, read-only)
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/rea-independent-apk-research.yml"
+      - "research/REA_OMNI_INDEPENDENT_ADOPTION_2026-11-19.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  independent-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact Omni Cleaner source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up JDK 17 for preserved Kotlin/Compose build
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Build independent debug APK from exact Omni source
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew assembleDebug --stacktrace
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          sha256sum app/build/outputs/apk/debug/app-debug.apk
+      - name: JDK 21 for bundled REA headless JADX engine
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Node 24 for REA CLI 6.9.0
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: "24"
+      - name: Checkout immutable AppLab research adapter
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: riccardopinato/AppLab
+          ref: c500000991290ac4dc0327192d97995232fccba1
+          path: .applab-research
+          persist-credentials: false
+      - name: Install pinned REA in runner only
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --prefix "$RUNNER_TEMP/rea-tools" --no-save --omit=optional --no-audit --no-fund rea-agents@6.9.0
+          "$RUNNER_TEMP/rea-tools/node_modules/.bin/rea" --version --json > "$RUNNER_TEMP/rea-version.json"
+      - name: Supply upstream SHA-256 verified JADX 0.7.1 engine prerequisite
+        shell: bash
+        run: |
+          set -euo pipefail
+          jar="$RUNNER_TEMP/jadx-headless-mcp-0.7.1-all.jar"
+          curl --fail --location --show-error --silent --retry 3 --connect-timeout 30 \
+            --max-time 240 \
+            "https://github.com/1013503897/jadx-headless-mcp/releases/download/v0.7.1/jadx-headless-mcp-0.7.1-all.jar" \
+            -o "$jar"
+          echo "6e5eacf500b64292bfb73c49797c1958f6ee44646e43e868039ae7feb573ff75  $jar" | sha256sum --check --status
+          echo "REA_JADX_MCP_JAR=$jar" >> "$GITHUB_ENV"
+          command -v ps
+          java -version
+          echo "JADX_PINNED_JAR_SHA256_PASS"
+      - name: Analyze our independently built Android APK without execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$GITHUB_WORKSPACE/app/build/outputs/apk/debug/app-debug.apk"
+          hash="$(sha256sum "$apk" | cut -d' ' -f1)"
+          python .applab-research/scripts/rea_cli_research.py \
+            --mode android --operation inspect-android-package \
+            --rea-bin "$RUNNER_TEMP/rea-tools/node_modules/.bin/rea" \
+            --artifact "$apk" --expected-sha256 "$hash" \
+            --repository riccardopinato/Android-Omni-Cleaner \
+            --source-sha ${{ github.event.pull_request.head.sha || github.sha }} \
+            --max-bytes 268435456 --timeout 180 \
+            --output-dir "$RUNNER_TEMP/rea-private" \
+            > "$RUNNER_TEMP/rea-android-receipt.json"
+          python - "$RUNNER_TEMP/rea-android-receipt.json" "$hash" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1],encoding="utf8"))
+          assert d["artifact"]["sha256"]==sys.argv[2],d
+          assert d["status"]=="REA_RESEARCH_OBSERVED",d
+          assert d["operations"][0]["operation"]=="inspect-android-package",d
+          assert d["operations"][0]["status"]=="OBSERVED",d
+          assert d["operations"][0]["full_bundle"],d
+          assert d["trusted_runtime"] is False
+          print("REAL_INDEPENDENT_OMNI_APK_REA_ANDROID_STATIC_PASS")
+          print("APK_SHA256="+d["artifact"]["sha256"])
+          print("REA_RAW_SHA256="+d["operations"][0]["evidence"]["sha256"])
+          PY
+      - name: Native Android negative Flutter control (real REA)
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$GITHUB_WORKSPACE/app/build/outputs/apk/debug/app-debug.apk"
+          hash="$(sha256sum "$apk" | cut -d' ' -f1)"
+          python .applab-research/scripts/rea_cli_research.py \
+            --mode flutter --operation identify-flutter-build \
+            --rea-bin "$RUNNER_TEMP/rea-tools/node_modules/.bin/rea" \
+            --artifact "$apk" --expected-sha256 "$hash" \
+            --repository riccardopinato/Android-Omni-Cleaner \
+            --source-sha ${{ github.event.pull_request.head.sha || github.sha }} \
+            --output-dir "$RUNNER_TEMP/rea-private" \
+            --max-bytes 268435456 --timeout 120 \
+            > "$RUNNER_TEMP/rea-flutter-negative-receipt.json"
+          python - "$RUNNER_TEMP/rea-flutter-negative-receipt.json" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1],encoding="utf8"))
+          assert d["status"]=="REA_RESEARCH_OBSERVED",d
+          assert not d["artifact"]["flutter_aot_libraries"],d
+          assert d["operations"][0]["status"]=="OBSERVED",d
+          print("NATIVE_OMNI_NOT_FLUTTER_STATIC_CONTROL_PASS")
+          PY
+      - name: Negative test rejects wrong artifact hash before REA execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$GITHUB_WORKSPACE/app/build/outputs/apk/debug/app-debug.apk"
+          if python .applab-research/scripts/rea_cli_research.py \
+            --mode android --operation inspect-android-package \
+            --rea-bin "$RUNNER_TEMP/rea-tools/node_modules/.bin/rea" \
+            --artifact "$apk" --expected-sha256 "$(printf '0%.0s' {1..64})" \
+            --repository riccardopinato/Android-Omni-Cleaner \
+            --source-sha ${{ github.event.pull_request.head.sha || github.sha }} \
+            --output-dir "$RUNNER_TEMP/rea-negative" \
+            > "$RUNNER_TEMP/rea-negative-output.txt" 2>&1; then
+              echo "ERROR: wrong-hash negative unexpectedly passed"
+              exit 1
+          fi
+          grep -Fq 'Input SHA-256 mismatch' "$RUNNER_TEMP/rea-negative-output.txt"
+          test ! -e "$RUNNER_TEMP/rea-negative"
+          echo "NEGATIVE_SHA_BLOCK_PASS"
+      - name: Retain only safe research receipts, not code or binary
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: omni-rea-independent-research-receipts
+          if-no-files-found: warn
+          retention-days: 7
+          path: |
+            ${{ runner.temp }}/rea-version.json
+            ${{ runner.temp }}/rea-android-receipt.json
+            ${{ runner.temp }}/rea-flutter-negative-receipt.json

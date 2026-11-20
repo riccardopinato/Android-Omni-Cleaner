@@ -133,20 +133,9 @@ class FileInventoryScanner {
         onConfirmedGroup: ((DuplicateGroup) -> Unit)? = null,
         onProgress: ((processed: Int, total: Int) -> Unit)? = null,
     ): List<DuplicateGroup> = withContext(Dispatchers.IO) {
-        val bySize = uniquePhysicalFiles(files)
-            .asSequence()
-            .filter { it.size > 0L }
-            .groupBy { it.size }
-            .values
-            .filter { it.size > 1 }
-            // Prioritize the highest verified potential saving: a confirmed
-            // large-file group appears sooner without skipping other groups.
-            .sortedWith(compareByDescending<List<IndexedFile>> { group ->
-                val size = group.first().size
-                val extra = (group.size - 1).toLong()
-                if (size > 0L && extra > Long.MAX_VALUE / size) Long.MAX_VALUE
-                else size * extra
-            }.thenBy { group -> group.minOf { it.file.absolutePath } })
+        // Most inventory sizes are singletons. Avoid allocating a List for
+        // every singleton size just to discard it at the next filtering stage.
+        val bySize = duplicateCandidateSizeGroups(files)
 
         val totalCandidates = bySize.sumOf { it.size }
         val result = ArrayList<DuplicateGroup>()
@@ -439,6 +428,46 @@ class FileInventoryScanner {
 
 
 
+/**
+ * Candidate-only grouping: a distinct size consumes one map entry, but no
+ * per-size List. Allocate a group only when the second file of that size is
+ * observed. All destructive duplicate decisions are still SHA-256 + byte
+ * verified by duplicatesProgressive; this is only a cheap candidate filter.
+ */
+internal fun duplicateCandidateSizeGroups(files: List<IndexedFile>): List<List<IndexedFile>> {
+    val firstBySize = HashMap<Long, IndexedFile>()
+    val groups = HashMap<Long, MutableList<IndexedFile>>()
+    // Deduplicate physical aliases and discover candidate size groups in ONE
+    // pass. Avoid allocating an intermediate unique-files list and formatted
+    // "physical:dev:inode" String for every file in a large inventory.
+    // Tagged type (PhysicalFileIdentity vs String path) cannot collide.
+    val identities = HashSet<Any>()
+    for (item in files) {
+        val key: Any = item.physicalIdentity ?: item.file.absolutePath
+        if (!identities.add(key)) continue
+        if (item.size <= 0L) continue
+        val existingGroup = groups[item.size]
+        if (existingGroup != null) {
+            existingGroup.add(item)
+            continue
+        }
+        val first = firstBySize.remove(item.size)
+        if (first == null) {
+            firstBySize[item.size] = item
+        } else {
+            groups[item.size] = arrayListOf(first, item)
+        }
+    }
+    // Retain the previous priority/overflow/tie-breaking contract.
+    return groups.values.sortedWith(
+        compareByDescending<List<IndexedFile>> { group ->
+            val size = group.first().size
+            val extra = (group.size - 1).toLong()
+            if (size > Long.MAX_VALUE / extra) Long.MAX_VALUE else size * extra
+        }.thenBy { group -> group.minOf { it.file.absolutePath } },
+    )
+}
+
 internal fun uniquePhysicalFiles(files: List<IndexedFile>): List<IndexedFile> =
     files.distinctBy { item ->
         item.physicalIdentity?.let { identity ->
@@ -462,8 +491,10 @@ internal suspend fun boundedHashFiles(
 
     val nextIndex = AtomicInteger(0)
     val inFlight = AtomicInteger(0)
-    val results = ArrayList<IndexedHashResult>()
-    val resultLock = Any()
+    // Every worker owns a unique atomic index. Write only its dedicated slot:
+    // no contended append lock, allocation per result, or O(n log n) re-sort.
+    // After joinAll, publish in the exact input order as before.
+    val hashesByIndex = arrayOfNulls<String>(items.size)
     val workers = boundedHashWorkerLaunchCount(items.size, parallelism)
 
     List(workers) {
@@ -478,11 +509,7 @@ internal suspend fun boundedHashFiles(
                 onInFlightChanged?.invoke(active)
                 try {
                     val hash = transform(item)
-                    if (hash != null) {
-                        synchronized(resultLock) {
-                            results += IndexedHashResult(index, item, hash)
-                        }
-                    }
+                    if (hash != null) hashesByIndex[index] = hash
                 } finally {
                     val remaining = inFlight.decrementAndGet()
                     onInFlightChanged?.invoke(remaining)
@@ -491,7 +518,12 @@ internal suspend fun boundedHashFiles(
         }
     }.joinAll()
 
-    results.sortedBy { it.index }
+    val ordered = ArrayList<IndexedHashResult>()
+    for (index in hashesByIndex.indices) {
+        val hash = hashesByIndex[index] ?: continue
+        ordered += IndexedHashResult(index, items[index], hash)
+    }
+    ordered
 }
 
 internal fun boundedHashWorkerLaunchCount(

@@ -1,0 +1,115 @@
+name: Omni Cleaner — native video playback render probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/src/androidTest/java/com/riccardopinato/omnicleaner/gallery/NativeVideoPlaybackInstrumentedTest.kt'
+      - '.github/workflows/omni-video-native-playback-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-video-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Exact-source checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Generate verified synthetic moving H264 test APK asset
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends ffmpeg
+          fi
+          mkdir -p app/src/androidTest/assets
+          ffmpeg -hide_banner -loglevel error -nostdin \
+            -f lavfi -i 'testsrc2=size=640x360:rate=15' \
+            -t 6 -an -c:v libx264 -preset ultrafast -pix_fmt yuv420p \
+            -movflags +faststart -y app/src/androidTest/assets/omni-native-playback.mp4
+          codec="$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 app/src/androidTest/assets/omni-native-playback.mp4)"
+          frames="$(ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of default=noprint_wrappers=1:nokey=1 app/src/androidTest/assets/omni-native-playback.mp4)"
+          test "$codec" = h264
+          test "$frames" -ge 80
+          echo "NATIVE_VIDEO_ASSET_READY: h264 frames=$frames"
+
+      - name: JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
+        with:
+          cache-provider: basic
+
+      - name: Compile exact APKs including synthetic test asset
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --stacktrace
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Observe native rendering and playback position on Android emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          disk-size: 2048M
+          disable-animations: true
+          script: |
+            adb install -r -t app/build/outputs/apk/debug/app-debug.apk
+            adb install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            adb logcat -c
+            adb shell am instrument -w -e class com.riccardopinato.omnicleaner.gallery.NativeVideoPlaybackInstrumentedTest com.riccardopinato.omnicleaner.debug.test/androidx.test.runner.AndroidJUnitRunner > "$GITHUB_WORKSPACE/omni-video-native-result.txt"
+            cat "$GITHUB_WORKSPACE/omni-video-native-result.txt"
+            adb logcat -d -s 'OMNI_VIDEO_NATIVE_RENDER_PASS:I' '*:S' > "$GITHUB_WORKSPACE/omni-video-native-logcat.txt"
+            cat "$GITHUB_WORKSPACE/omni-video-native-logcat.txt"
+            grep -Fq "OK (1 test)" "$GITHUB_WORKSPACE/omni-video-native-result.txt"
+            grep -Eq 'OMNI_VIDEO_NATIVE_RENDER_PASS.*position1=[0-9]+ position2=[0-9]+' "$GITHUB_WORKSPACE/omni-video-native-logcat.txt"
+
+      - name: Fail closed if video was not played/rendered
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("omni-video-native-result.txt")
+          if not path.is_file():
+              raise SystemExit("FAIL: native playback instrumentation not observed")
+          text = path.read_text(encoding="utf-8")
+          log_file = Path("omni-video-native-logcat.txt")
+          if not log_file.is_file():
+              raise SystemExit("FAIL: native playback logcat metrics missing")
+          log = log_file.read_text(encoding="utf-8")
+          import re
+          values = re.search(r"OMNI_VIDEO_NATIVE_RENDER_PASS.*position1=(\d+) position2=(\d+)", log)
+          if "OK (1 test)" not in text or "FAILURES" in text or not values:
+              raise SystemExit("FAIL: native H264 rendered/advancing test did not pass")
+          if int(values.group(2)) < int(values.group(1)) + 600:
+              raise SystemExit("FAIL: native video position did not advance sufficiently")
+          print("PASS: actual native Android H264 rendered-frame callback and position advancement")
+          PY
+
+      - name: Explicit evidence boundary
+        if: always()
+        run: |
+          {
+            echo "## Native VideoView probe"
+            echo "- Exact source: ${{ github.event.pull_request.head.sha || github.sha }}"
+            echo "- Native VideoView/MediaPlayer on Android 35 emulator, synthetic H264 6s, app-private cache"
+            echo "- Tests rendering callback, isPlaying and playback position advancement with zero destructive actions."
+            echo "- Does not certify screen-capture SurfaceView pixels, physical OEM codecs, HDR, audio sync, or battery."
+          } >> "$GITHUB_STEP_SUMMARY"

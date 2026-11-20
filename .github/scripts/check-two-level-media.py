@@ -19,7 +19,29 @@ assert "omni_clean_tool_" in clean and "omni_scan_" in clean
 assert "GalleryCleanerSection(" in gallery and "omni_gallery_open_review" in gallery
 assert "ContentScale.Crop" not in preview
 assert "ContentScale.Fit" in preview
-assert "VideoView(context)" in preview and "MediaController(context)" in preview
+assert "VideoView(context)" in preview
+# The native VideoView is the decoder; the WML-003 Compose timeline owns
+# real seek/playback controls, replacing the old Android MediaController.
+scrub = (JAVA / "gallery/OmniVideoScrubControls.kt").read_text(encoding="utf-8")
+for expected in (
+    "OmniVideoScrubControls(",
+    "setOnPreparedListener",
+    "setOnCompletionListener",
+    "video.currentPosition",
+    "video.seekTo(target)",
+    "video.start()",
+    "video.pause()",
+):
+    assert expected in preview, f"missing native video playback: {expected}"
+for expected in (
+    "Slider(",
+    "onValueChangeFinished",
+    "onSeek(",
+    "omni_video_scrub_slider",
+    "omni_video_toggle_play",
+):
+    assert expected in scrub, f"missing native scrub contract: {expected}"
+assert "MediaController(context)" not in preview, "avoid duplicate media controls"
 assert "video.stopPlayback()" in preview and "Lifecycle.Event.ON_PAUSE" in preview
 assert "galleryFitHeightDp" in preview
 # First-party immersive viewer is read-only, keeps both media types at original
@@ -42,6 +64,8 @@ keys = (
     "nav_back", "nav_gallery_review", "nav_privacy_quick",
     "nav_privacy_batch", "nav_pro_manage", "gallery_open_review",
     "gallery_video_play", "gallery_video_unavailable",
+    "gallery_video_seek", "gallery_video_back_10",
+    "gallery_video_forward_10", "gallery_video_pause", "gallery_video_resume",
     "omni_clean_group_analyze", "omni_clean_group_review", "omni_clean_group_advanced",
     "omni_scan_running", "omni_gallery_immersive_open",
     "omni_gallery_immersive_close", "omni_gallery_immersive_hint",

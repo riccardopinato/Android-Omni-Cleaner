@@ -1,0 +1,127 @@
+name: Omni Cleaner — synthetic safety gates (Android)
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'app/src/androidTest/java/com/riccardopinato/omnicleaner/cleaner/**'
+      - 'app/src/main/java/com/riccardopinato/omnicleaner/cleaner/**'
+      - '.github/workflows/omni-safety-gate-android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  OMNI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+concurrency:
+  group: omni-safety-gates-${{ github.event.pull_request.head.ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  synthetic-safety-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - name: Checkout exact source SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.OMNI_SOURCE_SHA }}
+          persist-credentials: false
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
+        with:
+          cache-provider: basic
+
+      - name: Assemble app and instrumentation APK
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --stacktrace
+
+      - name: Set up Android SDK commandline tools (sdkmanager)
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+
+      # GitHub-hosted runner image downloads can fail before any Android tests
+      # execute (observed corrupt SeekableByteChannel ZIP on API35 Google APIs).
+      # Retry ONLY SDK image provisioning; never retry or mask a failing test.
+      - name: Preflight emulator image with bounded network retry
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          for attempt in 1 2 3; do
+            echo "Android API35 Google APIs x86_64 image setup attempt ${attempt}/3"
+            if sdkmanager --install "system-images;android-35;google_apis;x86_64"; then
+              test -f "${ANDROID_HOME}/system-images/android-35/google_apis/x86_64/package.xml"
+              echo "ANDROID_EMULATOR_IMAGE_READY"
+              break
+            fi
+            if (( attempt == 3 )); then
+              echo "::error::ANDROID_EMULATOR_IMAGE_UNAVAILABLE: no safety testcase executed"
+              exit 2
+            fi
+            # An incomplete download must never appear as a valid SDK image.
+            rm -rf "${ANDROID_HOME}/system-images/android-35/google_apis/x86_64"
+            sleep "$((attempt * 5))"
+          done
+
+      - name: Enable KVM for Android emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run real Android File API safety fixtures (synthetic data only)
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          disk-size: 4096M
+          disable-animations: true
+          script: |
+            ./gradlew connectedDebugAndroidTest --stacktrace -Pandroid.testInstrumentationRunnerArguments.class=com.riccardopinato.omnicleaner.cleaner.OmniSafetyGateInstrumentedTest
+
+      - name: Fail closed if safety instrumentation did not execute
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          root = Path("app/build/outputs/androidTest-results/connected")
+          cases = []
+          for path in root.rglob("*.xml"):
+              try:
+                  tree = ET.parse(path)
+              except ET.ParseError:
+                  continue
+              for case in tree.iter("testcase"):
+                  if "OmniSafetyGateInstrumentedTest" in case.attrib.get("classname", ""):
+                      cases.append(case)
+          if len(cases) != 3:
+              raise SystemExit("FAIL: expected 3 executed safety tests, found " + str(len(cases)))
+          for case in cases:
+              if any(case.find(t) is not None for t in ("failure", "error", "skipped")):
+                  raise SystemExit("FAIL safety: " + str(case.attrib))
+          print("PASS: exactly 3 safety instrumentation tests executed without failure")
+          PY
+
+      - name: Summarize evidence and limitations
+        if: always()
+        run: |
+          {
+            echo "## Omni Cleaner safety gate"
+            echo
+            echo "- Source SHA: $OMNI_SOURCE_SHA"
+            echo "- Scope: only random synthetic app-owned fixtures on Android emulator API 35"
+            echo "- Assertions: two 50-MiB duplicate pairs; keepers; restore/purge; stale-keeper fail-safe; unknown trash entries"
+            echo "- This workflow DOES NOT certify MediaStore user dialogs, FUSE/OEM devices, SAF, Play, or actual user data."
+            echo "- Runtime PASS must be confirmed by the job outcome above, not by this summary."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gentleface ICO-020 original SVG path, Design-App BIBLIOTECA_COMPONENTI/sorgenti/gentleface/ICO-020.svg blob 7823edcd1d548295a68d3576ff9f630b9266f02b -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="20dp"
+    android:viewportWidth="16"
+    android:viewportHeight="16">
+    <path android:fillColor="#FF000000"
+        android:pathData="M3.757 13.929C3.636 14.001 3.51 14.021 3.378 13.988C3.246 13.955 3.144 13.878 3.071 13.757C3.024 13.678 3 13.592 3 13.5L3 1.5C3 1.359 3.048 1.241 3.144 1.144C3.241 1.048 3.359 1 3.5 1C3.592 1 3.678 1.024 3.757 1.071L13.757 7.071C13.876 7.142 13.952 7.245 13.985 7.379C14.019 7.513 14 7.639 13.929 7.757C13.886 7.829 13.829 7.886 13.757 7.929L3.757 13.929ZM12.528 7.5L4 2.383L4 12.617L12.528 7.5Z" />
+</vector>

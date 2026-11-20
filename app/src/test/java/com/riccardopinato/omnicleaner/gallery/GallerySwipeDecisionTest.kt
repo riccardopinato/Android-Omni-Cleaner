@@ -35,6 +35,61 @@ class GallerySwipeDecisionTest {
     }
 
     @Test
+    fun videoScrubberClampsRealSeekAndDisplaysHours() {
+        assertEquals(0, boundedVideoSeekPosition(-12, 90000))
+        assertEquals(15000, boundedVideoSeekPosition(15000, 90000))
+        assertEquals(90000, boundedVideoSeekPosition(100000, 90000))
+        assertEquals(0, boundedVideoSeekPosition(500, -1))
+        assertEquals("00:00", videoTimelineTimestamp(-10))
+        assertEquals("01:13", videoTimelineTimestamp(73000))
+        assertEquals("01:01:01", videoTimelineTimestamp(3661000))
+        assertEquals("27:00:00", videoTimelineTimestamp(97200000))
+    }
+
+    @Test
+    fun readOnlyCarouselIndexIsBoundedAndEmptyPageIsSafe() {
+        assertEquals(0, boundedCarouselIndex(-40, 12))
+        assertEquals(11, boundedCarouselIndex(100, 12))
+        assertEquals(4, boundedCarouselIndex(4, 12))
+        assertEquals(0, boundedCarouselIndex(3, 0))
+        assertTrue(carouselWindow(emptyList()).isEmpty())
+    }
+
+    @Test
+    fun tinderMetadataOmitsUnavailableDimensionsAndMimeTypes() {
+        assertEquals("4032 × 3024", galleryDisplayResolution(4032, 3024))
+        assertNull(galleryDisplayResolution(0, 3024))
+        assertNull(galleryDisplayResolution(4032, -1))
+        assertEquals("JPEG", galleryDisplayMimeSubtype("image/jpeg"))
+        assertEquals("MP4", galleryDisplayMimeSubtype("video/mp4"))
+        assertEquals("", galleryDisplayMimeSubtype("application"))
+        assertEquals("", galleryDisplayMimeSubtype(""))
+    }
+
+    @Test
+    fun sessionSummaryUsesVerifiedPersistedAndRecentCounters() {
+        val empty = gallerySessionSummary(GalleryUiState())
+        assertEquals(0, empty.reviewedTotal)
+        assertEquals(0, empty.selectedForAndroidTrash)
+        assertNull(empty.recentKept)
+
+        // No real media URI required in a local JVM test. The review counter
+        // is independently persisted; it cannot be interpreted as kept media.
+        val summary = gallerySessionSummary(GalleryUiState(totalReviewedCount = 250))
+        assertEquals(250, summary.reviewedTotal)
+        assertEquals(0, summary.selectedForAndroidTrash)
+        assertNull(summary.recentKept)
+    }
+
+    @Test
+    fun completionPanelNeverAppearsBeforeMediaIsLoaded() {
+        assertNull(galleryReviewFinishState(GalleryUiState()))
+        assertNull(galleryReviewFinishState(GalleryUiState(totalReviewedCount = 8)))
+        assertNull(galleryReviewFinishState(GalleryUiState(loading = true)))
+        assertNull(galleryReviewFinishState(GalleryUiState(loadingNextPage = true)))
+    }
+
+    @Test
     fun shortSwipeDoesNothing() {
         assertNull(gallerySwipeDirection(40f, 100f))
         assertNull(gallerySwipeDirection(-40f, 100f))
