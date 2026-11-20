@@ -552,4 +552,35 @@
     <string name="omni_gallery_immersive_open">Afficher en plein écran</string>
     <string name="omni_gallery_immersive_close">Fermer</string>
     <string name="omni_gallery_immersive_hint">Les proportions d’origine sont préservées. L’affichage ne modifie pas le fichier.</string>
+    <!-- Color Bento 2.0 editable dashboard -->
+    <string name="bento_v2_subtitle">Déplacer, redimensionner et personnaliser</string>
+    <string name="bento_v2_edit">Modifier</string>
+    <string name="bento_v2_done">Terminé</string>
+    <string name="bento_v2_add">+ Ajouter</string>
+    <string name="bento_v2_reset">Réinitialiser</string>
+    <string name="bento_v2_scanning">Analyse en cours</string>
+    <string name="bento_v2_queue_count">En attente : %1$d</string>
+    <string name="bento_v2_access">Accès et protection</string>
+    <string name="bento_v2_invalid_layout">Cette combinaison ne remplit pas la grille sans espaces intérieurs.</string>
+    <string name="bento_v2_size">Taille de la tuile</string>
+    <string name="bento_v2_close">Fermer</string>
+    <string name="bento_v2_add_tile">Ajouter une tuile</string>
+    <string name="bento_v2_already">Ajoutée</string>
+    <string name="bento_v2_reset_title">Réinitialiser la page ?</string>
+    <string name="bento_v2_reset_desc">Les positions et tailles personnalisées seront remplacées. Aucun fichier ne sera modifié.</string>
+    <string name="bento_v2_cancel">Annuler</string>
+    <string name="bento_v2_scan_queue">File des analyses</string>
+    <string name="bento_v2_active">En cours : %1$s</string>
+    <string name="bento_v2_waiting">En attente : %1$s</string>
+    <string name="bento_v2_none">aucune</string>
+    <string name="bento_v2_no_delete">Les analyses ne suppriment jamais de fichiers.</string>
+    <string name="bento_v2_cancel_scans">Annuler les analyses</string>
+    <string name="bento_v2_unavailable">Disposition indisponible</string>
+    <string name="bento_v2_waiting_state">En attente</string>
+    <string name="bento_v2_scan_state">Analyse…</string>
+    <string name="bento_v2_open_results">Voir les résultats</string>
+    <string name="bento_v2_tap_scan">Appuyer pour analyser</string>
+    <string name="bento_v2_open">Ouvrir</string>
+    <string name="bento_v2_premium_active">Pro actif</string>
+    <string name="bento_v2_stale">Ancien résultat · Actualisation recommandée</string>
 </resources>
