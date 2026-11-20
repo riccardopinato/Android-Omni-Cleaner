@@ -248,6 +248,13 @@
     <string name="gallery_move_android_trash">Mover a la Papelera de Android</string>
     <string name="gallery_trash_confirm_title">Confirmar papelera</string>
     <string name="gallery_trash_confirm_body">Android mostrará una segunda confirmación del sistema. Los elementos se moverán a la papelera multimedia, no se eliminarán directamente.</string>
+    <string name="gallery_details_photo">Foto</string>
+    <string name="gallery_details_video">Vídeo</string>
+    <string name="gallery_details_size">Tamaño</string>
+    <string name="gallery_details_date">Fecha</string>
+    <string name="gallery_details_album">Álbum</string>
+    <string name="gallery_details_resolution">Resolución</string>
+    <string name="gallery_details_duration">Duración</string>
     <string name="gallery_preview_unavailable">Vista previa no disponible</string>
     <string name="gallery_swipe_hint">← Papelera · Conservar →</string>
     <string name="gallery_selection_explainer">Papelera solo marca el elemento. Android pedirá confirmación antes de moverlo.</string>
