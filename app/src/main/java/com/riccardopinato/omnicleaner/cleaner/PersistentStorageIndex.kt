@@ -5,6 +5,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.os.Build
+import android.os.SystemClock
 import android.provider.MediaStore
 import java.io.File
 import java.util.Locale
@@ -24,6 +25,18 @@ internal data class PersistentInventorySnapshot(
     val inventory: FileInventory,
     val createdAtMillis: Long,
     val mediaStoreGeneration: Long?,
+)
+
+/** Read-only measurements emitted only for explicitly instrumented benchmark scans. */
+data class IndexReconcileDiagnostics(
+    val totalMillis: Long,
+    val fileRowsMillis: Long,
+    val directoryRowsMillis: Long,
+    val finalizationMillis: Long,
+    val commitMillis: Long,
+    val filesReused: Int,
+    val filesReplaced: Int,
+    val directoriesWritten: Int,
 )
 
 internal class PersistentStorageIndex(
@@ -222,8 +235,10 @@ internal class PersistentStorageIndex(
         inventory: FileInventory,
         completedAtMillis: Long,
         cancellationCheck: (() -> Unit)? = null,
+        onMetrics: ((IndexReconcileDiagnostics) -> Unit)? = null,
     ) = synchronized(lock) {
         cancellationCheck?.invoke()
+        val startedNanos = if (onMetrics != null) SystemClock.elapsedRealtimeNanos() else 0L
         val db = helper.writableDatabase
         val rootPath = canonical(root)
         db.beginTransaction()
@@ -235,73 +250,84 @@ internal class PersistentStorageIndex(
             }
 
             val generation = (meta(db, META_SCAN_GENERATION)?.toLongOrNull() ?: 0L) + 1L
-
-            for ((fileIndex, item) in inventory.files.withIndex()) {
-                if (fileIndex % CANCELLATION_CHECK_INTERVAL == 0) {
-                    cancellationCheck?.invoke()
-                }
-                val path = item.file.absolutePath
-                val extension = item.file.extension.lowercase(Locale.ROOT)
-                val revision = item.revision
-                val seenOnly = ContentValues().apply {
-                    put(COL_EXTENSION, extension)
-                    put(COL_LAST_SEEN_GENERATION, generation)
-                }
-                val unchanged = if (revision != null) {
-                    db.update(
-                        TABLE_FILES,
-                        seenOnly,
-                        "$COL_PATH = ? AND $COL_SIZE = ? AND $COL_MODIFIED = ? " +
-                            "AND $COL_DEVICE_ID = ? AND $COL_INODE = ? " +
-                            "AND $COL_CTIME_SECONDS = ? AND $COL_CTIME_NANOS = ?",
-                        arrayOf(
-                            path,
-                            item.size.toString(),
-                            item.modified.toString(),
-                            revision.physicalIdentity.deviceId.toString(),
-                            revision.physicalIdentity.inode.toString(),
-                            revision.changeTimeSeconds.toString(),
-                            revision.changeTimeNanos.toString(),
-                        ),
-                    )
-                } else {
-                    0
-                }
-
-                if (unchanged == 0) {
-                    val values = ContentValues().apply {
-                        put(COL_PATH, path)
-                        put(COL_SIZE, item.size)
-                        put(COL_MODIFIED, item.modified)
-                        put(COL_EXTENSION, extension)
-                        val physicalIdentity = item.physicalIdentity
-                        if (physicalIdentity != null) {
-                            put(COL_DEVICE_ID, physicalIdentity.deviceId)
-                            put(COL_INODE, physicalIdentity.inode)
-                        } else {
-                            putNull(COL_DEVICE_ID)
-                            putNull(COL_INODE)
-                        }
-                        if (revision != null) {
-                            put(COL_CTIME_SECONDS, revision.changeTimeSeconds)
-                            put(COL_CTIME_NANOS, revision.changeTimeNanos)
-                        } else {
-                            putNull(COL_CTIME_SECONDS)
-                            putNull(COL_CTIME_NANOS)
-                        }
-                        putNull(COL_SAMPLE_HASH)
-                        putNull(COL_FULL_HASH)
-                        put(COL_LAST_SEEN_GENERATION, generation)
-                        put(COL_LAST_VERIFIED_AT, completedAtMillis)
+            val filesStartedNanos = if (onMetrics != null) SystemClock.elapsedRealtimeNanos() else 0L
+            var filesReused = 0
+            var filesReplaced = 0
+            // Prepared once per reconciliation. The exact strong-revision WHERE
+            // predicate is unchanged; a mismatch still invalidates cached hashes
+            // via the existing replacement path. SQLite also preserves the
+            // transaction's atomicity and rollback behavior.
+            db.compileStatement(
+                "UPDATE $TABLE_FILES SET $COL_EXTENSION = ?, $COL_LAST_SEEN_GENERATION = ? " +
+                    "WHERE $COL_PATH = ? AND $COL_SIZE = ? AND $COL_MODIFIED = ? " +
+                    "AND $COL_DEVICE_ID = ? AND $COL_INODE = ? " +
+                    "AND $COL_CTIME_SECONDS = ? AND $COL_CTIME_NANOS = ?",
+            ).use { markSeen ->
+                for ((fileIndex, item) in inventory.files.withIndex()) {
+                    if (fileIndex % CANCELLATION_CHECK_INTERVAL == 0) {
+                        cancellationCheck?.invoke()
                     }
-                    db.insertWithOnConflict(
-                        TABLE_FILES,
-                        null,
-                        values,
-                        SQLiteDatabase.CONFLICT_REPLACE,
-                    )
+                    val path = item.file.absolutePath
+                    val extension = item.file.extension.lowercase(Locale.ROOT)
+                    val revision = item.revision
+                    val unchanged = if (revision != null) {
+                        // Reuse the SAME compiled statement across this transaction
+                        // instead of allocating ContentValues and compiling an UPDATE
+                        // for each of ~88,000 unchanged file rows.
+                        markSeen.clearBindings()
+                        markSeen.bindString(1, extension)
+                        markSeen.bindLong(2, generation)
+                        markSeen.bindString(3, path)
+                        markSeen.bindLong(4, item.size)
+                        markSeen.bindLong(5, item.modified)
+                        markSeen.bindLong(6, revision.physicalIdentity.deviceId)
+                        markSeen.bindLong(7, revision.physicalIdentity.inode)
+                        markSeen.bindLong(8, revision.changeTimeSeconds)
+                        markSeen.bindLong(9, revision.changeTimeNanos)
+                        markSeen.executeUpdateDelete()
+                    } else {
+                        0
+                    }
+
+                    if (unchanged == 0) {
+                        filesReplaced++
+                        val values = ContentValues().apply {
+                            put(COL_PATH, path)
+                            put(COL_SIZE, item.size)
+                            put(COL_MODIFIED, item.modified)
+                            put(COL_EXTENSION, extension)
+                            val physicalIdentity = item.physicalIdentity
+                            if (physicalIdentity != null) {
+                                put(COL_DEVICE_ID, physicalIdentity.deviceId)
+                                put(COL_INODE, physicalIdentity.inode)
+                            } else {
+                                putNull(COL_DEVICE_ID)
+                                putNull(COL_INODE)
+                            }
+                            if (revision != null) {
+                                put(COL_CTIME_SECONDS, revision.changeTimeSeconds)
+                                put(COL_CTIME_NANOS, revision.changeTimeNanos)
+                            } else {
+                                putNull(COL_CTIME_SECONDS)
+                                putNull(COL_CTIME_NANOS)
+                            }
+                            putNull(COL_SAMPLE_HASH)
+                            putNull(COL_FULL_HASH)
+                            put(COL_LAST_SEEN_GENERATION, generation)
+                            put(COL_LAST_VERIFIED_AT, completedAtMillis)
+                        }
+                        db.insertWithOnConflict(
+                            TABLE_FILES,
+                            null,
+                            values,
+                            SQLiteDatabase.CONFLICT_REPLACE,
+                        )
+                    } else {
+                        filesReused++
+                    }
                 }
             }
+            val filesFinishedNanos = if (onMetrics != null) SystemClock.elapsedRealtimeNanos() else 0L
 
             for ((directoryIndex, directory) in inventory.directories.withIndex()) {
                 if (directoryIndex % CANCELLATION_CHECK_INTERVAL == 0) {
@@ -336,6 +362,8 @@ internal class PersistentStorageIndex(
                 )
             }
 
+            val directoriesFinishedNanos = if (onMetrics != null) SystemClock.elapsedRealtimeNanos() else 0L
+
             db.delete(
                 TABLE_DIRECTORIES,
                 "$COL_LAST_SEEN_GENERATION != ?",
@@ -358,10 +386,34 @@ internal class PersistentStorageIndex(
             } ?: db.delete(TABLE_META, "$COL_META_KEY = ?", arrayOf(META_MEDIASTORE_GENERATION))
 
             db.setTransactionSuccessful()
-        } finally {
+            val finalizationFinishedNanos = if (onMetrics != null) SystemClock.elapsedRealtimeNanos() else 0L
+            // Only emit after the SQLite commit and healthy-index marker succeed.
+            // This callback never influences file selection, hashing or deletion.
+            // A failed/cancelled transaction emits no misleading success metrics.
             db.endTransaction()
+            statePreferences.edit().putBoolean(KEY_DIRTY, false).apply()
+            if (onMetrics != null) {
+                val endedNanos = SystemClock.elapsedRealtimeNanos()
+                fun millis(start: Long, end: Long): Long =
+                    ((end - start).coerceAtLeast(0L) / 1_000_000L)
+                onMetrics.invoke(
+                    IndexReconcileDiagnostics(
+                        totalMillis = millis(startedNanos, endedNanos),
+                        fileRowsMillis = millis(filesStartedNanos, filesFinishedNanos),
+                        directoryRowsMillis = millis(filesFinishedNanos, directoriesFinishedNanos),
+                        finalizationMillis = millis(directoriesFinishedNanos, finalizationFinishedNanos),
+                        commitMillis = millis(finalizationFinishedNanos, endedNanos),
+                        filesReused = filesReused,
+                        filesReplaced = filesReplaced,
+                        directoriesWritten = inventory.directories.size,
+                    ),
+                )
+            }
+        } catch (error: Throwable) {
+            // Roll back on any failure before the commit; do not emit diagnostics.
+            if (db.inTransaction()) db.endTransaction()
+            throw error
         }
-        statePreferences.edit().putBoolean(KEY_DIRTY, false).apply()
     }
 
     fun markStale() {
