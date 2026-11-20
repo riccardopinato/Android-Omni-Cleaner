@@ -244,6 +244,10 @@
     <string name="gallery_queue_photo">Foto</string>
     <string name="gallery_queue_video">Vídeo</string>
     <string name="gallery_queue_android_notice">Android solicitará confirmación antes de mover los archivos seleccionados a la papelera.</string>
+    <string name="gallery_session_reviewed">Revisados</string>
+    <string name="gallery_session_selected">Seleccionados para papelera</string>
+    <string name="gallery_session_recent_kept">Conservados · recientes</string>
+    <string name="gallery_session_android_confirmation">Los archivos seleccionados no se han eliminado. Android solicitará confirmación antes de enviarlos a la papelera.</string>
     <string name="gallery_selected_for_trash">%1$d elementos seleccionados para la papelera</string>
     <string name="gallery_move_android_trash">Mover a la Papelera de Android</string>
     <string name="gallery_trash_confirm_title">Confirmar papelera</string>
