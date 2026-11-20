@@ -419,44 +419,70 @@ fun RedesignedOmniCleanerApp(
                             }
                         }
                     } else when (item) {
-                        OmniDestination.HOME -> OmniColorBentoHome(
-                            dark = darkTheme,
-                            galleryController = viewModel.galleryController,
-                            onOpenSettings = { showSettings = true },
+                        OmniDestination.HOME -> OmniBentoV2Home(
                             state = state,
+                            galleryController = viewModel.galleryController,
                             premium = entitlement.isPremium,
+                            dark = darkTheme,
                             modifier = Modifier.fillMaxSize(),
+                            onOpenSettings = { showSettings = true },
                             onRefresh = controller::refreshAccessAndStorage,
                             onEnableDeepClean = { showDeepAccessDisclosure = true },
-                            onOpenClean = { destinationName = OmniDestination.CLEAN.name },
-                            onOpenGallery = { destinationName = OmniDestination.GALLERY.name },
-                            onOpenPrivacy = { destinationName = OmniDestination.PRIVACY.name },
-                            onOpenPro = { destinationName = OmniDestination.PRO.name },
-                            onAnalyzeStorage = {
-                                destinationName = OmniDestination.CLEAN.name
-                                detailName = OmniDetailRoute.CLEAN_OVERVIEW.name
-                                when {
-                                    state.hasBroadAccess -> controller.scanOverview()
-                                    state.storageCapability.canRequestDeepAccess ->
-                                        showDeepAccessDisclosure = true
+                            onScanTile = { id ->
+                                if (state.hasBroadAccess) {
+                                    com.riccardopinato.omnicleaner.ui.BentoScanRuntime.enqueue(context, id)
+                                } else if (state.storageCapability.canRequestDeepAccess) {
+                                    showDeepAccessDisclosure = true
                                 }
                             },
-                            onFindDuplicates = {
-                                destinationName = OmniDestination.CLEAN.name
-                                detailName = OmniDetailRoute.CLEAN_DUPLICATES.name
-                                when {
-                                    state.hasBroadAccess -> controller.scanDuplicates()
-                                    state.storageCapability.canRequestDeepAccess ->
-                                        showDeepAccessDisclosure = true
+                            onOpenTile = { id ->
+                                when (id) {
+                                    "settings" -> showSettings = true
+                                    "gallery" -> {
+                                        destinationName = OmniDestination.GALLERY.name
+                                        detailName = null
+                                    }
+                                    "galleryPro" -> {
+                                        destinationName = OmniDestination.GALLERY.name
+                                        detailName = OmniDetailRoute.GALLERY_INSIGHTS.name
+                                    }
+                                    "galleryReview" -> {
+                                        destinationName = OmniDestination.GALLERY.name
+                                        detailName = OmniDetailRoute.GALLERY_REVIEW.name
+                                    }
+                                    "privacy" -> {
+                                        destinationName = OmniDestination.PRIVACY.name
+                                        detailName = null
+                                    }
+                                    "privacyQuick" -> {
+                                        destinationName = OmniDestination.PRIVACY.name
+                                        detailName = OmniDetailRoute.PRIVACY_SINGLE.name
+                                    }
+                                    "privacyBatch" -> {
+                                        destinationName = OmniDestination.PRIVACY.name
+                                        detailName = OmniDetailRoute.PRIVACY_BATCH.name
+                                    }
+                                    "pro" -> {
+                                        destinationName = OmniDestination.PRO.name
+                                        detailName = null
+                                    }
+                                    else -> {
+                                        destinationName = OmniDestination.CLEAN.name
+                                        val route = when (id) {
+                                            "storage" -> OmniDetailRoute.CLEAN_OVERVIEW
+                                            "duplicates" -> OmniDetailRoute.CLEAN_DUPLICATES
+                                            "large" -> OmniDetailRoute.CLEAN_LARGE
+                                            "folders" -> OmniDetailRoute.CLEAN_FOLDERS
+                                            "review" -> OmniDetailRoute.CLEAN_REVIEW
+                                            "intelligence" -> OmniDetailRoute.CLEAN_INTELLIGENCE
+                                            "trash" -> OmniDetailRoute.CLEAN_TRASH
+                                            "filters" -> OmniDetailRoute.CLEAN_FILTERS
+                                            "advanced", "categories" -> OmniDetailRoute.CLEAN_ADVANCED
+                                            else -> OmniDetailRoute.CLEAN_OVERVIEW
+                                        }
+                                        detailName = route.name
+                                    }
                                 }
-                            },
-                            onOpenLargeFiles = {
-                                destinationName = OmniDestination.CLEAN.name
-                                detailName = OmniDetailRoute.CLEAN_LARGE.name
-                            },
-                            onOpenTrashQueue = {
-                                destinationName = OmniDestination.CLEAN.name
-                                detailName = OmniDetailRoute.CLEAN_TRASH.name
                             },
                         )
 
