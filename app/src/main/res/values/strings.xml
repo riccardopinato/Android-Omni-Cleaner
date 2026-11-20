@@ -245,6 +245,10 @@
     <string name="gallery_queue_photo">Photo</string>
     <string name="gallery_queue_video">Video</string>
     <string name="gallery_queue_android_notice">Android will ask for confirmation before moving these selected files to Trash.</string>
+    <string name="gallery_session_reviewed">Reviewed</string>
+    <string name="gallery_session_selected">Selected for Trash</string>
+    <string name="gallery_session_recent_kept">Kept · recent</string>
+    <string name="gallery_session_android_confirmation">Selected files have not been deleted. Android will request confirmation before moving them to Trash.</string>
     <string name="gallery_selected_for_trash">%1$d items selected for trash</string>
     <string name="gallery_move_android_trash">Move to Android Trash</string>
     <string name="gallery_trash_confirm_title">Confirm trash</string>
