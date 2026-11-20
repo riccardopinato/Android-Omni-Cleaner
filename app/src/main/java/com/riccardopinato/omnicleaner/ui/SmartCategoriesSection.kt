@@ -4,6 +4,8 @@ import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,7 +13,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AlertDialog
 import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as Button
 import androidx.compose.material3.Card
@@ -43,6 +44,7 @@ import com.riccardopinato.omnicleaner.cleaner.SmartCategoryScanner
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.StorageCleanupEngine
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
+import java.io.File
 import java.util.Locale
 import kotlinx.coroutines.launch
 
@@ -333,24 +335,27 @@ fun SmartCategoriesSection(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SmartCandidateRow(
     item: SmartCategoryItem,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
+    val target = remember(item.path) { omniQuickLookForFile(File(item.path)) }
+    var preview by remember(item.path) { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .toggleable(
-                value = checked,
+            .combinedClickable(
                 role = Role.Checkbox,
-                onValueChange = onCheckedChange,
+                onClick = { onCheckedChange(!checked) },
+                onLongClick = { if (target != null) preview = true },
             ),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        Checkbox(checked = checked, onCheckedChange = null)
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
         Column(modifier = Modifier.weight(1f)) {
             val oldDownloads = if (SmartCategory.OLD_DOWNLOADS in item.categories) {
                 stringResource(R.string.smart_category_old_downloads)
@@ -397,6 +402,14 @@ private fun SmartCandidateRow(
                 maxLines = 1,
             )
         }
+    }
+    if (preview && target != null) {
+        OmniMediaQuickLook(
+            target = target,
+            onDismiss = { preview = false },
+            selected = checked,
+            onSelectedChange = onCheckedChange,
+        )
     }
 }
 
