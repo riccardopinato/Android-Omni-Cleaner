@@ -228,7 +228,9 @@ fun RedesignedOmniCleanerApp(
         bottomBar = {
             if (activeDetail == null) {
             NavigationBar(
-                containerColor = if (darkTheme) Color(0xFF111B38) else Color(0xFFF7FAFF),
+                containerColor = if (destination == OmniDestination.HOME && activeDetail == null)
+                    (if (darkTheme) OmniColorBento.backgroundDark else OmniColorBento.background)
+                else if (darkTheme) Color(0xFF111B38) else Color(0xFFF7FAFF),
                 tonalElevation = 0.dp,
             ) {
                 OmniDestination.entries.forEach { item ->
@@ -243,7 +245,11 @@ fun RedesignedOmniCleanerApp(
                             OmniNavigationIcon(
                                 symbol = item.icon,
                                 animateOnEnter = destination == item,
-                                tint = if (destination == item) {
+                                tint = if (destination == OmniDestination.HOME && activeDetail == null) {
+                                    if (destination == item) OmniColorBento.ink
+                                    else if (darkTheme) OmniColorBento.white.copy(alpha = .75f)
+                                    else OmniColorBento.ink.copy(alpha = .72f)
+                                } else if (destination == item) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
                                     MaterialTheme.colorScheme.onSurfaceVariant
@@ -252,9 +258,15 @@ fun RedesignedOmniCleanerApp(
                         },
                         label = { Text(stringResource(item.labelRes)) },
                         colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = if (darkTheme) Color(0xFF4D278F) else Color(0xFFD4E4FF),
-                            selectedTextColor = if (darkTheme) Color.White else Color(0xFF174EE5),
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            indicatorColor = if (destination == OmniDestination.HOME && activeDetail == null)
+                                OmniColorBento.lime
+                            else if (darkTheme) Color(0xFF4D278F) else Color(0xFFD4E4FF),
+                            selectedTextColor = if (destination == OmniDestination.HOME && activeDetail == null)
+                                (if (darkTheme) OmniColorBento.white else OmniColorBento.ink)
+                            else if (darkTheme) Color.White else Color(0xFF174EE5),
+                            unselectedTextColor = if (destination == OmniDestination.HOME && activeDetail == null)
+                                (if (darkTheme) OmniColorBento.white else OmniColorBento.ink)
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
                         ),
                     )
                 }
@@ -269,10 +281,18 @@ fun RedesignedOmniCleanerApp(
         ) {
             // Brand waves belong to the rich Home dashboard; functional pages
             // use a quieter surface so sparse states remain intentional.
-            OmniPremiumWaveBackground(
-                dark = darkTheme,
-                showBottomWave = destination == OmniDestination.HOME && activeDetail == null,
-            )
+            if (destination == OmniDestination.HOME && activeDetail == null) {
+                Box(
+                    Modifier.fillMaxSize().background(
+                        if (darkTheme) OmniColorBento.backgroundDark else OmniColorBento.background,
+                    ),
+                )
+            } else {
+                OmniPremiumWaveBackground(
+                    dark = darkTheme,
+                    showBottomWave = false,
+                )
+            }
             OmniDestination.entries.forEach { item ->
                 val active = destination == item
                 // A short layer-only fade responds immediately to taps, avoiding
@@ -390,8 +410,9 @@ fun RedesignedOmniCleanerApp(
                             }
                         }
                     } else when (item) {
-                        OmniDestination.HOME -> OmniPremiumHome(
+                        OmniDestination.HOME -> OmniColorBentoHome(
                             dark = darkTheme,
+                            galleryController = viewModel.galleryController,
                             onOpenSettings = { showSettings = true },
                             state = state,
                             premium = entitlement.isPremium,
@@ -419,6 +440,14 @@ fun RedesignedOmniCleanerApp(
                                     state.storageCapability.canRequestDeepAccess ->
                                         showDeepAccessDisclosure = true
                                 }
+                            },
+                            onOpenLargeFiles = {
+                                destinationName = OmniDestination.CLEAN.name
+                                detailName = OmniDetailRoute.CLEAN_LARGE.name
+                            },
+                            onOpenTrashQueue = {
+                                destinationName = OmniDestination.CLEAN.name
+                                detailName = OmniDetailRoute.CLEAN_TRASH.name
                             },
                         )
 
