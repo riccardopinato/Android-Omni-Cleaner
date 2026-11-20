@@ -119,6 +119,7 @@ private enum class OmniDetailRoute(val parent: OmniDestination) {
     CLEAN_FILTERS(OmniDestination.CLEAN),
     CLEAN_TRASH(OmniDestination.CLEAN),
     CLEAN_ADVANCED(OmniDestination.CLEAN),
+    CLEAN_CATEGORIES(OmniDestination.CLEAN),
     GALLERY_REVIEW(OmniDestination.GALLERY),
     GALLERY_INSIGHTS(OmniDestination.GALLERY),
     PRIVACY_SINGLE(OmniDestination.PRIVACY),
@@ -136,6 +137,7 @@ private fun CleanerToolRoute.toDetailRoute(): OmniDetailRoute = when (this) {
     CleanerToolRoute.FILTERS -> OmniDetailRoute.CLEAN_FILTERS
     CleanerToolRoute.TRASH -> OmniDetailRoute.CLEAN_TRASH
     CleanerToolRoute.ADVANCED -> OmniDetailRoute.CLEAN_ADVANCED
+    CleanerToolRoute.CATEGORIES -> OmniDetailRoute.CLEAN_CATEGORIES
 }
 
 private fun OmniDetailRoute.toCleanerTool(): CleanerToolRoute = when (this) {
@@ -148,6 +150,7 @@ private fun OmniDetailRoute.toCleanerTool(): CleanerToolRoute = when (this) {
     OmniDetailRoute.CLEAN_FILTERS -> CleanerToolRoute.FILTERS
     OmniDetailRoute.CLEAN_TRASH -> CleanerToolRoute.TRASH
     OmniDetailRoute.CLEAN_ADVANCED -> CleanerToolRoute.ADVANCED
+    OmniDetailRoute.CLEAN_CATEGORIES -> CleanerToolRoute.CATEGORIES
     else -> error("Not a Clean tool route: $this")
 }
 
@@ -180,7 +183,12 @@ fun RedesignedOmniCleanerApp(
     val cleanSelectionState = remember { CleanupSelectionUiState() }
     val privacyWorkflow = remember { ExifWorkflowState() }
     val workflowScope = rememberCoroutineScope()
-    BackHandler(enabled = activeDetail != null) { detailName = null }
+    // All functional pages are direct children of the single Bento Home.
+    // Hardware Back must never strand the user on a former navigation hub.
+    BackHandler(enabled = destination != OmniDestination.HOME) {
+        detailName = null
+        destinationName = OmniDestination.HOME.name
+    }
     var showDeepAccessDisclosure by remember { mutableStateOf(false) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
 
@@ -228,59 +236,15 @@ fun RedesignedOmniCleanerApp(
         modifier = Modifier.semantics { testTagsAsResourceId = true },
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            if (activeDetail == null) {
-            NavigationBar(
-                containerColor = if (destination == OmniDestination.HOME && activeDetail == null)
-                    (if (darkTheme) OmniColorBentoV2Palette.legibleInk else OmniColorBentoV2Palette.cream)
-                else if (darkTheme) Color(0xFF111B38) else Color(0xFFF7FAFF),
-                tonalElevation = 0.dp,
-            ) {
-                // 200% Android font scale cannot fit five textual labels within
-                // 360dp. Use full-size icon-only destinations with explicit
-                // localized TalkBack names instead of clipped syllables.
-                val compactNav = LocalDensity.current.fontScale >= 1.6f
-                OmniDestination.entries.forEach { item ->
-                    val itemLabel = stringResource(item.labelRes)
-                    val textLabel: @Composable () -> Unit = { Text(itemLabel) }
-                    NavigationBarItem(
-                        modifier = Modifier.testTag("omni_nav_${item.name.lowercase(Locale.ROOT)}")
-                            .semantics { contentDescription = itemLabel },
-                        selected = destination == item,
-                        onClick = {
-                            detailName = null
-                            destinationName = item.name
-                        },
-                        icon = {
-                            OmniNavigationIcon(
-                                symbol = item.icon,
-                                animateOnEnter = destination == item,
-                                tint = if (destination == OmniDestination.HOME && activeDetail == null) {
-                                    if (destination == item) OmniColorBento.ink
-                                    else if (darkTheme) OmniColorBento.white.copy(alpha = .75f)
-                                    else OmniColorBento.ink.copy(alpha = .72f)
-                                } else if (destination == item) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                            )
-                        },
-                        label = if (compactNav) null else textLabel,
-                        colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = if (destination == OmniDestination.HOME && activeDetail == null)
-                                OmniColorBento.lime
-                            else if (darkTheme) Color(0xFF4D278F) else Color(0xFFD4E4FF),
-                            selectedTextColor = if (destination == OmniDestination.HOME && activeDetail == null)
-                                (if (darkTheme) OmniColorBento.white else OmniColorBento.ink)
-                            else if (darkTheme) Color.White else Color(0xFF174EE5),
-                            unselectedTextColor = if (destination == OmniDestination.HOME && activeDetail == null)
-                                (if (darkTheme) OmniColorBento.white else OmniColorBento.ink)
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                        ),
-                    )
-                }
-            }
-            } // No bottom navigation in dedicated functional screens.
+            // A single anchored banner, shared by Home and all dedicated pages.
+            // The ad view owns no layout space unless consent and the billing
+            // entitlement are resolved and the user is eligible for ads.
+            AdManager.Banner(
+                isPremium = entitlement.isPremium,
+                consentAllowsAds = consentState.canRequestAds,
+                entitlementResolved = entitlement.resolved,
+                modifier = Modifier.testTag("omni_admob_bottom_banner"),
+            )
         },
     ) { innerPadding ->
         Box(
@@ -339,7 +303,10 @@ fun RedesignedOmniCleanerApp(
                         ),
                 ) {
                     if (active && activeDetail != null) {
-                        OmniDetailFrame(onBack = { detailName = null }) {
+                        OmniDetailFrame(onBack = {
+                            detailName = null
+                            destinationName = OmniDestination.HOME.name
+                        }) {
                             when (activeDetail) {
                                 OmniDetailRoute.CLEAN_OVERVIEW,
                                 OmniDetailRoute.CLEAN_INTELLIGENCE,
@@ -349,7 +316,8 @@ fun RedesignedOmniCleanerApp(
                                 OmniDetailRoute.CLEAN_FOLDERS,
                                 OmniDetailRoute.CLEAN_FILTERS,
                                 OmniDetailRoute.CLEAN_TRASH,
-                                OmniDetailRoute.CLEAN_ADVANCED -> androidx.compose.runtime.key(activeDetail) {
+                                OmniDetailRoute.CLEAN_ADVANCED,
+                                OmniDetailRoute.CLEAN_CATEGORIES -> androidx.compose.runtime.key(activeDetail) {
                                     CleanDetailScreen(
                                         tool = activeDetail.toCleanerTool(),
                                         state = state,
@@ -418,7 +386,9 @@ fun RedesignedOmniCleanerApp(
                                 }
                             }
                         }
-                    } else when (item) {
+                    } else {
+                        val mainScreen: @Composable () -> Unit = {
+                            when (item) {
                         OmniDestination.HOME -> OmniBentoV2Home(
                             state = state,
                             galleryController = viewModel.galleryController,
@@ -452,7 +422,7 @@ fun RedesignedOmniCleanerApp(
                                     }
                                     "privacy" -> {
                                         destinationName = OmniDestination.PRIVACY.name
-                                        detailName = null
+                                        detailName = OmniDetailRoute.PRIVACY_SINGLE.name
                                     }
                                     "privacyQuick" -> {
                                         destinationName = OmniDestination.PRIVACY.name
@@ -464,7 +434,7 @@ fun RedesignedOmniCleanerApp(
                                     }
                                     "pro" -> {
                                         destinationName = OmniDestination.PRO.name
-                                        detailName = null
+                                        detailName = OmniDetailRoute.PRO_MANAGE.name
                                     }
                                     else -> {
                                         destinationName = OmniDestination.CLEAN.name
@@ -477,7 +447,8 @@ fun RedesignedOmniCleanerApp(
                                             "intelligence" -> OmniDetailRoute.CLEAN_INTELLIGENCE
                                             "trash" -> OmniDetailRoute.CLEAN_TRASH
                                             "filters" -> OmniDetailRoute.CLEAN_FILTERS
-                                            "advanced", "categories" -> OmniDetailRoute.CLEAN_ADVANCED
+                                            "advanced" -> OmniDetailRoute.CLEAN_ADVANCED
+                                            "categories" -> OmniDetailRoute.CLEAN_CATEGORIES
                                             else -> OmniDetailRoute.CLEAN_OVERVIEW
                                         }
                                         detailName = route.name
@@ -545,6 +516,15 @@ fun RedesignedOmniCleanerApp(
                                 ),
                                 showWelcome = !entitlement.isPremium,
                             )
+                            }
+                        }
+                        if (item == OmniDestination.HOME) {
+                            mainScreen()
+                        } else {
+                            OmniDetailFrame(onBack = {
+                                detailName = null
+                                destinationName = OmniDestination.HOME.name
+                            }) { mainScreen() }
                         }
                     }
                 }
