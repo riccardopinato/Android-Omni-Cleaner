@@ -115,6 +115,44 @@ internal fun OmniColorBentoHome(
         gallery.loadedSourceCount.toString()
     else "—"
     val settingsLabel = stringResource(R.string.audit_settings)
+    val compactTagline = LocalDensity.current.fontScale > 1.6f
+    // Stable real data owners. Reuse the same card in narrow one-column and
+    // standard asymmetric bento arrangements: never shrink text into noise.
+    val storageCard: @Composable (Modifier) -> Unit = { m ->
+        OmniBentoStorageCard(state.storageInfo, onAnalyzeStorage, m)
+    }
+    val loadedMediaCard: @Composable (Modifier) -> Unit = { m ->
+        OmniBentoMetricCard(
+            value = loadedMedia,
+            label = stringResource(R.string.bento_loaded_media),
+            symbol = OmniNavigationSymbol.GALLERY,
+            background = colors.pink,
+            foreground = colors.cobalt,
+            onClick = onOpenGallery,
+            modifier = m,
+            tag = "omni_bento_media_count",
+        )
+    }
+    val duplicatesCard: @Composable (Modifier) -> Unit = { m ->
+        OmniBentoMetricCard(
+            value = duplicates,
+            label = stringResource(R.string.bento_duplicates_verified),
+            symbol = OmniNavigationSymbol.CLEAN,
+            background = colors.magenta,
+            foreground = colors.white,
+            onClick = onFindDuplicates,
+            modifier = m,
+            tag = "omni_bento_duplicates",
+        )
+    }
+    val galleryCard: @Composable (Modifier) -> Unit = { m ->
+        OmniBentoGalleryCard(
+            title = stringResource(R.string.bento_gallery_title),
+            caption = stringResource(R.string.bento_gallery_subtitle),
+            onClick = onOpenGallery,
+            modifier = m,
+        )
+    }
 
     LazyColumn(
         modifier = modifier.fillMaxSize()
@@ -157,7 +195,10 @@ internal fun OmniColorBentoHome(
                         maxLines = 2,
                     )
                     Text(
-                        stringResource(R.string.redesign_home_subtitle),
+                        stringResource(
+                            if (compactTagline) R.string.bento_compact_tagline
+                            else R.string.redesign_home_subtitle,
+                        ),
                         color = subtext,
                         fontFamily = colors.body,
                         fontSize = 11.sp,
@@ -180,42 +221,29 @@ internal fun OmniColorBentoHome(
             }
         }
         item(key = "main_metrics") {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OmniBentoStorageCard(
-                    info = state.storageInfo,
-                    onClick = onAnalyzeStorage,
-                    modifier = Modifier.weight(if (compact) 1.6f else 1.75f),
-                )
-                OmniBentoMetricCard(
-                    value = loadedMedia,
-                    label = stringResource(R.string.bento_loaded_media),
-                    symbol = OmniNavigationSymbol.GALLERY,
-                    background = colors.pink,
-                    foreground = colors.cobalt,
-                    onClick = onOpenGallery,
-                    modifier = Modifier.weight(1f),
-                    tag = "omni_bento_media_count",
-                )
+            if (compact) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    storageCard(Modifier.fillMaxWidth())
+                    loadedMediaCard(Modifier.fillMaxWidth())
+                }
+            } else {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    storageCard(Modifier.weight(1.75f))
+                    loadedMediaCard(Modifier.weight(1f))
+                }
             }
         }
         item(key = "feature_metrics") {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OmniBentoMetricCard(
-                    value = duplicates,
-                    label = stringResource(R.string.bento_duplicates_verified),
-                    symbol = OmniNavigationSymbol.CLEAN,
-                    background = colors.magenta,
-                    foreground = colors.white,
-                    onClick = onFindDuplicates,
-                    modifier = Modifier.weight(1f),
-                    tag = "omni_bento_duplicates",
-                )
-                OmniBentoGalleryCard(
-                    title = stringResource(R.string.bento_gallery_title),
-                    caption = stringResource(R.string.bento_gallery_subtitle),
-                    onClick = onOpenGallery,
-                    modifier = Modifier.weight(if (compact) 1.6f else 1.75f),
-                )
+            if (compact) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    duplicatesCard(Modifier.fillMaxWidth())
+                    galleryCard(Modifier.fillMaxWidth())
+                }
+            } else {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    duplicatesCard(Modifier.weight(1f))
+                    galleryCard(Modifier.weight(1.75f))
+                }
             }
         }
         item(key = "large_files") {
