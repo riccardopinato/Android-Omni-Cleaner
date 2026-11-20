@@ -200,11 +200,15 @@ fun GalleryCleanerSection(
             }
 
             state.currentItem?.let { current ->
-                Text(
-                    stringResource(R.string.audit_review_progress, state.totalReviewedCount),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                if (reviewOnly) {
+                    OmniTinderSessionSummary(state = state)
+                } else {
+                    Text(
+                        stringResource(R.string.audit_review_progress, state.totalReviewedCount),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 val displayDate = if (current.dateTaken > 0L) {
                     current.formattedDate
                 } else {
