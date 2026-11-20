@@ -1,6 +1,7 @@
 package com.riccardopinato.omnicleaner.gallery
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -17,18 +19,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
-import com.riccardopinato.omnicleaner.ui.theme.OmniTextButton
 
 /**
  * Read-only, professional row for an item selected for Android system Trash.
@@ -79,16 +85,42 @@ internal fun OmniTrashQueueItem(
                 maxLines = 1,
             )
         }
-        OmniTextButton(
-            onClick = onRemove,
-            modifier = Modifier.testTag("omni_gallery_queue_remove_${media.id}")
-                .semantics { contentDescription = "$removeLabel: ${media.name}" },
+        // UIV-070: a compact circular selection mark. This queue contains
+        // selected items only: unchecking removes the entry via the original
+        // controller callback. It never requests Android Trash directly.
+        Box(
+            modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                .testTag("omni_gallery_queue_remove_${media.id}")
+                .semantics {
+                    contentDescription = "$removeLabel: ${media.name}"
+                    toggleableState = ToggleableState.On
+                }
+                .clickable(
+                    role = Role.Checkbox,
+                    onClick = onRemove,
+                ),
+            contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = "×",
-                style = MaterialTheme.typography.titleLarge,
-                color = colorScheme.onSurfaceVariant,
-            )
+            Canvas(modifier = Modifier.size(25.dp)) {
+                drawCircle(
+                    color = colorScheme.onSurface,
+                    radius = size.minDimension / 2f,
+                )
+                val p = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(size.width * .25f, size.height * .52f)
+                    lineTo(size.width * .44f, size.height * .69f)
+                    lineTo(size.width * .77f, size.height * .32f)
+                }
+                drawPath(
+                    path = p,
+                    color = colorScheme.surface,
+                    style = Stroke(
+                        width = 2.dp.toPx(),
+                        cap = StrokeCap.Round,
+                        join = androidx.compose.ui.graphics.StrokeJoin.Round,
+                    ),
+                )
+            }
         }
     }
     HorizontalDivider(color = colorScheme.outline.copy(alpha = .65f))
