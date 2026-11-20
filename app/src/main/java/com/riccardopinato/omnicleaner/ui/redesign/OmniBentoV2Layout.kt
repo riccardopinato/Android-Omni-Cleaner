@@ -2,6 +2,7 @@ package com.riccardopinato.omnicleaner.ui.redesign
 
 import android.content.Context
 import com.riccardopinato.omnicleaner.R
+import kotlin.math.roundToInt
 
 /** Color Bento 2.0: one widget per real feature, not one per shortcut appearance. */
 internal data class BentoV2Tile(
@@ -14,6 +15,22 @@ internal data class BentoV2Tile(
 }
 
 internal data class BentoV2Position(val tile: BentoV2Tile, val column: Int, val row: Int)
+
+/**
+ * Snaps handle movement to the six allowed tile formats. Used for both the live
+ * dashed guide and the final committed size so the preview cannot lie.
+ */
+internal fun bentoV2ResizeFromDrag(
+    tile: BentoV2Tile,
+    dxPx: Float,
+    dyPx: Float,
+    stepPx: Float,
+): Pair<Int, Int> {
+    if (stepPx <= 0f || !stepPx.isFinite()) return tile.columns to tile.rows
+    val columns = (tile.columns + (dxPx / stepPx).roundToInt()).coerceIn(1, 3)
+    val rows = (tile.rows + (dyPx / stepPx).roundToInt()).coerceIn(1, 2)
+    return columns to rows
+}
 internal val BENTO_V2_SIZES = setOf(1 to 1, 2 to 1, 1 to 2, 2 to 2, 3 to 1, 3 to 2)
 
 internal data class BentoV2Definition(
