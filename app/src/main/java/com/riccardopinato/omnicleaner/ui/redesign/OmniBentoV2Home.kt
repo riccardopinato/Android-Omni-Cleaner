@@ -53,6 +53,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -170,7 +172,7 @@ internal fun OmniBentoV2Home(
                         editing = !editing
                         selectedId = null
                     }
-                    if (!editing) BentoV2Action("⚙", palette.blue, palette.legibleInk, onClick = onOpenSettings)
+                    if (!editing) BentoV2Action("⚙", palette.blue, palette.legibleInk, tag = "omni_home_settings", semanticLabel = stringResource(R.string.audit_settings), onClick = onOpenSettings)
                 }
                 if (editing) {
                     Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -518,9 +520,10 @@ internal fun OmniBentoV2Home(
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun BentoV2Action(label: String, bg: Color, fg: Color, tag: String? = null, onClick: () -> Unit) {
+private fun BentoV2Action(label: String, bg: Color, fg: Color, tag: String? = null, semanticLabel: String? = null, onClick: () -> Unit) {
     Box(
         Modifier.then(if (tag != null) Modifier.testTag(tag) else Modifier)
+            .then(if (semanticLabel != null) Modifier.semantics { contentDescription = semanticLabel } else Modifier)
             .clip(RoundedCornerShape(13.dp)).background(bg)
             .combinedClickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp),
