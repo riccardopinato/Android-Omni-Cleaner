@@ -49,6 +49,7 @@ private data class MaintenanceState(
     val thumbnails: List<ThumbnailCacheItem> = emptyList(),
     val residues: List<AppResidueItem> = emptyList(),
     val residueVisibilityWarning: Boolean = false,
+    val residueInaccessibleRoots: List<String> = emptyList(),
     val thumbnailSearchQuery: String = "",
     val residueSearchQuery: String = "",
     val message: String? = null,
@@ -97,6 +98,7 @@ private class MaintenanceController(
         state = state.copy(
             residues = result.items,
             residueVisibilityWarning = result.packageVisibilityMayBeRestricted,
+            residueInaccessibleRoots = result.inaccessibleRoots,
         )
     }
 
@@ -285,6 +287,17 @@ fun MaintenanceSection() {
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
+                if (state.residueInaccessibleRoots.isNotEmpty()) {
+                    Text(
+                        "Sorgenti non leggibili: " + state.residueInaccessibleRoots.joinToString(),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Text(
+                    "Residui possibili, non confermati. Un'app archiviata o nascosta " +
+                        "può possedere ancora questi file: nessuna eliminazione automatica.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
                 state.visibleResidues.take(10).forEach { item ->
                     Text(
                         "${item.name} · ${item.formattedSize()} · " +
