@@ -392,6 +392,8 @@ internal fun StorageIntelligenceSection(
                             SmartCategory.INSTALLERS -> R.string.si_installers
                             SmartCategory.ARCHIVES -> R.string.si_archives
                             SmartCategory.SCREENSHOTS -> R.string.si_screenshots
+                            SmartCategory.TEMPORARY_FILES -> R.string.smart_category_temporary
+                            SmartCategory.OLD_LOGS -> R.string.smart_category_logs
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(stringResource(title), fontWeight = FontWeight.SemiBold)
