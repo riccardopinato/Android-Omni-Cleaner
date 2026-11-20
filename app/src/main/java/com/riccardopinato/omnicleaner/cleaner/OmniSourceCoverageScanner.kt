@@ -60,11 +60,12 @@ internal fun omniUniqueUris(items: List<OmniDiscoveredMedia>): List<OmniDiscover
     items.distinctBy { it.uri.toString() }
 
 internal class OmniSourceCoverageScanner {
-    suspend fun discover(context: Context, maxVisiblePerSource: Int = 400): OmniScanCoverageResult =
+    suspend fun discover(context: Context, maxVisiblePerSource: Int = 400, nameQuery: String = ""): OmniScanCoverageResult =
         withContext(Dispatchers.IO) {
             val sources = ArrayList<OmniScanCoverageSource>()
             val resources = ArrayList<OmniDiscoveredMedia>()
             val cap = maxVisiblePerSource.coerceIn(10, 2000)
+            val needle = nameQuery.trim().take(120)
 
             val primary = StorageAccess.primaryRoot()
             try {
@@ -111,13 +112,18 @@ internal class OmniSourceCoverageScanner {
                     MediaStore.Files.FileColumns.DATE_MODIFIED,
                     MediaStore.Files.FileColumns.MIME_TYPE,
                 )
-                val where = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val baseWhere = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     "${MediaStore.MediaColumns.IS_TRASHED}=0 AND ${MediaStore.MediaColumns.IS_PENDING}=0"
                 } else null
+                val where = listOfNotNull(
+                    baseWhere,
+                    if (needle.isNotEmpty()) "${MediaStore.Files.FileColumns.DISPLAY_NAME} LIKE ?" else null,
+                ).joinToString(" AND ").ifBlank { null }
+                val whereArgs = if (needle.isNotEmpty()) arrayOf("%$needle%") else null
                 try {
                     var checked = 0
                     context.contentResolver.query(
-                        base, projection, where, null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC",
+                        base, projection, where, whereArgs, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC",
                     )?.use { cursor ->
                         val ixId = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
                         val ixName = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
@@ -176,7 +182,9 @@ internal class OmniSourceCoverageScanner {
                             coroutineContext.ensureActive()
                             if (child.isDirectory) {
                                 stack.add(child)
-                            } else if (child.isFile) {
+                            } else if (child.isFile &&
+                                (needle.isEmpty() || child.name.orEmpty().contains(needle, ignoreCase = true))
+                            ) {
                                 found++
                                 if (found <= cap) resources += OmniDiscoveredMedia(
                                     id, child.uri, child.name ?: "Documento",
@@ -231,7 +239,9 @@ internal class OmniSourceCoverageScanner {
                         for (child in children) {
                             coroutineContext.ensureActive()
                             if (child.isDirectory) stack.add(child)
-                            else if (child.isFile) {
+                            else if (child.isFile &&
+                                (needle.isEmpty() || child.name.contains(needle, ignoreCase = true))
+                            ) {
                                 count++
                                 if (count <= cap) resources += OmniDiscoveredMedia(
                                     id, Uri.fromFile(child), child.name,
