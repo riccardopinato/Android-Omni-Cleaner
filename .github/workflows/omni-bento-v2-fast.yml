@@ -1,4 +1,4 @@
-name: Color Bento 2.0 — fast APK preview
+name: Omni Cleaner — fast APK preview
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   debug-apk:
-    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'design/omni-linktree-home-compose-v1-20261120'
+    if: github.event.pull_request.head.repo.full_name == github.repository && (github.event.pull_request.head.ref == 'design/omni-linktree-home-compose-v1-20261120' || github.event.pull_request.head.ref == 'feat/omni-coverage-media-preview-20261120')
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
