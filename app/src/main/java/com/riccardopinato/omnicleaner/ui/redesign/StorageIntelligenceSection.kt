@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.CleanupFileSnapshot
+import com.riccardopinato.omnicleaner.ui.OmniCoverageSection
 import com.riccardopinato.omnicleaner.ui.OmniFileTrashReview
 import com.riccardopinato.omnicleaner.ui.OmniMediaQuickLook
 import com.riccardopinato.omnicleaner.ui.omniQuickLookForFile
@@ -414,6 +415,7 @@ internal fun StorageIntelligenceSection(
                 }
             }
         }
+        OmniCoverageSection()
         Spacer(Modifier.height(12.dp))
     }
     val preview = previewFile
