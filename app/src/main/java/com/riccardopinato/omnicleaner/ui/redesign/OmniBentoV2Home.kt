@@ -100,6 +100,7 @@ internal fun OmniBentoV2Home(
     val rowCount = displayed.maxOfOrNull { it.row + it.tile.rows } ?: 0
     val bg = if (dark) colors.backgroundDark else colors.background
     val fg = if (dark) colors.white else colors.ink
+    val invalidLayoutText = stringResource(R.string.bento_v2_invalid_layout)
     val reducedMotion = remember(context) {
         runCatching { Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }
             .getOrDefault(false)
@@ -107,7 +108,7 @@ internal fun OmniBentoV2Home(
 
     fun commit(candidate: List<BentoV2Tile>) {
         if (bentoV2Pack(candidate) == null) {
-            errorMessage = "Questa combinazione non riempie la griglia senza spazi interni."
+            errorMessage = invalidLayoutText
             return
         }
         tiles = candidate
@@ -157,9 +158,9 @@ internal fun OmniBentoV2Home(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Column(Modifier.weight(1f)) {
                         Text("Omni Cleaner", color = fg, fontFamily = colors.display, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-                        Text(if (editing) "Trascina, ridimensiona e personalizza" else "Color Bento 2.0", color = fg.copy(alpha = .7f), fontFamily = colors.body, fontSize = 12.sp)
+                        Text(if (editing) stringResource(R.string.bento_v2_subtitle) else "Color Bento 2.0", color = fg.copy(alpha = .7f), fontFamily = colors.body, fontSize = 12.sp)
                     }
-                    BentoV2Action(if (editing) "Fine" else "Modifica", colors.lime, colors.forest) {
+                    BentoV2Action(if (editing) stringResource(R.string.bento_v2_done) else stringResource(R.string.bento_v2_edit), colors.lime, colors.forest, tag = "omni_bento_v2_editor_toggle") {
                         editing = !editing
                         selectedId = null
                     }
@@ -167,8 +168,8 @@ internal fun OmniBentoV2Home(
                 }
                 if (editing) {
                     Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        BentoV2Action("+ Aggiungi", colors.lime, colors.forest) { showLibrary = true }
-                        BentoV2Action("Ripristina", colors.pink, colors.ink) { showRestore = true }
+                        BentoV2Action(stringResource(R.string.bento_v2_add), colors.lime, colors.forest) { showLibrary = true }
+                        BentoV2Action(stringResource(R.string.bento_v2_reset), colors.pink, colors.ink) { showRestore = true }
                     }
                 }
                 if (!editing && (BentoScanRuntime.activeId != null || BentoScanRuntime.pending.isNotEmpty())) {
@@ -178,8 +179,8 @@ internal fun OmniBentoV2Home(
                             .padding(13.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("Analisi in corso", color = colors.white, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        Text("In coda: ${BentoScanRuntime.pending.size}  ›", color = colors.lime, fontSize = 12.sp)
+                        Text(stringResource(R.string.bento_v2_scanning), color = colors.white, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.bento_v2_queue_count, BentoScanRuntime.pending.size) + "  ›", color = colors.lime, fontSize = 12.sp)
                     }
                 }
             }
@@ -300,7 +301,7 @@ internal fun OmniBentoV2Home(
                     .background(if (dark) colors.panel else colors.sageBackground).padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("Accesso e protezione", color = if (dark) colors.white else colors.forest, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.bento_v2_access), color = if (dark) colors.white else colors.forest, fontWeight = FontWeight.Bold)
                 val accessStatus = when {
                     state.hasBroadAccess -> stringResource(R.string.access_ready)
                     state.storageCapability.standardCleaningAvailable -> stringResource(R.string.redesign_standard_ready)
@@ -325,7 +326,7 @@ internal fun OmniBentoV2Home(
             title = { Text(title) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text("Dimensioni della tessera")
+                    Text(stringResource(R.string.bento_v2_size))
                     BENTO_V2_SIZES.sortedWith(compareBy({ it.second }, { it.first }))
                         .chunked(3).forEach { row ->
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -340,13 +341,13 @@ internal fun OmniBentoV2Home(
                         }
                 }
             },
-            confirmButton = { androidx.compose.material3.TextButton(onClick = { selectedId = null }) { Text("Chiudi") } },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { selectedId = null }) { Text(stringResource(R.string.bento_v2_close)) } },
         )
     }
     if (showLibrary) {
         AlertDialog(
             onDismissRequest = { showLibrary = false },
-            title = { Text("Aggiungi tessera") },
+            title = { Text(stringResource(R.string.bento_v2_add_tile)) },
             text = {
                 LazyColumn(Modifier.height(360.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     items(BENTO_V2_LIBRARY.size) { index ->
@@ -360,52 +361,52 @@ internal fun OmniBentoV2Home(
                                     commit(tiles.map { if (it.id == def.id) it.copy(visible = true) else it })
                                     showLibrary = false
                                 },
-                            ) { Text(if (exists) "Presente" else "Aggiungi") }
+                            ) { Text(if (exists) stringResource(R.string.bento_v2_already) else stringResource(R.string.bento_v2_add_tile)) }
                         }
                     }
                 }
             },
-            confirmButton = { androidx.compose.material3.TextButton(onClick = { showLibrary = false }) { Text("Chiudi") } },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { showLibrary = false }) { Text(stringResource(R.string.bento_v2_close)) } },
         )
     }
     if (showRestore) {
         AlertDialog(
             onDismissRequest = { showRestore = false },
-            title = { Text("Ripristinare la Home?") },
-            text = { Text("L'ordine e le dimensioni personalizzate saranno sostituiti. I file non vengono modificati.") },
+            title = { Text(stringResource(R.string.bento_v2_reset_title)) },
+            text = { Text(stringResource(R.string.bento_v2_reset_desc)) },
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = {
                     preferences.reset(); tiles = bentoV2Defaults(); showRestore = false
-                }) { Text("Ripristina") }
+                }) { Text(stringResource(R.string.bento_v2_reset)) }
             },
-            dismissButton = { androidx.compose.material3.TextButton(onClick = { showRestore = false }) { Text("Annulla") } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { showRestore = false }) { Text(stringResource(R.string.bento_v2_cancel)) } },
         )
     }
     if (showQueue) {
         AlertDialog(
             onDismissRequest = { showQueue = false },
-            title = { Text("Coda analisi") },
+            title = { Text(stringResource(R.string.bento_v2_scan_queue)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("In corso: ${BentoScanRuntime.activeId ?: "nessuna"}")
-                    Text("In attesa: ${BentoScanRuntime.pending.joinToString().ifBlank { "nessuna" }}")
-                    Text("Le analisi non eliminano alcun file.", fontSize = 12.sp)
+                    Text(stringResource(R.string.bento_v2_active, BentoScanRuntime.activeId ?: stringResource(R.string.bento_v2_none)))
+                    Text(stringResource(R.string.bento_v2_waiting, BentoScanRuntime.pending.joinToString().ifBlank { stringResource(R.string.bento_v2_none) }))
+                    Text(stringResource(R.string.bento_v2_no_delete), fontSize = 12.sp)
                 }
             },
             confirmButton = {
-                androidx.compose.material3.TextButton(onClick = { showQueue = false }) { Text("Chiudi") }
+                androidx.compose.material3.TextButton(onClick = { showQueue = false }) { Text(stringResource(R.string.bento_v2_close)) }
             },
             dismissButton = {
                 androidx.compose.material3.TextButton(onClick = {
                     BentoScanRuntime.cancel(context); showQueue = false
-                }) { Text("Annulla analisi") }
+                }) { Text(stringResource(R.string.bento_v2_cancel_scans)) }
             },
         )
     }
     if (errorMessage != null) {
         AlertDialog(
             onDismissRequest = { errorMessage = null },
-            title = { Text("Disposizione non disponibile") },
+            title = { Text(stringResource(R.string.bento_v2_unavailable)) },
             text = { Text(errorMessage.orEmpty()) },
             confirmButton = { androidx.compose.material3.TextButton(onClick = { errorMessage = null }) { Text("OK") } },
         )
@@ -414,9 +415,10 @@ internal fun OmniBentoV2Home(
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun BentoV2Action(label: String, bg: Color, fg: Color, onClick: () -> Unit) {
+private fun BentoV2Action(label: String, bg: Color, fg: Color, tag: String? = null, onClick: () -> Unit) {
     Box(
-        Modifier.clip(RoundedCornerShape(13.dp)).background(bg)
+        Modifier.then(if (tag != null) Modifier.testTag(tag) else Modifier)
+            .clip(RoundedCornerShape(13.dp)).background(bg)
             .combinedClickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center,
@@ -473,18 +475,18 @@ private fun BentoV2Card(
         "large" -> if (state.bigFilesScanned) bentoByteLabel(state.bigFiles.sumOf { it.sizeBytes.coerceAtLeast(0L) }) else "—"
         "folders" -> if (state.foldersScanned) state.folders.size.toString() else "—"
         "gallery" -> if (galleryCount > 0) galleryCount.toString() else "—"
-        "pro" -> if (premium) "Pro attivo" else ""
+        "pro" -> if (premium) stringResource(R.string.bento_v2_premium_active) else ""
         else -> ""
     }
     val compact = tile.columns == 1 && tile.rows == 1
     val tall = tile.rows == 2
     val title = stringResource(spec.title)
     val status = when {
-        queued -> "In attesa"
-        showScan -> "Analisi in corso…"
-        spec.scan && scanDone -> "Apri risultati"
-        spec.scan -> "Tocca per analizzare"
-        else -> "Apri"
+        queued -> stringResource(R.string.bento_v2_waiting_state)
+        showScan -> stringResource(R.string.bento_v2_scan_state)
+        spec.scan && scanDone -> stringResource(R.string.bento_v2_open_results)
+        spec.scan -> stringResource(R.string.bento_v2_tap_scan)
+        else -> stringResource(R.string.bento_v2_open)
     }
     Column(
         modifier = modifier.background(bg).padding(if (compact) 9.dp else 14.dp),
@@ -530,7 +532,7 @@ private fun BentoV2Card(
                 if (spec.scan && scanDone && completedAt != null &&
                     System.currentTimeMillis() - completedAt > 24L * 60L * 60L * 1000L
                 ) {
-                    Text("Risultato precedente · Aggiornamento consigliato", fontSize = 10.sp,
+                    Text(stringResource(R.string.bento_v2_stale), fontSize = 10.sp,
                         color = fg.copy(alpha = .9f), maxLines = 2)
                 }
             }
