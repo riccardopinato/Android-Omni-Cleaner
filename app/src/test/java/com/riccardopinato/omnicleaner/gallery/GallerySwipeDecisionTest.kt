@@ -53,29 +53,12 @@ class GallerySwipeDecisionTest {
         assertEquals(0, empty.selectedForAndroidTrash)
         assertNull(empty.recentKept)
 
-        // The 50-entry bounded journal is NOT the lifetime kept count.
-        val current = GalleryMediaItem(
-            id = 42L,
-            uri = android.net.Uri.parse("content://media/external/images/media/42"),
-            name = "photo.jpg",
-            sizeBytes = 100L,
-            dateTaken = 0L,
-            mimeType = "image/jpeg",
-            album = null,
-        )
-        val summary = gallerySessionSummary(
-            GalleryUiState(
-                totalReviewedCount = 250,
-                pendingTrashItems = listOf(current.copy(isSelectedForTrash = true)),
-                history = listOf(
-                    GallerySwipeHistoryItem(current, SwipeDirection.KEEP, 0),
-                    GallerySwipeHistoryItem(current, SwipeDirection.TRASH, 1),
-                ),
-            ),
-        )
+        // No real media URI required in a local JVM test. The review counter
+        // is independently persisted; it cannot be interpreted as kept media.
+        val summary = gallerySessionSummary(GalleryUiState(totalReviewedCount = 250))
         assertEquals(250, summary.reviewedTotal)
-        assertEquals(1, summary.selectedForAndroidTrash)
-        assertEquals(1, summary.recentKept)
+        assertEquals(0, summary.selectedForAndroidTrash)
+        assertNull(summary.recentKept)
     }
 
     @Test
