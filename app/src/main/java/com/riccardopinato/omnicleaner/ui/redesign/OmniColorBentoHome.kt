@@ -404,7 +404,7 @@ private fun OmniBentoFileArt() {
                 .background(OmniColorBento.ochre, RoundedCornerShape(13.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Text("▤", color = OmniColorBento.ink, fontSize = 31.sp)
+            OmniBentoUtilityIcon(kind = 1, tint = OmniColorBento.ink, modifier = Modifier.size(33.dp))
         }
     }
 }
@@ -528,11 +528,19 @@ private fun BentoToolDeck(
                             Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            OmniNavigationIcon(
-                                symbol = tool.symbol,
-                                tint = tool.foreground,
-                                modifier = Modifier.size(26.dp),
-                            )
+                            if (index == 1 || index == 2 || index == 4) {
+                                OmniBentoUtilityIcon(
+                                    kind = index,
+                                    tint = tool.foreground,
+                                    modifier = Modifier.size(26.dp),
+                                )
+                            } else {
+                                OmniNavigationIcon(
+                                    symbol = tool.symbol,
+                                    tint = tool.foreground,
+                                    modifier = Modifier.size(26.dp),
+                                )
+                            }
                             Text(
                                 stringResource(tool.title),
                                 color = tool.foreground,
