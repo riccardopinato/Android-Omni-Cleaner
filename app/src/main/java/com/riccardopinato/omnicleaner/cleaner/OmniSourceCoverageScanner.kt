@@ -79,10 +79,10 @@ internal class OmniSourceCoverageScanner {
                     val inventory = snapshot.inventory
                     sources += OmniScanCoverageSource(
                         "primary", OmniScanSourceKind.PRIMARY_FILES, "Memoria condivisa",
-                        if (inventory.unreadable > 0 || inventory.excluded > 0) OmniScanCoverageStatus.PARTIAL
+                        if (inventory.unreadable > 0 || inventory.excludedDirectories > 0) OmniScanCoverageStatus.PARTIAL
                         else OmniScanCoverageStatus.COMPLETE,
                         inventory.files.size, inventory.unreadable,
-                        "File indicizzati: ${inventory.files.size}; esclusi: ${inventory.excluded}. " +
+                        "File indicizzati: ${inventory.files.size}; esclusi: ${inventory.excludedDirectories}. " +
                             "Le cartelle protette non sono state lette.",
                     )
                     // Existing primary index already powers Storage Intelligence search.
