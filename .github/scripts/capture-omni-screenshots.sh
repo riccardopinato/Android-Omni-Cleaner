@@ -370,6 +370,25 @@ picture_200="$(find "$OUTPUT/maestro-200pct" -type f -name 22-gallery-360dp-200p
 test -n "$picture_200" && test -s "$picture_200"
 cp "$picture_200" "$OUTPUT/22-gallery-360dp-200pct.png"
 
+# The new Bento Home must render at 360dp/200% without hiding core controls.
+cat > "$OUTPUT/home-bento-200pct.yaml" <<'NARROW_BENTO_200'
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    id: "omni_nav_home"
+- extendedWaitUntil:
+    visible: "Omni Cleaner"
+    timeout: 30000
+- takeScreenshot: 24-home-360dp-200pct
+NARROW_BENTO_200
+mkdir -p "$OUTPUT/maestro-bento-200pct"
+maestro test --test-output-dir "$OUTPUT/maestro-bento-200pct" "$OUTPUT/home-bento-200pct.yaml"
+bento_200="$(find "$OUTPUT/maestro-bento-200pct" -type f -name 24-home-360dp-200pct.png -print -quit)"
+test -n "$bento_200" && test -s "$bento_200"
+cp "$bento_200" "$OUTPUT/24-home-360dp-200pct.png"
+
 adb shell settings put system font_scale 1.0
 adb shell wm size reset
 adb shell wm density reset
