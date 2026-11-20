@@ -24,8 +24,9 @@ class OmniBentoV2LayoutTest {
 
     @Test fun defaultsHaveNoDuplicatesAndFitThreeColumns() {
         val entries = bentoV2Defaults()
-        assertEquals(18, entries.size)
+        assertEquals(16, entries.size)
         assertEquals(entries.size, entries.map { it.id }.distinct().size)
+        assertTrue(entries.all { it.visible })
         assertNotNull(bentoV2Pack(entries))
     }
 
