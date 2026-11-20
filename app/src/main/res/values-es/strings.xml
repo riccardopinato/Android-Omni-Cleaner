@@ -583,4 +583,6 @@
     <string name="bento_v2_open">Abrir</string>
     <string name="bento_v2_premium_active">Pro activo</string>
     <string name="bento_v2_stale">Resultado anterior · Se recomienda actualizar</string>
+    <string name="smart_category_temporary">Archivos temporales · 14 d+</string>
+    <string name="smart_category_logs">Registros antiguos · 30 d+</string>
 </resources>
