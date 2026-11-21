@@ -64,7 +64,7 @@ The card retains its approved 3-column geometry, colors, click behavior,
 and saved layout.
 
 Validation: the locale parity script rejects missing titles, spaces, and
-visual titles longer than seven Unicode characters; JVM tests require every
+visual titles longer than six Unicode characters; JVM tests require every
 Bento definition to resolve its short resource. Native exact-head screenshot
 of `24-home-360dp-200pct` must be reviewed to confirm `Dupes` and
 `Large` render as whole words without internal splits. Emulator evidence
