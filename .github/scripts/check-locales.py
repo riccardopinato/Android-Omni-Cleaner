@@ -77,10 +77,10 @@ def main() -> int:
         for suffix in NARROW_CARD_KEYS:
             key = f"bento_v2_narrow_{suffix}"
             label = values.get(key, "")
-            if not label or len(label) > 7 or any(ch.isspace() for ch in label):
+            if not label or len(label) > 6 or any(ch.isspace() for ch in label):
                 failures.append(
                     f"{lang}: narrow Bento label {key} must be one "
-                    f"localized 1-7 character word; got {label!r}"
+                    f"localized 1-6 character word; got {label!r}"
                 )
 
         print(
