@@ -598,9 +598,14 @@ private fun OmniDetailFrame(
     content: @Composable () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        Button(
+        // Design-App DSK-008 / DCL-007 — ADATTATA:
+        // back navigation is tertiary, never visually stronger than the
+        // page's actual scan/preview/review action.
+        TextButton(
             onClick = onBack,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .height(48.dp),
         ) {
             Text("‹  " + stringResource(R.string.nav_back))
         }

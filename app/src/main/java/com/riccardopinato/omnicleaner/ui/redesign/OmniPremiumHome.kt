@@ -60,9 +60,17 @@ internal fun OmniPremiumWaveBackground(
                 val w = size.width
                 val h = size.height
                 val background = Brush.verticalGradient(
-                    if (dark) listOf(Color(0xFF0A112C), Color(0xFF0A1025))
-                    else if (showBottomWave) listOf(Color(0xFFEAF2FF), Color(0xFFF8FAFF))
-                    else listOf(Color(0xFFF1F6FF), Color(0xFFFBFCFF)),
+                    if (showBottomWave) {
+                        // Keep the already approved branded Home unchanged.
+                        if (dark) listOf(Color(0xFF0A112C), Color(0xFF0A1025))
+                        else listOf(Color(0xFFEAF2FF), Color(0xFFF8FAFF))
+                    } else {
+                        // Design-App DCL-002 / DSK-002: quieter information-first
+                        // surfaces for dedicated tools, without a competing blue
+                        // wave underneath real labels and deletion controls.
+                        if (dark) listOf(Color(0xFF111B31), Color(0xFF0A1025))
+                        else listOf(Color(0xFFEAF1FA), Color(0xFFF7F9FD), Color(0xFFFBFCFF))
+                    },
                 )
                 val top = Path().apply {
                     moveTo(0f, 0f)
@@ -93,8 +101,12 @@ internal fun OmniPremiumWaveBackground(
                 )
                 onDrawBehind {
                     drawRect(brush = background)
-                    drawPath(path = top, brush = topPaint)
-                    if (showBottomWave) drawPath(path = bottom, brush = bottomPaint)
+                    // A strong decorative wave belongs only to the approved
+                    // Home hero. In tool views it competes with the content.
+                    if (showBottomWave) {
+                        drawPath(path = top, brush = topPaint)
+                        drawPath(path = bottom, brush = bottomPaint)
+                    }
                 }
             },
     )
