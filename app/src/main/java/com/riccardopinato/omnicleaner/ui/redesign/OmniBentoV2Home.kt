@@ -584,6 +584,13 @@ private fun BentoV2Card(
     val fontScale = LocalDensity.current.fontScale
     val tall = tile.rows == 2
     val title = stringResource(spec.title)
+    // The full name remains the spoken accessibility description. At large
+    // font scales only the narrow, one-column surface uses a localized short
+    // visual label, preventing words being split inside an 89dp-wide card.
+    val narrowTitleRes = if (tile.columns == 1 && fontScale >= 1.5f) {
+        bentoV2AccessibleNarrowTitleRes(tile.id)
+    } else null
+    val visualTitle = if (narrowTitleRes != null) stringResource(narrowTitleRes) else title
     val status = when {
         queued -> stringResource(R.string.bento_v2_waiting_state)
         showScan -> stringResource(R.string.bento_v2_scan_state)
@@ -616,11 +623,19 @@ private fun BentoV2Card(
                     fontSize = if (tile.columns >= 2) 27.sp else 17.sp, fontWeight = FontWeight.Bold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Text(title, color = fg, fontFamily = colors.display,
+            Text(
+                text = visualTitle,
+                modifier = if (narrowTitleRes != null) {
+                    Modifier.semantics { contentDescription = title }
+                } else Modifier,
+                color = fg,
+                fontFamily = colors.display,
                 fontWeight = FontWeight.Bold,
                 fontSize = if (compact) 11.sp else if (tile.columns == 1 && fontScale >= 1.5f) 11.sp else if (tile.columns == 1) 13.sp else 20.sp,
                 lineHeight = if (compact) 13.sp else if (tile.columns == 1 && fontScale >= 1.5f) 13.sp else if (tile.columns == 1) 16.sp else 24.sp,
-                maxLines = if (fontScale >= 1.5f) 5 else if (compact) 2 else 3, overflow = TextOverflow.Ellipsis)
+                maxLines = if (fontScale >= 1.5f) 3 else if (compact) 2 else 3,
+                overflow = TextOverflow.Ellipsis,
+            )
             if (!compact && !editing) {
                 Text(
                     if (metric.isNotBlank() && !tall) "$metric · $status" else status,
