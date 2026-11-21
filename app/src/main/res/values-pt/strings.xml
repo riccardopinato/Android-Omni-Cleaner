@@ -588,7 +588,7 @@
     <!-- Bento: brief visual titles for narrow tiles at 150–200% text; full names stay available to accessibility. -->
     <string name="bento_v2_narrow_storage">Espaço</string>
     <string name="bento_v2_narrow_duplicates">Cópias</string>
-    <string name="bento_v2_narrow_large">Grandes</string>
+    <string name="bento_v2_narrow_large">Pesado</string>
     <string name="bento_v2_narrow_gallery">Média</string>
     <string name="bento_v2_narrow_privacy">EXIF</string>
     <string name="bento_v2_narrow_trash">Lixo</string>
