@@ -38,12 +38,31 @@ class PhysicalPerformanceBenchmarkTest {
             thermalEnd = 1,
             observedHeapMaxBytes = 42L * 1024L * 1024L,
             emulatorSignalsDetected = false,
+            coldIndexDiagnostics = IndexReconcileDiagnostics(
+                totalMillis = 400L,
+                fileRowsMillis = 230L,
+                directoryRowsMillis = 100L,
+                finalizationMillis = 40L,
+                commitMillis = 20L,
+                filesReused = 8_000,
+                filesReplaced = 2_000,
+                directoriesWritten = 700,
+            ),
         )
 
         val report = result.toReport()
 
         assertTrue(report.startsWith("OMNI_PERF_V1"))
         assertTrue("cold_scan_ms=4000" in report)
+        assertTrue("cold_index_reconcile_ms=400" in report)
+        assertTrue("cold_index_file_rows_ms=230" in report)
+        assertTrue("cold_index_directory_rows_ms=100" in report)
+        assertTrue("cold_index_finalize_ms=40" in report)
+        assertTrue("cold_index_commit_ms=20" in report)
+        assertTrue("cold_index_rows_reused=8000" in report)
+        assertTrue("cold_index_rows_replaced=2000" in report)
+        assertTrue("cold_index_directories_written=700" in report)
+        assertTrue("cold_other_ms=100" in report)
         assertTrue("warm_scan_ms=1000" in report)
         assertTrue("warm_persistent_hit=true" in report)
         assertTrue("warm_speedup_x=4.00" in report)
@@ -55,6 +74,18 @@ class PhysicalPerformanceBenchmarkTest {
         assertTrue("hash_4_workers_peak_inflight=4" in report)
         assertTrue("emulator_signals_detected=false" in report)
         assertTrue("destructive_actions=false" in report)
+    }
+
+    @Test
+    fun reportKeepsLegacyKeysWhenDetailedIndexMetricsUnavailable() {
+        val input = IndexReconcileDiagnostics(
+            totalMillis = 180L, fileRowsMillis = 110L,
+            directoryRowsMillis = 30L, finalizationMillis = 20L,
+            commitMillis = 10L, filesReused = 2, filesReplaced = 1,
+            directoriesWritten = 1,
+        )
+        assertEquals(2, input.filesReused)
+        assertTrue(input.totalMillis >= input.fileRowsMillis + input.directoryRowsMillis)
     }
 
     @Test
