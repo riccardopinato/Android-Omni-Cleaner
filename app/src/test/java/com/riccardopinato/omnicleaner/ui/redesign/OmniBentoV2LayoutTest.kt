@@ -9,17 +9,18 @@ import org.junit.Test
 
 class OmniBentoV2LayoutTest {
 
-    @Test fun colorataPaletteHasExactUserApprovedNineSwatches() {
+    @Test fun popFreshPaletteHasExactUserApprovedNineSwatches() {
         val palette = OmniColorBentoV2Palette
-        assertEquals(androidx.compose.ui.graphics.Color(0xFF8BC45C), palette.tileColor("storage"))
-        assertEquals(androidx.compose.ui.graphics.Color(0xFFEFBD51), palette.tileColor("duplicates"))
-        assertEquals(androidx.compose.ui.graphics.Color(0xFFFFD371), palette.tileColor("large"))
-        assertEquals(androidx.compose.ui.graphics.Color(0xFF88C0F8), palette.tileColor("gallery"))
-        assertEquals(androidx.compose.ui.graphics.Color(0xFFE72F63), palette.tileColor("privacy"))
-        assertEquals(androidx.compose.ui.graphics.Color(0xFFF6B1CF), palette.tileColor("trash"))
-        assertEquals(androidx.compose.ui.graphics.Color(0xFFB3CF8C), palette.tileColor("folders"))
-        assertEquals(androidx.compose.ui.graphics.Color(0xFF597ED1), palette.tileColor("review"))
-        assertEquals(androidx.compose.ui.graphics.Color(0xFFFDF7E8), palette.tileColor("intelligence"))
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF3C55E8), palette.tileColor("storage"))
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFC9F25D), palette.tileColor("duplicates"))
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFFF7A73), palette.tileColor("large"))
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF5EDBD5), palette.tileColor("gallery"))
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFC4A2FF), palette.tileColor("privacy"))
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFFFAE58), palette.tileColor("trash"))
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF87DEAA), palette.tileColor("folders"))
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFFFE066), palette.tileColor("review"))
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFFF83C2), palette.tileColor("pro"))
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFF7F7F4), palette.tileColor("intelligence"))
     }
 
     @Test fun defaultsHaveNoDuplicatesAndFitThreeColumns() {
