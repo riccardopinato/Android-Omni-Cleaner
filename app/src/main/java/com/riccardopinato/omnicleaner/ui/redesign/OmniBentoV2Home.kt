@@ -105,6 +105,9 @@ internal fun OmniBentoV2Home(
     }
     val definitions = remember { BENTO_V2_LIBRARY.associateBy { it.id } }
     val displayed = remember(tiles) { bentoV2Pack(tiles) ?: emptyList() }
+    // Stable until a reorder/resize/hide is committed. Drag previews never
+    // recolor; each final rectangle owns a swatch, not its feature ID.
+    val positionColorIndices = remember(displayed) { bentoV2HarmonizedColorIndices(displayed) }
     val rowCount = displayed.maxOfOrNull { it.row + it.tile.rows } ?: 0
     val bg = if (dark) palette.legibleInk else palette.cream
     val fg = if (dark) colors.white else palette.legibleInk
@@ -265,6 +268,7 @@ internal fun OmniBentoV2Home(
                         ) {
                             BentoV2Card(
                                 tile = tile,
+                                background = palette.positionSwatches[positionColorIndices[placement] ?: 0],
                                 state = state,
                                 galleryCount = galleryState.loadedSourceCount,
                                 premium = premium,
@@ -546,6 +550,7 @@ private fun BentoV2MiniAction(text: String, onClick: () -> Unit) {
 @Composable
 private fun BentoV2Card(
     tile: BentoV2Tile,
+    background: Color,
     state: CleanerUiState,
     galleryCount: Int,
     premium: Boolean,
@@ -558,8 +563,8 @@ private fun BentoV2Card(
     val spec = BENTO_V2_LIBRARY.first { it.id == tile.id }
     val colors = OmniColorBento
     val palette = OmniColorBentoV2Palette
-    val bg = palette.tileColor(tile.id)
-    val fg = palette.tileForeground(tile.id)
+    val bg = background
+    val fg = palette.tileForeground(background)
     val scanDone = when (tile.id) {
         "storage" -> state.overview != null
         "duplicates" -> state.duplicatesScanned
