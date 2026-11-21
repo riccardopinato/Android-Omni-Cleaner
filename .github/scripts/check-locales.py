@@ -19,6 +19,13 @@ FILES = {
 PLACEHOLDER = re.compile(r"%\d+\$[sd]")
 
 
+NARROW_CARD_KEYS = (
+    "storage", "duplicates", "large", "gallery", "privacy", "trash",
+    "folders", "review", "gallery_review", "intelligence", "gallery_pro",
+    "filters", "pro", "categories", "advanced", "privacy_batch",
+)
+
+
 def load(path: Path) -> tuple[list[str], dict[str, str]]:
     root = ET.parse(path).getroot()
     names: list[str] = []
@@ -62,6 +69,18 @@ def main() -> int:
                 failures.append(
                     f"{lang}: placeholder mismatch for {key}: "
                     f"expected={expected} actual={actual}"
+                )
+
+        # 1-column Bento tiles have ~85dp at 360dp/200% font scale.
+        # Brief translated visual labels stay one word, while the full
+        # original resource remains the spoken accessibility description.
+        for suffix in NARROW_CARD_KEYS:
+            key = f"bento_v2_narrow_{suffix}"
+            label = values.get(key, "")
+            if not label or len(label) > 7 or any(ch.isspace() for ch in label):
+                failures.append(
+                    f"{lang}: narrow Bento label {key} must be one "
+                    f"localized 1-7 character word; got {label!r}"
                 )
 
         print(
