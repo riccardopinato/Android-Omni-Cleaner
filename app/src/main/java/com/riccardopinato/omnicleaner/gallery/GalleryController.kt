@@ -397,6 +397,26 @@ class GalleryController(
         persistProgress()
     }
 
+    /**
+     * Direct, non-destructive checkbox for any loaded Gallery Pro item.
+     * Does not advance the swipe cursor or trigger an Android Trash request.
+     * The user's exact selection is persisted and reviewed before deletion.
+     */
+    fun setTrashSelection(mediaId: Long, selected: Boolean) {
+        val item = state.items.firstOrNull { it.id == mediaId } ?: return
+        if (item.isSelectedForTrash == selected) return
+        update(
+            state.copy(
+                items = state.items.map { media ->
+                    if (media.id == mediaId) media.copy(isSelectedForTrash = selected) else media
+                },
+                pendingTrashItems = if (selected) state.pendingTrashItems
+                    else state.pendingTrashItems.filterNot { it.id == mediaId },
+            ),
+        )
+        persistProgress()
+    }
+
     /** Unmark a reviewed photo without deleting or changing the media file. */
     fun removeFromTrashSelection(mediaId: Long) {
         if (state.selectedForTrash.none { it.id == mediaId }) return

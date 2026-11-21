@@ -116,6 +116,18 @@ internal fun OmniCleanToolIcon(
                     line(11f, 11f, 11f, 17f)
                     line(13f, 11f, 13f, 17f)
                 }
+                CleanerToolRoute.CATEGORIES -> {
+                    // Four distinct bins: this is not the maintenance tool icon.
+                    for (y in 0..1) for (x in 0..1) {
+                        drawRoundRect(
+                            tint,
+                            Offset(4f + 9f * x, 4f + 9f * y),
+                            androidx.compose.ui.geometry.Size(7f, 7f),
+                            androidx.compose.ui.geometry.CornerRadius(1.5f),
+                            style = stroke,
+                        )
+                    }
+                }
                 CleanerToolRoute.ADVANCED -> {
                     drawRoundRect(tint, Offset(4f, 4f),
                         androidx.compose.ui.geometry.Size(16f, 16f),

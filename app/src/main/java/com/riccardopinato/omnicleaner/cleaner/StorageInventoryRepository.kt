@@ -55,6 +55,7 @@ object StorageInventoryRepository {
         forceRefresh: Boolean = false,
         onProgress: ((checked: Int, currentPath: String) -> Unit)? = null,
         onStage: ((String) -> Unit)? = null,
+        onIndexReconcile: ((IndexReconcileDiagnostics) -> Unit)? = null,
         nowMillis: () -> Long = System::currentTimeMillis,
     ): StorageInventorySnapshot {
         val operationContext = coroutineContext
@@ -134,6 +135,7 @@ object StorageInventoryRepository {
                             inventory = inventory,
                             completedAtMillis = finished,
                             cancellationCheck = { operationContext.ensureActive() },
+                            onMetrics = onIndexReconcile,
                         )
                     }
                 }

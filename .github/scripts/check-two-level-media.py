@@ -10,8 +10,10 @@ clean = (JAVA / "ui/redesign/CleanerScreens.kt").read_text(encoding="utf-8")
 preview = (JAVA / "gallery/GalleryMediaPreview.kt").read_text(encoding="utf-8")
 gallery = (JAVA / "gallery/GalleryCleanerSection.kt").read_text(encoding="utf-8")
 exif = (JAVA / "exif/ExifCleanerSection.kt").read_text(encoding="utf-8")
-assert "OmniDetailRoute" in root and "BackHandler(enabled = activeDetail != null)" in root
-assert "if (activeDetail == null)" in root
+assert "OmniDetailRoute" in root and "BackHandler(enabled = destination != OmniDestination.HOME)" in root
+assert "NavigationBar(" not in root, "single-Home UI must not retain the five-tab bar"
+assert "omni_home_back" in root, "dedicated pages require an explicit Home back button"
+assert 'AdManager.Banner(' in root, "eligible Free users need the anchored bottom banner"
 assert "OmniDetailRoute.GALLERY_REVIEW" in root
 assert "CleanHubScreen(" in root and "CleanDetailScreen(" in root
 assert "CleanHubScreen(" in clean and "CleanDetailScreen(" in clean
@@ -19,18 +21,28 @@ assert "omni_clean_tool_" in clean and "omni_scan_" in clean
 assert "GalleryCleanerSection(" in gallery and "omni_gallery_open_review" in gallery
 assert "ContentScale.Crop" not in preview
 assert "ContentScale.Fit" in preview
-assert "VideoView(context)" in preview
-# The native VideoView is the decoder; the WML-003 Compose timeline owns
-# real seek/playback controls, replacing the old Android MediaController.
+# Video and audio are decoded by the platform MediaPlayer and displayed via
+# TextureView, so actual video frames can be composed and screen-captured.
+# MediaStore URI access starts only after an attached TextureView surface exists.
+assert "GalleryTexturePlaybackSession(" in preview
+assert "TextureView(androidContext)" in preview
+assert "Surface(texture)" in preview
+assert "setDataSource(context, uri)" in preview
+assert "player.prepareAsync()" in preview
+assert "galleryVideoFitScales(" in preview
+assert "VideoView(context)" not in preview
+# WML-003 scrub owns the real native media controls, not a fake timer.
 scrub = (JAVA / "gallery/OmniVideoScrubControls.kt").read_text(encoding="utf-8")
 for expected in (
     "OmniVideoScrubControls(",
     "setOnPreparedListener",
     "setOnCompletionListener",
-    "video.currentPosition",
-    "video.seekTo(target)",
-    "video.start()",
-    "video.pause()",
+    "player.currentPosition",
+    "player.seekTo(position)",
+    "player.start()",
+    "player.pause()",
+    "player.release()",
+    "Lifecycle.Event.ON_PAUSE",
 ):
     assert expected in preview, f"missing native video playback: {expected}"
 for expected in (
@@ -42,7 +54,7 @@ for expected in (
 ):
     assert expected in scrub, f"missing native scrub contract: {expected}"
 assert "MediaController(context)" not in preview, "avoid duplicate media controls"
-assert "video.stopPlayback()" in preview and "Lifecycle.Event.ON_PAUSE" in preview
+assert "playback.pauseForLifecycle()" in preview and "playback.release()" in preview
 assert "galleryFitHeightDp" in preview
 # First-party immersive viewer is read-only, keeps both media types at original
 # proportions and disposes the embedded player before opening its fullscreen peer.

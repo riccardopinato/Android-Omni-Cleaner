@@ -1,6 +1,8 @@
 package com.riccardopinato.omnicleaner.gallery
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +18,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -35,12 +41,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
+import com.riccardopinato.omnicleaner.ui.OmniMediaQuickLook
+import com.riccardopinato.omnicleaner.ui.OmniQuickLookKind
+import com.riccardopinato.omnicleaner.ui.OmniQuickLookTarget
 
 /**
  * Read-only, professional row for an item selected for Android system Trash.
  * No deletion or selection changes are performed here: removal explicitly
  * delegates to the existing GalleryController callback in the parent.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun OmniTrashQueueItem(
     media: GalleryMediaItem,
@@ -49,9 +59,14 @@ internal fun OmniTrashQueueItem(
     val colorScheme = MaterialTheme.colorScheme
     val kind = stringResource(if (media.isVideo) R.string.gallery_queue_video else R.string.gallery_queue_photo)
     val removeLabel = stringResource(R.string.audit_gallery_unmark)
+    var preview by remember(media.id) { mutableStateOf(false) }
     Row(
         modifier = Modifier.fillMaxWidth()
             .testTag("omni_gallery_queue_item_${media.id}")
+            .combinedClickable(
+                onClick = { preview = true },
+                onLongClick = { preview = true },
+            )
             .padding(vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -124,6 +139,23 @@ internal fun OmniTrashQueueItem(
         }
     }
     HorizontalDivider(color = colorScheme.outline.copy(alpha = .65f))
+    if (preview) {
+        OmniMediaQuickLook(
+            target = OmniQuickLookTarget(
+                uri = media.uri,
+                name = media.name,
+                kind = if (media.isVideo) OmniQuickLookKind.VIDEO else OmniQuickLookKind.PHOTO,
+            ),
+            onDismiss = { preview = false },
+            selected = true,
+            onSelectedChange = { checked ->
+                if (!checked) {
+                    preview = false
+                    onRemove()
+                }
+            },
+        )
+    }
 }
 
 @Composable
