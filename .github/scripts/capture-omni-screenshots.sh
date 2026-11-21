@@ -53,6 +53,7 @@ appId: com.riccardopinato.omnicleaner.debug
       id: "omni_bento_v2_review"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     id: "omni_bento_v2_review"
 - assertVisible:
@@ -66,6 +67,7 @@ appId: com.riccardopinato.omnicleaner.debug
       id: "omni_bento_v2_gallery"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     id: "omni_bento_v2_gallery"
 - assertVisible: "Gallery cleaner"
@@ -78,6 +80,7 @@ appId: com.riccardopinato.omnicleaner.debug
       id: "omni_bento_v2_privacy"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     id: "omni_bento_v2_privacy"
 - assertVisible:
@@ -91,6 +94,7 @@ appId: com.riccardopinato.omnicleaner.debug
       id: "omni_bento_v2_pro"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     id: "omni_bento_v2_pro"
 - assertVisible: "Restore purchase"
@@ -127,6 +131,7 @@ appId: com.riccardopinato.omnicleaner.debug
       id: "omni_bento_v2_review"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     id: "omni_bento_v2_review"
 - assertVisible:
@@ -143,6 +148,7 @@ appId: com.riccardopinato.omnicleaner.debug
       id: "omni_bento_v2_filters"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     id: "omni_bento_v2_filters"
 - assertVisible:
@@ -156,6 +162,7 @@ appId: com.riccardopinato.omnicleaner.debug
       id: "omni_bento_v2_privacy"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     id: "omni_bento_v2_privacy"
 - assertVisible:
@@ -169,6 +176,7 @@ appId: com.riccardopinato.omnicleaner.debug
       id: "omni_bento_v2_privacyBatch"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     id: "omni_bento_v2_privacyBatch"
 - assertVisible: "Choose photo folder"
@@ -181,6 +189,7 @@ appId: com.riccardopinato.omnicleaner.debug
       id: "omni_bento_v2_pro"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     id: "omni_bento_v2_pro"
 - assertVisible: "Restore purchase"
@@ -193,6 +202,7 @@ appId: com.riccardopinato.omnicleaner.debug
       id: "omni_bento_v2_intelligence"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     id: "omni_bento_v2_intelligence"
 - assertVisible: "Storage Intelligence"
@@ -213,6 +223,7 @@ appId: com.riccardopinato.omnicleaner.debug
       text: "Gallery Pro"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     text: "Gallery Pro"
 # Validate that the actual Gallery Pro content was opened, rather than
@@ -230,6 +241,7 @@ appId: com.riccardopinato.omnicleaner.debug
       id: "omni_bento_v2_review"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     id: "omni_bento_v2_review"
 - assertVisible:
@@ -316,6 +328,7 @@ appId: com.riccardopinato.omnicleaner.debug
       id: "omni_bento_v2_gallery"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     id: "omni_bento_v2_gallery"
 - tapOn: "Videos only"
@@ -393,6 +406,7 @@ appId: com.riccardopinato.omnicleaner.debug
       id: "omni_bento_v2_review"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     id: "omni_bento_v2_review"
 - takeScreenshot: 17-clean-dark-large
@@ -404,6 +418,7 @@ appId: com.riccardopinato.omnicleaner.debug
       id: "omni_bento_v2_gallery"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     id: "omni_bento_v2_gallery"
 - takeScreenshot: 18-gallery-dark-large
@@ -415,6 +430,7 @@ appId: com.riccardopinato.omnicleaner.debug
       id: "omni_bento_v2_privacy"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     id: "omni_bento_v2_privacy"
 - takeScreenshot: 19-privacy-dark-large
@@ -426,6 +442,7 @@ appId: com.riccardopinato.omnicleaner.debug
       id: "omni_bento_v2_pro"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     id: "omni_bento_v2_pro"
 - takeScreenshot: 20-pro-dark-large
@@ -460,6 +477,7 @@ appId: com.riccardopinato.omnicleaner.debug
       id: "omni_bento_v2_gallery"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     id: "omni_bento_v2_gallery"
 - scrollUntilVisible:
@@ -492,6 +510,7 @@ appId: com.riccardopinato.omnicleaner.debug
       id: "omni_bento_v2_gallery"
     direction: DOWN
     timeout: 30000
+    centerElement: true
 - tapOn:
     id: "omni_bento_v2_gallery"
 - scrollUntilVisible:
