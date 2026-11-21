@@ -85,6 +85,17 @@ class OmniBentoV2LayoutTest {
         assertEquals(0f, bentoV2RowHeightDp(-2f, 2.0f), 0.001f)
     }
 
+    @Test fun everyBentoFeatureHasAnAccessibleShortTitleForLargeText() {
+        val featureIds = BENTO_V2_LIBRARY.map { it.id }
+        assertEquals(16, featureIds.size)
+        assertTrue(featureIds.all { bentoV2AccessibleNarrowTitleRes(it) != null })
+        assertEquals(
+            com.riccardopinato.omnicleaner.R.string.bento_v2_narrow_duplicates,
+            bentoV2AccessibleNarrowTitleRes("duplicates"),
+        )
+        assertNull(bentoV2AccessibleNarrowTitleRes("nonexistent"))
+    }
+
     @Test fun defaultsHaveNoDuplicatesAndFitThreeColumns() {
         val entries = bentoV2Defaults()
         assertEquals(16, entries.size)
