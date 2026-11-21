@@ -43,3 +43,29 @@ A Home Color Bento tile inherits the swatch of the **place where it appears**, n
 - Any new source commit invalidates the earlier exact-head QA results until rerun.
 
 No merge or signed APK is authorized by this document alone.
+
+
+## Large-text narrow-title polish — 21 November 2026
+
+Observed genuine 360dp / 200% screenshot: 1×1 tiles showed full
+`Find duplicates` with `duplicates` broken mid-word, despite the taller
+accessibility rows. Card width is still limited by the intentionally preserved
+three-column layout; increasing vertical height alone cannot fix an
+overlong single word.
+
+Fix: when `tile.columns == 1` and Android font scale is at least 150%, use
+one intentionally localized **brief visual title** from
+`bento_v2_narrow_<feature>`; retain the original full `spec.title`
+as `contentDescription` for TalkBack. All 16 resizable destinations have
+short titles in EN/IT/ES/FR/PT. At normal text size and for cards two/three
+columns wide, the full original title remains displayed. No automatic
+in-word break, ellipsis-based abbreviation or font-scale override is used.
+The card retains its approved 3-column geometry, colors, click behavior,
+and saved layout.
+
+Validation: the locale parity script rejects missing titles, spaces, and
+visual titles longer than seven Unicode characters; JVM tests require every
+Bento definition to resolve its short resource. Native exact-head screenshot
+of `24-home-360dp-200pct` must be reviewed to confirm `Dupes` and
+`Large` render as whole words without internal splits. Emulator evidence
+does not certify hardware TalkBack until physical accessibility QA.
