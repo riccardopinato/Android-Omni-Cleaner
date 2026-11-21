@@ -31,6 +31,18 @@ internal fun bentoV2ResizeFromDrag(
     val rows = (tile.rows + (dyPx / stepPx).roundToInt()).coerceIn(1, 2)
     return columns to rows
 }
+/**
+ * Accessible Bento cards keep their 3-column widths, but grow vertically
+ * at large Android font sizes instead of clipping titles or status labels.
+ * This is a presentation-only rule: saved tile sizes and grid positions stay
+ * unchanged and no user preferences are migrated.
+ */
+internal fun bentoV2RowHeightDp(cellWidthDp: Float, fontScale: Float): Float {
+    if (cellWidthDp <= 0f || !cellWidthDp.isFinite()) return 0f
+    if (!fontScale.isFinite() || fontScale <= 1.1f) return cellWidthDp
+    return maxOf(cellWidthDp, 90f * fontScale)
+}
+
 internal val BENTO_V2_SIZES = setOf(1 to 1, 2 to 1, 1 to 2, 2 to 2, 3 to 1, 3 to 2)
 
 internal data class BentoV2Definition(
