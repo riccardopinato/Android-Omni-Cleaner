@@ -339,6 +339,12 @@ appId: com.riccardopinato.omnicleaner.debug
     id: "omni_gallery_media_full"
 - tapOn:
     id: "omni_gallery_video_play"
+# Play is an asynchronous MediaStore/VideoView operation. Do not snapshot a
+# loading/black surface and mistake the click for actual video readiness.
+- extendedWaitUntil:
+    visible:
+      id: "omni_video_scrub_controls"
+    timeout: 60000
 - waitForAnimationToEnd:
     timeout: 1000
 - takeScreenshot: 11-video-playing
@@ -352,6 +358,10 @@ appId: com.riccardopinato.omnicleaner.debug
     id: "omni_gallery_immersive_content"
 - tapOn:
     id: "omni_gallery_video_play"
+- extendedWaitUntil:
+    visible:
+      id: "omni_video_scrub_controls"
+    timeout: 60000
 - waitForAnimationToEnd:
     timeout: 1000
 - takeScreenshot: 15-video-immersive
