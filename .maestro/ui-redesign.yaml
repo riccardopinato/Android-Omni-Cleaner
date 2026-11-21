@@ -1,42 +1,71 @@
 appId: com.riccardopinato.omnicleaner.debug
 ---
-# Dedicated screen hierarchy; no destructive request is authorized here.
+# Unified Color Bento Home: no bottom tabs and no destructive requests.
 - launchApp:
     clearState: false
-- assertVisible: "Android Omni Cleaner"
-- assertVisible: "Smart cleaning"
-- assertVisible: "Analyze storage"
-- tapOn: "Settings"
+- assertVisible: "Omni Cleaner"
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- tapOn:
+    id: "omni_home_settings"
 - assertVisible: "Appearance"
 - pressKey: Back
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_review"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_clean"
-- assertVisible: "Deep Cleaning"
-- tapOn:
-    id: "omni_clean_tool_duplicates"
-- assertVisible: "Find duplicates"
+    id: "omni_bento_v2_review"
+- assertVisible:
+    id: "omni_review_center"
+- tapOn: "Find duplicates"
+- assertVisible:
+    id: "omni_clean_detail_duplicates"
 - pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_gallery"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_gallery"
+    id: "omni_bento_v2_gallery"
 - assertVisible: "Gallery cleaner"
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_privacy"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_privacy"
-- assertVisible: "EXIF privacy"
-- tapOn:
-    id: "omni_privacy_quick"
+    id: "omni_bento_v2_privacy"
 - assertVisible: "Choose one JPEG photo"
 - pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_privacyBatch"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_privacy_batch"
+    id: "omni_bento_v2_privacyBatch"
 - assertVisible: "Choose photo folder"
 - pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_pro"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_pro"
-- assertVisible: "Omni Cleaner Pro"
-- tapOn:
-    id: "omni_pro_manage"
+    id: "omni_bento_v2_pro"
 - assertVisible: "Restore purchase"
 - pressKey: Back
-- tapOn:
-    id: "omni_nav_home"
-- assertVisible: "Smart cleaning"
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"

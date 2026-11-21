@@ -24,6 +24,7 @@ internal data class StorageFileSearchHit(
     val relativePath: String,
     val extension: String,
     val bytes: Long,
+    val lastModified: Long = 0L,
 )
 
 internal data class StorageFileSearchPage(
@@ -74,6 +75,7 @@ internal class StorageIntelligenceReport(
                     relativePath = relative,
                     extension = entry.file.extension.lowercase(Locale.ROOT),
                     bytes = size,
+                    lastModified = entry.modified,
                 )
             }
         }

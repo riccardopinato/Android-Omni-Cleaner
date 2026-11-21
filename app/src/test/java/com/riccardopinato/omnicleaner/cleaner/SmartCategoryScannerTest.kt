@@ -99,6 +99,33 @@ class SmartCategoryScannerTest {
         assertTrue(scan.items.isEmpty())
     }
 
+    @Test
+    fun temporaryAndLogCandidateRulesAreOldScopedAndExcludeBackups() {
+        val root = temporaryFolder.newFolder("files")
+        val oldLog = file(root, "Download/session.log")
+        val oldTemp = file(root, "Documents/tmp/old.temp")
+        val recentTemp = file(root, "Download/recent.tmp")
+        val protectedBackup = file(root, "Download/whatsapp-backup.tmp")
+        val protectedApp = file(root, "Android/media/com.sample/cache/trace.log")
+        val scanned = scanner.classify(
+            root = root,
+            files = listOf(
+                indexed(oldLog, 10L, now - days(40)),
+                indexed(oldTemp, 20L, now - days(20)),
+                indexed(recentTemp, 30L, now - days(1)),
+                indexed(protectedBackup, 40L, now - days(200)),
+                indexed(protectedApp, 50L, now - days(60)),
+            ),
+            nowMillis = now,
+        )
+        assertTrue(SmartCategory.OLD_LOGS in scanned.items.single { it.file == oldLog }.categories)
+        assertTrue(SmartCategory.TEMPORARY_FILES in scanned.items.single { it.file == oldTemp }.categories)
+        assertFalse(scanned.items.any { it.file == recentTemp })
+        assertFalse(scanned.items.any { it.file == protectedBackup })
+        assertFalse(scanned.items.any { it.file == protectedApp })
+        assertEquals(30L, scanned.totalUniqueBytes)
+    }
+
     private fun indexed(file: File, bytes: Long, modified: Long): IndexedFile =
         IndexedFile(file = file, size = bytes, modified = modified)
 

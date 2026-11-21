@@ -235,13 +235,7 @@ fun MonetizationSection(
                 )
             }
 
-            if (!premium) {
-                AdManager.Banner(
-                    isPremium = false,
-                    consentAllowsAds = consentState.canRequestAds,
-                    entitlementResolved = entitlement.resolved,
-                )
-            }
+            // The app shell now owns the single anchored banner.
         }
     }
 }

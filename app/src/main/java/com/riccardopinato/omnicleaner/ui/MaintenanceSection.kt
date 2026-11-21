@@ -1,6 +1,8 @@
 package com.riccardopinato.omnicleaner.ui
 
 import android.content.Context
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -22,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -36,6 +40,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.Locale
 
 private data class MaintenanceState(
@@ -44,6 +49,7 @@ private data class MaintenanceState(
     val thumbnails: List<ThumbnailCacheItem> = emptyList(),
     val residues: List<AppResidueItem> = emptyList(),
     val residueVisibilityWarning: Boolean = false,
+    val residueInaccessibleRoots: List<String> = emptyList(),
     val thumbnailSearchQuery: String = "",
     val residueSearchQuery: String = "",
     val message: String? = null,
@@ -92,16 +98,18 @@ private class MaintenanceController(
         state = state.copy(
             residues = result.items,
             residueVisibilityWarning = result.packageVisibilityMayBeRestricted,
+            residueInaccessibleRoots = result.inaccessibleRoots,
         )
     }
 
     fun cleanThumbnail(
         item: ThumbnailCacheItem,
+        approvedPaths: Set<String>,
         label: String,
         accessRequired: String,
         resultMessage: (removed: Int, bytes: Long, rejected: Int) -> String,
     ) = run(label, accessRequired) {
-        val result = thumbnailCleanup.clean(item.inventory)
+        val result = thumbnailCleanup.clean(item.inventory, approvedPaths)
         val refreshed = scanner.scanThumbnailCache(StorageAccess.primaryRoot())
         state = state.copy(
             thumbnails = refreshed,
@@ -146,6 +154,7 @@ private class MaintenanceController(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MaintenanceSection() {
     val context = LocalContext.current
@@ -155,6 +164,9 @@ fun MaintenanceSection() {
     }
     val state = controller.state
     var pendingThumbnail by remember { mutableStateOf<ThumbnailCacheItem?>(null) }
+    var selectedThumbFiles by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var visibleThumbFiles by remember { mutableStateOf(20) }
+    var previewFile by remember { mutableStateOf<File?>(null) }
 
     val thumbnailLabel = stringResource(R.string.maintenance_thumbnail_cache)
     val residueLabel = stringResource(R.string.maintenance_app_residues)
@@ -227,8 +239,41 @@ fun MaintenanceSection() {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Button(onClick = { pendingThumbnail = item }, enabled = !state.running) {
-                        Text(stringResource(R.string.maintenance_clean_verified))
+                    item.inventory.files.take(visibleThumbFiles).forEach { stamp ->
+                        val checked = stamp.file.absolutePath in selectedThumbFiles
+                        Row(
+                            modifier = Modifier.fillMaxWidth()
+                                .combinedClickable(
+                                    role = Role.Checkbox,
+                                    onClick = {
+                                        selectedThumbFiles = if (checked) selectedThumbFiles - stamp.file.absolutePath
+                                            else selectedThumbFiles + stamp.file.absolutePath
+                                    },
+                                    onLongClick = { previewFile = stamp.file },
+                                ),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Checkbox(
+                                checked = checked,
+                                onCheckedChange = { now ->
+                                    selectedThumbFiles = if (now) selectedThumbFiles + stamp.file.absolutePath
+                                        else selectedThumbFiles - stamp.file.absolutePath
+                                },
+                            )
+                            Text(stamp.file.name, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    if (item.inventory.files.size > visibleThumbFiles) {
+                        OutlinedButton(
+                            onClick = { visibleThumbFiles = (visibleThumbFiles + 50).coerceAtMost(item.inventory.files.size) },
+                        ) { Text("Mostra altri file") }
+                    }
+                    val selectedHere = item.inventory.files.count { it.file.absolutePath in selectedThumbFiles }
+                    Button(
+                        onClick = { pendingThumbnail = item },
+                        enabled = !state.running && selectedHere > 0,
+                    ) {
+                        Text("Elimina ${selectedHere} miniature verificate")
                     }
                 }
             }
@@ -242,6 +287,17 @@ fun MaintenanceSection() {
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
+                if (state.residueInaccessibleRoots.isNotEmpty()) {
+                    Text(
+                        "Sorgenti non leggibili: " + state.residueInaccessibleRoots.joinToString(),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Text(
+                    "Residui possibili, non confermati. Un'app archiviata o nascosta " +
+                        "può possedere ancora questi file: nessuna eliminazione automatica.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
                 state.visibleResidues.take(10).forEach { item ->
                     Text(
                         "${item.name} · ${item.formattedSize()} · " +
@@ -260,6 +316,22 @@ fun MaintenanceSection() {
         }
     }
 
+    previewFile?.let { file ->
+        val target = omniQuickLookForFile(file)
+        if (target != null) {
+            OmniMediaQuickLook(
+                target = target,
+                onDismiss = { previewFile = null },
+                selected = file.absolutePath in selectedThumbFiles,
+                onSelectedChange = { checked ->
+                    selectedThumbFiles = if (checked) selectedThumbFiles + file.absolutePath
+                        else selectedThumbFiles - file.absolutePath
+                },
+            )
+        } else {
+            androidx.compose.runtime.LaunchedEffect(file) { previewFile = null }
+        }
+    }
     pendingThumbnail?.let { item ->
         AlertDialog(
             onDismissRequest = { pendingThumbnail = null },
@@ -271,7 +343,14 @@ fun MaintenanceSection() {
                 TextButton(
                     onClick = {
                         pendingThumbnail = null
-                        controller.cleanThumbnail(item, cleaningThumbnailLabel, accessRequired, cleanupResultMessage)
+                        controller.cleanThumbnail(
+                            item,
+                            selectedThumbFiles,
+                            cleaningThumbnailLabel,
+                            accessRequired,
+                            cleanupResultMessage,
+                        )
+                        selectedThumbFiles = emptySet()
                     },
                 ) {
                     Text(stringResource(R.string.action_clean))

@@ -37,32 +37,74 @@ appId: com.riccardopinato.omnicleaner.debug
 # Fresh install, do not revoke app-ops after granting storage access.
 # Default startup route IS Home. Do not tap a tab before Compose is ready.
 - extendedWaitUntil:
-    visible: "Smart cleaning"
+    visible: "Omni Cleaner"
     timeout: 90000
 - takeScreenshot: 01-home
+# Color Bento 2.0: capture real editor mode and return without changing layout.
 - tapOn:
-    id: "omni_nav_clean"
-- assertVisible: "Deep Cleaning"
+    id: "omni_bento_v2_editor_toggle"
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- takeScreenshot: 23-home-deck-expanded
+- tapOn:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_review"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "omni_bento_v2_review"
+- assertVisible:
+    id: "omni_clean_detail_review"
 - takeScreenshot: 02-clean
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_gallery"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_gallery"
+    id: "omni_bento_v2_gallery"
 - assertVisible: "Gallery cleaner"
 - takeScreenshot: 03-gallery
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_privacy"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_privacy"
-- assertVisible: "EXIF privacy"
+    id: "omni_bento_v2_privacy"
+- assertVisible:
+    id: "omni_home_back"
 - takeScreenshot: 04-privacy
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_pro"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_pro"
-- assertVisible: "Omni Cleaner Pro"
+    id: "omni_bento_v2_pro"
+- assertVisible: "Restore purchase"
 - takeScreenshot: 05-pro
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
 FLOW
 
 maestro test --test-output-dir "$OUTPUT/maestro" "$OUTPUT/visual-capture.yaml"
 
 # Maestro stores takeScreenshot images in a nested per-flow artifact folder.
 # Copy those actual pixels into a stable, user-friendly artifact layout.
-for name in 01-home 02-clean 03-gallery 04-privacy 05-pro; do
+for name in 01-home 23-home-deck-expanded 02-clean 03-gallery 04-privacy 05-pro; do
   candidate="$(find "$OUTPUT/maestro" -type f -name "$name.png" -print -quit)"
   if [[ -z "$candidate" ]]; then
     echo "::error::Missing Maestro screenshot $name.png"
@@ -80,46 +122,79 @@ appId: com.riccardopinato.omnicleaner.debug
 ---
 - launchApp:
     clearState: false
-- tapOn:
-    id: "omni_nav_clean"
-- tapOn:
-    id: "omni_clean_tool_duplicates"
-- assertVisible: "Find duplicates"
-- takeScreenshot: 06-clean-duplicates
-- pressKey: Back
 - scrollUntilVisible:
     element:
-      id: "omni_clean_tool_filters"
+      id: "omni_bento_v2_review"
     direction: DOWN
     timeout: 30000
 - tapOn:
-    id: "omni_clean_tool_filters"
-- assertVisible: "Filters & thresholds"
+    id: "omni_bento_v2_review"
+- assertVisible:
+    id: "omni_review_center"
+- tapOn: "Find duplicates"
+- assertVisible:
+    id: "omni_clean_detail_duplicates"
+- takeScreenshot: 06-clean-duplicates
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_filters"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "omni_bento_v2_filters"
+- assertVisible:
+    id: "omni_clean_detail_filters"
 - takeScreenshot: 07-clean-filters
 - pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_privacy"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_privacy"
-- tapOn:
-    id: "omni_privacy_quick"
-- assertVisible: "Choose one JPEG photo"
+    id: "omni_bento_v2_privacy"
+- assertVisible:
+    id: "omni_home_back"
 - takeScreenshot: 08-privacy-quick
 - pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_privacyBatch"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_privacy_batch"
+    id: "omni_bento_v2_privacyBatch"
 - assertVisible: "Choose photo folder"
 - takeScreenshot: 09-privacy-batch
 - pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_pro"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_pro"
-- tapOn:
-    id: "omni_pro_manage"
+    id: "omni_bento_v2_pro"
 - assertVisible: "Restore purchase"
 - takeScreenshot: 10-pro-manage
 - pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_intelligence"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_clean"
-- tapOn:
-    id: "omni_clean_tool_intelligence"
+    id: "omni_bento_v2_intelligence"
 - assertVisible: "Storage Intelligence"
 - tapOn:
     id: "omni_storage_intelligence_scan"
@@ -128,20 +203,33 @@ appId: com.riccardopinato.omnicleaner.debug
     timeout: 120000
 - takeScreenshot: 12-storage-intelligence
 - pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_galleryPro"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_gallery"
-- tapOn:
-    id: "omni_gallery_open_pro"
+    id: "omni_bento_v2_galleryPro"
 - assertVisible: "Gallery Pro"
 - takeScreenshot: 13-gallery-pro
 - pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_review"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_clean"
-- tapOn:
-    id: "omni_clean_tool_review"
+    id: "omni_bento_v2_review"
 - assertVisible:
     id: "omni_review_center"
 - takeScreenshot: 14-review-center
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
 DETAIL_FLOW
 # Synthetic, disposable emulator fixture to verify a *nonempty* visual
 # storage map. The first five screenshots are captured before this is created.
@@ -215,8 +303,13 @@ appId: com.riccardopinato.omnicleaner.debug
 - tapOn:
     text: "Close app"
     optional: true
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_gallery"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_gallery"
+    id: "omni_bento_v2_gallery"
 - tapOn: "Videos only"
 - tapOn: "Load gallery"
 - tapOn:
@@ -275,21 +368,53 @@ appId: com.riccardopinato.omnicleaner.debug
     text: "Close app"
     optional: true
 - extendedWaitUntil:
-    visible: "Smart cleaning"
+    visible: "Omni Cleaner"
     timeout: 90000
 - takeScreenshot: 16-home-dark-large
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_review"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_clean"
+    id: "omni_bento_v2_review"
 - takeScreenshot: 17-clean-dark-large
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_gallery"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_gallery"
+    id: "omni_bento_v2_gallery"
 - takeScreenshot: 18-gallery-dark-large
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_privacy"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_privacy"
+    id: "omni_bento_v2_privacy"
 - takeScreenshot: 19-privacy-dark-large
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_pro"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_pro"
+    id: "omni_bento_v2_pro"
 - takeScreenshot: 20-pro-dark-large
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
 DARK_LARGE
 mkdir -p "$OUTPUT/maestro-dark-large"
 maestro test --test-output-dir "$OUTPUT/maestro-dark-large" "$OUTPUT/dark-large-capture.yaml"
@@ -313,8 +438,13 @@ appId: com.riccardopinato.omnicleaner.debug
 ---
 - launchApp:
     clearState: false
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_gallery"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_gallery"
+    id: "omni_bento_v2_gallery"
 - scrollUntilVisible:
     element:
       id: "omni_gallery_filter_videos"
@@ -327,6 +457,7 @@ appId: com.riccardopinato.omnicleaner.debug
 - assertVisible:
     id: "omni_gallery_filter_videos"
 - takeScreenshot: 21-gallery-360dp-large
+- pressKey: Back
 NARROW_GALLERY
 maestro test --test-output-dir "$OUTPUT/maestro-narrow" "$OUTPUT/gallery-narrow.yaml"
 test -s "$(find "$OUTPUT/maestro-narrow" -name 21-gallery-360dp-large.png -print -quit)"
@@ -339,8 +470,13 @@ appId: com.riccardopinato.omnicleaner.debug
 ---
 - launchApp:
     clearState: false
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_gallery"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_gallery"
+    id: "omni_bento_v2_gallery"
 - scrollUntilVisible:
     element:
       id: "omni_gallery_filter_videos"
@@ -353,11 +489,29 @@ appId: com.riccardopinato.omnicleaner.debug
 - assertVisible:
     id: "omni_gallery_filter_videos"
 - takeScreenshot: 22-gallery-360dp-200pct
+- pressKey: Back
 NARROW_GALLERY_200
 maestro test --test-output-dir "$OUTPUT/maestro-200pct" "$OUTPUT/gallery-200pct.yaml"
 picture_200="$(find "$OUTPUT/maestro-200pct" -type f -name 22-gallery-360dp-200pct.png -print -quit)"
 test -n "$picture_200" && test -s "$picture_200"
 cp "$picture_200" "$OUTPUT/22-gallery-360dp-200pct.png"
+
+# The new Bento Home must render at 360dp/200% without hiding core controls.
+cat > "$OUTPUT/home-bento-200pct.yaml" <<'NARROW_BENTO_200'
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Omni Cleaner"
+    timeout: 30000
+- takeScreenshot: 24-home-360dp-200pct
+NARROW_BENTO_200
+mkdir -p "$OUTPUT/maestro-bento-200pct"
+maestro test --test-output-dir "$OUTPUT/maestro-bento-200pct" "$OUTPUT/home-bento-200pct.yaml"
+bento_200="$(find "$OUTPUT/maestro-bento-200pct" -type f -name 24-home-360dp-200pct.png -print -quit)"
+test -n "$bento_200" && test -s "$bento_200"
+cp "$bento_200" "$OUTPUT/24-home-360dp-200pct.png"
 
 adb shell settings put system font_scale 1.0
 adb shell wm size reset

@@ -1,0 +1,57 @@
+name: Omni Cleaner — fast APK preview
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: omni-bento-v2-fast-${{ github.event.pull_request.head.ref }}
+  cancel-in-progress: true
+
+jobs:
+  debug-apk:
+    if: github.event.pull_request.head.repo.full_name == github.repository && (github.event.pull_request.head.ref == 'design/omni-linktree-home-compose-v1-20261120' || github.event.pull_request.head.ref == 'feat/omni-coverage-media-preview-20261120')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      OMNI_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout exact source head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.OMNI_SOURCE_SHA }}
+          persist-credentials: false
+      - name: Set up JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Build installable debug preview
+        run: ./gradlew assembleDebug --stacktrace
+      - name: Publish exact-source SHA prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          SRC='app/build/outputs/apk/debug/app-debug.apk'
+          test -s "$SRC"
+          SHORT="${OMNI_SOURCE_SHA:0:12}"
+          TAG="fast-apk-$SHORT"
+          NAME="Android-Omni-Cleaner-$SHORT-debug.apk"
+          cp "$SRC" "$RUNNER_TEMP/$NAME"
+          cd "$RUNNER_TEMP"
+          sha256sum "$NAME" > "$NAME.sha256"
+          printf 'Color Bento 2.0 development APK. Source SHA: %s\nDebug applicationId has .debug suffix and installs separately.\nNot a signed production update; full QA continues independently.\n' "$OMNI_SOURCE_SHA" > notes.txt
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$NAME" "$NAME.sha256" --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" "$NAME" "$NAME.sha256" \
+              --repo "$GITHUB_REPOSITORY" --target "$OMNI_SOURCE_SHA" \
+              --title "Color Bento 2.0 debug · $SHORT" \
+              --notes-file notes.txt --prerelease
+          fi
