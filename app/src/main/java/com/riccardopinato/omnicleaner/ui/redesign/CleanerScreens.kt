@@ -125,7 +125,7 @@ internal fun CleanHubScreen(
     ) {
         item {
             OmniSectionHeader(
-                eyebrow = stringResource(R.string.redesign_clean_eyebrow),
+                eyebrow = null,
                 title = stringResource(R.string.nav_clean),
                 subtitle = stringResource(R.string.redesign_clean_subtitle),
                 modifier = Modifier.padding(top = 18.dp),
@@ -660,7 +660,7 @@ internal fun CleanScreen(
     ) {
         item {
             OmniSectionHeader(
-                eyebrow = stringResource(R.string.redesign_clean_eyebrow),
+                eyebrow = null,
                 title = stringResource(R.string.nav_clean),
                 subtitle = stringResource(R.string.redesign_clean_subtitle),
                 modifier = Modifier.padding(top = 18.dp),
