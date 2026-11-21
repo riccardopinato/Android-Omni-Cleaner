@@ -63,7 +63,7 @@ internal fun OmniFileTrashReview(
             scope.launch {
                 try {
                     val result = engine.movePreparedSnapshotsToSafeTrash(prepared.safeTrashCandidates)
-                    message = "File nel cestino Android: ${prepared.mediaUris.size} · Cestino reversibile: ${result.moved} · Rifiutati: ${result.rejected}"
+                    message = "Conferma Android accettata per ${prepared.mediaUris.size} file (stato Cestino non verificato) · Cestino reversibile: ${result.moved} · Rifiutati: ${result.rejected}"
                     CleanupEventBus.publishCompleted()
                     onFinished()
                 } catch (cancelled: CancellationException) {
