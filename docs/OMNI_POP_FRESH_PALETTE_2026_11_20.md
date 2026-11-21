@@ -2,6 +2,13 @@
 
 Status: SOURCE_CANDIDATE / VISUAL_AND_CI_QA_PENDING. No APK, no merge to main.
 
+> **21/11/2026 — user-approved behavior change in PR #77:** the nine original
+> colors remain exact, but the table below records the **historical semantic
+> assignment only**. In the new version swatches belong to packed **positions**
+> rather than features. A module can take a different color after the user
+> reorders, resizes or hides tiles. See
+> `docs/OMNI_POSITIONAL_COLOR_HARMONY_2026_11_21.md` for the active contract.
+
 ## Approved inputs
 The user selected the nine HEX colors proposed for Android Omni Cleaner on 20 November 2026, and requested to change only colors for now while feature work proceeds in a different chat.
 
