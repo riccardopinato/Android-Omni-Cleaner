@@ -14,6 +14,81 @@ import org.junit.Test
 class PersistentStorageIndexInstrumentedTest {
 
     @Test
+    fun reconciliationDiagnosticsCountWritesWithoutChangingIndexedResults() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val databaseName = "reconcile-metrics-${UUID.randomUUID()}.db"
+        val root = File(context.cacheDir, "reconcile-metrics-${UUID.randomUUID()}").apply { mkdirs() }
+        try {
+            File(root, "first.bin").writeText("first content")
+            File(root, "second.bin").writeText("second content")
+            val index = PersistentStorageIndex(context, databaseName)
+            val firstInventory = FileInventoryScanner().collect(root)
+            var first: IndexReconcileDiagnostics? = null
+            index.reconcileFull(root, firstInventory, System.currentTimeMillis())
+            val originalFirst = firstInventory.files.single { it.file.name == "first.bin" }
+            val expectedHash = "a".repeat(64)
+            // Preserve a real cached hash when this exact revision is reused.
+            if (originalFirst.revision != null) index.putFullHash(originalFirst, expectedHash)
+            // The ordinary path above retains the original reconciliation contract.
+            val metricsInventory = FileInventoryScanner().collect(root)
+            index.reconcileFull(
+                root, metricsInventory, System.currentTimeMillis(),
+                onMetrics = { first = it },
+            )
+            val measured = requireNotNull(first)
+            assertEquals(2, measured.filesReused + measured.filesReplaced)
+            if (metricsInventory.files.all { it.revision != null }) {
+                assertEquals("Unchanged revisions must reuse the existing rows", 2, measured.filesReused)
+                assertEquals("No unnecessary replacements", 0, measured.filesReplaced)
+                assertEquals(expectedHash, index.fullHash(originalFirst))
+            }
+            assertEquals(metricsInventory.directories.size, measured.directoriesWritten)
+            assertTrue(measured.totalMillis >= 0L)
+            assertTrue(measured.fileRowsMillis >= 0L)
+            assertTrue(measured.directoryRowsMillis >= 0L)
+            assertTrue(measured.finalizationMillis >= 0L)
+            assertTrue(measured.commitMillis >= 0L)
+
+            val readBack = requireNotNull(index.loadReusableSnapshot(
+                root, nowMillis = System.currentTimeMillis(),
+                maxAgeMillis = 60_000L,
+            ))
+            assertEquals(2, readBack.inventory.files.size)
+
+            // Changed content must replace its row (and invalidate any derived
+            // hash); newly added content must be indexed without data loss.
+            File(root, "second.bin").writeText("second content with a different size")
+            File(root, "third.bin").writeText("third content")
+            val changedInventory = FileInventoryScanner().collect(root)
+            var changed: IndexReconcileDiagnostics? = null
+            index.reconcileFull(
+                root, changedInventory, System.currentTimeMillis(),
+                onMetrics = { changed = it },
+            )
+            val updated = requireNotNull(changed)
+            assertEquals(3, updated.filesReused + updated.filesReplaced)
+            if (changedInventory.files.all { it.revision != null }) {
+                assertEquals(1, updated.filesReused)
+                assertEquals(2, updated.filesReplaced)
+                assertEquals(expectedHash, index.fullHash(originalFirst))
+            }
+            val changedSecond = changedInventory.files.single { it.file.name == "second.bin" }
+            assertNull(index.fullHash(changedSecond))
+            val afterMutation = requireNotNull(index.loadReusableSnapshot(
+                root, nowMillis = System.currentTimeMillis(),
+                maxAgeMillis = 60_000L,
+            ))
+            assertEquals(3, afterMutation.inventory.files.size)
+        } finally {
+            root.deleteRecursively()
+            context.deleteDatabase(databaseName)
+            context.getSharedPreferences(
+                "storage_index_state_$databaseName", android.content.Context.MODE_PRIVATE,
+            ).edit().clear().commit()
+        }
+    }
+
+    @Test
     fun interruptedDuplicateScanMarkerSurvivesRestartAndScopesModeAndExtension() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val prefsName = "scan2-recovery-${UUID.randomUUID()}"
