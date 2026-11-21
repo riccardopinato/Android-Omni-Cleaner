@@ -133,6 +133,79 @@ internal fun bentoV2Pack(tiles: List<BentoV2Tile>): List<BentoV2Position>? {
     return if (search(0)) positions.filterNotNull() else null
 }
 
+/**
+ * Pop Fresh positional harmonizer.
+ *
+ * The nine approved swatches are assigned to VISIBLE RECTANGLES in reading
+ * order, not to feature IDs. Shape/edge adjacency (including 2x2 cards) and
+ * distribution are considered. No randomness, persisted color choices, or
+ * user data are involved: a given packed mosaic always produces one palette.
+ *
+ * The editor computes colors only for the last committed packed layout, not
+ * a transient drag/resize preview. Changes are applied on release/commit.
+ */
+internal const val BENTO_V2_SWATCH_COUNT = 9
+private val BENTO_V2_COLOR_FAMILY = intArrayOf(
+    0, // Lime Pop: green
+    1, // Electric Blue: blue
+    2, // Tangerine: warm
+    3, // Soft Violet: violet/pink
+    2, // Sunshine: warm
+    1, // Aqua Fresh: blue/aqua
+    2, // Coral Pop: warm
+    0, // Spring Green: green
+    3, // Bubblegum: violet/pink
+)
+
+/** Number of shared grid-cell edges; corner-only contacts are not neighbors. */
+internal fun bentoV2SharedBorderUnits(a: BentoV2Position, b: BentoV2Position): Int {
+    val aRight = a.column + a.tile.columns
+    val bRight = b.column + b.tile.columns
+    val aBottom = a.row + a.tile.rows
+    val bBottom = b.row + b.tile.rows
+    return when {
+        aRight == b.column || bRight == a.column ->
+            (minOf(aBottom, bBottom) - maxOf(a.row, b.row)).coerceAtLeast(0)
+        aBottom == b.row || bBottom == a.row ->
+            (minOf(aRight, bRight) - maxOf(a.column, b.column)).coerceAtLeast(0)
+        else -> 0
+    }
+}
+
+internal fun bentoV2HarmonizedColorIndices(
+    positions: List<BentoV2Position>,
+): Map<BentoV2Position, Int> {
+    val placed = linkedMapOf<BentoV2Position, Int>()
+    val visualOrder = positions.sortedWith(
+        compareBy<BentoV2Position> { it.row }.thenBy { it.column },
+    )
+    for ((slot, position) in visualOrder.withIndex()) {
+        val preferred = slot % BENTO_V2_SWATCH_COUNT
+        // Every candidate is scored against *actual* touching rectangles, not
+        // the position of a feature in the persisted list.
+        val selected = (0 until BENTO_V2_SWATCH_COUNT).minWithOrNull(
+            compareBy<Int> { candidate ->
+                val reuse = placed.values.count { it == candidate }
+                var score = reuse * 300 +
+                    ((candidate - preferred + BENTO_V2_SWATCH_COUNT) % BENTO_V2_SWATCH_COUNT) * 11
+                for ((neighbor, oldColor) in placed) {
+                    val contact = bentoV2SharedBorderUnits(position, neighbor)
+                    if (contact == 0) continue
+                    score += when {
+                        candidate == oldColor -> 1800 * contact
+                        BENTO_V2_COLOR_FAMILY[candidate] == BENTO_V2_COLOR_FAMILY[oldColor] ->
+                            175 * contact
+                        else -> 0
+                    }
+                }
+                score
+            }.thenBy { it },
+        ) ?: preferred
+        placed[position] = selected
+    }
+    return placed
+}
+
 /** Persist only the order, size and visibility. Never persist file names or personal media. */
 internal class BentoV2Preferences(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("omni_color_bento_v2", Context.MODE_PRIVATE)
