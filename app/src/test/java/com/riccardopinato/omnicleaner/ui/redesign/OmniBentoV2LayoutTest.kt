@@ -9,18 +9,71 @@ import org.junit.Test
 
 class OmniBentoV2LayoutTest {
 
-    @Test fun popFreshPaletteHasExactUserApprovedNineSwatches() {
-        val palette = OmniColorBentoV2Palette
-        assertEquals(androidx.compose.ui.graphics.Color(0xFF3C55E8), palette.tileColor("storage"))
-        assertEquals(androidx.compose.ui.graphics.Color(0xFFC9F25D), palette.tileColor("duplicates"))
-        assertEquals(androidx.compose.ui.graphics.Color(0xFFFF7A73), palette.tileColor("large"))
-        assertEquals(androidx.compose.ui.graphics.Color(0xFF5EDBD5), palette.tileColor("gallery"))
-        assertEquals(androidx.compose.ui.graphics.Color(0xFFC4A2FF), palette.tileColor("privacy"))
-        assertEquals(androidx.compose.ui.graphics.Color(0xFFFFAE58), palette.tileColor("trash"))
-        assertEquals(androidx.compose.ui.graphics.Color(0xFF87DEAA), palette.tileColor("folders"))
-        assertEquals(androidx.compose.ui.graphics.Color(0xFFFFE066), palette.tileColor("review"))
-        assertEquals(androidx.compose.ui.graphics.Color(0xFFFF83C2), palette.tileColor("pro"))
-        assertEquals(androidx.compose.ui.graphics.Color(0xFFF7F7F4), palette.tileColor("intelligence"))
+    @Test fun positionalPaletteIsIndependentOfFeatureIdentity() {
+        val tiles = (0 until 6).map { BentoV2Tile("feature-$it", 1, 1) }
+        val first = requireNotNull(bentoV2Pack(tiles))
+        val moved = requireNotNull(bentoV2Pack(tiles.reversed()))
+        val firstIndices = bentoV2HarmonizedColorIndices(first)
+        val movedIndices = bentoV2HarmonizedColorIndices(moved)
+        val byPosition = firstIndices.entries.associate { (p, color) ->
+            (p.row to p.column) to color
+        }
+        val afterByPosition = movedIndices.entries.associate { (p, color) ->
+            (p.row to p.column) to color
+        }
+        assertEquals(byPosition, afterByPosition)
+        assertTrue(
+            "Moving a function to another slot must change its assigned color",
+            firstIndices.entries.first { it.key.tile.id == "feature-0" }.value !=
+                movedIndices.entries.first { it.key.tile.id == "feature-0" }.value,
+        )
+    }
+
+    @Test fun neighborAwareColorsRemainStableWithoutRepeatsAcrossTouchingRectangles() {
+        val placements = requireNotNull(bentoV2Pack(bentoV2Defaults()))
+        val initial = bentoV2HarmonizedColorIndices(placements)
+        val reverseInput = bentoV2HarmonizedColorIndices(placements.reversed())
+        assertEquals(initial, reverseInput)
+        assertEquals(placements.size, initial.size)
+        assertTrue(initial.values.all { it in 0 until BENTO_V2_SWATCH_COUNT })
+        for (a in placements) {
+            for (b in placements) {
+                if (a !== b && bentoV2SharedBorderUnits(a, b) > 0) {
+                    assertTrue(
+                        "Touching tiles must not share a color: ${a.tile.id} / ${b.tile.id}",
+                        initial[a] != initial[b],
+                    )
+                }
+            }
+        }
+    }
+
+    @Test fun largeTileAdjacencyCountsSharedEdgesRatherThanOnlyListOrder() {
+        val arrangement = requireNotNull(
+            bentoV2Pack(listOf(
+                BentoV2Tile("wide", 2, 2),
+                BentoV2Tile("rightTop", 1, 1),
+                BentoV2Tile("rightBottom", 1, 1),
+            )),
+        )
+        val large = arrangement.first { it.tile.id == "wide" }
+        assertEquals(1, bentoV2SharedBorderUnits(large, arrangement.first { it.tile.id == "rightTop" }))
+        assertEquals(1, bentoV2SharedBorderUnits(large, arrangement.first { it.tile.id == "rightBottom" }))
+        val assigned = bentoV2HarmonizedColorIndices(arrangement)
+        assertTrue(assigned[large] != assigned[arrangement.first { it.tile.id == "rightTop" }])
+        assertTrue(assigned[large] != assigned[arrangement.first { it.tile.id == "rightBottom" }])
+    }
+
+    @Test fun hiddenTileDoesNotClaimASwatchAndRepackingIsDeterministic() {
+        val tiles = listOf(
+            BentoV2Tile("a", 1, 1), BentoV2Tile("b", 1, 1),
+            BentoV2Tile("c", 1, 1), BentoV2Tile("d", 1, 1),
+            BentoV2Tile("e", 1, 1), BentoV2Tile("f", 1, 1, visible = false),
+        )
+        val packed = requireNotNull(bentoV2Pack(tiles))
+        assertEquals(5, packed.size)
+        assertTrue(packed.none { it.tile.id == "f" })
+        assertEquals(bentoV2HarmonizedColorIndices(packed), bentoV2HarmonizedColorIndices(packed))
     }
 
     @Test fun accessibilityFontScalingExpandsCardRowsWithoutChangingGridWidth() {
