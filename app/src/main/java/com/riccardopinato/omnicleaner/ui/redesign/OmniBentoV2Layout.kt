@@ -55,6 +55,32 @@ internal data class BentoV2Definition(
 )
 
 /** All destinations are already present in the app; tiles do not introduce new cleanup actions. */
+/**
+ * Short, localized *visual* labels for one-column cards at large Android font
+ * scales. Names stay full in accessibility semantics and dedicated screens.
+ * Never derive these by truncating words: short labels are intentionally
+ * translated and readable at 360dp / 200% text.
+ */
+internal fun bentoV2AccessibleNarrowTitleRes(id: String): Int? = when (id) {
+    "storage" -> R.string.bento_v2_narrow_storage
+    "duplicates" -> R.string.bento_v2_narrow_duplicates
+    "large" -> R.string.bento_v2_narrow_large
+    "gallery" -> R.string.bento_v2_narrow_gallery
+    "privacy" -> R.string.bento_v2_narrow_privacy
+    "trash" -> R.string.bento_v2_narrow_trash
+    "folders" -> R.string.bento_v2_narrow_folders
+    "review" -> R.string.bento_v2_narrow_review
+    "galleryReview" -> R.string.bento_v2_narrow_gallery_review
+    "intelligence" -> R.string.bento_v2_narrow_intelligence
+    "galleryPro" -> R.string.bento_v2_narrow_gallery_pro
+    "filters" -> R.string.bento_v2_narrow_filters
+    "pro" -> R.string.bento_v2_narrow_pro
+    "categories" -> R.string.bento_v2_narrow_categories
+    "advanced" -> R.string.bento_v2_narrow_advanced
+    "privacyBatch" -> R.string.bento_v2_narrow_privacy_batch
+    else -> null
+}
+
 internal val BENTO_V2_LIBRARY = listOf(
     // Every distinct feature is visible on the unified Home by default.
     // Privacy opens the single-photo workflow; batch privacy is a separate tile.
