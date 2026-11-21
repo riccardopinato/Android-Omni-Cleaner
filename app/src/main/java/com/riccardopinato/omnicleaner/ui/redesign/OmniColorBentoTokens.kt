@@ -50,36 +50,29 @@ internal object OmniColorBento {
  * Keep screen structure, routes, motion and scan behavior unchanged.
  */
 internal object OmniColorBentoV2Palette {
-    val green = Color(0xFFC9F25D)      // Lime Pop — duplicates
-    val sage = Color(0xFF87DEAA)       // Spring Green — folders/categories
-    val gold = Color(0xFFFFAE58)       // Tangerine — Safe Trash
-    val yellow = Color(0xFFFFE066)     // Sunshine — quick/edit actions
-    val blue = Color(0xFF3C55E8)       // Electric Blue — storage
-    val sky = Color(0xFF5EDBD5)        // Aqua Fresh — gallery
-    val raspberry = Color(0xFFFF83C2)  // Bubblegum — Pro
-    val blush = Color(0xFFFF7A73)      // Coral Pop — large files
-    val violet = Color(0xFFC4A2FF)     // Soft Violet — Privacy
+    val green = Color(0xFFC9F25D)      // Lime Pop
+    val sage = Color(0xFF87DEAA)       // Spring Green
+    val gold = Color(0xFFFFAE58)       // Tangerine
+    val yellow = Color(0xFFFFE066)     // Sunshine
+    val blue = Color(0xFF3C55E8)       // Electric Blue
+    val sky = Color(0xFF5EDBD5)        // Aqua Fresh
+    val raspberry = Color(0xFFFF83C2)  // Bubblegum
+    val blush = Color(0xFFFF7A73)      // Coral Pop
+    val violet = Color(0xFFC4A2FF)     // Soft Violet
     val cream = Color(0xFFF7F7F4)      // Neutral surface
     val legibleInk = Color(0xFF192033)
     val white = Color(0xFFFFFFFF)
 
-    /** Deterministic semantic-to-color mapping; no random colors. */
-    fun tileColor(id: String): Color = when (id) {
-        "storage" -> blue
-        "duplicates" -> green
-        "large" -> blush
-        "gallery", "galleryReview" -> sky
-        "privacy", "privacyQuick", "privacyBatch" -> violet
-        "trash" -> gold
-        "folders", "categories" -> sage
-        "review", "galleryPro", "advanced" -> yellow
-        "filters" -> yellow
-        "intelligence", "settings" -> cream
-        "pro" -> raspberry
-        else -> cream
-    }
+    /**
+     * Approved nine swatches in a stable editorial starting order. The actual
+     * position-derived order is chosen by bentoV2HarmonizedColorIndices()
+     * from visible tile geometry, not from a module ID.
+     */
+    val positionSwatches = listOf(
+        green, blue, gold, violet, yellow, sky, blush, sage, raspberry,
+    )
 
     /** Electric Blue needs white ink; all other swatches use dark navy. */
-    fun tileForeground(id: String): Color =
-        if (tileColor(id) == blue) white else legibleInk
+    fun tileForeground(background: Color): Color =
+        if (background == blue) white else legibleInk
 }
