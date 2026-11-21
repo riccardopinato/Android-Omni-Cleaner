@@ -172,7 +172,7 @@ internal fun OmniBentoV2Home(
                         editing = !editing
                         selectedId = null
                     }
-                    if (!editing) BentoV2Action("⚙", palette.blue, palette.legibleInk, tag = "omni_home_settings", semanticLabel = stringResource(R.string.audit_settings), onClick = onOpenSettings)
+                    if (!editing) BentoV2Action("⚙", palette.blue, palette.white, tag = "omni_home_settings", semanticLabel = stringResource(R.string.audit_settings), onClick = onOpenSettings)
                 }
                 if (editing) {
                     Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -187,8 +187,8 @@ internal fun OmniBentoV2Home(
                             .padding(13.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(stringResource(R.string.bento_v2_scanning), color = palette.legibleInk, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        Text(stringResource(R.string.bento_v2_queue_count, BentoScanRuntime.pending.size) + "  ›", color = palette.legibleInk, fontSize = 12.sp)
+                        Text(stringResource(R.string.bento_v2_scanning), color = palette.white, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.bento_v2_queue_count, BentoScanRuntime.pending.size) + "  ›", color = palette.white, fontSize = 12.sp)
                     }
                 }
             }
@@ -403,7 +403,7 @@ internal fun OmniBentoV2Home(
         item("bento_access") {
             Column(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
-                    .background(if (dark) palette.blue else palette.sage).padding(14.dp),
+                    .background(palette.sage).padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(stringResource(R.string.bento_v2_access), color = palette.legibleInk, fontWeight = FontWeight.Bold)
@@ -557,7 +557,7 @@ private fun BentoV2Card(
     val colors = OmniColorBento
     val palette = OmniColorBentoV2Palette
     val bg = palette.tileColor(tile.id)
-    val fg = palette.legibleInk
+    val fg = palette.tileForeground(tile.id)
     val scanDone = when (tile.id) {
         "storage" -> state.overview != null
         "duplicates" -> state.duplicatesScanned
@@ -622,7 +622,8 @@ private fun BentoV2Card(
             if (!compact && !editing) {
                 Text(
                     if (metric.isNotBlank() && !tall) "$metric · $status" else status,
-                    color = fg.copy(alpha = .84f), fontFamily = colors.body, fontSize = 11.sp,
+                    color = if (fg == palette.white) fg else fg.copy(alpha = .84f),
+                     fontFamily = colors.body, fontSize = 11.sp,
                     maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
                 if (showScan) {
@@ -635,7 +636,7 @@ private fun BentoV2Card(
                     System.currentTimeMillis() - completedAt > 24L * 60L * 60L * 1000L
                 ) {
                     Text(stringResource(R.string.bento_v2_stale), fontSize = 10.sp,
-                        color = fg.copy(alpha = .9f), maxLines = 2)
+                        color = if (fg == palette.white) fg else fg.copy(alpha = .9f), maxLines = 2)
                 }
             }
         }
