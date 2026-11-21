@@ -588,4 +588,21 @@
     <string name="bento_v2_stale">Risultato precedente · Aggiornamento consigliato</string>
     <string name="smart_category_temporary">File temporanei · 14g+</string>
     <string name="smart_category_logs">Log vecchi · 30g+</string>
+    <!-- Bento: brief visual titles for narrow tiles at 150–200% text; full names stay available to accessibility. -->
+    <string name="bento_v2_narrow_storage">Spazio</string>
+    <string name="bento_v2_narrow_duplicates">Doppi</string>
+    <string name="bento_v2_narrow_large">Grandi</string>
+    <string name="bento_v2_narrow_gallery">Media</string>
+    <string name="bento_v2_narrow_privacy">EXIF</string>
+    <string name="bento_v2_narrow_trash">Cestino</string>
+    <string name="bento_v2_narrow_folders">Cart.</string>
+    <string name="bento_v2_narrow_review">Rivedi</string>
+    <string name="bento_v2_narrow_gallery_review">Foto</string>
+    <string name="bento_v2_narrow_intelligence">Dati</string>
+    <string name="bento_v2_narrow_gallery_pro">Media+</string>
+    <string name="bento_v2_narrow_filters">Filtri</string>
+    <string name="bento_v2_narrow_pro">Pro</string>
+    <string name="bento_v2_narrow_categories">Tipi</string>
+    <string name="bento_v2_narrow_advanced">Extra</string>
+    <string name="bento_v2_narrow_privacy_batch">EXIF+</string>
 </resources>
