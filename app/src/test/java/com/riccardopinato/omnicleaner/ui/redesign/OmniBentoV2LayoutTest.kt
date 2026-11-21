@@ -23,6 +23,15 @@ class OmniBentoV2LayoutTest {
         assertEquals(androidx.compose.ui.graphics.Color(0xFFF7F7F4), palette.tileColor("intelligence"))
     }
 
+    @Test fun accessibilityFontScalingExpandsCardRowsWithoutChangingGridWidth() {
+        assertEquals(106f, bentoV2RowHeightDp(106f, 1.0f), 0.001f)
+        assertEquals(106f, bentoV2RowHeightDp(106f, 1.1f), 0.001f)
+        assertEquals(135f, bentoV2RowHeightDp(106f, 1.5f), 0.001f)
+        assertEquals(180f, bentoV2RowHeightDp(106f, 2.0f), 0.001f)
+        assertEquals(270f, bentoV2RowHeightDp(106f, 3.0f), 0.001f)
+        assertEquals(0f, bentoV2RowHeightDp(-2f, 2.0f), 0.001f)
+    }
+
     @Test fun defaultsHaveNoDuplicatesAndFitThreeColumns() {
         val entries = bentoV2Defaults()
         assertEquals(16, entries.size)
