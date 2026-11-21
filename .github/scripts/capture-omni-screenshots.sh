@@ -42,7 +42,7 @@ appId: com.riccardopinato.omnicleaner.debug
 - takeScreenshot: 01-home
 - tapOn:
     id: "omni_nav_clean"
-- assertVisible: "Deep Cleaning"
+- assertVisible: "Clean"
 - takeScreenshot: 02-clean
 - tapOn:
     id: "omni_nav_gallery"

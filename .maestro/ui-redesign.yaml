@@ -11,7 +11,8 @@ appId: com.riccardopinato.omnicleaner.debug
 - pressKey: Back
 - tapOn:
     id: "omni_nav_clean"
-- assertVisible: "Deep Cleaning"
+# Clean is the actual destination; Deep Cleaning is only available with optional access.
+- assertVisible: "Clean"
 - tapOn:
     id: "omni_clean_tool_duplicates"
 - assertVisible: "Find duplicates"
