@@ -10,7 +10,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -594,11 +593,6 @@ private fun BentoV2Card(
     }
     Column(
         modifier = modifier.background(bg)
-            .then(
-                if (tile.id == "intelligence" || tile.id == "settings") {
-                    Modifier.border(1.dp, palette.sage, RoundedCornerShape(22.dp))
-                } else Modifier
-            )
             .padding(if (tile.columns == 1) 9.dp else 14.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
