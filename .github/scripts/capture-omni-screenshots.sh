@@ -205,14 +205,22 @@ appId: com.riccardopinato.omnicleaner.debug
 - pressKey: Back
 - assertVisible:
     id: "omni_bento_v2_editor_toggle"
+# The Bento tile may be only partially inside the viewport while its
+# testTag is still in the semantics tree. Scroll to its visible *label* and
+# tap that label, matching the dedicated Gallery Pro read-only journey.
 - scrollUntilVisible:
     element:
-      id: "omni_bento_v2_galleryPro"
+      text: "Gallery Pro"
     direction: DOWN
     timeout: 30000
 - tapOn:
-    id: "omni_bento_v2_galleryPro"
-- assertVisible: "Gallery Pro"
+    text: "Gallery Pro"
+# Validate that the actual Gallery Pro content was opened, rather than
+# accepting an offscreen tile's accessibility label as destination proof.
+- extendedWaitUntil:
+    visible:
+      id: "omni_gallery_pro"
+    timeout: 30000
 - takeScreenshot: 13-gallery-pro
 - pressKey: Back
 - assertVisible:
