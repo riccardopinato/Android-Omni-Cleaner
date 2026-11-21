@@ -197,6 +197,10 @@ internal fun OmniBentoV2Home(
             BoxWithConstraints(Modifier.fillMaxWidth()) {
                 val gap = 8.dp
                 val cell = (maxWidth - gap * 2) / 3
+                val density = LocalDensity.current
+                val rowCell = bentoV2RowHeightDp(cell.value, density.fontScale).dp
+                val cellPx = with(density) { (cell + gap).toPx() }
+                val rowStridePx = with(density) { (rowCell + gap).toPx() }
                 // Keep a ghost layout only while the user drags the resize handle.
                 // Preview is never written to preferences before release.
                 var resizePreview by remember { mutableStateOf<Triple<String, Int, Int>?>(null) }
@@ -205,16 +209,14 @@ internal fun OmniBentoV2Home(
                     previewPosition.row + resizePreview!!.third
                 } else 0
                 val renderedRows = maxOf(rowCount, previewRowEnd)
-                val height = cell * renderedRows + gap * (renderedRows - 1).coerceAtLeast(0)
-                val density = LocalDensity.current
-                val cellPx = with(density) { (cell + gap).toPx() }
+                val height = rowCell * renderedRows + gap * (renderedRows - 1).coerceAtLeast(0)
                 Box(Modifier.fillMaxWidth().height(height)) {
                     displayed.forEachIndexed { index, placement ->
                         val tile = placement.tile
                         val x by animateDpAsState((cell + gap) * placement.column, tween(210), label = "tile-x-${tile.id}")
-                        val y by animateDpAsState((cell + gap) * placement.row, tween(210), label = "tile-y-${tile.id}")
+                        val y by animateDpAsState((rowCell + gap) * placement.row, tween(210), label = "tile-y-${tile.id}")
                         val w = cell * tile.columns + gap * (tile.columns - 1)
-                        val h = cell * tile.rows + gap * (tile.rows - 1)
+                        val h = rowCell * tile.rows + gap * (tile.rows - 1)
                         var dragging by remember(tile.id) { mutableStateOf(Offset.Zero) }
                         val wiggle = if (editing && !reducedMotion) {
                             val transition = rememberInfiniteTransition(label = "wiggle-${tile.id}")
@@ -245,7 +247,7 @@ internal fun OmniBentoV2Home(
                                             },
                                             onDragEnd = {
                                                 val dx = (dragging.x / cellPx).roundToInt()
-                                                val dy = (dragging.y / cellPx).roundToInt()
+                                                val dy = (dragging.y / rowStridePx).roundToInt()
                                                 dragging = Offset.Zero
                                                 if (dx != 0 || dy != 0) reorder(tile.id, dy * 3 + dx)
                                             },
@@ -298,13 +300,13 @@ internal fun OmniBentoV2Home(
                                                     change.consume()
                                                     resizeDelta += amount
                                                     val (previewCols, previewRows) = bentoV2ResizeFromDrag(
-                                                        tile, resizeDelta.x, resizeDelta.y, cellPx,
+                                                        tile, resizeDelta.x, resizeDelta.y * cellPx / rowStridePx, cellPx,
                                                     )
                                                     resizePreview = Triple(tile.id, previewCols, previewRows)
                                                 },
                                                 onDragEnd = {
                                                     val (columns, rows) = bentoV2ResizeFromDrag(
-                                                        tile, resizeDelta.x, resizeDelta.y, cellPx,
+                                                        tile, resizeDelta.x, resizeDelta.y * cellPx / rowStridePx, cellPx,
                                                     )
                                                     resizeDelta = Offset.Zero
                                                     resizePreview = null
@@ -330,13 +332,13 @@ internal fun OmniBentoV2Home(
                         val previewRows = preview.third
                         val visualColumn = origin.column.coerceAtMost(3 - previewCols)
                         val guideWidth = cell * previewCols + gap * (previewCols - 1)
-                        val guideHeight = cell * previewRows + gap * (previewRows - 1)
+                        val guideHeight = rowCell * previewRows + gap * (previewRows - 1)
                         val borderColor = palette.raspberry
                         Box(
                             Modifier
                                 .offset(
                                     x = (cell + gap) * visualColumn,
-                                    y = (cell + gap) * origin.row,
+                                    y = (rowCell + gap) * origin.row,
                                 )
                                 .width(guideWidth).height(guideHeight)
                                 .zIndex(30f)
@@ -373,7 +375,7 @@ internal fun OmniBentoV2Home(
                                     )
                                 }
                                 for (r in 1 until previewRows) {
-                                    val yy = stride * r - lineOffset
+                                    val yy = rowStridePx * r - lineOffset
                                     drawLine(
                                         color = borderColor, start = Offset(0f, yy),
                                         end = Offset(size.width, yy),
@@ -575,6 +577,7 @@ private fun BentoV2Card(
         else -> ""
     }
     val compact = tile.columns == 1 && tile.rows == 1
+    val fontScale = LocalDensity.current.fontScale
     val tall = tile.rows == 2
     val title = stringResource(spec.title)
     val status = when {
@@ -591,7 +594,7 @@ private fun BentoV2Card(
                     Modifier.border(1.dp, palette.sage, RoundedCornerShape(22.dp))
                 } else Modifier
             )
-            .padding(if (compact) 9.dp else 14.dp),
+            .padding(if (tile.columns == 1) 9.dp else 14.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.SpaceBetween) {
@@ -616,9 +619,9 @@ private fun BentoV2Card(
             }
             Text(title, color = fg, fontFamily = colors.display,
                 fontWeight = FontWeight.Bold,
-                fontSize = if (compact) 11.sp else if (tile.columns == 1) 13.sp else 20.sp,
-                lineHeight = if (compact) 13.sp else if (tile.columns == 1) 16.sp else 24.sp,
-                maxLines = if (compact) 2 else 3, overflow = TextOverflow.Ellipsis)
+                fontSize = if (compact) 11.sp else if (tile.columns == 1 && fontScale >= 1.5f) 11.sp else if (tile.columns == 1) 13.sp else 20.sp,
+                lineHeight = if (compact) 13.sp else if (tile.columns == 1 && fontScale >= 1.5f) 13.sp else if (tile.columns == 1) 16.sp else 24.sp,
+                maxLines = if (fontScale >= 1.5f) 5 else if (compact) 2 else 3, overflow = TextOverflow.Ellipsis)
             if (!compact && !editing) {
                 Text(
                     if (metric.isNotBlank() && !tall) "$metric · $status" else status,
