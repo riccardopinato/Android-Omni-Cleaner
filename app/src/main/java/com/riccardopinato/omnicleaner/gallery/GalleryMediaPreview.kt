@@ -4,7 +4,12 @@ import android.content.Context
 import android.graphics.ImageDecoder
 import android.graphics.Matrix
 import androidx.exifinterface.media.ExifInterface
-import android.widget.VideoView
+import android.graphics.SurfaceTexture
+import android.media.MediaPlayer
+import android.media.AudioAttributes
+import android.util.Log
+import android.view.Surface
+import android.view.TextureView
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawing
@@ -53,6 +58,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
 import com.riccardopinato.omnicleaner.ui.theme.OmniSecondaryButton as OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -417,6 +423,199 @@ fun GalleryMediaPreview(
  * No cropping, transcoding or write access; playback is opt-in and lifecycle-bound.
  * Video surface consumes its own taps (seek/play) instead of triggering photo swipes.
  */
+/**
+ * TextureView keeps video pixels in the regular Android compositing pipeline.
+ * Unlike an early, detached VideoView, the native MediaPlayer is prepared only
+ * when TextureView has an actual SurfaceTexture and a readable MediaStore URI.
+ * No media edits, network calls, new dependencies or autoplay without user tap.
+ */
+private class GalleryTexturePlaybackSession(
+    private val context: Context,
+    private val uri: android.net.Uri,
+    private val onReady: (Int) -> Unit,
+    private val onPlaying: (Boolean) -> Unit,
+    private val onComplete: () -> Unit,
+    private val onFailed: () -> Unit,
+) {
+    private val player = MediaPlayer()
+    private var activeSurface: Surface? = null
+    private var activeTexture: SurfaceTexture? = null
+    private var view: TextureView? = null
+    private var released = false
+    private var requested = false
+    private var prepared = false
+    private var suspended = false
+    private var contentWidth = 0
+    private var contentHeight = 0
+
+    init {
+        player.setAudioAttributes(
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
+                .build(),
+        )
+        player.setOnPreparedListener { media ->
+            if (!released) {
+                prepared = true
+                onReady(media.duration.coerceAtLeast(0))
+                updateFit()
+                if (!suspended) play()
+            }
+        }
+        player.setOnVideoSizeChangedListener { _, width, height ->
+            contentWidth = width
+            contentHeight = height
+            updateFit()
+        }
+        player.setOnCompletionListener {
+            if (!released) {
+                onPlaying(false)
+                onComplete()
+            }
+        }
+        player.setOnErrorListener { _, what, extra ->
+            // Log error codes only; never log a media URI, filename or file content.
+            Log.w("OmniGalleryVideo", "Playback error code=$what detail=$extra")
+            if (!released) {
+                onPlaying(false)
+                onFailed()
+            }
+            true
+        }
+    }
+
+    fun bind(viewToBind: TextureView) {
+        view = viewToBind
+        viewToBind.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+            override fun onSurfaceTextureAvailable(texture: SurfaceTexture, width: Int, height: Int) {
+                attach(texture)
+            }
+            override fun onSurfaceTextureSizeChanged(texture: SurfaceTexture, width: Int, height: Int) {
+                updateFit()
+            }
+            override fun onSurfaceTextureDestroyed(texture: SurfaceTexture): Boolean {
+                detach(texture)
+                return true // TextureView owns and frees the SurfaceTexture.
+            }
+            override fun onSurfaceTextureUpdated(texture: SurfaceTexture) = Unit
+        }
+        if (viewToBind.isAvailable) {
+            viewToBind.surfaceTexture?.let { attach(it) }
+        }
+    }
+
+    private fun attach(texture: SurfaceTexture) {
+        if (released || activeTexture === texture) return
+        activeSurface?.release()
+        activeTexture = texture
+        activeSurface = Surface(texture)
+        runCatching {
+            player.setSurface(activeSurface)
+            updateFit()
+            if (!requested) {
+                requested = true
+                player.setDataSource(context, uri)
+                player.prepareAsync()
+            } else if (prepared && !suspended) {
+                play()
+            }
+        }.onFailure { fail(it) }
+    }
+
+    private fun detach(texture: SurfaceTexture) {
+        if (activeTexture !== texture) return
+        pauseForLifecycle()
+        runCatching { player.setSurface(null) }
+        activeSurface?.release()
+        activeSurface = null
+        activeTexture = null
+    }
+
+    private fun updateFit() {
+        val activeView = view ?: return
+        val (scaleX, scaleY) = galleryVideoFitScales(
+            activeView.width, activeView.height, contentWidth, contentHeight,
+        )
+        activeView.setTransform(Matrix().apply {
+            setScale(scaleX, scaleY, activeView.width / 2f, activeView.height / 2f)
+        })
+    }
+
+    private fun fail(cause: Throwable) {
+        Log.w("OmniGalleryVideo", "Playback initialization failed: " + cause.javaClass.simpleName)
+        if (!released) {
+            onPlaying(false)
+            onFailed()
+        }
+    }
+
+    private fun play() {
+        if (released || !prepared || activeSurface == null) return
+        runCatching {
+            player.start()
+            onPlaying(true)
+        }.onFailure { fail(it) }
+    }
+
+    fun toggle() {
+        if (released || !prepared) return
+        runCatching {
+            if (player.isPlaying) {
+                player.pause()
+                onPlaying(false)
+            } else {
+                suspended = false
+                play()
+            }
+        }.onFailure { fail(it) }
+    }
+
+    fun pauseForLifecycle() {
+        suspended = true
+        if (!released && prepared) {
+            runCatching { if (player.isPlaying) player.pause() }
+        }
+        if (!released) onPlaying(false)
+    }
+
+    fun seekTo(position: Int) {
+        if (released || !prepared) return
+        runCatching { player.seekTo(position) }.onFailure { fail(it) }
+    }
+
+    fun currentPosition(): Int =
+        if (!released && prepared) runCatching { player.currentPosition }.getOrDefault(0) else 0
+
+    fun release() {
+        if (released) return
+        released = true
+        onPlaying(false)
+        runCatching {
+            player.setOnPreparedListener(null)
+            player.setOnVideoSizeChangedListener(null)
+            player.setOnErrorListener(null)
+            player.setOnCompletionListener(null)
+            player.release()
+        }
+        activeSurface?.release()
+        activeSurface = null
+        activeTexture = null
+        view = null
+    }
+}
+
+/** Contain/fill-fit transform for a TextureView (no stretching or cropping). */
+internal fun galleryVideoFitScales(
+    viewWidth: Int, viewHeight: Int, videoWidth: Int, videoHeight: Int,
+): Pair<Float, Float> {
+    if (viewWidth <= 0 || viewHeight <= 0 || videoWidth <= 0 || videoHeight <= 0) return 1f to 1f
+    val frameRatio = viewWidth.toFloat() / viewHeight
+    val videoRatio = videoWidth.toFloat() / videoHeight
+    return if (videoRatio >= frameRatio) 1f to (frameRatio / videoRatio)
+    else (videoRatio / frameRatio) to 1f
+}
+
 @Composable
 internal fun GalleryVideoPlayer(item: GalleryMediaItem, thumbnail: Bitmap?) {
     val context = LocalContext.current
@@ -427,53 +626,40 @@ internal fun GalleryVideoPlayer(item: GalleryMediaItem, thumbnail: Bitmap?) {
     var positionMs by remember(item.uri) { androidx.compose.runtime.mutableIntStateOf(0) }
     var durationMs by remember(item.uri) { androidx.compose.runtime.mutableIntStateOf(0) }
     var error by remember(item.uri) { mutableStateOf(false) }
-    val video = remember(context, item.uri) {
-        VideoView(context).apply {
-            // WML-003: one genuine controller instead of overlapping Android
-            // MediaController chrome. VideoView remains the actual codec engine.
-            setOnPreparedListener {
-                durationMs = duration.coerceAtLeast(0).takeIf { it > 0 }
+
+    val playback = remember(context, item.uri) {
+        GalleryTexturePlaybackSession(
+            context = context.applicationContext,
+            uri = item.uri,
+            onReady = { duration ->
+                durationMs = duration.takeIf { it > 0 }
                     ?: item.durationMs.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
                 ready = true
-            }
-            setOnCompletionListener {
+            },
+            onPlaying = { playing = it },
+            onComplete = {
                 playing = false
                 positionMs = durationMs
-            }
-            setOnErrorListener { _, _, _ ->
-                error = true
-                playing = false
-                true
-            }
-            runCatching { setVideoURI(item.uri) }.onFailure { error = true }
-        }
+            },
+            onFailed = { error = true },
+        )
     }
-    DisposableEffect(lifecycle, video) {
+    DisposableEffect(lifecycle, playback) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
-                video.pause()
-                playing = false
+                playback.pauseForLifecycle()
             }
         }
         lifecycle.addObserver(observer)
         onDispose {
             lifecycle.removeObserver(observer)
-            video.stopPlayback()
+            playback.release()
         }
     }
-    LaunchedEffect(video, started, ready) {
-        if (started && ready) {
-            runCatching {
-                video.start()
-                playing = true
-            }.onFailure { error = true }
-        }
-    }
-    // Observe the real engine rather than estimating elapsed playback time.
-    LaunchedEffect(video, started, ready) {
+    LaunchedEffect(playback, started, ready) {
         if (started && ready) {
             while (true) {
-                positionMs = video.currentPosition.coerceIn(0, durationMs.coerceAtLeast(0))
+                positionMs = playback.currentPosition().coerceIn(0, durationMs.coerceAtLeast(0))
                 delay(250L)
             }
         }
@@ -485,8 +671,10 @@ internal fun GalleryVideoPlayer(item: GalleryMediaItem, thumbnail: Bitmap?) {
         ) {
             if (started && !error) {
                 AndroidView(
-                    factory = { video },
-                    modifier = Modifier.fillMaxSize(),
+                    factory = { androidContext ->
+                        TextureView(androidContext).also { playback.bind(it) }
+                    },
+                    modifier = Modifier.fillMaxSize().testTag("omni_gallery_video_texture"),
                 )
             } else if (thumbnail != null) {
                 Image(
@@ -510,6 +698,9 @@ internal fun GalleryVideoPlayer(item: GalleryMediaItem, thumbnail: Bitmap?) {
                     }
                 }
             }
+            if (started && !ready && !error) {
+                CircularProgressIndicator(modifier = Modifier.testTag("omni_gallery_video_preparing"))
+            }
             if (error) {
                 Text(
                     text = stringResource(R.string.gallery_video_unavailable),
@@ -525,24 +716,10 @@ internal fun GalleryVideoPlayer(item: GalleryMediaItem, thumbnail: Bitmap?) {
                 playing = playing,
                 onSeek = { requested ->
                     val target = boundedVideoSeekPosition(requested, durationMs)
-                    runCatching {
-                        video.seekTo(target)
-                        positionMs = target
-                    }.onFailure { error = true }
+                    playback.seekTo(target)
+                    positionMs = target
                 },
-                onPlayPause = {
-                    runCatching {
-                        if (video.isPlaying) {
-                            video.pause()
-                            playing = false
-                        } else {
-                            // Android VideoView resumes the same media and URI;
-                            // no extra decoder or implicit read/write access.
-                            video.start()
-                            playing = true
-                        }
-                    }.onFailure { error = true }
-                },
+                onPlayPause = playback::toggle,
             )
         }
     }
