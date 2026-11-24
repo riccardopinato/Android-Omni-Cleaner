@@ -37,7 +37,7 @@ jobs:
           heredoc = "          python3 - <<'PY'\n"
           assert merge.count(heredoc) == 1
           script = merge.split(heredoc, 1)[1].split("\n          PY\n", 1)[0]
-          assert script and all(line.startswith('          ') for line in script.splitlines())
+          assert script and all(not line.strip() or line.startswith('          ') for line in script.splitlines())
           compile('\n'.join(line[10:] for line in script.splitlines()) + '\n',
                   'app-factory-context-automerge.py', 'exec')
           print('APP_FACTORY_CONTEXT_V4_CONTRACT_PASS')
