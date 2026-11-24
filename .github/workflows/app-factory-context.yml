@@ -7,6 +7,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/app-factory-context.yml'
+      - '.github/workflows/app-factory-context-automerge.yml'
 permissions:
   contents: read
 concurrency:
@@ -31,6 +32,14 @@ jobs:
               assert marker in s, marker
           for marker in ('SNAPSHOT_AUTOMERGE_VERIFIED', 'required.issubset', 'REQUIRED_CHECKS_JSON', 'APP_FACTORY_BOT_PRIVATE_KEY', 'expected_paths'):
               assert marker in merge, marker
+          # Compile the actual scheduled Python guard even on PR runs. No API
+          # calls, credentials or repository mutations during validation.
+          heredoc = "          python3 - <<'PY'\\n"
+          assert merge.count(heredoc) == 1
+          script = merge.split(heredoc, 1)[1].split("\\n          PY\\n", 1)[0]
+          assert script and all(line.startswith('          ') for line in script.splitlines())
+          compile('\\n'.join(line[10:] for line in script.splitlines()) + '\\n',
+                  'app-factory-context-automerge.py', 'exec')
           print('APP_FACTORY_CONTEXT_V4_CONTRACT_PASS')
           PY
   snapshot-app-factory-context:
