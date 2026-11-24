@@ -1,0 +1,140 @@
+# Read-only metadata snapshot PRs only. Never merge general app-code PRs.
+# Does not bypass GitHub branch protection, checks, or review requirements.
+name: App Factory — context verified auto-merge
+on:
+  schedule:
+    - cron: '17,47 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: app-factory-context-verified-merge-${{ github.repository }}
+  cancel-in-progress: false
+jobs:
+  merge-verified-context-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check bot installation configuration
+        id: bot-config
+        shell: bash
+        env:
+          BOT_CLIENT_ID: ${{ vars.APP_FACTORY_BOT_CLIENT_ID }}
+          BOT_PRIVATE_KEY: ${{ secrets.APP_FACTORY_BOT_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${BOT_CLIENT_ID}" && -n "${BOT_PRIVATE_KEY}" ]]; then
+            echo 'ready=true' >> "${GITHUB_OUTPUT}"
+          elif [[ -z "${BOT_CLIENT_ID}" && -z "${BOT_PRIVATE_KEY}" ]]; then
+            echo 'ready=false' >> "${GITHUB_OUTPUT}"
+            echo 'APP_FACTORY_BOT_NOT_CONFIGURED: no automated merge'
+          else
+            echo 'APP_FACTORY_BOT_CREDENTIALS_INCOMPLETE' >&2
+            exit 1
+          fi
+      - name: Authenticate scoped GitHub App
+        if: steps.bot-config.outputs.ready == 'true'
+        id: bot-token
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc
+        with:
+          client-id: ${{ vars.APP_FACTORY_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.APP_FACTORY_BOT_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-checks: read
+      - name: Evaluate exact-head checks and merge metadata-only PR
+        if: steps.bot-config.outputs.ready == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.bot-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          MAIN_BRANCH: ${{ github.event.repository.default_branch }}
+          REQUIRED_CHECKS_JSON: '["verify","capture","validate-app-factory-context"]'
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from __future__ import annotations
+          import json, os, subprocess, sys
+
+          repo = os.environ["GH_REPO"]
+          base = os.environ["MAIN_BRANCH"] or "main"
+          required = set(json.loads(os.environ["REQUIRED_CHECKS_JSON"]))
+          expected_paths = {"docs/APP_FACTORY_CONTEXT.json", "docs/APP_FACTORY_CONTEXT.md"}
+
+          def api(path: str, *, method: str = "GET", params: dict | None = None):
+              command = ["gh", "api"]
+              if method != "GET":
+                  command.extend(["-X", method])
+              command.append(f"repos/{repo}/{path}")
+              for key, value in (params or {}).items():
+                  command.extend(["-f", f"{key}={value}"])
+              proc = subprocess.run(command, text=True, capture_output=True)
+              if proc.returncode != 0:
+                  raise RuntimeError(f"GitHub API failed at {path}: {proc.stderr[:300]}")
+              return json.loads(proc.stdout)
+
+          def hold(reason: str):
+              print(f"SNAPSHOT_AUTOMERGE_HOLD: {reason}")
+              with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as out:
+                  out.write(f"Snapshot auto-merge HOLD: {reason}\n")
+              sys.exit(0)
+
+          rows = api("pulls?state=open&per_page=100")
+          candidates = [p for p in rows if p["head"]["ref"] == "automation/app-factory-context"
+                        and p["base"]["ref"] == base
+                        and p["head"]["repo"] is not None
+                        and p["head"]["repo"]["full_name"] == repo]
+          if not candidates:
+              hold("no eligible context snapshot PR")
+          if len(candidates) != 1:
+              hold("multiple eligible PRs")
+          pr = api(f"pulls/{candidates[0]['number']}")
+          number = pr["number"]
+          head = pr["head"]["sha"]
+          if pr["state"] != "open" or pr["draft"]:
+              hold("PR is not an open non-draft review")
+          if pr["mergeable"] is not True or pr["mergeable_state"] != "clean":
+              hold("GitHub reports PR not cleanly mergeable")
+          files = api(f"pulls/{number}/files?per_page=100")
+          if len(files) != 2 or {f["filename"] for f in files} != expected_paths:
+              hold("PR changes more than the two metadata snapshot documents")
+          ancestry = api(f"compare/{pr['base']['sha']}...{head}")
+          if ancestry["behind_by"] != 0:
+              hold("snapshot branch is behind current base")
+          checks = api(f"commits/{head}/check-runs?per_page=100")
+          if checks["total_count"] > 100:
+              hold("check results exceed the reviewed limit")
+          github_checks = {c["name"]: c for c in checks["check_runs"]
+                           if c.get("app", {}).get("slug") == "github-actions"}
+          if not required.issubset(github_checks):
+              hold("required exact-head checks not yet present: " + ", ".join(sorted(required - set(github_checks))))
+          if any(github_checks[name]["status"] != "completed" or
+                 github_checks[name]["conclusion"] != "success" for name in required):
+              hold("one or more required exact-head checks are not PASS")
+          if any(c["status"] != "completed" or
+                 c["conclusion"] not in ("success", "skipped", "neutral")
+                 for c in checks["check_runs"]):
+              hold("another check is pending or non-success")
+          reviews = api(f"pulls/{number}/reviews?per_page=100")
+          if len(reviews) >= 100:
+              hold("review history exceeds validated limit")
+          latest_review_by_user = {}
+          for review in reviews:
+              if review["state"] != "DISMISSED":
+                  latest_review_by_user[review["user"]["login"]] = review["state"]
+          if "CHANGES_REQUESTED" in latest_review_by_user.values():
+              hold("blocking review present")
+          # Recheck base HEAD before the SHA-guarded merge request.
+          current_base = api(f"branches/{base}")
+          if current_base["commit"]["sha"] != pr["base"]["sha"]:
+              hold("base changed during verification")
+          # GitHub enforces actual branch protection and review rules at merge.
+          result = api(f"pulls/{number}/merge", method="PUT", params={
+              "sha": head,
+              "merge_method": "squash",
+              "commit_title": "chore(context): merge independently checked App Factory snapshot",
+          })
+          if result.get("merged") is not True:
+              raise RuntimeError(f"GitHub did not confirm a merge: {result}")
+          print("SNAPSHOT_AUTOMERGE_VERIFIED", number, head, result.get("sha"))
+          PY

@@ -1,4 +1,4 @@
-# APP_FACTORY_CONTEXT_v3 — source metadata only, PR-first/explicit branch-only fallback; no runtime changes
+# APP_FACTORY_CONTEXT_v4 — GitHub App PRs start CI; branch-only fallback without credentials; no runtime changes
 name: App Factory — context snapshot
 on:
   schedule:
@@ -7,6 +7,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/app-factory-context.yml'
+      - '.github/workflows/app-factory-context-automerge.yml'
 permissions:
   contents: read
 concurrency:
@@ -26,24 +27,65 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           s = Path('.github/workflows/app-factory-context.yml').read_text(encoding='utf-8')
-          for marker in ('APP_FACTORY_CONTEXT_v3', 'workflow_dispatch:', 'pull-requests: write', 'APP_FACTORY_CONTEXT.md', 'git push origin HEAD:refs/heads/automation/app-factory-context', 'SNAPSHOT_PR_BLOCKED_BY_POLICY', 'GITHUB_STEP_SUMMARY'):
+          merge = Path('.github/workflows/app-factory-context-automerge.yml').read_text(encoding='utf-8')
+          for marker in ('APP_FACTORY_CONTEXT_v4', 'workflow_dispatch:', 'APP_FACTORY_CONTEXT.md', 'git push origin HEAD:refs/heads/automation/app-factory-context', 'APP_FACTORY_BOT_MISSING', 'APP_FACTORY_BOT_CLIENT_ID', 'APP_FACTORY_BOT_PRIVATE_KEY', 'actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc'):
               assert marker in s, marker
-          print('APP_FACTORY_CONTEXT_CONTRACT_PASS')
+          for marker in ('SNAPSHOT_AUTOMERGE_VERIFIED', 'required.issubset', 'REQUIRED_CHECKS_JSON', 'APP_FACTORY_BOT_PRIVATE_KEY', 'expected_paths'):
+              assert marker in merge, marker
+          # Compile the actual scheduled Python guard even on PR runs. No API
+          # calls, credentials or repository mutations during validation.
+          heredoc = "          python3 - <<'PY'\n"
+          assert merge.count(heredoc) == 1
+          script = merge.split(heredoc, 1)[1].split("\n          PY\n", 1)[0]
+          assert script and all(not line.strip() or line.startswith('          ') for line in script.splitlines())
+          compile('\n'.join(line[10:] for line in script.splitlines()) + '\n',
+                  'app-factory-context-automerge.py', 'exec')
+          print('APP_FACTORY_CONTEXT_V4_CONTRACT_PASS')
           PY
   snapshot-app-factory-context:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
+      pull-requests: read
     steps:
+      - name: Detect App Factory bot credentials
+        id: bot-config
+        shell: bash
+        env:
+          BOT_CLIENT_ID: ${{ vars.APP_FACTORY_BOT_CLIENT_ID }}
+          BOT_PRIVATE_KEY: ${{ secrets.APP_FACTORY_BOT_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${BOT_CLIENT_ID}" && -n "${BOT_PRIVATE_KEY}" ]]; then
+            echo 'ready=true' >> "${GITHUB_OUTPUT}"
+          elif [[ -z "${BOT_CLIENT_ID}" && -z "${BOT_PRIVATE_KEY}" ]]; then
+            echo 'ready=false' >> "${GITHUB_OUTPUT}"
+            echo 'APP_FACTORY_BOT_NOT_CONFIGURED'
+          else
+            echo 'APP_FACTORY_BOT_CREDENTIALS_INCOMPLETE' >&2
+            exit 1
+          fi
+      - name: Mint single-repository GitHub App token
+        id: bot-token
+        if: steps.bot-config.outputs.ready == 'true'
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc
+        with:
+          client-id: ${{ vars.APP_FACTORY_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.APP_FACTORY_BOT_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-checks: read
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+          token: ${{ steps.bot-token.outputs.token || github.token }}
       - name: Reconcile public source SHAs and propose reviewed update
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.bot-token.outputs.token || github.token }}
+          SOURCE_TOKEN: ${{ github.token }}
+          BOT_READY: ${{ steps.bot-config.outputs.ready }}
           GH_REPO: ${{ github.repository }}
           BASE_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
@@ -63,7 +105,7 @@ jobs:
           import json, os, urllib.request
           from pathlib import Path
           sources = [["riccardopinato/App-Factory-Core","Master, Golden e policy"],["riccardopinato/Idee-app-Archivi-riferimenti","Idee, capability e donor"]]
-          token = os.environ.get('GH_TOKEN', '')
+          token = os.environ.get('SOURCE_TOKEN', '')
           rows = []
           for repo, role in sources:
               def api(path):
@@ -101,29 +143,31 @@ jobs:
             echo 'NO_OP: no snapshot delta versus base'
             exit 0
           fi
-          # Repository policy may forbid pull requests created with GITHUB_TOKEN,
-          # even when the job has pull-requests: write. Keep the reviewed branch
-          # and report PENDING_REVIEW; never claim that main is synchronized.
+          # A GITHUB_TOKEN-created PR does not start ordinary PR CI; never
+          # silently use it for PR creation. The App token owns both git push
+          # (checkout credentials) and gh pr create, triggering exact-head CI.
           PR_NUMBER="$(gh pr list --head automation/app-factory-context --state open --json number --jq '.[0].number // empty')"
           if [ -n "${PR_NUMBER}" ]; then
             echo "SNAPSHOT_PR_ALREADY_OPEN ${PR_NUMBER}"
             exit 0
           fi
-          if PR_RESULT="$(gh pr create --head automation/app-factory-context --base "${BASE_BRANCH}" --title 'chore(context): new upstream GitHub snapshot' --body 'Metadata only: observe upstream commit SHAs and dates. No application code, Master, Golden, deployment or certification changed. Review and merge through normal project gates.' 2>&1)"; then
-            printf '%s\n' "${PR_RESULT}"
-            echo 'SNAPSHOT_PR_CREATED'
-          elif printf '%s\n' "${PR_RESULT}" | grep -Fq 'GitHub Actions is not permitted to create or approve pull requests'; then
-            echo 'SNAPSHOT_PR_BLOCKED_BY_POLICY: branch ready, main not updated'
-            echo '::warning title=App Factory context pending review::Repository policy blocks GitHub Actions from creating PRs. The snapshot branch is ready; main remains unchanged.'
+          if [ "${BOT_READY}" != 'true' ]; then
+            echo 'APP_FACTORY_BOT_MISSING: branch ready, PR not created, main unchanged'
+            echo '::warning title=App Factory bot setup needed::Configure APP_FACTORY_BOT_CLIENT_ID (repository variable) and APP_FACTORY_BOT_PRIVATE_KEY (repository secret) to create a PR that triggers CI. Snapshot branch is ready.'
             {
-              echo '### App Factory context — pending reviewed PR'
+              echo '### App Factory context — awaiting GitHub App credentials'
               echo ''
-              echo '**State:** `BRANCH_READY_PR_BLOCKED_BY_POLICY` (not synchronized into main).'
+              echo '**State:** `BRANCH_READY_BOT_NOT_CONFIGURED`; main was not updated.'
               echo ''
-              echo "Open the [branch comparison](https://github.com/${GH_REPO}/compare/${BASE_BRANCH}...automation/app-factory-context?expand=1) and create a reviewed PR using an authorized account."
+              echo "Review [the snapshot comparison](https://github.com/${GH_REPO}/compare/${BASE_BRANCH}...automation/app-factory-context?expand=1)."
               echo ''
-              echo 'No data, app code, Master/Golden, release or certification were modified on main.'
+              echo 'A GitHub App token with Contents write, Pull requests write and Checks read is required to create CI-triggering PRs.'
             } >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+          if PR_RESULT="$(gh pr create --head automation/app-factory-context --base "${BASE_BRANCH}" --title 'chore(context): new upstream GitHub snapshot' --body 'Metadata only. Opened by scoped GitHub App so exact-head PR CI runs automatically; a separate metadata-only merge workflow requires all applicable checks PASS.' 2>&1)"; then
+            printf '%s\n' "${PR_RESULT}"
+            echo 'SNAPSHOT_PR_CREATED_APP_TOKEN'
           else
             printf '%s\n' "${PR_RESULT}" >&2
             echo 'SNAPSHOT_PR_UNEXPECTED_FAILURE' >&2
