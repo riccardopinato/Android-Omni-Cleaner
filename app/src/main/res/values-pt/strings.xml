@@ -226,7 +226,7 @@
     <string name="cleanup_empty_confirm_body">Cada pasta é verificada novamente: deve continuar vazia, estar dentro do armazenamento do utilizador e fora de caminhos protegidos.</string>
     <string name="cleanup_confirm_title">Confirmar limpeza?</string>
     <string name="cleanup_confirm_body">Os ficheiros são novamente validados imediatamente antes da modificação. Os duplicados mantêm uma cópia válida e inalterada. Os conteúdos multimédia passam pela Lixeira do Android. Os ficheiros não multimédia usam a Lixeira segura apenas quando a operação é verificável; ficheiros grandes não multimédia nunca são eliminados permanentemente como alternativa.</string>
-    <string name="cleanup_android_trash_confirmed">Lixeira do Android confirmada (o espaço não é contado como já libertado)</string>
+    <string name="cleanup_android_trash_confirmed">Autorização da Lixeira Android aceite (estado real não verificado; espaço não contabilizado como libertado)</string>
     <string name="cleanup_safe_trash_moved">%1$d ficheiros movidos para a Lixeira segura</string>
     <string name="cleanup_rejected">%1$d rejeitados</string>
     <string name="cleanup_changed">%1$d alterados após a análise e deixados inalterados</string>

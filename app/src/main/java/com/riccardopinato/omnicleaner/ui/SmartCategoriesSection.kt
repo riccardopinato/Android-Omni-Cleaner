@@ -118,7 +118,8 @@ fun SmartCategoriesSection(
                 blockedTemplate = blockedTemplate,
                 safeTrashNotReclaimed = safeTrashNotReclaimed,
             )
-            if (safeResult.moved > 0 || preparation.mediaUris.isNotEmpty()) {
+            // RESULT_OK is consent, not a read-after-write verification of MediaStore trash.
+            if (safeResult.moved > 0) {
                 CleanupEventBus.publishCompleted()
             }
             onCleanupFinished()

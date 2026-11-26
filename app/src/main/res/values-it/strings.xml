@@ -227,7 +227,7 @@
     <string name="cleanup_empty_confirm_body">Ogni cartella viene ricontrollata: deve essere ancora vuota, interna alla memoria utente e fuori dai percorsi protetti.</string>
     <string name="cleanup_confirm_title">Confermare la pulizia?</string>
     <string name="cleanup_confirm_body">I file vengono ricontrollati subito prima della modifica. I duplicati mantengono una copia valida e invariata. I media passano dal Cestino Android. I non-media vanno nel Safe Trash solo quando l’operazione è verificabile; nessun file grande viene eliminato permanentemente come fallback.</string>
-    <string name="cleanup_android_trash_confirmed">Cestino Android confermato (spazio non conteggiato come già liberato)</string>
+    <string name="cleanup_android_trash_confirmed">Consenso al Cestino Android accettato (spostamento effettivo non verificato; spazio non conteggiato come liberato)</string>
     <string name="cleanup_safe_trash_moved">%1$d file spostati nel Safe Trash</string>
     <string name="cleanup_rejected">%1$d rifiutati</string>
     <string name="cleanup_changed">%1$d cambiati dopo la scansione e lasciati invariati</string>

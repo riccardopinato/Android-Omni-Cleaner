@@ -36,3 +36,9 @@ Integration source baseline: PR #75 `c8e785f89c4dc852799171718d380e97d2040966`. 
 - The canonical `Android CI` workflow already publishes exact-head **debug** APK prereleases for in-repository PRs (source SHA and SHA-256). The separate fast-preview job is reserved for its original feature branches and uses `setup-gradle` to avoid cold-cache dependency lookup failures. `Android CI` release output is still pending a successful run. Debug APK is not a production update or release certification.
 - The two upstream `main` commits modify only the App Factory context workflow files, which are copied unchanged into the integration tree with `main` as the second merge parent. Do not merge this Draft PR into `main` until the owner accepts the screenshots, hardware tests and release-signing gates.
 - Physical-device cases and evidence requirements: `docs/OMNI_MAXI_STEP_11_PHYSICAL_QA_2026_11_27.md`.
+
+### Safety follow-up — Android consent across legacy cleanup surfaces
+
+- `StorageCleanupSection.kt` and `SmartCategoriesSection.kt` no longer emit `CleanupEventBus.publishCompleted()` for Android `RESULT_OK` alone; only a verified positive Safe Trash movement emits that event.
+- The existing `cleanup_android_trash_confirmed` display string was revised consistently in all five locales to state **consent accepted, actual MediaStore trash state unverified**. This affects both legacy screens without changing any destructive file operation.
+- Gallery UI `onTrashResult(success)` optimistically updates its local queue after Android consent; independently verify MediaStore state, cancellation and partial rejection on physical Android before release acceptance. Do not equate view-state changes with bytes reclaimed.

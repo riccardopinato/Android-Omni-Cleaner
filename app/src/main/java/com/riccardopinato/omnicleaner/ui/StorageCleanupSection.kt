@@ -151,7 +151,8 @@ fun StorageCleanupSection(
             )
             selectedBigFiles = emptySet()
             selectedDuplicates = emptySet()
-            CleanupEventBus.publishCompleted()
+            // Android consent does not establish that the media is trashed.
+            if (safeResult.moved > 0) CleanupEventBus.publishCompleted()
             onCleanupFinished()
         }
     }

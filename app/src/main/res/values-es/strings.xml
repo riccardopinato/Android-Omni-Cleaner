@@ -226,7 +226,7 @@
     <string name="cleanup_empty_confirm_body">Cada carpeta se comprueba de nuevo: debe seguir vacía, estar dentro del almacenamiento del usuario y fuera de rutas protegidas.</string>
     <string name="cleanup_confirm_title">¿Confirmar limpieza?</string>
     <string name="cleanup_confirm_body">Los archivos se vuelven a validar justo antes de modificarlos. Los duplicados conservan una copia válida sin cambios. Los medios pasan por la Papelera de Android. Los archivos no multimedia usan la Papelera segura solo cuando la operación es verificable; los archivos grandes no multimedia nunca se eliminan permanentemente como alternativa.</string>
-    <string name="cleanup_android_trash_confirmed">Papelera de Android confirmada (el espacio no se cuenta como ya liberado)</string>
+    <string name="cleanup_android_trash_confirmed">Consentimiento para la Papelera de Android aceptado (estado real sin verificar; espacio no contabilizado como liberado)</string>
     <string name="cleanup_safe_trash_moved">%1$d archivos movidos a la Papelera segura</string>
     <string name="cleanup_rejected">%1$d rechazados</string>
     <string name="cleanup_changed">%1$d cambiaron después del análisis y permanecieron sin cambios</string>

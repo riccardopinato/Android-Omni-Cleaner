@@ -226,7 +226,7 @@
     <string name="cleanup_empty_confirm_body">Chaque dossier est revérifié : il doit toujours être vide, se trouver dans le stockage utilisateur et hors des chemins protégés.</string>
     <string name="cleanup_confirm_title">Confirmer le nettoyage ?</string>
     <string name="cleanup_confirm_body">Les fichiers sont revérifiés juste avant modification. Les doublons conservent une copie valide et inchangée. Les médias passent par la Corbeille Android. Les fichiers non multimédias utilisent la Corbeille sécurisée uniquement lorsque l’opération est vérifiable ; les gros fichiers non multimédias ne sont jamais supprimés définitivement en solution de repli.</string>
-    <string name="cleanup_android_trash_confirmed">Corbeille Android confirmée (l’espace n’est pas compté comme déjà libéré)</string>
+    <string name="cleanup_android_trash_confirmed">Autorisation de la Corbeille Android acceptée (état réel non vérifié ; espace non comptabilisé comme libéré)</string>
     <string name="cleanup_safe_trash_moved">%1$d fichiers déplacés vers la Corbeille sécurisée</string>
     <string name="cleanup_rejected">%1$d refusés</string>
     <string name="cleanup_changed">%1$d modifiés après l’analyse et laissés inchangés</string>
