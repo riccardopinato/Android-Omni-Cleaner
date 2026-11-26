@@ -44,35 +44,47 @@ internal object OmniColorBento {
 }
 
 /**
- * Pop Fresh 2027 — nine user-selected swatches, 20 November 2026.
- * Color-only alternative to the previous Linktree Color Bento v2 palette.
- * Neutral off-white and dark navy are accessibility surfaces/ink, not extra tiles.
- * Keep screen structure, routes, motion and scan behavior unchanged.
+ * Soft Pastel Cleaner — calm native palette approved for Bento Home.
+ *
+ * Preserve the nine positional swatch identities and their harmonic order,
+ * but lower saturation, use warm paper and readable ink. Neutral surfaces,
+ * error/destructive colors and app functionality remain independent.
  */
 internal object OmniColorBentoV2Palette {
-    val green = Color(0xFFC9F25D)      // Lime Pop
-    val sage = Color(0xFF87DEAA)       // Spring Green
-    val gold = Color(0xFFFFAE58)       // Tangerine
-    val yellow = Color(0xFFFFE066)     // Sunshine
-    val blue = Color(0xFF3C55E8)       // Electric Blue
-    val sky = Color(0xFF5EDBD5)        // Aqua Fresh
-    val raspberry = Color(0xFFFF83C2)  // Bubblegum
-    val blush = Color(0xFFFF7A73)      // Coral Pop
-    val violet = Color(0xFFC4A2FF)     // Soft Violet
-    val cream = Color(0xFFF7F7F4)      // Neutral surface
-    val legibleInk = Color(0xFF192033)
+    val green = Color(0xFFDCEEC9)      // pear
+    val sage = Color(0xFFDBEEE4)       // mint/sage
+    val gold = Color(0xFFF9E5D3)       // peach
+    val yellow = Color(0xFFF8EFD2)     // butter cream
+    val blue = Color(0xFFD5E5FA)       // powder blue
+    val sky = Color(0xFFD9EFF1)        // misty aqua
+    val raspberry = Color(0xFFF6E0EB)  // powder pink
+    val blush = Color(0xFFF6DFDA)      // gentle coral
+    val violet = Color(0xFFE9E2F6)     // lavender
+    val cream = Color(0xFFF8F9F6)      // warm paper
+    val legibleInk = Color(0xFF263440)
     val white = Color(0xFFFFFFFF)
+    val subtleInk = Color(0xFF60717C)
 
-    /**
-     * Approved nine swatches in a stable editorial starting order. The actual
-     * position-derived order is chosen by bentoV2HarmonizedColorIndices()
-     * from visible tile geometry, not from a module ID.
-     */
+    /** Positional harmonizer remains the single owner of swatch indices. */
     val positionSwatches = listOf(
         green, blue, gold, violet, yellow, sky, blush, sage, raspberry,
     )
 
-    /** Electric Blue needs white ink; all other swatches use dark navy. */
-    fun tileForeground(background: Color): Color =
-        if (background == blue) white else legibleInk
+    /** Pastel surfaces are all light: use dark ink, never white on powder blue. */
+    fun tileForeground(background: Color): Color = legibleInk
+
+    /**
+     * Give larger rectangles slightly more presence without tying tone to
+     * the underlying function. Small rectangles become calmer surfaces.
+     */
+    fun surfaceForPosition(swatch: Color, columns: Int, rows: Int): Color =
+        androidx.compose.ui.graphics.lerp(
+            cream,
+            swatch,
+            when {
+                columns * rows >= 4 -> 1f
+                columns >= 2 || rows >= 2 -> .87f
+                else -> .69f
+            },
+        )
 }
