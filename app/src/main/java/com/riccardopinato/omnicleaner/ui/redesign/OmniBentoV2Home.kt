@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
@@ -168,13 +169,13 @@ internal fun OmniBentoV2Home(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Column(Modifier.weight(1f)) {
                         Text("Omni Cleaner", color = fg, fontFamily = colors.display, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-                        Text(if (editing) stringResource(R.string.bento_v2_subtitle) else "Color Bento 2.0", color = fg.copy(alpha = .7f), fontFamily = colors.body, fontSize = 12.sp)
+                        Text(if (editing) stringResource(R.string.bento_v2_subtitle) else stringResource(R.string.bento_v2_subtitle), color = fg.copy(alpha = .7f), fontFamily = colors.body, fontSize = 12.sp)
                     }
                     BentoV2Action(if (editing) stringResource(R.string.bento_v2_done) else stringResource(R.string.bento_v2_edit), palette.yellow, palette.legibleInk, tag = "omni_bento_v2_editor_toggle") {
                         editing = !editing
                         selectedId = null
                     }
-                    if (!editing) BentoV2Action("⚙", palette.blue, palette.white, tag = "omni_home_settings", semanticLabel = stringResource(R.string.audit_settings), onClick = onOpenSettings)
+                    if (!editing) BentoV2Action("⚙", palette.blue, palette.legibleInk, tag = "omni_home_settings", semanticLabel = stringResource(R.string.audit_settings), onClick = onOpenSettings)
                 }
                 if (editing) {
                     Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -189,15 +190,15 @@ internal fun OmniBentoV2Home(
                             .padding(13.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(stringResource(R.string.bento_v2_scanning), color = palette.white, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        Text(stringResource(R.string.bento_v2_queue_count, BentoScanRuntime.pending.size) + "  ›", color = palette.white, fontSize = 12.sp)
+                        Text(stringResource(R.string.bento_v2_scanning), color = palette.legibleInk, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.bento_v2_queue_count, BentoScanRuntime.pending.size) + "  ›", color = palette.legibleInk, fontSize = 12.sp)
                     }
                 }
             }
         }
         item("bento_mosaic_v2") {
             BoxWithConstraints(Modifier.fillMaxWidth()) {
-                val gap = 8.dp
+                val gap = 10.dp
                 val cell = (maxWidth - gap * 2) / 3
                 val density = LocalDensity.current
                 val rowCell = bentoV2RowHeightDp(cell.value, density.fontScale).dp
@@ -239,6 +240,7 @@ internal fun OmniBentoV2Home(
                                 }
                                 .offset(x = x, y = y)
                                 .width(w).height(h)
+                                .shadow(1.dp, RoundedCornerShape(22.dp))
                                 .then(
                                     if (editing) Modifier.pointerInput(tile.id, editing, cellPx) {
                                         detectDragGesturesAfterLongPress(
@@ -562,8 +564,8 @@ private fun BentoV2Card(
     val spec = BENTO_V2_LIBRARY.first { it.id == tile.id }
     val colors = OmniColorBento
     val palette = OmniColorBentoV2Palette
-    val bg = background
-    val fg = palette.tileForeground(background)
+    val bg = palette.surfaceForPosition(background, tile.columns, tile.rows)
+    val fg = palette.tileForeground(bg)
     val scanDone = when (tile.id) {
         "storage" -> state.overview != null
         "duplicates" -> state.duplicatesScanned
@@ -598,11 +600,18 @@ private fun BentoV2Card(
         spec.scan -> stringResource(R.string.bento_v2_tap_scan)
         else -> stringResource(R.string.bento_v2_open)
     }
-    Column(
-        modifier = modifier.background(bg)
-            .padding(if (tile.columns == 1) 9.dp else 14.dp),
-        verticalArrangement = Arrangement.SpaceBetween,
-    ) {
+    Box(modifier = modifier.background(bg)) {
+        BentoSoftIllustration(
+            tileId = tile.id,
+            modifier = Modifier.align(Alignment.TopEnd)
+                .padding(top = if (compact) 5.dp else 11.dp, end = if (compact) 5.dp else 12.dp)
+                .size(if (compact) 36.dp else if (tile.columns * tile.rows >= 4) 92.dp else 67.dp),
+        )
+        Column(
+            modifier = Modifier.fillMaxSize()
+                .padding(if (tile.columns == 1) 9.dp else 14.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.SpaceBetween) {
             val icon = when (tile.id) {
                 "gallery", "galleryPro", "galleryReview" -> OmniNavigationSymbol.GALLERY
@@ -630,7 +639,7 @@ private fun BentoV2Card(
                 } else Modifier,
                 color = fg,
                 fontFamily = colors.display,
-                fontWeight = FontWeight.Bold,
+                fontWeight = if (tile.columns * tile.rows >= 4) FontWeight.Bold else FontWeight.SemiBold,
                 fontSize = if (compact) 11.sp else if (tile.columns == 1 && fontScale >= 1.5f) 11.sp else if (tile.columns == 1) 13.sp else 20.sp,
                 lineHeight = if (compact) 13.sp else if (tile.columns == 1 && fontScale >= 1.5f) 13.sp else if (tile.columns == 1) 16.sp else 24.sp,
                 maxLines = if (fontScale >= 1.5f) 3 else if (compact) 2 else 3,
@@ -657,5 +666,6 @@ private fun BentoV2Card(
                 }
             }
         }
+    }
     }
 }
