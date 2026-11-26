@@ -24,7 +24,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.CleanupFileSnapshot
 import com.riccardopinato.omnicleaner.cleaner.FileCleanupPreparation
 import com.riccardopinato.omnicleaner.cleaner.StorageCleanupEngine
@@ -63,19 +65,21 @@ internal fun OmniFileTrashReview(
             scope.launch {
                 try {
                     val result = engine.movePreparedSnapshotsToSafeTrash(prepared.safeTrashCandidates)
-                    message = "Conferma Android accettata per ${prepared.mediaUris.size} file (stato Cestino non verificato) · Cestino reversibile: ${result.moved} · Rifiutati: ${result.rejected}"
-                    CleanupEventBus.publishCompleted()
+                    message = context.getString(R.string.file_trash_android_request_accepted, prepared.mediaUris.size, result.moved, result.rejected)
+                    if (result.moved > 0) CleanupEventBus.publishCompleted()
+                    // Android RESULT_OK grants consent, not proof that all media are trashed.
+                    // Refresh selection without reporting media cleanup as completed.
                     onFinished()
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (_: Exception) {
-                    message = "Spostamento incompleto. I file non confermati restano invariati."
+                    message = context.getString(R.string.file_trash_movement_incomplete)
                 } finally {
                     running = false
                 }
             }
         } else {
-            message = "Operazione annullata. Nessun file rimosso."
+            message = context.getString(R.string.file_trash_cancelled)
             running = false
         }
     }
@@ -85,17 +89,17 @@ internal fun OmniFileTrashReview(
             onClick = { confirm = true },
             enabled = selected.isNotEmpty() && !running,
             modifier = Modifier.fillMaxWidth().testTag("omni_file_trash_selected"),
-        ) { Text("Sposta nel cestino (${selected.size})") }
+        ) { Text(stringResource(R.string.file_trash_move_selected_count, selected.size)) }
         if (running) CircularProgressIndicator()
         message?.let { Text(it) }
     }
     if (confirm) {
         AlertDialog(
             onDismissRequest = { confirm = false },
-            title = { Text("Conferma i file selezionati") },
+            title = { Text(stringResource(R.string.file_trash_confirm_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Solo i file verificati saranno spostati. Le foto e i video richiedono l'autorizzazione Android.")
+                    Text(stringResource(R.string.file_trash_confirm_body))
                     LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
                         items(selected, key = { it.file.absolutePath }) { candidate ->
                             Text(candidate.file.name + " · " + candidate.file.parent.orEmpty())
@@ -120,11 +124,11 @@ internal fun OmniFileTrashReview(
                                         )
                                     } else {
                                         running = false
-                                        message = "Conferma del cestino Android non disponibile: file intatti."
+                                        message = context.getString(R.string.file_trash_request_unavailable)
                                     }
                                 } else {
                                     val moved = engine.movePreparedSnapshotsToSafeTrash(prepared.safeTrashCandidates)
-                                    message = "Spostati: ${moved.moved} · Non idonei: ${prepared.blockedFiles.size} · Modificati: ${prepared.staleFiles.size} · Rifiutati: ${moved.rejected}"
+                                    message = context.getString(R.string.file_trash_moved_summary, moved.moved, prepared.blockedFiles.size, prepared.staleFiles.size, moved.rejected)
                                     if (moved.moved > 0) {
                                         CleanupEventBus.publishCompleted()
                                         onFinished()
@@ -135,14 +139,14 @@ internal fun OmniFileTrashReview(
                                 throw cancelled
                             } catch (_: Exception) {
                                 running = false
-                                message = "Errore nella preparazione. Nessun altro file viene rimosso."
+                                message = context.getString(R.string.file_trash_prepare_error)
                             }
                         }
                     },
-                ) { Text("Conferma") }
+                ) { Text(stringResource(R.string.file_trash_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirm = false }) { Text("Annulla") }
+                TextButton(onClick = { confirm = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }

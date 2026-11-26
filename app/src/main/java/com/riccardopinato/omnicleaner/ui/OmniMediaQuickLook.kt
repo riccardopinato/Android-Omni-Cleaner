@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -53,6 +54,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
+import com.riccardopinato.omnicleaner.R
 
 /**
  * Read-only media Quick Look for any scanner result. A long press opens it;
@@ -116,7 +118,7 @@ internal fun OmniMediaQuickLook(
                         maxLines = 2,
                         style = MaterialTheme.typography.titleMedium,
                     )
-                    TextButton(onClick = onDismiss) { Text("Chiudi") }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
                 }
                 Box(
                     modifier = Modifier.fillMaxWidth().heightIn(min = 180.dp, max = 520.dp)
@@ -137,11 +139,11 @@ internal fun OmniMediaQuickLook(
                             onCheckedChange = onSelectedChange,
                             modifier = Modifier.testTag("omni_media_quicklook_select"),
                         )
-                        Text("Seleziona per la revisione nel cestino")
+                        Text(stringResource(R.string.quicklook_select_for_review))
                     }
                 }
                 Text(
-                    "L'anteprima non modifica i file. La rimozione richiede una conferma separata.",
+                    stringResource(R.string.quicklook_read_only_notice),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -165,7 +167,7 @@ private fun OmniQuickLookImage(target: OmniQuickLookTarget) {
             modifier = Modifier.fillMaxWidth().heightIn(max = 510.dp),
         )
     } else {
-        Text("Anteprima non disponibile", color = Color.White)
+        Text(stringResource(R.string.gallery_preview_unavailable), color = Color.White)
     }
 }
 
@@ -235,7 +237,7 @@ private fun OmniQuickLookVideo(target: OmniQuickLookTarget) {
             modifier = Modifier.fillMaxWidth().heightIn(min = 180.dp, max = 450.dp),
         )
         if (error) {
-            Text("Video non riproducibile", color = Color.White)
+            Text(stringResource(R.string.quicklook_video_unavailable), color = Color.White)
         } else {
             Button(
                 onClick = {
@@ -250,7 +252,7 @@ private fun OmniQuickLookVideo(target: OmniQuickLookTarget) {
                     }.onFailure { error = true }
                 },
                 modifier = Modifier.testTag("omni_media_quicklook_play"),
-            ) { Text(if (playing) "Pausa" else "Riproduci video") }
+            ) { Text(if (playing) stringResource(R.string.quicklook_pause) else stringResource(R.string.quicklook_play_video)) }
         }
     }
 }
@@ -290,7 +292,7 @@ private fun OmniQuickLookAudio(target: OmniQuickLookTarget) {
     ) {
         Text("♫", style = MaterialTheme.typography.displayLarge, color = Color.White)
         if (failed) {
-            Text("Audio non riproducibile", color = Color.White)
+            Text(stringResource(R.string.quicklook_audio_unavailable), color = Color.White)
         } else {
             Button(
                 onClick = {
@@ -308,7 +310,7 @@ private fun OmniQuickLookAudio(target: OmniQuickLookTarget) {
                 },
                 enabled = ready,
                 modifier = Modifier.testTag("omni_media_quicklook_play"),
-            ) { Text(if (playing) "Pausa" else if (ready) "Ascolta" else "Caricamento…") }
+            ) { Text(when { playing -> stringResource(R.string.quicklook_pause); ready -> stringResource(R.string.quicklook_listen); else -> stringResource(R.string.quicklook_loading) }) }
         }
     }
 }

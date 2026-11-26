@@ -605,4 +605,23 @@
     <string name="bento_v2_narrow_categories">Tipi</string>
     <string name="bento_v2_narrow_advanced">Extra</string>
     <string name="bento_v2_narrow_privacy_batch">EXIF+</string>
+    <!-- MAXI STEP 11: localized safe Quick Look and review flows -->
+    <string name="quicklook_select_for_review">Seleziona per la revisione nel Cestino sicuro</string>
+    <string name="quicklook_read_only_notice">La anteprima non modifica i file. Lo spostamento nel Cestino richiede una conferma separata.</string>
+    <string name="quicklook_video_unavailable">Video non riproducibile</string>
+    <string name="quicklook_play_video">Riproduci video</string>
+    <string name="quicklook_pause">Pausa</string>
+    <string name="quicklook_audio_unavailable">Audio non riproducibile</string>
+    <string name="quicklook_listen">Ascolta</string>
+    <string name="quicklook_loading">Caricamento…</string>
+    <string name="file_trash_move_selected_count">Rivedi file selezionati (%1$d)</string>
+    <string name="file_trash_confirm_title">Conferma i file selezionati</string>
+    <string name="file_trash_confirm_body">Solo i file nuovamente verificati saranno spostati. Foto, video e altri media supportati richiedono la conferma Android.</string>
+    <string name="file_trash_confirm">Conferma</string>
+    <string name="file_trash_android_request_accepted">Consenso Android accettato per %1$d media (stato del Cestino non verificato) · Spostati nel Cestino sicuro: %2$d · Rifiutati: %3$d</string>
+    <string name="file_trash_cancelled">Operazione annullata. Nessun file spostato.</string>
+    <string name="file_trash_movement_incomplete">Spostamento incompleto. I file non confermati restano invariati.</string>
+    <string name="file_trash_request_unavailable">Conferma del Cestino Android non disponibile. Nessun file spostato.</string>
+    <string name="file_trash_moved_summary">Spostati: %1$d · Non idonei: %2$d · Modificati: %3$d · Rifiutati: %4$d</string>
+    <string name="file_trash_prepare_error">Preparazione della pulizia non riuscita. Nessun altro file spostato.</string>
 </resources>

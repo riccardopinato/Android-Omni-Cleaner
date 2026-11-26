@@ -602,4 +602,23 @@
     <string name="bento_v2_narrow_categories">Types</string>
     <string name="bento_v2_narrow_advanced">Outils</string>
     <string name="bento_v2_narrow_privacy_batch">EXIF+</string>
+    <!-- MAXI STEP 11: localized safe Quick Look and review flows -->
+    <string name="quicklook_select_for_review">Sélectionner pour examen dans la corbeille sûre</string>
+    <string name="quicklook_read_only_notice">La prévisualisation ne modifie aucun fichier. La mise à la corbeille exige une confirmation distincte.</string>
+    <string name="quicklook_video_unavailable">Lecture vidéo impossible</string>
+    <string name="quicklook_play_video">Lire la vidéo</string>
+    <string name="quicklook_pause">Pause</string>
+    <string name="quicklook_audio_unavailable">Lecture audio impossible</string>
+    <string name="quicklook_listen">Écouter</string>
+    <string name="quicklook_loading">Chargement…</string>
+    <string name="file_trash_move_selected_count">Examiner les fichiers sélectionnés (%1$d)</string>
+    <string name="file_trash_confirm_title">Confirmer les fichiers sélectionnés</string>
+    <string name="file_trash_confirm_body">Seuls les fichiers vérifiés de nouveau seront déplacés. Photos, vidéos et autres médias compatibles exigent la confirmation Android.</string>
+    <string name="file_trash_confirm">Confirmer</string>
+    <string name="file_trash_android_request_accepted">Autorisation Android acceptée pour %1$d médias (état de la corbeille non vérifié) · Déplacés vers la corbeille sûre : %2$d · Refusés : %3$d</string>
+    <string name="file_trash_cancelled">Opération annulée. Aucun fichier déplacé.</string>
+    <string name="file_trash_movement_incomplete">Déplacement incomplet. Les fichiers non confirmés restent inchangés.</string>
+    <string name="file_trash_request_unavailable">Confirmation de la corbeille Android indisponible. Aucun fichier déplacé.</string>
+    <string name="file_trash_moved_summary">Déplacés : %1$d · Non éligibles : %2$d · Modifiés : %3$d · Refusés : %4$d</string>
+    <string name="file_trash_prepare_error">Préparation du nettoyage impossible. Aucun autre fichier déplacé.</string>
 </resources>

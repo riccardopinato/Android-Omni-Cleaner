@@ -69,3 +69,7 @@ Bento definition to resolve its short resource. Native exact-head screenshot
 of `24-home-360dp-200pct` must be reviewed to confirm `Dupes` and
 `Large` render as whole words without internal splits. Emulator evidence
 does not certify hardware TalkBack until physical accessibility QA.
+
+## Current visual candidate — Soft Pastel Cleaner (27 November 2026)
+
+The Pop Fresh swatches recorded above are **historical** and are **not** the current PR #77 implementation. `OmniColorBentoV2Palette` now uses nine low-saturation, positional pastels: pear `#DCEEC9`, powder blue `#D5E5FA`, peach `#F9E5D3`, lavender `#E9E2F6`, butter `#F8EFD2`, aqua `#D9EFF1`, coral `#F6DFDA`, mint `#DBEEE4` and pink `#F6E0EB`. Warm-paper surface `#F8F9F6`; readable dark ink `#263440` on every tile. The feature-to-color mapping remains based on geometry, never feature identity. Native illustrations are retained. The visual archive for `d7fb405` passed its capture workflow, but only physical-device review can certify 360dp / font-scale 2.0 readability, gesture operation and accessibility. Post-change exact-head screenshots and CI are separate gates.

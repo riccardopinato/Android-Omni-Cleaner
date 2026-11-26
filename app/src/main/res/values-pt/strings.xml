@@ -602,4 +602,23 @@
     <string name="bento_v2_narrow_categories">Tipos</string>
     <string name="bento_v2_narrow_advanced">Extra</string>
     <string name="bento_v2_narrow_privacy_batch">EXIF+</string>
+    <!-- MAXI STEP 11: localized safe Quick Look and review flows -->
+    <string name="quicklook_select_for_review">Selecionar para revisão na Lixeira segura</string>
+    <string name="quicklook_read_only_notice">A pré-visualização não altera ficheiros. Mover para a lixeira requer confirmação separada.</string>
+    <string name="quicklook_video_unavailable">Não é possível reproduzir o vídeo</string>
+    <string name="quicklook_play_video">Reproduzir vídeo</string>
+    <string name="quicklook_pause">Pausa</string>
+    <string name="quicklook_audio_unavailable">Não é possível reproduzir o áudio</string>
+    <string name="quicklook_listen">Ouvir</string>
+    <string name="quicklook_loading">A carregar…</string>
+    <string name="file_trash_move_selected_count">Rever ficheiros selecionados (%1$d)</string>
+    <string name="file_trash_confirm_title">Confirmar ficheiros selecionados</string>
+    <string name="file_trash_confirm_body">Só serão movidos ficheiros novamente verificados. Fotografias, vídeos e outros conteúdos compatíveis exigem confirmação do Android.</string>
+    <string name="file_trash_confirm">Confirmar</string>
+    <string name="file_trash_android_request_accepted">Autorização Android aceite para %1$d ficheiros multimédia (estado da Lixeira não verificado) · Movidos para a Lixeira segura: %2$d · Rejeitados: %3$d</string>
+    <string name="file_trash_cancelled">Operação cancelada. Nenhum ficheiro movido.</string>
+    <string name="file_trash_movement_incomplete">Movimentação incompleta. Os ficheiros não confirmados permanecem inalterados.</string>
+    <string name="file_trash_request_unavailable">Confirmação da Lixeira Android indisponível. Nenhum ficheiro movido.</string>
+    <string name="file_trash_moved_summary">Movidos: %1$d · Não elegíveis: %2$d · Alterados: %3$d · Rejeitados: %4$d</string>
+    <string name="file_trash_prepare_error">Não foi possível preparar a limpeza. Não foram movidos outros ficheiros.</string>
 </resources>

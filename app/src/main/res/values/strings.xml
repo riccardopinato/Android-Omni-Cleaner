@@ -605,4 +605,23 @@
     <string name="bento_v2_narrow_categories">Types</string>
     <string name="bento_v2_narrow_advanced">Tools</string>
     <string name="bento_v2_narrow_privacy_batch">EXIF+</string>
+    <!-- MAXI STEP 11: localized safe Quick Look and review flows -->
+    <string name="quicklook_select_for_review">Select for Safe Trash review</string>
+    <string name="quicklook_read_only_notice">Preview does not change files. Moving files to trash requires separate confirmation.</string>
+    <string name="quicklook_video_unavailable">Video cannot be played</string>
+    <string name="quicklook_play_video">Play video</string>
+    <string name="quicklook_pause">Pause</string>
+    <string name="quicklook_audio_unavailable">Audio cannot be played</string>
+    <string name="quicklook_listen">Play audio</string>
+    <string name="quicklook_loading">Loading…</string>
+    <string name="file_trash_move_selected_count">Review selected files (%1$d)</string>
+    <string name="file_trash_confirm_title">Confirm selected files</string>
+    <string name="file_trash_confirm_body">Only revalidated files can be moved. Photos, videos and other supported media require Android confirmation.</string>
+    <string name="file_trash_confirm">Confirm</string>
+    <string name="file_trash_android_request_accepted">Android consent accepted for %1$d media items (trash state not verified) · Moved to Safe Trash: %2$d · Rejected: %3$d</string>
+    <string name="file_trash_cancelled">Operation cancelled. No files moved.</string>
+    <string name="file_trash_movement_incomplete">Move incomplete. Files not confirmed as moved remain unchanged.</string>
+    <string name="file_trash_request_unavailable">Android Trash confirmation unavailable. No files moved.</string>
+    <string name="file_trash_moved_summary">Moved: %1$d · Ineligible: %2$d · Changed: %3$d · Rejected: %4$d</string>
+    <string name="file_trash_prepare_error">Could not prepare cleanup. No additional files were moved.</string>
 </resources>

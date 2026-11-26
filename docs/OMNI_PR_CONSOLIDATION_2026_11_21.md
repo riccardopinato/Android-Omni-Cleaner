@@ -27,3 +27,12 @@ Integration source baseline: PR #75 `c8e785f89c4dc852799171718d380e97d2040966`. 
 - PR #39 emulator R1 PASS on its head is not a physical 88k-file performance speedup, and a combined branch requires its own exact-head execution.
 - Screenshots must be manually inspected, including all palettes and loading/empty/non-empty states.
 - The final merge target is only the reviewed, test-passing integration of the single Home and distinct feature screens. Never auto-promote a Draft branch to main solely because compilation passes.
+
+## MAXI STEP 11 — integration checkpoint (27 November 2026)
+
+- The previous `d7fb405` exact-head Android CI, synthetic safety, SQLite instrumentation, and visual workflow completed successfully. A genuine QA archive was inspected. **Those results do not certify any newer commit.**
+- Verified discrepancy: the current Soft Pastel palette differs from the older Pop Fresh description above; current behavior is governed by `OmniColorBentoV2Palette`.
+- The Quick Look and file-trash review surfaces have been moved from hard-coded Italian labels to English, Italian, Spanish, French and Portuguese Android resources. Only Safe Trash movement can now emit the completed-cleanup event; Android media-trash consent alone is not counted as completed.
+- The existing fast debug-preview workflow has been explicitly allowlisted for this same-repository integration head; if its exact-head run succeeds it publishes a **debug** APK with `.debug` application ID, source SHA and SHA-256. It is not a production update or release certification.
+- The two upstream `main` commits modify only the App Factory context workflow files, which are copied unchanged into the integration tree with `main` as the second merge parent. Do not merge this Draft PR into `main` until the owner accepts the screenshots, hardware tests and release-signing gates.
+- Physical-device cases and evidence requirements: `docs/OMNI_MAXI_STEP_11_PHYSICAL_QA_2026_11_27.md`.

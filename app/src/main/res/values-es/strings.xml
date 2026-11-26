@@ -602,4 +602,23 @@
     <string name="bento_v2_narrow_categories">Tipos</string>
     <string name="bento_v2_narrow_advanced">Extra</string>
     <string name="bento_v2_narrow_privacy_batch">EXIF+</string>
+    <!-- MAXI STEP 11: localized safe Quick Look and review flows -->
+    <string name="quicklook_select_for_review">Seleccionar para revisar en la Papelera segura</string>
+    <string name="quicklook_read_only_notice">La vista previa no modifica archivos. Enviar a la papelera requiere una confirmación aparte.</string>
+    <string name="quicklook_video_unavailable">No se puede reproducir el vídeo</string>
+    <string name="quicklook_play_video">Reproducir vídeo</string>
+    <string name="quicklook_pause">Pausa</string>
+    <string name="quicklook_audio_unavailable">No se puede reproducir el audio</string>
+    <string name="quicklook_listen">Escuchar</string>
+    <string name="quicklook_loading">Cargando…</string>
+    <string name="file_trash_move_selected_count">Revisar archivos seleccionados (%1$d)</string>
+    <string name="file_trash_confirm_title">Confirmar archivos seleccionados</string>
+    <string name="file_trash_confirm_body">Solo se moverán archivos verificados de nuevo. Fotos, vídeos y otros medios compatibles requieren confirmación de Android.</string>
+    <string name="file_trash_confirm">Confirmar</string>
+    <string name="file_trash_android_request_accepted">Consentimiento Android aceptado para %1$d archivos multimedia (estado de la Papelera sin verificar) · Movidos a la Papelera segura: %2$d · Rechazados: %3$d</string>
+    <string name="file_trash_cancelled">Operación cancelada. No se movieron archivos.</string>
+    <string name="file_trash_movement_incomplete">Movimiento incompleto. Los archivos no confirmados permanecen sin cambios.</string>
+    <string name="file_trash_request_unavailable">Confirmación de la Papelera Android no disponible. No se movieron archivos.</string>
+    <string name="file_trash_moved_summary">Movidos: %1$d · No aptos: %2$d · Modificados: %3$d · Rechazados: %4$d</string>
+    <string name="file_trash_prepare_error">No se pudo preparar la limpieza. No se movieron más archivos.</string>
 </resources>
