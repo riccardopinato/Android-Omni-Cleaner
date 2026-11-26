@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   debug-apk:
-    if: github.event.pull_request.head.repo.full_name == github.repository && (github.event.pull_request.head.ref == 'design/omni-linktree-home-compose-v1-20261120' || github.event.pull_request.head.ref == 'feat/omni-coverage-media-preview-20261120' || github.event.pull_request.head.ref == 'integration/omni-v11-colors-gallery-qa-20261121')
+    if: github.event.pull_request.head.repo.full_name == github.repository && (github.event.pull_request.head.ref == 'design/omni-linktree-home-compose-v1-20261120' || github.event.pull_request.head.ref == 'feat/omni-coverage-media-preview-20261120')
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -29,7 +29,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
+          # Gradle dependency cache is managed by setup-gradle below.
+      - name: Restore Gradle build cache
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
+        with:
+          cache-provider: basic
+          add-job-summary: on-failure
       - name: Build installable debug preview
         run: ./gradlew assembleDebug --stacktrace
       - name: Publish exact-source SHA prerelease
