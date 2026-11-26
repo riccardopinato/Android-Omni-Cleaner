@@ -2,39 +2,53 @@ package com.riccardopinato.omnicleaner.ui.redesign
 
 import androidx.compose.ui.graphics.Color
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** User-selected Pop Fresh colors; a tile's ID must not own its color. */
+/** Approved Soft Pastel Home: nine calm positional tones, not feature colors. */
 class OmniPopFreshPaletteTest {
-    @Test fun exactlyNineApprovedSwatchesAreAvailableForPositions() {
+    @Test fun nineSoftPastelSwatchesFollowPositionalIdentity() {
         val expected = listOf(
-            Color(0xFFC9F25D), // Lime Pop
-            Color(0xFF3C55E8), // Electric Blue
-            Color(0xFFFFAE58), // Tangerine
-            Color(0xFFC4A2FF), // Soft Violet
-            Color(0xFFFFE066), // Sunshine
-            Color(0xFF5EDBD5), // Aqua Fresh
-            Color(0xFFFF7A73), // Coral Pop
-            Color(0xFF87DEAA), // Spring Green
-            Color(0xFFFF83C2), // Bubblegum
+            Color(0xFFDCEEC9), // Pear
+            Color(0xFFD5E5FA), // Powder blue
+            Color(0xFFF9E5D3), // Peach
+            Color(0xFFE9E2F6), // Lavender
+            Color(0xFFF8EFD2), // Butter
+            Color(0xFFD9EFF1), // Misty aqua
+            Color(0xFFF6DFDA), // Gentle coral
+            Color(0xFFDBEEE4), // Mint
+            Color(0xFFF6E0EB), // Powder pink
         )
         assertEquals(BENTO_V2_SWATCH_COUNT, expected.size)
         assertEquals(expected.size, expected.distinct().size)
         assertEquals(expected, OmniColorBentoV2Palette.positionSwatches)
     }
 
-    @Test fun positionalElectricBlueUsesWhiteInkAndLightSwatchesUseDarkInk() {
+    @Test fun everyPastelUsesDarkAccessibleInk() {
         val palette = OmniColorBentoV2Palette
-        assertEquals(Color.White, palette.tileForeground(palette.blue))
-        assertEquals(Color(0xFF192033), palette.tileForeground(palette.green))
-        assertEquals(Color(0xFF192033), palette.tileForeground(palette.violet))
-        assertTrue(palette.positionSwatches.count { palette.tileForeground(it) == Color.White } == 1)
+        for (swatch in palette.positionSwatches) {
+            assertEquals(Color(0xFF263440), palette.tileForeground(swatch))
+        }
+        assertEquals(Color(0xFFF8F9F6), palette.cream)
+        assertTrue(palette.cream !in palette.positionSwatches)
     }
 
-    @Test fun neutralBackgroundIsNotAnAdditionalCardSwatch() {
+    @Test fun smallTilesAreSofterWithoutChangingThePositionalSwatch() {
         val palette = OmniColorBentoV2Palette
-        assertEquals(Color(0xFFF7F7F4), palette.cream)
-        assertTrue(palette.cream !in palette.positionSwatches)
+        val base = palette.positionSwatches[1]
+        val hero = palette.surfaceForPosition(base, columns = 2, rows = 2)
+        val medium = palette.surfaceForPosition(base, columns = 2, rows = 1)
+        val small = palette.surfaceForPosition(base, columns = 1, rows = 1)
+        assertEquals(base, hero)
+        assertNotEquals(hero, medium)
+        assertNotEquals(medium, small)
+        assertEquals(base, palette.positionSwatches[1])
+    }
+
+    @Test fun originalNativeIllustrationsCoverPriorityModules() {
+        for (id in listOf("storage", "duplicates", "large", "gallery", "privacy", "trash", "folders")) {
+            assertTrue(id, bentoHasSoftIllustration(id))
+        }
     }
 }
