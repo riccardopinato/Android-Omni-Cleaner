@@ -606,7 +606,7 @@
     <string name="bento_v2_narrow_advanced">Tools</string>
     <string name="bento_v2_narrow_privacy_batch">EXIF+</string>
     <!-- MAXI STEP 11: localized safe Quick Look and review flows -->
-    <string name="quicklook_select_for_review">Select for Safe Trash review</string>
+    <string name="quicklook_select_for_review">Select for trash review</string>
     <string name="quicklook_read_only_notice">Preview does not change files. Moving files to trash requires separate confirmation.</string>
     <string name="quicklook_video_unavailable">Video cannot be played</string>
     <string name="quicklook_play_video">Play video</string>

@@ -606,8 +606,8 @@
     <string name="bento_v2_narrow_advanced">Extra</string>
     <string name="bento_v2_narrow_privacy_batch">EXIF+</string>
     <!-- MAXI STEP 11: localized safe Quick Look and review flows -->
-    <string name="quicklook_select_for_review">Seleziona per la revisione nel Cestino sicuro</string>
-    <string name="quicklook_read_only_notice">La anteprima non modifica i file. Lo spostamento nel Cestino richiede una conferma separata.</string>
+    <string name="quicklook_select_for_review">Seleziona per la revisione prima del Cestino</string>
+    <string name="quicklook_read_only_notice">L\'anteprima non modifica i file. Lo spostamento nel Cestino richiede una conferma separata.</string>
     <string name="quicklook_video_unavailable">Video non riproducibile</string>
     <string name="quicklook_play_video">Riproduci video</string>
     <string name="quicklook_pause">Pausa</string>

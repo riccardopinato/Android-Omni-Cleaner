@@ -603,7 +603,7 @@
     <string name="bento_v2_narrow_advanced">Outils</string>
     <string name="bento_v2_narrow_privacy_batch">EXIF+</string>
     <!-- MAXI STEP 11: localized safe Quick Look and review flows -->
-    <string name="quicklook_select_for_review">Sélectionner pour examen dans la corbeille sûre</string>
+    <string name="quicklook_select_for_review">Sélectionner pour examen avant mise à la corbeille</string>
     <string name="quicklook_read_only_notice">La prévisualisation ne modifie aucun fichier. La mise à la corbeille exige une confirmation distincte.</string>
     <string name="quicklook_video_unavailable">Lecture vidéo impossible</string>
     <string name="quicklook_play_video">Lire la vidéo</string>

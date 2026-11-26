@@ -603,7 +603,7 @@
     <string name="bento_v2_narrow_advanced">Extra</string>
     <string name="bento_v2_narrow_privacy_batch">EXIF+</string>
     <!-- MAXI STEP 11: localized safe Quick Look and review flows -->
-    <string name="quicklook_select_for_review">Seleccionar para revisar en la Papelera segura</string>
+    <string name="quicklook_select_for_review">Seleccionar para revisar antes de enviar a la papelera</string>
     <string name="quicklook_read_only_notice">La vista previa no modifica archivos. Enviar a la papelera requiere una confirmación aparte.</string>
     <string name="quicklook_video_unavailable">No se puede reproducir el vídeo</string>
     <string name="quicklook_play_video">Reproducir vídeo</string>
