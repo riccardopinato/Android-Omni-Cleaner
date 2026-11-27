@@ -54,7 +54,8 @@ class SafeTrashManagerTest {
             assertEquals(0L, manager.getTrashSize())
             assertFalse(File(trash, entry.id).exists())
             assertFalse(source.exists())
-            assertEquals(SafeTrashPurgeStatus.ENTRY_NOT_FOUND, manager.purgeEntry(entry.id).status)
+            // Raw ID without reviewed metadata can never authorize a purge.
+            assertEquals(SafeTrashPurgeStatus.INVALID_ENTRY, manager.purgeEntry(entry.id).status)
         } finally {
             root.deleteRecursively()
         }
