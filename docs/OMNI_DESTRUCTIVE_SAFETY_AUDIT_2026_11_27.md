@@ -57,3 +57,40 @@ In `SafeTrashManagerTest.kt` quattro regressioni:
 - P1: 360dp, 200% font, TalkBack, background interruption, exact APK upgrade/rollback.
 
 **Decisione attuale:** restare in PR #77 Draft, non mergiare su `main`. Il codice è stato irrigidito sui percorsi Safe Trash, ma **non si può dichiarare zero rischio di perdita dati senza i gate rimanenti**.
+
+
+## Follow-up implementativo — 27/11/2026, chiusura source P0/P1 senza telefono
+
+**Stato: SOURCE IMPLEMENTED / EXACT-HEAD CI PENDING; non equivalgono a collaudo OEM.** Aggiornato su PR #77, non su `main`.
+
+### DSAFE-05: miniature — P0 risolta a livello sorgente
+- `ThumbnailFileCleanup.clean()` non chiama più `File.delete()` né esegue sweep ricorsivi di directory.
+- `ThumbnailDirectoryPolicy` riconosce soltanto `DCIM/.thumbnails`, `Pictures/.thumbnails` e `Android/media/<app>/.thumbnails`; esclusione di directory generiche, symlink, path fuori root e record obsoleti.
+- `SafeTrashManager.moveVerifiedThumbnailToTrash` sposta snapshot con SHA-256 nel Cestino recuperabile persistente; su fallimento il file resta in sede oppure la copia verificabile nel Cestino viene preservata. La speciale deroga al divieto su file media è circoscritta a un file nella cartella thumbnail riconosciuta.
+- L'interfaccia EN/IT/ES/FR/PT ora parla di **spostamento recuperabile e byte trattenuti**, non di cancellazione definitiva o spazio recuperato. In Maintenance e Pro Batch è iniettato il gestore Safe Trash, mentre un cleaner senza gestore rifiuta l'operazione.
+- Test JVM: cache JPG recuperabile, file cambiato rifiutato, nessun gestore => nessuna operazione, cartella personale rifiutata, `Android/media` ordinario protetto, thumbnail sotto `Android/media` ammessa solo con hash e root validi.
+
+### DSAFE-06: callback OS — P1 risolta a livello sorgente
+- `MediaStoreHelper.verifyTrashedUris`: lettura `IS_TRASHED` ripetuta fino a tre volte per ogni URI; `null`/assenza/errore/false non sono successi.
+- `OmniFileTrashReview`, `StorageCleanupSection`, `SmartCategoriesSection`, `ProBatchController` e `GalleryController` usano la verifica; selezioni incerte rimangono aperte, evitando `onFinished` che le eliminerebbe localmente.
+- Gli eventi di pulizia riuscita si basano solo sui movimenti confermati (Safe Trash locale o URI verificati), non sul solo `RESULT_OK`.
+- Test strumentale Android con media sintetico, URI inesistente, media non ancora nel Cestino, media poi messo nel Cestino.
+
+### DSAFE-07/09: selezioni obsolete — P1 risolta a livello sorgente
+- `StorageCleanupEngine.prepareSnapshots` lega URI + snapshot originale e prima del prompt riapplica `CleanupSnapshotValidator`, verifica il MediaStore URI e il nome/dimensione/stato non già nel Cestino.
+- Nessun percorso raw-URI privo di snapshot rimane disponibile nell'engine di pulizia.
+- `GalleryController.createTrashRequest` rifiuta selezioni salvate il cui MediaStore URI non corrisponde più a nome/dimensione originali o non è accessibile. I media cancellati o non leggibili non vengono dichiarati puliti.
+- **Limite documentato:** esiste sempre una finestra di modifica tra verifica e callback OS; la conferma nativa e il controllo a posteriori restano obbligatori. Non si può impedire ogni edit contemporaneo di app terze senza un primitivo di lock di provider.
+
+### DSAFE-08: restore no-overwrite — P1 risolta nel percorso Android, collaudo fisico da confermare
+- `SafeTrashManager.restore` non usa più `exists()` seguito da `renameTo()` verso il file definitivo.
+- Prova prima hard link `Os.link` (pubblicazione atomica senza sovrascrivere il path esistente); se il filesystem non supporta hardlink, apre la destinazione Android 24+ con `O_CREAT | O_EXCL | O_WRONLY | O_NOFOLLOW` e verifica il digest dopo la copia.
+- Se la copia fallisce conserva il payload del Safe Trash, senza eliminare un eventuale file di destinazione la cui proprietà non è certa. Solo i test JVM usano `File.createNewFile()` come fallback perché la API Android native non è eseguibile nell'ambiente unitario.
+- Il comportamento specifico OEM/FUSE/SAF deve ancora passare test runtime su hardware.
+
+### DSAFE-10: test OEM/SAF — non dichiarabili conclusi senza dispositivo
+- La matrice sintetica Android e gli unit test sono stati estesi ma non sostituiscono prove fisiche con permessi reali, SAF revocato, MediaStore del costruttore, interruzione, collisioni concorrenti e dati di upgrade.
+- **Blocco distribuzione resta attivo:** PR Draft, nessun merge `main`, nessun APK firmato dichiarato certificato.
+- Quando disponibili i risultati del nuovo exact-head: registrare singolarmente Android CI, R1, synthetic safety, Android functional acceptance, video/visual QA. Un PASS precedente sullo SHA vecchio non basta.
+
+**Riferimento Android ufficiale:** MediaStore createTrashRequest imposta `IS_TRASHED` quando approvato; `QUERY_ARG_MATCH_TRASHED` rende leggibili anche le righe nel Cestino. `android.system.Os.link/open` supportano le operazioni native; l'uso rimane sempre condizionato ai vincoli del filesystem reale.
