@@ -453,7 +453,11 @@ class GalleryController(
         // A persisted Gallery queue can outlive a file replacement or a
         // revoked MediaStore permission: verify its identity before prompting.
         val changed = selectedBatch.filterNot { media ->
-            MediaStoreHelper.isCurrentMediaMatch(
+            val sameProviderEpoch = media.mediaStoreVersion != null &&
+                media.mediaStoreVersion == MediaStoreHelper.mountedVolumeVersion(
+                    context, media.volumeName,
+                )
+            sameProviderEpoch && MediaStoreHelper.isCurrentMediaMatch(
                 context.contentResolver, media.uri, media.sizeBytes, media.name,
                 media.dateModifiedSeconds, media.generationModified,
             )
