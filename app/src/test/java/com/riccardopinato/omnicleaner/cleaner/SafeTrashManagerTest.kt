@@ -291,6 +291,12 @@ class SafeTrashManagerTest {
 
         try {
             val manager = SafeTrashManager.forTests(trash)
+            // Mere inventory does NOT modify old metadata or claim it safe.
+            assertTrue(manager.listEntries().isEmpty())
+            assertEquals(1, manager.inspect().unrecognizedEntries)
+            assertFalse(metadata.readText().contains("sha256="))
+            // User explicitly opts into staged checksum repair.
+            assertTrue(manager.repairLegacyEntryApproved(entryDir.name))
             val entry = manager.listEntries().single()
             val migratedProperties = Properties().apply {
                 metadata.inputStream().use { input -> load(input) }
