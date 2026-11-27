@@ -65,9 +65,17 @@ internal class BackgroundIndexWorker(
             ) {
                 store.markDirty()
                 Result.retry()
-            } else {
-                store.recordComplete(root, inventory, System.currentTimeMillis(), after)
+            } else if (StorageInventoryRepository.publishCompletedIndexIfCurrent(
+                    root = root,
+                    inventory = inventory,
+                    expectedGeneration = generation,
+                    media = after,
+                    requireBackgroundEnabled = true,
+                )
+            ) {
                 Result.success()
+            } else {
+                Result.retry()
             }
         } catch (cancelled: CancellationException) {
             throw cancelled

@@ -31,6 +31,7 @@ object StorageInventoryRepository {
     const val PERSISTENT_REUSE_TTL_MS: Long = 6L * 60L * 60L * 1000L
 
     private val mutex = Mutex()
+    private val invalidationGuard = Any()
     private val scanner = FileInventoryScanner()
 
     @Volatile
@@ -143,7 +144,16 @@ object StorageInventoryRepository {
                         )
                     }
                 }
-                cached = snapshot
+                synchronized(invalidationGuard) {
+                    if (isInventoryGenerationCurrent(scanGeneration, invalidationGeneration.get())) {
+                        cached = snapshot
+                    } else {
+                        // An app cleanup raced the transaction; keep the old
+                        // persistent generation non-reusable.
+                        index?.markStale()
+                        backgroundIndexStore?.markDirty()
+                    }
+                }
             }
 
             snapshot
@@ -151,6 +161,25 @@ object StorageInventoryRepository {
     }
 
     internal fun currentInvalidationGeneration(): Long = invalidationGeneration.get()
+
+    /** All writers of a completed summary synchronize with invalidation. */
+    internal fun publishCompletedIndexIfCurrent(
+        root: File,
+        inventory: FileInventory,
+        expectedGeneration: Long,
+        media: MediaRevisionToken?,
+        requireBackgroundEnabled: Boolean = false,
+    ): Boolean = synchronized(invalidationGuard) {
+        val store = backgroundIndexStore ?: return@synchronized false
+        if (expectedGeneration != invalidationGeneration.get() ||
+            (requireBackgroundEnabled && !store.isEnabled())
+        ) {
+            store.markDirty()
+            return@synchronized false
+        }
+        store.recordComplete(root, inventory, System.currentTimeMillis(), media)
+        true
+    }
 
     /** Read existing RAM/SQLite data, but never start a filesystem scan on cache miss. */
     suspend fun reusableSnapshotOrNull(root: File): StorageInventorySnapshot? {
@@ -161,29 +190,40 @@ object StorageInventoryRepository {
             cached?.takeIf { it.rootPath == rootPath && now >= it.createdAtMillis &&
                 now - it.createdAtMillis <= CACHE_TTL_MS
             }?.let { return@withLock it.copy(cacheHit = true) }
+            val generation = invalidationGeneration.get()
             val index = persistentIndex ?: return@withLock null
             val persisted = withContext(Dispatchers.IO) {
                 index.loadReusableSnapshot(root, now, PERSISTENT_REUSE_TTL_MS) {
                     operationContext.ensureActive()
                 }
             } ?: return@withLock null
-            StorageInventorySnapshot(
-                rootPath = rootPath,
-                inventory = persisted.inventory,
-                createdAtMillis = now,
-                scanElapsedMillis = 0L,
-                cacheHit = true,
-                persistentHit = true,
-                indexAgeMillis = (now - persisted.createdAtMillis).coerceAtLeast(0L),
-            ).also { cached = it }
+            synchronized(invalidationGuard) {
+                if (generation != invalidationGeneration.get() ||
+                    backgroundIndexStore?.read()?.dirty == true
+                ) {
+                    null
+                } else {
+                    StorageInventorySnapshot(
+                        rootPath = rootPath,
+                        inventory = persisted.inventory,
+                        createdAtMillis = now,
+                        scanElapsedMillis = 0L,
+                        cacheHit = true,
+                        persistentHit = true,
+                        indexAgeMillis = (now - persisted.createdAtMillis).coerceAtLeast(0L),
+                    ).also { cached = it }
+                }
+            }
         }
     }
 
     fun invalidate() {
-        invalidationGeneration.incrementAndGet()
-        backgroundIndexStore?.markDirty()
-        cached = null
-        persistentIndex?.markStale()
+        synchronized(invalidationGuard) {
+            invalidationGeneration.incrementAndGet()
+            cached = null
+            persistentIndex?.markStale()
+            backgroundIndexStore?.markDirty()
+        }
     }
 
     internal fun dropMemoryCacheForBenchmark() {

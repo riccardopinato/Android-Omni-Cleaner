@@ -143,9 +143,13 @@ internal fun StorageIntelligenceSection(
                             val mediaBefore = BackgroundIndexStore.mediaRevision(context.applicationContext)
                             val inventory = StorageInventoryRepository.snapshot(root, forceRefresh = true).inventory
                             val mediaAfter = BackgroundIndexStore.mediaRevision(context.applicationContext)
-                            if (previousGeneration == StorageInventoryRepository.currentInvalidationGeneration() &&
-                                (mediaBefore == null || mediaAfter == null || mediaBefore == mediaAfter)) {
-                                backgroundStore.recordComplete(root, inventory, System.currentTimeMillis(), mediaAfter)
+                            if (mediaBefore == null || mediaAfter == null || mediaBefore == mediaAfter) {
+                                StorageInventoryRepository.publishCompletedIndexIfCurrent(
+                                    root = root,
+                                    inventory = inventory,
+                                    expectedGeneration = previousGeneration,
+                                    media = mediaAfter,
+                                )
                             } else {
                                 backgroundStore.markDirty()
                             }
