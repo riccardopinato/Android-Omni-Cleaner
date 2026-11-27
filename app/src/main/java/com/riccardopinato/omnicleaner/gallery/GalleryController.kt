@@ -4,6 +4,10 @@ import android.app.PendingIntent
 import android.content.Context
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.MediaStoreHelper
+import com.riccardopinato.omnicleaner.cleaner.SafeOperationsJournal
+import com.riccardopinato.omnicleaner.cleaner.SafeOperationPhase
+import java.io.File
+import java.security.MessageDigest
 import com.riccardopinato.omnicleaner.cleaner.MediaTrashBatchPolicy
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
 import kotlinx.coroutines.CancellationException
@@ -66,6 +70,10 @@ class GalleryController(
     private val observers = LinkedHashSet<(GalleryUiState) -> Unit>()
     // Exact selection for one in-flight Android system confirmation.
     private var inFlightTrashIds: Set<Long> = emptySet()
+    private var inFlightOperationId: String? = null
+    private val operationJournal by lazy {
+        SafeOperationsJournal(File(context.filesDir, "omni_safe_operations"))
+    }
     private var verifyingTrash = false
     private var loadJob: Job? = null
     private var persistJob: Job? = null
@@ -447,6 +455,7 @@ class GalleryController(
         val changed = selectedBatch.filterNot { media ->
             MediaStoreHelper.isCurrentMediaMatch(
                 context.contentResolver, media.uri, media.sizeBytes, media.name,
+                media.dateModifiedSeconds, media.generationModified,
             )
         }
         if (changed.isNotEmpty()) {
@@ -455,13 +464,31 @@ class GalleryController(
             )))
             return null
         }
+        val details = selectedBatch.joinToString("\n") { media ->
+            listOf(media.uri.toString(), media.sizeBytes.toString(), media.name,
+                media.generationModified.toString(),
+            ).joinToString("|")
+        }
+        val fingerprint = MessageDigest.getInstance("SHA-256")
+            .digest(details.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+        val prepared = operationJournal.begin("MEDIA_TRASH", fingerprint, details)
+        val approved = prepared?.let {
+            operationJournal.advance(it, SafeOperationPhase.USER_APPROVED)
+        }
+        if (approved == null) {
+            update(state.copy(error = uiContext.getString(R.string.gallery_error_trash_android11)))
+            return null
+        }
         val pendingIntent = MediaStoreHelper.trashMediaFiles(
             context.contentResolver, selectedBatch.map { it.uri },
         )
         if (pendingIntent == null) {
+            operationJournal.advance(approved, SafeOperationPhase.REJECTED)
             update(state.copy(error = uiContext.getString(R.string.gallery_error_trash_android11)))
         } else {
             inFlightTrashIds = selectedBatch.mapTo(HashSet()) { it.id }
+            inFlightOperationId = approved.id
         }
         return pendingIntent
     }
@@ -473,7 +500,16 @@ class GalleryController(
     fun onTrashResult(success: Boolean) {
         val requested = inFlightTrashIds
         inFlightTrashIds = emptySet()
-        if (!success || requested.isEmpty()) return
+        val operationId = inFlightOperationId
+        inFlightOperationId = null
+        if (!success || requested.isEmpty()) {
+            operationId?.let { id ->
+                operationJournal.latest(id)?.let {
+                    operationJournal.advance(it, SafeOperationPhase.REJECTED)
+                }
+            }
+            return
+        }
         val selected = state.selectedForTrash.filter { it.id in requested }
         if (selected.isEmpty()) return
         verifyingTrash = true
@@ -486,6 +522,13 @@ class GalleryController(
                     media.id to if (media.uri in verified.confirmedUris) true else null
                 }
                 val evidence = evaluateGalleryTrashEvidence(requested, flags)
+                operationId?.let { id ->
+                    operationJournal.latest(id)?.let {
+                        operationJournal.advance(it,
+                            if (evidence.unverifiedIds.isEmpty()) SafeOperationPhase.COMMITTED
+                            else SafeOperationPhase.UNKNOWN_NEEDS_REVIEW)
+                    }
+                }
                 if (evidence.confirmedIds.isNotEmpty()) {
                     lastUndo = null
                     val confirmed = evidence.confirmedIds
