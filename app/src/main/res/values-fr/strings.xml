@@ -192,6 +192,8 @@
     <string name="maintenance_confirm_cache_title">Confirmer le nettoyage du cache</string>
     <string name="maintenance_confirm_cache_body">Seules les miniatures sélectionnées dont la taille, la date et le SHA-256 correspondent sont déplacées vers la corbeille sûre récupérable. Aucune suppression définitive ni espace annoncé libéré.</string>
 
+    <string name="safe_trash_repair_legacy_metadata">Réparer les anciennes métadonnées</string>
+    <string name="safe_trash_repair_legacy_metadata_body">Vérifiez et réparez %1$d anciennes entrées sans empreinte. Seules les entrées contrôlées sont réparées ; les empreintes erronées ne sont jamais remplacées.</string>
     <string name="safe_trash_import_legacy">Importer l’ancienne corbeille</string>
     <string name="safe_trash_import_legacy_body">Cette importation facultative copie et vérifie les anciennes entrées avant de retirer les originaux. Les entrées corrompues ou incomplètes restent intactes. Aucune importation automatique.</string>
     <string name="cleanup_system_trash_expiry_notice">Android peut supprimer automatiquement les médias de sa corbeille à l’expiration du délai système (souvent environ 30 jours). Ce n’est pas une sauvegarde permanente.</string>
