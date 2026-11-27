@@ -69,6 +69,9 @@ jobs:
       - name: Compile including ephemeral generated test assets
         run: ./gradlew assembleDebug assembleDebugAndroidTest --stacktrace
 
+      - name: Set up Android SDK commandline tools
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+
       - name: Preflight API35 image with bounded retry
         shell: bash
         run: |
