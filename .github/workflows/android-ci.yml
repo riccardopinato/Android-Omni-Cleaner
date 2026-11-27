@@ -132,7 +132,9 @@ jobs:
         run: ./gradlew lintDebug lintRelease testDebugUnitTest assembleDebug assembleDebugAndroidTest assembleRelease bundleRelease --stacktrace
 
       - name: Publish exact-head development APK
-        if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'push' && (github.ref == 'refs/heads/audit/omni-safety-ux-360-20261115' || github.ref == 'refs/heads/feature/omni-storage-intelligence-v1-20261116' || github.ref == 'refs/heads/feature/omni-gallery-pro-v1-20261116' || github.ref == 'refs/heads/feature/omni-qa-gallery-review-v1-20261116' || github.ref == 'refs/heads/feature/omni-scan-engine-2-0-20261117'))
+        # M6 is explicitly deferred for the fail-closed integration PR.
+        # Compiling debug/androidTest as CI evidence remains allowed.
+        if: ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref != 'integration/omni-v11-colors-gallery-qa-20261121') || (github.event_name == 'push' && (github.ref == 'refs/heads/audit/omni-safety-ux-360-20261115' || github.ref == 'refs/heads/feature/omni-storage-intelligence-v1-20261116' || github.ref == 'refs/heads/feature/omni-gallery-pro-v1-20261116' || github.ref == 'refs/heads/feature/omni-qa-gallery-review-v1-20261116' || github.ref == 'refs/heads/feature/omni-scan-engine-2-0-20261117')))
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
