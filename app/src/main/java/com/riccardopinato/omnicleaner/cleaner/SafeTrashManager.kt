@@ -498,7 +498,7 @@ class SafeTrashManager private constructor(
                 entry.sizeBytes.toString(), entry.lastModified.toString(), entry.sha256,
             ).joinToString("\u0000")
             digest.update(canonical.toByteArray(Charsets.UTF_8))
-            digest.update(0)
+            digest.update(0.toByte())
         }
         return digest.digest().joinToString("") { "%02x".format(it) }
     }
