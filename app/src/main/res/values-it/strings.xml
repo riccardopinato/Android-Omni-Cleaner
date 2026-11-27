@@ -193,6 +193,9 @@
     <string name="maintenance_confirm_cache_title">Conferma pulizia cache</string>
     <string name="maintenance_confirm_cache_body">Solo le miniature selezionate con dimensione, data e SHA-256 invariati vengono spostate nel Cestino sicuro recuperabile. Nessuna eliminazione definitiva o spazio dichiarato liberato.</string>
 
+    <string name="safe_trash_import_legacy">Importa il vecchio Cestino</string>
+    <string name="safe_trash_import_legacy_body">Questa importazione facoltativa copia e verifica le vecchie voci del Cestino prima di rimuovere le copie originali. Le voci incomplete o corrotte restano intatte. Nessuna importazione automatica.</string>
+    <string name="cleanup_system_trash_expiry_notice">Android può eliminare automaticamente i file dal Cestino multimediale alla scadenza prevista dal sistema (spesso circa 30 giorni). Il Cestino di sistema non è un backup permanente.</string>
     <string name="safe_trash_body">I file qui dentro occupano ancora spazio. Puoi ripristinarli senza sovrascrivere file esistenti oppure eliminarli definitivamente.</string>
     <string name="safe_trash_summary">%1$d elementi · %2$s</string>
     <string name="safe_trash_unrecognized">%1$d elementi del cestino non riconosciuti o incompleti sono stati conservati per sicurezza. Non verranno eliminati automaticamente.</string>
@@ -363,7 +366,7 @@
     <string name="pro_system_trash_cancelled">Cestino Android annullato</string>
 
 
-    <string name="safe_trash_persistent_notice">Safe Trash è salvato nella memoria condivisa per poter sopravvivere alla disinstallazione dell’app. Reinstalla Omni Cleaner e riattiva Pulizia profonda per ripristinare questi file.</string>
+    <string name="safe_trash_persistent_notice">Safe Trash è nella memoria condivisa e può sopravvivere alla disinstallazione, ma altre app di pulizia, la formattazione o il reset possono comunque eliminarlo. Conserva backup indipendenti dei file importanti.</string>
     <string name="safe_trash_unavailable">La memoria di Safe Trash non è disponibile. I file resteranno invariati.</string>
     <string name="gallery_error_load_failed">Impossibile caricare i contenuti della Galleria. Riprova.</string>
     <string name="smart_categories_scan_failed">Impossibile completare la scansione delle Categorie smart.</string>
