@@ -429,7 +429,7 @@ fun GalleryMediaPreview(
  * when TextureView has an actual SurfaceTexture and a readable MediaStore URI.
  * No media edits, network calls, new dependencies or autoplay without user tap.
  */
-private class GalleryTexturePlaybackSession(
+internal class GalleryTexturePlaybackSession(
     private val context: Context,
     private val uri: android.net.Uri,
     private val onReady: (Int) -> Unit,
