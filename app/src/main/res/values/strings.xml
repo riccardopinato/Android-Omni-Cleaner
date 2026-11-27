@@ -630,4 +630,5 @@
     <string name="bg_index_saved_summary">Saved analysis · %1$d files indexed</string>
     <string name="bg_index_saved_disclaimer">Previous results are shown immediately; they may be out of date. Tap Analyze to refresh manually. Changes to non-media files are checked in the periodic full audit.</string>
     <string name="bg_index_never">No completed background scan yet.</string>
+    <string name="gallery_error_trash_unverified">Android confirmed the request, but %1$d selected media items could not be verified in Trash. They remain in your review queue.</string>
 </resources>

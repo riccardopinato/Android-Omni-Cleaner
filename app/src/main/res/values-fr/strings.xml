@@ -627,4 +627,5 @@
     <string name="bg_index_saved_summary">Dernière analyse enregistrée · %1$d fichiers indexés</string>
     <string name="bg_index_saved_disclaimer">Les anciens résultats s\'affichent immédiatement mais peuvent être obsolètes. Touchez Analyser pour actualiser. Les fichiers non multimédias sont vérifiés lors de l\'analyse complète périodique.</string>
     <string name="bg_index_never">Aucune analyse en arrière-plan terminée.</string>
+    <string name="gallery_error_trash_unverified">Android a confirmé la demande, mais %1$d médias n\'ont pas pu être vérifiés dans la Corbeille. Ils restent dans la liste de vérification.</string>
 </resources>

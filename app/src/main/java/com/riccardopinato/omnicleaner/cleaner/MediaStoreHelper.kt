@@ -272,6 +272,32 @@ object MediaStoreHelper {
         }
     }
 
+    /**
+     * Independent read-after-write verification for Android system Trash.
+     * Missing or inaccessible provider rows are UNKNOWN, never proof of a move.
+     */
+    fun verifiedTrashState(resolver: ContentResolver, uri: Uri): Boolean? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
+        return runCatching {
+            val queryArgs = Bundle().apply {
+                putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_INCLUDE)
+            }
+            resolver.query(
+                uri,
+                arrayOf(MediaStore.MediaColumns.IS_TRASHED),
+                queryArgs,
+                null,
+            )?.use { cursor ->
+                if (!cursor.moveToFirst()) null
+                else when (cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.IS_TRASHED))) {
+                    1 -> true
+                    0 -> false
+                    else -> null
+                }
+            }
+        }.getOrNull()
+    }
+
     fun trashMediaFiles(
         resolver: ContentResolver,
         uris: List<Uri>,

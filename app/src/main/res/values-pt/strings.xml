@@ -627,4 +627,5 @@
     <string name="bg_index_saved_summary">Última análise guardada · %1$d ficheiros indexados</string>
     <string name="bg_index_saved_disclaimer">Os resultados anteriores aparecem imediatamente, mas podem estar desatualizados. Toque em Analisar para atualizar. Os ficheiros não multimédia são verificados na análise completa periódica.</string>
     <string name="bg_index_never">Ainda não há análises em segundo plano concluídas.</string>
+    <string name="gallery_error_trash_unverified">O Android confirmou o pedido, mas não foi possível verificar %1$d ficheiros no Lixo. Permanecem na lista de revisão.</string>
 </resources>
