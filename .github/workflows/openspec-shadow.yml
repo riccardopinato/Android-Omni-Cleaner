@@ -23,4 +23,4 @@ jobs:
     with:
       target_repository: riccardopinato/Android-Omni-Cleaner
       target_pr: ${{ github.event.pull_request.number || 0 }}
-      deep_pairs: ${{ github.event_name == 'pull_request' && '75:77,39:77' || inputs.deep_pairs || '' }}
+      deep_pairs: ${{ inputs.deep_pairs || '' }}
