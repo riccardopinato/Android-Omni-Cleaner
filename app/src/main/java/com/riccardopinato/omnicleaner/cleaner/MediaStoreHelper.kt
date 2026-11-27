@@ -92,6 +92,9 @@ object MediaStoreHelper {
             add(MediaStore.MediaColumns.SIZE)
             add(MediaStore.Images.ImageColumns.DATE_TAKEN)
             add(MediaStore.MediaColumns.DATE_MODIFIED)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                add(MediaStore.MediaColumns.GENERATION_MODIFIED)
+            }
             add(MediaStore.MediaColumns.MIME_TYPE)
             add(MediaStore.Files.FileColumns.MEDIA_TYPE)
             add(MediaStore.MediaColumns.WIDTH)
@@ -170,6 +173,9 @@ object MediaStoreHelper {
             val sizeIndex = it.getColumnIndex(MediaStore.MediaColumns.SIZE)
             val takenIndex = it.getColumnIndex(MediaStore.Images.ImageColumns.DATE_TAKEN)
             val modifiedIndex = it.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED)
+            val generationIndex = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                it.getColumnIndex(MediaStore.MediaColumns.GENERATION_MODIFIED)
+            } else -1
             val mimeIndex = it.getColumnIndex(MediaStore.MediaColumns.MIME_TYPE)
             val typeIndex = it.getColumnIndex(MediaStore.Files.FileColumns.MEDIA_TYPE)
             val widthIndex = it.getColumnIndex(MediaStore.MediaColumns.WIDTH)
@@ -240,6 +246,10 @@ object MediaStoreHelper {
                     durationMs = duration,
                     width = width,
                     height = height,
+                    dateModifiedSeconds = modifiedIndex.takeIf { index -> index >= 0 }
+                        ?.let(it::getLong) ?: 0L,
+                    generationModified = generationIndex.takeIf { index -> index >= 0 }
+                        ?.let(it::getLong) ?: 0L,
                 )
             }
             return result
@@ -333,6 +343,8 @@ object MediaStoreHelper {
         uri: Uri,
         expectedSize: Long,
         expectedName: String,
+        expectedModifiedSeconds: Long? = null,
+        expectedGeneration: Long? = null,
     ): Boolean = runCatching {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || expectedSize < 0L) {
             false
@@ -342,18 +354,28 @@ object MediaStoreHelper {
             }
             resolver.query(
                 uri,
-                arrayOf(
-                    MediaStore.MediaColumns.SIZE,
-                    MediaStore.MediaColumns.DISPLAY_NAME,
-                    MediaStore.MediaColumns.IS_TRASHED,
-                ),
+                buildList {
+                    add(MediaStore.MediaColumns.SIZE)
+                    add(MediaStore.MediaColumns.DISPLAY_NAME)
+                    add(MediaStore.MediaColumns.IS_TRASHED)
+                    if (expectedModifiedSeconds != null) add(MediaStore.MediaColumns.DATE_MODIFIED)
+                    if (expectedGeneration != null) add(MediaStore.MediaColumns.GENERATION_MODIFIED)
+                }.toTypedArray(),
                 queryArgs,
                 null,
             )?.use { cursor ->
                 cursor.moveToFirst() &&
                     cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)) == expectedSize &&
                     cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)) == expectedName &&
-                    cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.IS_TRASHED)) == 0
+                    cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.IS_TRASHED)) == 0 &&
+                    (expectedModifiedSeconds == null || (
+                        expectedModifiedSeconds > 0L &&
+                        cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED)) == expectedModifiedSeconds
+                    )) &&
+                    (expectedGeneration == null || (
+                        expectedGeneration > 0L &&
+                        cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.GENERATION_MODIFIED)) == expectedGeneration
+                    ))
             } == true
         }
     }.getOrDefault(false)
