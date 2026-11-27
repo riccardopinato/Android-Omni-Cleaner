@@ -75,6 +75,12 @@ class SafeTrashManager private constructor(
     private val restoreRoot: File,
     private val legacyTrashDirectory: File? = null,
 ) {
+    private val destructiveJournal by lazy {
+        SafeOperationsJournal(
+            File(trashDirectory.parentFile ?: restoreRoot, "OperationJournal")
+        )
+    }
+
     constructor(context: Context) : this(
         trashDirectory = StorageAccess.safeTrashRoot(),
         restoreRoot = StorageAccess.primaryRoot(),
@@ -439,7 +445,7 @@ class SafeTrashManager private constructor(
      * A permanent delete is explicitly scoped to one known Safe Trash entry ID.
      * Unrecognized directories, links and parent paths are never purged.
      */
-    fun purgeEntry(entryId: String): SafeTrashPurgeResult {
+    internal fun purgeEntry(entryId: String): SafeTrashPurgeResult {
         if (!isPersistentTrashAvailable()) {
             return SafeTrashPurgeResult(SafeTrashPurgeStatus.TRASH_UNAVAILABLE)
         }
@@ -521,7 +527,20 @@ class SafeTrashManager private constructor(
         if (live != entry || !isPersistentTrashAvailable()) {
             return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
         }
-        return purgeEntry(entry.id)
+        val fingerprint = manifestFingerprint(listOf(entry))
+        var cursor = destructiveJournal.begin(
+            "EXPLICIT_SINGLE_PURGE", fingerprint, entry.id,
+        ) ?: return SafeTrashPurgeResult(SafeTrashPurgeStatus.DELETE_FAILED)
+        cursor = destructiveJournal.advance(cursor, SafeOperationPhase.USER_APPROVED)
+            ?: return SafeTrashPurgeResult(SafeTrashPurgeStatus.DELETE_FAILED)
+        cursor = destructiveJournal.advance(cursor, SafeOperationPhase.MUTATING)
+            ?: return SafeTrashPurgeResult(SafeTrashPurgeStatus.DELETE_FAILED)
+        val result = purgeEntry(entry.id)
+        destructiveJournal.advance(
+            cursor, if (result.deleted) SafeOperationPhase.COMMITTED
+            else SafeOperationPhase.UNKNOWN_NEEDS_REVIEW,
+        )
+        return result
     }
 
     /**
@@ -537,6 +556,14 @@ class SafeTrashManager private constructor(
             inventory.entries.toSet() != approved.toSet() ||
             manifestFingerprint(approved) != manifest.fingerprint
         ) return SafeTrashEmptyResult(0, approved.size, 0L, completed = false)
+        var bulk = destructiveJournal.begin(
+            "EXPLICIT_BULK_PURGE", manifest.fingerprint,
+            approved.joinToString(",") { it.id },
+        ) ?: return SafeTrashEmptyResult(0, approved.size, 0L, completed = false)
+        bulk = destructiveJournal.advance(bulk, SafeOperationPhase.USER_APPROVED)
+            ?: return SafeTrashEmptyResult(0, approved.size, 0L, completed = false)
+        bulk = destructiveJournal.advance(bulk, SafeOperationPhase.MUTATING)
+            ?: return SafeTrashEmptyResult(0, approved.size, 0L, completed = false)
         var deletedCount = 0
         var failedCount = 0
         var reclaimedBytes = 0L
@@ -550,6 +577,12 @@ class SafeTrashManager private constructor(
             }
         }
         val remaining = trashDirectory.listFiles()?.isEmpty() == true
+        destructiveJournal.advance(
+            bulk,
+            if (failedCount == 0 && remaining) SafeOperationPhase.COMMITTED
+            else SafeOperationPhase.UNKNOWN_NEEDS_REVIEW,
+            "deleted=$deletedCount;failed=$failedCount;bytes=$reclaimedBytes",
+        )
         return SafeTrashEmptyResult(
             deletedEntries = deletedCount,
             rejectedEntries = failedCount,
@@ -564,9 +597,8 @@ class SafeTrashManager private constructor(
         SafeTrashEmptyResult(0, 0, 0L, completed = false)
 
     /** Compatibility path: only immediate children are ever accepted. */
-    fun permanentlyDelete(file: File): Boolean =
-        file.absoluteFile.parentFile == trashDirectory.absoluteFile &&
-            purgeEntry(file.name).deleted
+    @Deprecated("Use explicit SafeTrashEntry review and purgeApproved")
+    fun permanentlyDelete(file: File): Boolean = false
 
     @Deprecated("Explicit reviewed manifest required")
     fun emptyTrash(): Boolean = false
