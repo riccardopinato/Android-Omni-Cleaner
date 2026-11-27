@@ -11,6 +11,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.riccardopinato.omnicleaner.cleaner.BackgroundIndexScheduler
 import com.riccardopinato.omnicleaner.localization.AppLanguage
 import com.riccardopinato.omnicleaner.ui.OmniCleanerViewModel
@@ -24,7 +27,9 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         // Schedule only lightweight checks; WorkManager performs slow I/O off UI.
-        runCatching { BackgroundIndexScheduler.onAppOpened(applicationContext) }
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching { BackgroundIndexScheduler.onAppOpened(applicationContext) }
+        }
     }
 
     override fun attachBaseContext(newBase: Context) {

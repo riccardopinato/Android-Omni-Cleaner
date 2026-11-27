@@ -9,6 +9,7 @@ Source: PR #77, layered on exact-head 9e22481. No merge before safety gates.
 - Persist aggregate file count/bytes/timestamps only after a completed scan. Home and Storage Intelligence show the previous summary immediately, explicitly marked as potentially stale. Storage Intelligence can hydrate the persisted index without triggering a cold traversal; manual Analyze deliberately forces full refresh.
 - Settings offer an on/off switch. Turning off cancels unique scheduled jobs. No boot-triggered dataSync foreground service.
 - Preserve existing destructive path SHA/physical revision and Safe Trash validation. App-side invalidation marks the summary dirty.
+- The opening scheduler runs on an IO dispatcher, and the one-time/periodic workers share a mutex so a first launch cannot trigger two simultaneous full traversals.
 - Cancellation and MediaStore-generation races never publish a completed result. WorkManager may defer or stop work under Android background limits.
 
 ## Deliberate limits

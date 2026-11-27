@@ -100,6 +100,7 @@ import com.riccardopinato.omnicleaner.ui.theme.OmniPurple
 import com.riccardopinato.omnicleaner.ui.theme.OmniRose
 import com.riccardopinato.omnicleaner.ui.theme.AppAppearance
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 private enum class OmniDestination(
     val labelRes: Int,
@@ -593,7 +594,11 @@ fun RedesignedOmniCleanerApp(
                         checked = automaticIndex,
                         onCheckedChange = { enabled ->
                             automaticIndex = enabled
-                            BackgroundIndexScheduler.setEnabled(context, enabled)
+                            backgroundStore.setEnabled(enabled)
+                            workflowScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                BackgroundIndexScheduler.sync(context)
+                                if (enabled) BackgroundIndexScheduler.onAppOpened(context)
+                            }
                         },
                         modifier = Modifier.testTag("omni_background_index_toggle"),
                     )

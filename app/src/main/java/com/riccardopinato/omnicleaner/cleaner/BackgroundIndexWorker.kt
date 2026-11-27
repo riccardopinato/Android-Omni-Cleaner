@@ -13,8 +13,14 @@ import androidx.work.WorkerParameters
 import com.riccardopinato.omnicleaner.ui.BentoScanRuntime
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.coroutineContext
+
+// The one-shot launch check and periodic work may overlap. Only one complete
+// decision + reconciliation + publish cycle may execute in this process.
+private val indexWorkerMutex = Mutex()
 
 /**
  * Non-expedited, read-only work. No foreground service is started by background
@@ -24,7 +30,11 @@ internal class BackgroundIndexWorker(
     appContext: Context,
     params: WorkerParameters,
 ) : CoroutineWorker(appContext, params) {
-    override suspend fun doWork(): Result {
+    override suspend fun doWork(): Result = indexWorkerMutex.withLock {
+        runIndexOnce()
+    }
+
+    private suspend fun runIndexOnce(): Result {
         val app = applicationContext
         val store = BackgroundIndexStore(app)
         if (!store.isEnabled()) return Result.success()
