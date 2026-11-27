@@ -77,6 +77,9 @@ jobs:
           grep -Fq 'restart-recovery.yaml' .github/scripts/applab-runtime-smoke.sh
           grep -Fq 'omni_bento_v2_review' .maestro/restart-recovery.yaml
 
+      - name: Enforce fail-closed destructive operations source policy
+        run: python3 .github/scripts/check-omni-destructive-policies.py
+
       - name: Verify read-only Storage Intelligence contract
         run: python3 .github/scripts/check-storage-intelligence.py
 
