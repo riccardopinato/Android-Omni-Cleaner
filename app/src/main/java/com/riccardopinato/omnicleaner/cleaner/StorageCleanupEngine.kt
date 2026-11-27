@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.security.MessageDigest
 import kotlin.coroutines.coroutineContext
 
 data class EmptyFolderCleanupResult(
@@ -20,6 +21,8 @@ data class FileCleanupPreparation(
     val safeTrashCandidates: List<CleanupFileSnapshot>,
     val blockedFiles: List<File>,
     val staleFiles: List<File>,
+    val mediaBindings: List<Pair<Uri, CleanupFileSnapshot>> = emptyList(),
+    var mediaTransactionId: String? = null,
 ) {
     val safeTrashFiles: List<File>
         get() = safeTrashCandidates.map { it.file }
@@ -35,32 +38,24 @@ class StorageCleanupEngine(
     private val context: Context,
     private val safeTrashManager: SafeTrashManager = SafeTrashManager(context),
 ) {
+    private val journal by lazy {
+        SafeOperationsJournal(File(context.filesDir, "omni_safe_operations"))
+    }
+    private val coordinator by lazy { DeletionCoordinator(safeTrashManager, journal) }
+
+    /** Read-only crash recovery. The caller must never replay a pending move. */
+    fun incompleteOperations(): List<SafeOperationRecord> = journal.needsReview()
+
     suspend fun deleteEmptyFolders(
         folders: List<File>,
         allowedRoot: File = StorageAccess.primaryRoot(),
     ): EmptyFolderCleanupResult = withContext(Dispatchers.IO) {
-        var removed = 0
-        var rejected = 0
-
-        for (folder in CleanupSelection.uniqueEntries(folders)) {
-            coroutineContext.ensureActive()
-            val safe = PathSafety.isSafeFolderToDelete(folder, allowedRoot)
-            val stillEmpty = runCatching {
-                folder.isDirectory && folder.listFiles()?.isEmpty() == true
-            }.getOrDefault(false)
-
-            if (!safe || !stillEmpty) {
-                rejected++
-                continue
-            }
-
-            if (folder.delete()) removed++ else rejected++
-        }
-
-        if (removed > 0) {
-            StorageInventoryRepository.invalidate()
-        }
-        EmptyFolderCleanupResult(removed, rejected)
+        coroutineContext.ensureActive()
+        val result = coordinator.removeEmptyFoldersApproved(
+            CleanupSelection.uniqueEntries(folders), allowedRoot,
+        )
+        if (result.removed > 0) StorageInventoryRepository.invalidate()
+        result
     }
 
     fun snapshotsForBigFiles(
@@ -150,6 +145,7 @@ class StorageCleanupEngine(
         snapshots: List<CleanupFileSnapshot>,
     ): FileCleanupPreparation = withContext(Dispatchers.IO) {
         val media = ArrayList<Uri>()
+        val mediaBindings = ArrayList<Pair<Uri, CleanupFileSnapshot>>()
         val seenMedia = HashSet<Uri>()
         val safeTrash = ArrayList<CleanupFileSnapshot>()
         val blocked = ArrayList<File>()
@@ -173,6 +169,11 @@ class StorageCleanupEngine(
 
             val file = snapshot.file
             if (MediaStoreHelper.isMediaFile(file)) {
+                val digestBound = CleanupSnapshotValidator.withCurrentDigest(snapshot)
+                if (digestBound == null) {
+                    stale += file
+                    continue
+                }
                 val uri = runCatching { MediaStoreHelper.getMediaUri(context, file) }.getOrNull()
                 if (uri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     if (uri in seenMedia) continue
@@ -183,6 +184,7 @@ class StorageCleanupEngine(
                     } else {
                         seenMedia += uri
                         media += uri
+                        mediaBindings += uri to digestBound
                     }
                 } else {
                     blocked += file
@@ -215,6 +217,7 @@ class StorageCleanupEngine(
             safeTrashCandidates = safeTrash,
             blockedFiles = blocked.distinctBy(::canonicalKey),
             staleFiles = stale.distinctBy(::canonicalKey),
+            mediaBindings = mediaBindings,
         )
     }
 
@@ -235,32 +238,97 @@ class StorageCleanupEngine(
     suspend fun movePreparedSnapshotsToSafeTrash(
         snapshots: List<CleanupFileSnapshot>,
     ): SafeTrashExecutionResult = withContext(Dispatchers.IO) {
-        var moved = 0
-        var rejected = 0
-        var movedBytes = 0L
-
-        for (snapshot in strongestCleanupSnapshots(snapshots)) {
-            coroutineContext.ensureActive()
-
-            // moveToTrash(snapshot) performs the full snapshot + keeper
-            // validation immediately before mutation. Do not duplicate the
-            // same full-file SHA pass here.
-            if (safeTrashManager.moveToTrash(snapshot) != null) {
-                moved++
-                movedBytes += snapshot.expectedBytes.coerceAtLeast(0L)
-            } else {
-                rejected++
-            }
-        }
-
-        if (moved > 0) {
-            StorageInventoryRepository.invalidate()
-        }
-        SafeTrashExecutionResult(moved, rejected, movedBytes)
+        coroutineContext.ensureActive()
+        val result = coordinator.moveApproved(snapshots)
+        if (result.moved > 0) StorageInventoryRepository.invalidate()
+        result
     }
 
-    fun createSystemTrashRequest(mediaUris: List<Uri>): PendingIntent? =
-        MediaStoreHelper.trashMediaFiles(context.contentResolver, mediaUris)
+    /**
+     * Media snapshots are revalidated immediately before the system intent is
+     * created. An inaccessible or changed source blocks the entire batch.
+     */
+    fun createSystemTrashRequest(preparation: FileCleanupPreparation): PendingIntent? {
+        val bindings = preparation.mediaBindings
+        if (bindings.size != preparation.mediaUris.size ||
+            bindings.map { it.first } != preparation.mediaUris ||
+            bindings.any { (uri, snapshot) ->
+                !CleanupSnapshotValidator.validate(snapshot).valid ||
+                    runCatching { MediaStoreHelper.getMediaUri(context, snapshot.file) }.getOrNull() != uri ||
+                    !MediaStoreHelper.isCurrentMediaMatch(
+                        context.contentResolver,
+                        uri,
+                        snapshot.expectedBytes,
+                        snapshot.file.name,
+                    )
+            }
+        ) return null
+
+        // Write intent before asking the OS to mutate MediaStore. On crash the
+        // persisted URI set can be re-read, never replayed as a Trash request.
+        val detail = preparation.mediaBindings.joinToString("\n") { (uri, item) ->
+            listOf(uri.toString(), item.expectedBytes.toString(),
+                item.file.name, item.expectedSha256.orEmpty(),
+            ).joinToString("|")
+        }
+        val fingerprint = MessageDigest.getInstance("SHA-256")
+            .digest(detail.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+        val prepared = journal.begin("MEDIA_TRASH", fingerprint, detail) ?: return null
+        val approved = journal.advance(prepared, SafeOperationPhase.USER_APPROVED) ?: return null
+        val request = MediaStoreHelper.trashMediaFiles(
+            context.contentResolver, preparation.mediaUris,
+        )
+        if (request == null) {
+            journal.advance(approved, SafeOperationPhase.REJECTED)
+            return null
+        }
+        // External Android consent is now in-flight, not completed.
+        val mutating = journal.advance(approved, SafeOperationPhase.MUTATING)
+            ?: return null
+        preparation.mediaTransactionId = mutating.id
+        return request
+    }
+
+    /** Callback is only evidence. Actual MediaStore state determines success. */
+    suspend fun recordMediaTrashOutcome(
+        preparation: FileCleanupPreparation,
+        verification: MediaTrashVerification?,
+    ) = withContext(Dispatchers.IO) {
+        val record = preparation.mediaTransactionId?.let(journal::latest)
+            ?: return@withContext
+        if (record.type != "MEDIA_TRASH") return@withContext
+        val success = verification != null &&
+            preparation.mediaUris.toSet() == verification.confirmedUris
+        journal.advance(
+            record,
+            if (success) SafeOperationPhase.COMMITTED
+            else SafeOperationPhase.UNKNOWN_NEEDS_REVIEW,
+        )
+    }
+
+    /** Read-only crash recovery; never relaunch Android's destructive prompt. */
+    suspend fun reconcilePendingMedia(): Int = withContext(Dispatchers.IO) {
+        var unresolved = 0
+        journal.needsReview().filter { it.type == "MEDIA_TRASH" }.forEach { record ->
+            val raw = record.detail.lineSequence().filter { it.isNotBlank() }.toList()
+            val uris = raw.mapNotNull { line ->
+                line.substringBefore('|').takeIf { it.startsWith("content://") }
+                    ?.let(Uri::parse)
+            }
+            if (uris.isEmpty() || uris.size != raw.size) {
+                unresolved++
+                return@forEach
+            }
+            val confirmed = MediaStoreHelper.verifyTrashedUris(
+                context.contentResolver, uris,
+            )
+            if (confirmed.unverifiedUris.isEmpty()) {
+                journal.advance(record, SafeOperationPhase.COMMITTED)
+            } else unresolved++
+        }
+        unresolved
+    }
 
     fun selectDuplicatesExceptOldest(groups: List<DuplicateGroup>): Set<String> =
         selectDuplicatesExcept(groups, keepNewest = false)

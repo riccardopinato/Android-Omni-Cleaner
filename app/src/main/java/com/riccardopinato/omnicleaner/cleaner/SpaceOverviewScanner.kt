@@ -27,8 +27,10 @@ class SpaceOverviewScanner {
         val categories = linkedMapOf<String, Long>()
 
         for (item in inventory.files) {
-            val path = runCatching { item.file.canonicalPath }
-                .getOrElse { item.file.absolutePath }
+            // Inventory entries have already been discovered/validated. Re-canonicalizing
+            // every historical row causes an unnecessary filesystem I/O operation.
+            // Projection is read-only; any subsequent destructive action revalidates.
+            val path = item.file.absolutePath
             val relative = path.removePrefix(rootPath)
             val category = relative.substringBefore('/').ifBlank { "Other" }
             categories[category] = (categories[category] ?: 0L) + item.size

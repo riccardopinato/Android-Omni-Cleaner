@@ -4,6 +4,8 @@ import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AlertDialog
 import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as Button
 import androidx.compose.material3.Card
@@ -43,8 +44,10 @@ import com.riccardopinato.omnicleaner.cleaner.FolderItem
 import com.riccardopinato.omnicleaner.cleaner.FolderStatus
 import com.riccardopinato.omnicleaner.cleaner.ManualMaintenance
 import com.riccardopinato.omnicleaner.cleaner.StorageCleanupEngine
+import com.riccardopinato.omnicleaner.cleaner.MediaStoreHelper
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.Locale
 
 private enum class CleanupDialog {
@@ -89,6 +92,7 @@ fun StorageCleanupSection(
     val noSelection = stringResource(R.string.cleanup_no_selection)
     val systemTrashUnavailable = stringResource(R.string.cleanup_system_trash_unavailable)
     val androidTrashConfirmed = stringResource(R.string.cleanup_android_trash_confirmed)
+    val verifiedTemplate = stringResource(R.string.cleanup_media_verified_summary)
     val movedTemplate = stringResource(R.string.cleanup_safe_trash_moved)
     val rejectedTemplate = stringResource(R.string.cleanup_rejected)
     val changedTemplate = stringResource(R.string.cleanup_changed)
@@ -135,22 +139,38 @@ fun StorageCleanupSection(
         pendingPreparation = null
 
         if (result.resultCode != Activity.RESULT_OK || preparation == null) {
+            if (preparation != null) {
+                scope.launch { engine.recordMediaTrashOutcome(preparation, null) }
+            }
             message = androidTrashCancelled
             return@rememberLauncherForActivityResult
         }
 
         scope.launch {
+            val verification = MediaStoreHelper.verifyTrashedUris(
+                context.contentResolver, preparation.mediaUris,
+            )
+            engine.recordMediaTrashOutcome(preparation, verification)
             val safeResult = engine.movePreparedSnapshotsToSafeTrash(preparation.safeTrashCandidates)
             message = cleanupMessage(
                 preparation = preparation,
                 moved = safeResult.moved,
                 rejected = safeResult.rejected,
-                androidConfirmed = true,
+                androidConfirmed = false,
+            ) + " · " + localized(
+                verifiedTemplate, verification.confirmedUris.size,
+                verification.unverifiedUris.size,
             )
-            selectedBigFiles = emptySet()
-            selectedDuplicates = emptySet()
-            CleanupEventBus.publishCompleted()
-            onCleanupFinished()
+            if (safeResult.moved > 0 || verification.confirmedUris.isNotEmpty()) {
+                CleanupEventBus.publishCompleted()
+            }
+            if (verification.unverifiedUris.isEmpty() && safeResult.rejected == 0 &&
+                preparation.blockedFiles.isEmpty() && preparation.staleFiles.isEmpty()
+            ) {
+                selectedBigFiles = emptySet()
+                selectedDuplicates = emptySet()
+                onCleanupFinished()
+            }
         }
     }
 
@@ -166,7 +186,7 @@ fun StorageCleanupSection(
         scope.launch {
             val preparation = engine.prepareSnapshots(requested)
             if (preparation.mediaUris.isNotEmpty()) {
-                val request = engine.createSystemTrashRequest(preparation.mediaUris)
+                val request = engine.createSystemTrashRequest(preparation)
                 if (request == null) {
                     message = systemTrashUnavailable
                     return@launch
@@ -183,10 +203,14 @@ fun StorageCleanupSection(
                 rejected = safeResult.rejected,
                 androidConfirmed = false,
             )
-            selectedBigFiles = emptySet()
-            selectedDuplicates = emptySet()
             if (safeResult.moved > 0) CleanupEventBus.publishCompleted()
-            onCleanupFinished()
+            if (safeResult.rejected == 0 && preparation.blockedFiles.isEmpty() &&
+                preparation.staleFiles.isEmpty()
+            ) {
+                selectedBigFiles = emptySet()
+                selectedDuplicates = emptySet()
+                onCleanupFinished()
+            }
         }
     }
 
@@ -254,6 +278,7 @@ fun StorageCleanupSection(
                     bigFiles.take(visibleBigFileLimit).forEach { file ->
                         SelectionRow(
                             checked = file.path in selectedBigFiles,
+                            file = File(file.path),
                             label = file.name,
                             detail = file.displayPath,
                             onCheckedChange = { checked ->
@@ -305,6 +330,7 @@ fun StorageCleanupSection(
                         group.files.take(visibleDuplicateFilesLimit).forEach { file ->
                             SelectionRow(
                                 checked = file.path in selectedDuplicates,
+                                file = File(file.path),
                                 label = file.name,
                                 detail = file.displayPath,
                                 onCheckedChange = { checked ->
@@ -475,25 +501,29 @@ fun ManualMaintenanceCard() {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SelectionRow(
     checked: Boolean,
     label: String,
     detail: String,
     onCheckedChange: (Boolean) -> Unit,
+    file: File? = null,
 ) {
+    val previewTarget = remember(file?.absolutePath) { file?.let(::omniQuickLookForFile) }
+    var showPreview by remember(file?.absolutePath) { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .toggleable(
-                value = checked,
+            .combinedClickable(
                 role = Role.Checkbox,
-                onValueChange = onCheckedChange,
+                onClick = { onCheckedChange(!checked) },
+                onLongClick = { if (previewTarget != null) showPreview = true },
             ),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        Checkbox(checked = checked, onCheckedChange = null)
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
         Column(modifier = Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.bodyMedium, maxLines = 2)
             Text(
@@ -503,6 +533,14 @@ private fun SelectionRow(
                 maxLines = 2,
             )
         }
+    }
+    if (showPreview && previewTarget != null) {
+        OmniMediaQuickLook(
+            target = previewTarget,
+            onDismiss = { showPreview = false },
+            selected = checked,
+            onSelectedChange = onCheckedChange,
+        )
     }
 }
 

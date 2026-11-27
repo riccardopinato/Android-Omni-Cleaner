@@ -13,6 +13,7 @@ import com.riccardopinato.omnicleaner.gallery.GalleryMediaFilter
 import com.riccardopinato.omnicleaner.gallery.GalleryMediaItem
 import com.riccardopinato.omnicleaner.gallery.GallerySortOrder
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -21,7 +22,24 @@ import java.util.Locale
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
+data class MediaTrashVerification(
+    val confirmedUris: Set<Uri>,
+    val unverifiedUris: Set<Uri>,
+)
+
+/** All return paths fail closed: null/inaccessible never means trashed. */
 object MediaStoreHelper {
+    /**
+     * Provider generations are meaningful only within one MediaStore version
+     * and one mounted volume. Null/unmounted version blocks destructive review.
+     */
+    fun mountedVolumeVersion(context: Context, volumeName: String?): String? =
+        runCatching {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || volumeName.isNullOrBlank() ||
+                volumeName !in MediaStore.getExternalVolumeNames(context)
+            ) null else MediaStore.getVersion(context, volumeName)
+        }.getOrNull()?.takeIf { it.isNotBlank() }
+
     private val imageExtensions = setOf(
         "jpg", "jpeg", "png", "webp", "gif", "heic", "heif", "bmp", "svg",
     )
@@ -83,8 +101,14 @@ object MediaStoreHelper {
             add(MediaStore.MediaColumns._ID)
             add(MediaStore.MediaColumns.DISPLAY_NAME)
             add(MediaStore.MediaColumns.SIZE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                add(MediaStore.MediaColumns.VOLUME_NAME)
+            }
             add(MediaStore.Images.ImageColumns.DATE_TAKEN)
             add(MediaStore.MediaColumns.DATE_MODIFIED)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                add(MediaStore.MediaColumns.GENERATION_MODIFIED)
+            }
             add(MediaStore.MediaColumns.MIME_TYPE)
             add(MediaStore.Files.FileColumns.MEDIA_TYPE)
             add(MediaStore.MediaColumns.WIDTH)
@@ -161,8 +185,15 @@ object MediaStoreHelper {
             val idIndex = it.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
             val nameIndex = it.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
             val sizeIndex = it.getColumnIndex(MediaStore.MediaColumns.SIZE)
+            val volumeIndex = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                it.getColumnIndex(MediaStore.MediaColumns.VOLUME_NAME)
+            } else -1
+            val volumeVersions = hashMapOf<String, String?>()
             val takenIndex = it.getColumnIndex(MediaStore.Images.ImageColumns.DATE_TAKEN)
             val modifiedIndex = it.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED)
+            val generationIndex = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                it.getColumnIndex(MediaStore.MediaColumns.GENERATION_MODIFIED)
+            } else -1
             val mimeIndex = it.getColumnIndex(MediaStore.MediaColumns.MIME_TYPE)
             val typeIndex = it.getColumnIndex(MediaStore.Files.FileColumns.MEDIA_TYPE)
             val widthIndex = it.getColumnIndex(MediaStore.MediaColumns.WIDTH)
@@ -204,6 +235,11 @@ object MediaStoreHelper {
                     .orEmpty()
                     .ifBlank { if (isVideo) "video/mp4" else "image/jpeg" }
                 val album = albumIndex.takeIf { index -> index >= 0 }?.let(it::getString)
+                val volume = volumeIndex.takeIf { index -> index >= 0 }
+                    ?.let(it::getString)
+                val version = volume?.let { name ->
+                    volumeVersions.getOrPut(name) { mountedVolumeVersion(context, name) }
+                }
                 val duration = if (isVideo && durationIndex >= 0) it.getLong(durationIndex) else 0L
                 val width = widthIndex.takeIf { index -> index >= 0 }?.let(it::getInt) ?: 0
                 val height = heightIndex.takeIf { index -> index >= 0 }?.let(it::getInt) ?: 0
@@ -233,6 +269,12 @@ object MediaStoreHelper {
                     durationMs = duration,
                     width = width,
                     height = height,
+                    dateModifiedSeconds = modifiedIndex.takeIf { index -> index >= 0 }
+                        ?.let(it::getLong) ?: 0L,
+                    generationModified = generationIndex.takeIf { index -> index >= 0 }
+                        ?.let(it::getLong) ?: 0L,
+                    volumeName = volume,
+                    mediaStoreVersion = version,
                 )
             }
             return result
@@ -271,6 +313,97 @@ object MediaStoreHelper {
             }
         }
     }
+
+    /**
+     * Independent read-after-write verification for Android system Trash.
+     * Missing or inaccessible provider rows are UNKNOWN, never proof of a move.
+     */
+    fun verifiedTrashState(resolver: ContentResolver, uri: Uri): Boolean? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
+        return runCatching {
+            val queryArgs = Bundle().apply {
+                putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_INCLUDE)
+            }
+            resolver.query(
+                uri,
+                arrayOf(MediaStore.MediaColumns.IS_TRASHED),
+                queryArgs,
+                null,
+            )?.use { cursor ->
+                if (!cursor.moveToFirst()) null
+                else when (cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.IS_TRASHED))) {
+                    1 -> true
+                    0 -> false
+                    else -> null
+                }
+            }
+        }.getOrNull()
+    }
+
+    /**
+     * Verifies Android Trash after the OS consent callback. Provider rows that
+     * cannot be queried are NOT counted as successful. The caller must retain
+     * all unknown/false rows in its user's pending selection.
+     */
+    suspend fun verifyTrashedUris(
+        resolver: ContentResolver,
+        requested: List<Uri>,
+    ): MediaTrashVerification = withContext(Dispatchers.IO) {
+        val unique = requested.toSet()
+        val confirmed = linkedSetOf<Uri>()
+        repeat(3) { attempt ->
+            for (uri in unique) {
+                if (uri !in confirmed && verifiedTrashState(resolver, uri) == true) {
+                    confirmed += uri
+                }
+            }
+            if (confirmed.size < unique.size && attempt < 2) delay(180L)
+        }
+        MediaTrashVerification(confirmed, unique - confirmed)
+    }
+
+    /** Recheck URI identity immediately before showing Android's Trash prompt. */
+    fun isCurrentMediaMatch(
+        resolver: ContentResolver,
+        uri: Uri,
+        expectedSize: Long,
+        expectedName: String,
+        expectedModifiedSeconds: Long? = null,
+        expectedGeneration: Long? = null,
+    ): Boolean = runCatching {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || expectedSize < 0L) {
+            false
+        } else {
+            val queryArgs = Bundle().apply {
+                putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_INCLUDE)
+            }
+            resolver.query(
+                uri,
+                buildList {
+                    add(MediaStore.MediaColumns.SIZE)
+                    add(MediaStore.MediaColumns.DISPLAY_NAME)
+                    add(MediaStore.MediaColumns.IS_TRASHED)
+                    if (expectedModifiedSeconds != null) add(MediaStore.MediaColumns.DATE_MODIFIED)
+                    if (expectedGeneration != null) add(MediaStore.MediaColumns.GENERATION_MODIFIED)
+                }.toTypedArray(),
+                queryArgs,
+                null,
+            )?.use { cursor ->
+                cursor.moveToFirst() &&
+                    cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)) == expectedSize &&
+                    cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)) == expectedName &&
+                    cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.IS_TRASHED)) == 0 &&
+                    (expectedModifiedSeconds == null || (
+                        expectedModifiedSeconds > 0L &&
+                        cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED)) == expectedModifiedSeconds
+                    )) &&
+                    (expectedGeneration == null || (
+                        expectedGeneration > 0L &&
+                        cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.GENERATION_MODIFIED)) == expectedGeneration
+                    ))
+            } == true
+        }
+    }.getOrDefault(false)
 
     fun trashMediaFiles(
         resolver: ContentResolver,

@@ -37,7 +37,6 @@ import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.MediaTrashBatchPolicy
 import com.riccardopinato.omnicleaner.ui.redesign.OmniWelcomeKind
 import com.riccardopinato.omnicleaner.ui.redesign.OmniWelcomePanel
-import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
 import java.util.Locale
 
 @Composable
@@ -70,7 +69,6 @@ fun GalleryCleanerSection(
     ) { result ->
         val success = result.resultCode == Activity.RESULT_OK
         controller.onTrashResult(success)
-        if (success) CleanupEventBus.publishCompleted()
     }
 
     // The outer Material Card previously nested a second welcome card and a
@@ -392,7 +390,10 @@ fun GalleryCleanerSection(
             onDismissRequest = { showTrashConfirmation = false },
             title = { Text(stringResource(R.string.gallery_trash_confirm_title)) },
             text = {
-                Text(stringResource(R.string.gallery_trash_confirm_body))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.gallery_trash_confirm_body))
+                    Text(stringResource(R.string.cleanup_system_trash_expiry_notice))
+                }
             },
             confirmButton = {
                 TextButton(

@@ -1,0 +1,124 @@
+name: Omni Cleaner — MAXI STEP 13–16 functional Android acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/src/**'
+      - '.github/workflows/omni-roadmap-functional-matrix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  OMNI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+concurrency:
+  group: omni-roadmap-functional-${{ github.event.pull_request.head.ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  functional-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - name: Checkout exact app commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.OMNI_SOURCE_SHA }}
+          persist-credentials: false
+
+      - name: Checkout immutable Python QA fixture generator
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: riccardopinato/App-Factory-Core
+          ref: 39a5144f2b0d22dc8928970ca13b226fab17a05f
+          path: .factory-core
+          persist-credentials: false
+
+      - name: Generate private synthetic media and Python fixtures
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "$OMNI_SOURCE_SHA"
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends ffmpeg
+          fi
+          mkdir -p app/src/androidTest/assets
+          ffmpeg -hide_banner -loglevel error -nostdin -f lavfi -i 'testsrc2=size=640x360:rate=15' -t 6 -an -c:v libx264 -preset ultrafast -pix_fmt yuv420p -movflags +faststart -y app/src/androidTest/assets/omni-native-playback.mp4
+          codec="$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 app/src/androidTest/assets/omni-native-playback.mp4)"
+          test "$codec" = h264
+          python3 .factory-core/reference_engines/performance_qa/factory_performance_qa.py fixture --output "$RUNNER_TEMP/omni-python-qa-fixture" --files 512 --duplicate-pairs 8 --seed 19
+          python3 .factory-core/reference_engines/performance_qa/factory_performance_qa.py verify --input "$RUNNER_TEMP/omni-python-qa-fixture"
+          cp -R "$RUNNER_TEMP/omni-python-qa-fixture" app/src/androidTest/assets/
+          test "$(find app/src/androidTest/assets/omni-python-qa-fixture -type f | wc -l)" -eq 513
+
+      - name: JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
+        with:
+          cache-provider: basic
+
+      - name: Compile including ephemeral generated test assets
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --stacktrace
+
+      - name: Set up Android SDK commandline tools
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+
+      - name: Preflight API35 image with bounded retry
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          for n in 1 2 3; do
+            if sdkmanager --install "system-images;android-35;google_apis;x86_64"; then
+              echo "ANDROID_IMAGE_READY"
+              break
+            fi
+            if (( n == 3 )); then exit 2; fi
+            rm -rf "${ANDROID_HOME}/system-images/android-35/google_apis/x86_64"
+            sleep "$((n * 5))"
+          done
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Execute and prove every Android instrumented class explicitly
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          disk-size: 4096M
+          disable-animations: true
+          script: bash .github/scripts/run-omni-functional-matrix.sh
+
+      - name: Upload Android execution proof
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: omni-functional-matrix-${{ env.OMNI_SOURCE_SHA }}
+          path: ${{ runner.temp }}/omni-functional-matrix.txt
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Scope of evidence
+        if: always()
+        run: |
+          {
+            echo "## MAXI STEP 13–16 functional matrix"
+            echo "- Exact source: $OMNI_SOURCE_SHA"
+            echo "- Synthetic-only Android 35 emulator; temp media are isolated and cleaned up"
+            echo "- Actual tests, not merely androidTest compilation, must pass above"
+            echo "- Physical OEM, battery, Store billing and production signing remain separate acceptance gates"
+          } >> "$GITHUB_STEP_SUMMARY"

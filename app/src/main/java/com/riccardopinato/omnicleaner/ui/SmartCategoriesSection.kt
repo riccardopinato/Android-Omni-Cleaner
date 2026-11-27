@@ -4,6 +4,8 @@ import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,7 +13,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AlertDialog
 import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton as Button
 import androidx.compose.material3.Card
@@ -42,7 +43,9 @@ import com.riccardopinato.omnicleaner.cleaner.SmartCategoryScan
 import com.riccardopinato.omnicleaner.cleaner.SmartCategoryScanner
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.StorageCleanupEngine
+import com.riccardopinato.omnicleaner.cleaner.MediaStoreHelper
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
+import java.io.File
 import java.util.Locale
 import kotlinx.coroutines.launch
 
@@ -74,6 +77,7 @@ fun SmartCategoriesSection(
         stringResource(R.string.smart_categories_scan_failed)
 
     val androidTrashConfirmedMessage = stringResource(R.string.cleanup_android_trash_confirmed)
+    val verifiedTemplate = stringResource(R.string.cleanup_media_verified_summary)
     val movedTemplate = stringResource(R.string.cleanup_safe_trash_moved)
     val rejectedTemplate = stringResource(R.string.cleanup_rejected)
     val changedTemplate = stringResource(R.string.cleanup_changed)
@@ -97,18 +101,24 @@ fun SmartCategoriesSection(
         }
     }
 
-    fun finishPreparedCleanup(preparation: FileCleanupPreparation) {
+    fun finishPreparedCleanup(
+        preparation: FileCleanupPreparation,
+        verifyMedia: Boolean = false,
+    ) {
         scope.launch {
+            val verification = if (verifyMedia) {
+                MediaStoreHelper.verifyTrashedUris(context.contentResolver, preparation.mediaUris)
+            } else null
+            if (verifyMedia) engine.recordMediaTrashOutcome(preparation, verification)
             val safeResult = engine.movePreparedSnapshotsToSafeTrash(
                 preparation.safeTrashCandidates,
             )
-            selectedPaths = emptySet()
             message = buildCleanupMessage(
                 movedToSafeTrash = safeResult.moved,
                 rejected = safeResult.rejected,
                 stale = preparation.staleFiles.size,
                 blocked = preparation.blockedFiles.size,
-                androidTrashWasConfirmed = preparation.mediaUris.isNotEmpty(),
+                androidTrashWasConfirmed = false,
                 androidTrashConfirmedMessage = androidTrashConfirmedMessage,
                 movedTemplate = movedTemplate,
                 rejectedTemplate = rejectedTemplate,
@@ -116,14 +126,26 @@ fun SmartCategoriesSection(
                 blockedTemplate = blockedTemplate,
                 safeTrashNotReclaimed = safeTrashNotReclaimed,
             )
-            if (safeResult.moved > 0 || preparation.mediaUris.isNotEmpty()) {
+            if (verification != null) {
+                message = message.orEmpty() + " · " + String.format(
+                    Locale.getDefault(), verifiedTemplate,
+                    verification.confirmedUris.size, verification.unverifiedUris.size,
+                )
+            }
+            if (safeResult.moved > 0 || verification?.confirmedUris?.isNotEmpty() == true) {
                 CleanupEventBus.publishCompleted()
             }
-            onCleanupFinished()
-            runCatching {
-                scanner.scan(StorageAccess.primaryRoot())
-            }.onSuccess { refreshed ->
-                result = refreshed
+            if (verification?.unverifiedUris?.isNotEmpty() != true &&
+                safeResult.rejected == 0 && preparation.blockedFiles.isEmpty() &&
+                preparation.staleFiles.isEmpty()
+            ) {
+                selectedPaths = emptySet()
+                onCleanupFinished()
+                runCatching {
+                    scanner.scan(StorageAccess.primaryRoot())
+                }.onSuccess { refreshed ->
+                    result = refreshed
+                }
             }
         }
     }
@@ -134,9 +156,12 @@ fun SmartCategoriesSection(
         val preparation = pendingPreparation
         pendingPreparation = null
         if (activityResult.resultCode != Activity.RESULT_OK || preparation == null) {
+            if (preparation != null) {
+                scope.launch { engine.recordMediaTrashOutcome(preparation, null) }
+            }
             message = androidTrashCancelledMessage
         } else {
-            finishPreparedCleanup(preparation)
+            finishPreparedCleanup(preparation, verifyMedia = true)
         }
     }
 
@@ -162,7 +187,7 @@ fun SmartCategoriesSection(
         scope.launch {
             val preparation = engine.prepareSnapshots(snapshots)
             if (preparation.mediaUris.isNotEmpty()) {
-                val request = engine.createSystemTrashRequest(preparation.mediaUris)
+                val request = engine.createSystemTrashRequest(preparation)
                 if (request == null) {
                     message = trashUnavailableMessage
                     return@launch
@@ -333,24 +358,27 @@ fun SmartCategoriesSection(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SmartCandidateRow(
     item: SmartCategoryItem,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
+    val target = remember(item.path) { omniQuickLookForFile(File(item.path)) }
+    var preview by remember(item.path) { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .toggleable(
-                value = checked,
+            .combinedClickable(
                 role = Role.Checkbox,
-                onValueChange = onCheckedChange,
+                onClick = { onCheckedChange(!checked) },
+                onLongClick = { if (target != null) preview = true },
             ),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        Checkbox(checked = checked, onCheckedChange = null)
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
         Column(modifier = Modifier.weight(1f)) {
             val oldDownloads = if (SmartCategory.OLD_DOWNLOADS in item.categories) {
                 stringResource(R.string.smart_category_old_downloads)
@@ -372,11 +400,14 @@ private fun SmartCandidateRow(
             } else {
                 null
             }
+            val temporary = if (SmartCategory.TEMPORARY_FILES in item.categories) {
+                stringResource(R.string.smart_category_temporary)
+            } else null
+            val logs = if (SmartCategory.OLD_LOGS in item.categories) {
+                stringResource(R.string.smart_category_logs)
+            } else null
             val categoryText = listOfNotNull(
-                oldDownloads,
-                installers,
-                archives,
-                screenshots,
+                oldDownloads, installers, archives, screenshots, temporary, logs,
             ).joinToString(" · ")
 
             Text(
@@ -398,6 +429,14 @@ private fun SmartCandidateRow(
             )
         }
     }
+    if (preview && target != null) {
+        OmniMediaQuickLook(
+            target = target,
+            onDismiss = { preview = false },
+            selected = checked,
+            onSelectedChange = onCheckedChange,
+        )
+    }
 }
 
 @Composable
@@ -406,6 +445,8 @@ private fun categoryLabel(category: SmartCategory): String = when (category) {
     SmartCategory.INSTALLERS -> stringResource(R.string.smart_category_installers)
     SmartCategory.ARCHIVES -> stringResource(R.string.smart_category_archives)
     SmartCategory.SCREENSHOTS -> stringResource(R.string.smart_category_screenshots)
+    SmartCategory.TEMPORARY_FILES -> stringResource(R.string.smart_category_temporary)
+    SmartCategory.OLD_LOGS -> stringResource(R.string.smart_category_logs)
 }
 
 private fun buildCleanupMessage(

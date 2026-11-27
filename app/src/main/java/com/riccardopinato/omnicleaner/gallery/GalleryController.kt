@@ -4,9 +4,16 @@ import android.app.PendingIntent
 import android.content.Context
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.MediaStoreHelper
+import com.riccardopinato.omnicleaner.cleaner.SafeOperationsJournal
+import com.riccardopinato.omnicleaner.cleaner.SafeOperationPhase
+import java.io.File
+import java.security.MessageDigest
 import com.riccardopinato.omnicleaner.cleaner.MediaTrashBatchPolicy
+import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -63,6 +70,11 @@ class GalleryController(
     private val observers = LinkedHashSet<(GalleryUiState) -> Unit>()
     // Exact selection for one in-flight Android system confirmation.
     private var inFlightTrashIds: Set<Long> = emptySet()
+    private var inFlightOperationId: String? = null
+    private val operationJournal by lazy {
+        SafeOperationsJournal(File(context.filesDir, "omni_safe_operations"))
+    }
+    private var verifyingTrash = false
     private var loadJob: Job? = null
     private var persistJob: Job? = null
     private var sessionLoaded = false
@@ -397,6 +409,26 @@ class GalleryController(
         persistProgress()
     }
 
+    /**
+     * Direct, non-destructive checkbox for any loaded Gallery Pro item.
+     * Does not advance the swipe cursor or trigger an Android Trash request.
+     * The user's exact selection is persisted and reviewed before deletion.
+     */
+    fun setTrashSelection(mediaId: Long, selected: Boolean) {
+        val item = state.items.firstOrNull { it.id == mediaId } ?: return
+        if (item.isSelectedForTrash == selected) return
+        update(
+            state.copy(
+                items = state.items.map { media ->
+                    if (media.id == mediaId) media.copy(isSelectedForTrash = selected) else media
+                },
+                pendingTrashItems = if (selected) state.pendingTrashItems
+                    else state.pendingTrashItems.filterNot { it.id == mediaId },
+            ),
+        )
+        persistProgress()
+    }
+
     /** Unmark a reviewed photo without deleting or changing the media file. */
     fun removeFromTrashSelection(mediaId: Long) {
         if (state.selectedForTrash.none { it.id == mediaId }) return
@@ -412,49 +444,146 @@ class GalleryController(
     }
 
     fun createTrashRequest(): PendingIntent? {
-        if (inFlightTrashIds.isNotEmpty()) return null
+        if (inFlightTrashIds.isNotEmpty() || verifyingTrash) return null
         val selectedBatch = MediaTrashBatchPolicy.firstBatch(state.selectedForTrash)
         if (selectedBatch.isEmpty()) {
             update(state.copy(error = uiContext.getString(R.string.gallery_error_no_selection)))
+            return null
+        }
+        // A persisted Gallery queue can outlive a file replacement or a
+        // revoked MediaStore permission: verify its identity before prompting.
+        val changed = selectedBatch.filterNot { media ->
+            val sameProviderEpoch = media.mediaStoreVersion != null &&
+                media.mediaStoreVersion == MediaStoreHelper.mountedVolumeVersion(
+                    context, media.volumeName,
+                )
+            sameProviderEpoch && MediaStoreHelper.isCurrentMediaMatch(
+                context.contentResolver, media.uri, media.sizeBytes, media.name,
+                media.dateModifiedSeconds, media.generationModified,
+            )
+        }
+        if (changed.isNotEmpty()) {
+            update(state.copy(error = uiContext.getString(
+                R.string.gallery_error_trash_unverified, changed.size,
+            )))
+            return null
+        }
+        val details = selectedBatch.joinToString("\n") { media ->
+            listOf(media.uri.toString(), media.sizeBytes.toString(), media.name,
+                media.generationModified.toString(),
+            ).joinToString("|")
+        }
+        val fingerprint = MessageDigest.getInstance("SHA-256")
+            .digest(details.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+        val prepared = operationJournal.begin("MEDIA_TRASH", fingerprint, details)
+        val approved = prepared?.let {
+            operationJournal.advance(it, SafeOperationPhase.USER_APPROVED)
+        }
+        if (approved == null) {
+            update(state.copy(error = uiContext.getString(R.string.gallery_error_trash_android11)))
             return null
         }
         val pendingIntent = MediaStoreHelper.trashMediaFiles(
             context.contentResolver, selectedBatch.map { it.uri },
         )
         if (pendingIntent == null) {
+            operationJournal.advance(approved, SafeOperationPhase.REJECTED)
             update(state.copy(error = uiContext.getString(R.string.gallery_error_trash_android11)))
         } else {
+            val mutating = operationJournal.advance(
+                approved, SafeOperationPhase.MUTATING,
+            )
+            if (mutating == null) {
+                update(state.copy(error = uiContext.getString(
+                    R.string.gallery_error_trash_android11,
+                )))
+                return null
+            }
             inFlightTrashIds = selectedBatch.mapTo(HashSet()) { it.id }
+            inFlightOperationId = mutating.id
         }
         return pendingIntent
     }
 
+    /**
+     * RESULT_OK is user consent; only MediaStore IS_TRASHED is verified state.
+     * Failed/unknown rows remain in the explicit review queue.
+     */
     fun onTrashResult(success: Boolean) {
-        val approvedIds = inFlightTrashIds
+        val requested = inFlightTrashIds
         inFlightTrashIds = emptySet()
-        if (!success || approvedIds.isEmpty()) return
-        lastUndo = null
-
-        val removedFromLoaded = state.items.count { it.id in approvedIds }
-        val removedBeforeCurrent = state.items.take(state.currentIndex)
-            .count { it.id in approvedIds }
-        val remainingItems = state.items.filterNot { it.id in approvedIds }
-
-        update(
-            state.copy(
-                items = remainingItems,
-                currentIndex = (state.currentIndex - removedBeforeCurrent)
-                    .coerceIn(0, remainingItems.size),
-                loadedSourceCount = (state.loadedSourceCount - removedFromLoaded).coerceAtLeast(0),
-                sourceOffset = (state.sourceOffset - approvedIds.size).coerceAtLeast(0),
-                history = emptyList(),
-                hasPersistedUndo = false,
-                // Later batches must remain user-reviewed, never silently cleared.
-                pendingTrashItems = state.pendingTrashItems.filterNot { it.id in approvedIds },
-                error = null,
-            ),
-        )
-        persistProgress()
+        val operationId = inFlightOperationId
+        inFlightOperationId = null
+        if (!success || requested.isEmpty()) {
+            operationId?.let { id ->
+                operationJournal.latest(id)?.let {
+                    operationJournal.advance(it, SafeOperationPhase.REJECTED)
+                }
+            }
+            return
+        }
+        val selected = state.selectedForTrash.filter { it.id in requested }
+        if (selected.isEmpty()) return
+        verifyingTrash = true
+        scope.launch {
+            try {
+                val verified = MediaStoreHelper.verifyTrashedUris(
+                    context.contentResolver, selected.map { it.uri },
+                )
+                val flags = selected.associate { media ->
+                    media.id to if (media.uri in verified.confirmedUris) true else null
+                }
+                val evidence = evaluateGalleryTrashEvidence(requested, flags)
+                operationId?.let { id ->
+                    operationJournal.latest(id)?.let {
+                        operationJournal.advance(it,
+                            if (evidence.unverifiedIds.isEmpty()) SafeOperationPhase.COMMITTED
+                            else SafeOperationPhase.UNKNOWN_NEEDS_REVIEW)
+                    }
+                }
+                if (evidence.confirmedIds.isNotEmpty()) {
+                    lastUndo = null
+                    val confirmed = evidence.confirmedIds
+                    val removedFromLoaded = state.items.count { it.id in confirmed }
+                    val removedBeforeCurrent = state.items.take(state.currentIndex)
+                        .count { it.id in confirmed }
+                    val remainingItems = state.items.filterNot { it.id in confirmed }
+                    update(
+                        state.copy(
+                            items = remainingItems,
+                            currentIndex = (state.currentIndex - removedBeforeCurrent)
+                                .coerceIn(0, remainingItems.size),
+                            loadedSourceCount = (state.loadedSourceCount - removedFromLoaded).coerceAtLeast(0),
+                            sourceOffset = (state.sourceOffset - confirmed.size).coerceAtLeast(0),
+                            history = emptyList(),
+                            hasPersistedUndo = false,
+                            pendingTrashItems = state.pendingTrashItems.filterNot { it.id in confirmed },
+                            error = null,
+                        ),
+                    )
+                    persistProgress()
+                    // Only an independently confirmed move is an ad-eligible cleanup.
+                    CleanupEventBus.publishCompleted()
+                }
+                if (evidence.unverifiedIds.isNotEmpty()) {
+                    update(state.copy(
+                        error = uiContext.getString(
+                            R.string.gallery_error_trash_unverified,
+                            evidence.unverifiedIds.size,
+                        ),
+                    ))
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                update(state.copy(
+                    error = uiContext.getString(R.string.gallery_error_trash_unverified, selected.size),
+                ))
+            } finally {
+                verifyingTrash = false
+            }
+        }
     }
 
     fun clearError() {

@@ -11,6 +11,7 @@ import kotlin.coroutines.coroutineContext
 data class AppResidueScan(
     val items: List<AppResidueItem>,
     val packageVisibilityMayBeRestricted: Boolean,
+    val inaccessibleRoots: List<String> = emptyList(),
 )
 
 class AppResidueScanner(
@@ -27,30 +28,51 @@ class AppResidueScanner(
                 .mapTo(hashSetOf()) { it.packageName }
         }.getOrDefault(emptySet())
 
-        val mediaRoot = File(root, "Android/media")
-        val children = runCatching { mediaRoot.listFiles() }.getOrNull()
-            ?.filter { it.isDirectory }
-            .orEmpty()
+        // Different storage locations are independent capabilities; inaccessible
+        // Android/data or Android/obb is not proof that no app data exists there.
+        val locations = listOf("Android/media", "Android/data", "Android/obb")
+        val unavailable = ArrayList<String>()
+        val candidates = ArrayList<File>()
+        for (name in locations) {
+            coroutineContext.ensureActive()
+            val parent = File(root, name)
+            val directories = runCatching { parent.listFiles() }.getOrNull()
+            if (directories == null) {
+                unavailable += name
+                continue
+            }
+            candidates += directories.filter { it.isDirectory && !PathSafety.isSymlink(it) }
+        }
 
         val results = ArrayList<AppResidueItem>()
         var index = 0
-        for (directory in children) {
+        val reported = HashSet<String>()
+        for (directory in candidates) {
             coroutineContext.ensureActive()
             index++
             onProgress(index, directory)
-
             val packageName = directory.name
             if (!looksLikePackageName(packageName) || packageName in visiblePackages) continue
 
-            val inventory = inventoryScanner.collect(directory)
+            // PackageManager visibility can hide installed or archived apps.
+            // Query an individual package when permitted, but never regard a
+            // NameNotFound as definitive proof that uninstall occurred.
+            val knownInstalled = runCatching {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(packageName, 0) != null
+            }.getOrDefault(false)
+            if (knownInstalled) continue
+
+            val canonical = runCatching { directory.canonicalFile }.getOrNull() ?: continue
+            if (canonical != directory.absoluteFile || !reported.add(canonical.path)) continue
+            val inventory = inventoryScanner.collect(canonical)
             if (inventory.unreadable > 0 && inventory.files.isEmpty()) continue
             val bytes = inventory.files.sumOf { it.size }
-            val path = directory.absolutePath
             results += AppResidueItem(
                 file = directory,
                 name = packageName,
-                path = path,
-                displayPath = path,
+                path = canonical.path,
+                displayPath = canonical.path,
                 sizeBytes = bytes,
                 fileCount = inventory.files.size,
             )
@@ -59,6 +81,7 @@ class AppResidueScanner(
         AppResidueScan(
             items = results.sortedByDescending { it.sizeBytes },
             packageVisibilityMayBeRestricted = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R,
+            inaccessibleRoots = unavailable,
         )
     }
 

@@ -148,6 +148,23 @@ jobs:
           test -s "$APK"
           test -s "$AAB"
 
+          # Fail closed if a QA/debug package or an older version is uploaded as production.
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -x "$AAPT"
+          BADGING="$("$AAPT" dump badging "$APK")"
+          PACKAGE_LINE="$(printf '%s\n' "$BADGING" | grep -m1 "^package: " || true)"
+          APK_PACKAGE="$(printf '%s\n' "$PACKAGE_LINE" | sed -n "s/.*name='\\([^']*\\)'.*/\\1/p")"
+          APK_VERSION_CODE="$(printf '%s\n' "$PACKAGE_LINE" | sed -n "s/.*versionCode='\\([0-9][0-9]*\\)'.*/\\1/p")"
+          APK_VERSION_NAME="$(printf '%s\n' "$PACKAGE_LINE" | sed -n "s/.*versionName='\\([^']*\\)'.*/\\1/p")"
+          if [ "$APK_PACKAGE" != "com.riccardopinato.omnicleaner" ] ||
+             ! [[ "$APK_VERSION_CODE" =~ ^[0-9]+$ ]] ||
+             [ "$APK_VERSION_CODE" -le 14 ] ||
+             [ -z "$APK_VERSION_NAME" ]; then
+            echo "::error::Release artifact identity mismatch or non-upgrade versionCode."
+            echo "Package: $APK_PACKAGE; versionCode: $APK_VERSION_CODE; versionName: $APK_VERSION_NAME"
+            exit 1
+          fi
+
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -x "$APKSIGNER"
 
@@ -193,6 +210,9 @@ jobs:
 
           {
             echo "source_sha=${GITHUB_SHA}"
+            echo "package_id=$APK_PACKAGE"
+            echo "version_code=$APK_VERSION_CODE"
+            echo "version_name=$APK_VERSION_NAME"
             echo "certificate_sha256=$APK_CERT"
             echo "apk_certificate_sha256=$APK_CERT"
             echo "aab_certificate_sha256=$AAB_CERT"

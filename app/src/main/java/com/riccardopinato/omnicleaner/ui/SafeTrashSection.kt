@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.SafeTrashEntry
+import com.riccardopinato.omnicleaner.cleaner.SafeTrashPurgeManifest
 import com.riccardopinato.omnicleaner.cleaner.SafeTrashManager
 import com.riccardopinato.omnicleaner.cleaner.SafeTrashPurgeStatus
 import com.riccardopinato.omnicleaner.cleaner.SafeTrashRestoreStatus
@@ -54,12 +55,22 @@ fun SafeTrashSection() {
     var persistentAvailable by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<SafeTrashMessage?>(null) }
     var confirmEmpty by remember { mutableStateOf(false) }
+    var confirmEmptySecond by remember { mutableStateOf(false) }
+    var confirmLegacyImport by remember { mutableStateOf(false) }
+    var confirmMetadataRepair by remember { mutableStateOf(false) }
+    var repairCandidates by remember { mutableStateOf<List<String>>(emptyList()) }
+    var legacyAvailable by remember { mutableStateOf(false) }
+    var approvedPurgePlan by remember { mutableStateOf<SafeTrashPurgeManifest?>(null) }
     var pendingIndividualDelete by remember { mutableStateOf<SafeTrashEntry?>(null) }
     val canRestore = StorageAccess.hasBroadAccess(context)
     val persistentTrashAvailable = manager.isPersistentTrashAvailable()
 
     suspend fun reload() {
         val snapshot = withContext(Dispatchers.IO) { manager.inspect() }
+        legacyAvailable = withContext(Dispatchers.IO) { manager.hasLegacyEntries() }
+        repairCandidates = withContext(Dispatchers.IO) {
+            manager.legacyMetadataRepairCandidates()
+        }
         entries = snapshot.entries
         trashBytes = snapshot.totalPayloadBytes
         unrecognizedEntries = snapshot.unrecognizedEntries
@@ -69,9 +80,8 @@ fun SafeTrashSection() {
     }
 
     LaunchedEffect(manager) {
-        withContext(Dispatchers.IO) {
-            manager.migrateLegacyTrashIfNeeded()
-        }
+        // Opening the Trash screen is read-only. Legacy import now
+        // requires a separate explicit confirmation from the owner.
         reload()
         CleanupEventBus.events.collectLatest {
             reload()
@@ -230,9 +240,42 @@ fun SafeTrashSection() {
                         ) {
                             Text(stringResource(R.string.refresh))
                         }
+                        if (repairCandidates.isNotEmpty()) {
+                            OutlinedButton(
+                                enabled = !loading && persistentAvailable,
+                                onClick = { confirmMetadataRepair = true },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(R.string.safe_trash_repair_legacy_metadata))
+                            }
+                        }
+                        if (legacyAvailable) {
+                            OutlinedButton(
+                                enabled = !loading && persistentAvailable,
+                                onClick = { confirmLegacyImport = true },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(R.string.safe_trash_import_legacy))
+                            }
+                        }
                         Button(
                             enabled = !loading && persistentAvailable && entries.isNotEmpty(),
-                            onClick = { confirmEmpty = true },
+                            onClick = {
+                                loading = true
+                                scope.launch {
+                                    val plan = withContext(Dispatchers.IO) {
+                                        manager.planPurge(entries)
+                                    }
+                                    approvedPurgePlan = plan
+                                    confirmEmpty = plan != null
+                                    loading = false
+                                    if (plan == null) {
+                                        message = SafeTrashMessage(R.string.safe_trash_partial_empty,
+                                            listOf(formatSafeTrashBytes(0L)))
+                                        reload()
+                                    }
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(stringResource(R.string.safe_trash_empty_permanently))
@@ -270,7 +313,7 @@ fun SafeTrashSection() {
                         loading = true
                         scope.launch {
                             val result = withContext(Dispatchers.IO) {
-                                runCatching { manager.purgeEntry(entry.id) }.getOrNull()
+                                runCatching { manager.purgeApproved(entry) }.getOrNull()
                             }
                             val success = result?.status == SafeTrashPurgeStatus.DELETED
                             message = SafeTrashMessage(
@@ -301,7 +344,7 @@ fun SafeTrashSection() {
 
     if (confirmEmpty) {
         AlertDialog(
-            onDismissRequest = { confirmEmpty = false },
+            onDismissRequest = { confirmEmpty = false; approvedPurgePlan = null },
             title = { Text(stringResource(R.string.safe_trash_empty_confirm_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -309,8 +352,10 @@ fun SafeTrashSection() {
                     Text(
                         stringResource(
                             R.string.safe_trash_purge_count_bytes,
-                            entries.size,
-                            formatSafeTrashBytes(trashBytes),
+                            approvedPurgePlan?.entries?.size ?: 0,
+                            formatSafeTrashBytes(
+                                approvedPurgePlan?.entries?.sumOf { it.sizeBytes } ?: 0L
+                            ),
                         ),
                         style = MaterialTheme.typography.bodyMedium,
                     )
@@ -319,39 +364,113 @@ fun SafeTrashSection() {
             confirmButton = {
                 TextButton(
                     onClick = {
+                        // Require a second, separate confirmation on the frozen manifest.
                         confirmEmpty = false
-                        loading = true
-                        scope.launch {
-                            val result = withContext(Dispatchers.IO) {
-                                runCatching { manager.purgeAll() }.getOrNull()
-                            }
-                            message = if (result?.completed == true) {
-                                SafeTrashMessage(
-                                    R.string.safe_trash_emptied,
-                                    listOf(formatSafeTrashBytes(result.reclaimedBytes)),
-                                )
-                            } else {
-                                SafeTrashMessage(
-                                    R.string.safe_trash_partial_empty,
-                                    listOf(
-                                        formatSafeTrashBytes(result?.reclaimedBytes ?: 0L),
-                                    ),
-                                )
-                            }
-                            reload()
-                            if ((result?.deletedEntries ?: 0) > 0) {
-                                CleanupEventBus.publishCompleted()
-                            }
-                        }
+                        confirmEmptySecond = approvedPurgePlan != null
                     },
                 ) {
                     Text(stringResource(R.string.safe_trash_delete_permanently))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmEmpty = false }) {
+                TextButton(onClick = {
+                    confirmEmpty = false
+                    approvedPurgePlan = null
+                }) {
                     Text(stringResource(R.string.cancel))
                 }
+            },
+        )
+    }
+
+    if (confirmMetadataRepair) {
+        val frozenCandidates = repairCandidates.toList()
+        AlertDialog(
+            onDismissRequest = { confirmMetadataRepair = false },
+            title = { Text(stringResource(R.string.safe_trash_repair_legacy_metadata)) },
+            text = { Text(stringResource(R.string.safe_trash_repair_legacy_metadata_body,
+                frozenCandidates.size)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmMetadataRepair = false
+                    loading = true
+                    scope.launch {
+                        withContext(Dispatchers.IO) {
+                            frozenCandidates.forEach { manager.repairLegacyEntryApproved(it) }
+                        }
+                        reload()
+                    }
+                }) { Text(stringResource(R.string.safe_trash_repair_legacy_metadata)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmMetadataRepair = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (confirmLegacyImport) {
+        AlertDialog(
+            onDismissRequest = { confirmLegacyImport = false },
+            title = { Text(stringResource(R.string.safe_trash_import_legacy)) },
+            text = { Text(stringResource(R.string.safe_trash_import_legacy_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmLegacyImport = false
+                    loading = true
+                    scope.launch {
+                        withContext(Dispatchers.IO) {
+                            manager.migrateLegacyTrashIfNeeded()
+                        }
+                        reload()
+                    }
+                }) { Text(stringResource(R.string.safe_trash_import_legacy)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmLegacyImport = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (confirmEmptySecond) {
+        AlertDialog(
+            onDismissRequest = {
+                confirmEmptySecond = false
+                approvedPurgePlan = null
+            },
+            title = { Text(stringResource(R.string.safe_trash_empty_confirm_title)) },
+            text = { Text(stringResource(R.string.safe_trash_empty_confirm_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val approved = approvedPurgePlan
+                    confirmEmptySecond = false
+                    approvedPurgePlan = null
+                    if (approved == null) return@TextButton
+                    loading = true
+                    scope.launch {
+                        val result = withContext(Dispatchers.IO) {
+                            runCatching { manager.purgeApproved(approved) }.getOrNull()
+                        }
+                        message = if (result?.completed == true) {
+                            SafeTrashMessage(R.string.safe_trash_emptied,
+                                listOf(formatSafeTrashBytes(result.reclaimedBytes)))
+                        } else {
+                            SafeTrashMessage(R.string.safe_trash_partial_empty,
+                                listOf(formatSafeTrashBytes(result?.reclaimedBytes ?: 0L)))
+                        }
+                        reload()
+                        if ((result?.deletedEntries ?: 0) > 0) CleanupEventBus.publishCompleted()
+                    }
+                }) { Text(stringResource(R.string.safe_trash_delete_permanently)) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    confirmEmptySecond = false
+                    approvedPurgePlan = null
+                }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }

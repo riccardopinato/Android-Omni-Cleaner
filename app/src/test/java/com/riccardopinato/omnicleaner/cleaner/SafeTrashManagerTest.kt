@@ -47,14 +47,15 @@ class SafeTrashManagerTest {
             assertNotNull(manager.moveToTrash(source))
             val entry = manager.listEntries().single()
 
-            val result = manager.purgeEntry(entry.id)
+            val result = manager.purgeApproved(entry)
             assertEquals(SafeTrashPurgeStatus.DELETED, result.status)
             assertEquals(50L * 1024L * 1024L, result.reclaimedBytes)
             assertTrue(manager.listEntries().isEmpty())
             assertEquals(0L, manager.getTrashSize())
             assertFalse(File(trash, entry.id).exists())
             assertFalse(source.exists())
-            assertEquals(SafeTrashPurgeStatus.ENTRY_NOT_FOUND, manager.purgeEntry(entry.id).status)
+            // Raw ID without reviewed metadata can never authorize a purge.
+            assertEquals(SafeTrashPurgeStatus.INVALID_ENTRY, manager.purgeEntry(entry.id).status)
         } finally {
             root.deleteRecursively()
         }
@@ -71,7 +72,8 @@ class SafeTrashManagerTest {
             assertEquals(0L, manager.getTrashSize())
             assertEquals(1, manager.listEntries().size)
 
-            val result = manager.purgeAll()
+            val approved = requireNotNull(manager.planPurge(manager.listEntries()))
+            val result = manager.purgeApproved(approved)
             assertTrue(result.completed)
             assertEquals(1, result.deletedEntries)
             assertEquals(0, result.rejectedEntries)
@@ -94,13 +96,15 @@ class SafeTrashManagerTest {
             assertFalse(manager.permanentlyDelete(untouched))
             assertEquals(SafeTrashPurgeStatus.INVALID_ENTRY, manager.purgeEntry("../keep-me.apk").status)
 
+            // An unrecognized file blocks the ENTIRE bulk purge: nothing
+            // under the user's shared storage may be deleted by omission.
             val result = manager.purgeAll()
             assertFalse(result.completed)
-            assertEquals(1, result.deletedEntries)
-            assertEquals(1, result.rejectedEntries)
+            assertEquals(0, result.deletedEntries)
+            assertTrue(manager.planPurge(manager.listEntries()) == null)
             assertTrue(foreign.exists())
             assertTrue(untouched.exists())
-            assertTrue(manager.listEntries().isEmpty())
+            assertEquals(1, manager.listEntries().size)
         } finally {
             root.deleteRecursively()
         }
@@ -189,7 +193,9 @@ class SafeTrashManagerTest {
             assertTrue(properties.getProperty("originalPath").endsWith("notes.txt"))
             assertEquals(64, properties.getProperty("sha256").length)
             assertEquals(payload.length(), manager.getTrashSize())
-            assertTrue(manager.emptyTrash())
+            assertTrue(manager.purgeApproved(
+                requireNotNull(manager.planPurge(manager.listEntries())),
+            ).completed)
             assertFalse(payload.exists())
         } finally {
             root.deleteRecursively()
@@ -285,6 +291,12 @@ class SafeTrashManagerTest {
 
         try {
             val manager = SafeTrashManager.forTests(trash)
+            // Mere inventory does NOT modify old metadata or claim it safe.
+            assertTrue(manager.listEntries().isEmpty())
+            assertEquals(1, manager.inspect().unrecognizedEntries)
+            assertFalse(metadata.readText().contains("sha256="))
+            // User explicitly opts into staged checksum repair.
+            assertTrue(manager.repairLegacyEntryApproved(entryDir.name))
             val entry = manager.listEntries().single()
             val migratedProperties = Properties().apply {
                 metadata.inputStream().use { input -> load(input) }
@@ -547,7 +559,7 @@ class SafeTrashManagerTest {
             assertEquals(34, manager.listEntries().size)
 
             val first = manager.listEntries().single { it.originalName == "sample-1.txt" }
-            assertTrue(manager.permanentlyDelete(File(trash, first.id)))
+            assertTrue(manager.purgeApproved(first).deleted)
             assertEquals(33, manager.listEntries().size)
             assertFalse(File(root, "sample-1.txt").exists())
             // Only synthetic files in this temporary test root were touched.
@@ -555,4 +567,170 @@ class SafeTrashManagerTest {
             root.deleteRecursively()
         }
     }
+
+    @Test
+    fun purgeAndRestoreFailClosedWhenEntryContainsUnexpectedUserData() {
+        val root = createTempDirectory("omni-unknown-entry-").toFile()
+        try {
+            val trash = File(root, "safe-trash")
+            val manager = SafeTrashManager.forTests(trash, root)
+            val original = File(root, "retain-me.txt").apply { writeText("valuable data") }
+            assertNotNull(manager.moveToTrash(original))
+            val entry = manager.listEntries().single()
+            val entryDirectory = File(trash, entry.id)
+            val foreign = File(entryDirectory, "user-extra.txt").apply { writeText("untouched") }
+
+            assertEquals(SafeTrashPurgeStatus.INVALID_ENTRY, manager.purgeEntry(entry.id).status)
+            assertEquals(SafeTrashRestoreStatus.PAYLOAD_INVALID, manager.restore(entry.id).status)
+            assertTrue(foreign.isFile)
+            assertEquals("untouched", foreign.readText())
+            assertTrue(File(entryDirectory, "payload").isFile)
+            assertTrue(File(entryDirectory, "original.properties").isFile)
+            assertFalse(original.exists())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun automaticLegacyMigrationNeverRemovesUnknownChildren() {
+        val root = createTempDirectory("omni-migration-unknown-").toFile()
+        try {
+            val legacy = File(root, "legacy")
+            val persistent = File(root, "persistent")
+            val entry = File(legacy, UUID.randomUUID().toString()).apply { mkdirs() }
+            val payload = File(entry, "payload").apply { writeText("protect this") }
+            val metadata = File(entry, "original.properties")
+            Properties().apply {
+                setProperty("originalPath", File(root, "restore.txt").canonicalPath)
+                setProperty("originalName", "restore.txt")
+                setProperty("sizeBytes", payload.length().toString())
+                setProperty("lastModified", "0")
+            }.also { p -> metadata.outputStream().use { out -> p.store(out, "legacy") } }
+            val foreign = File(entry, "personal-note.txt").apply { writeText("not owned by cleaner") }
+
+            val manager = SafeTrashManager.forTests(persistent, root, legacy)
+            manager.migrateLegacyTrashIfNeeded()
+
+            assertEquals("protect this", payload.readText())
+            assertTrue(metadata.isFile)
+            assertEquals("not owned by cleaner", foreign.readText())
+            assertTrue(entry.isDirectory)
+            assertTrue(manager.listEntries().isEmpty())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun existingMatchingBytesWithDifferentOriginalPathCannotConsumeLegacyEntry() {
+        val root = createTempDirectory("omni-migration-collision-").toFile()
+        try {
+            val legacy = File(root, "legacy")
+            val persistent = File(root, "persistent")
+            val id = UUID.randomUUID().toString()
+            val legacyEntry = File(legacy, id).apply { mkdirs() }
+            val legacyPayload = File(legacyEntry, "payload").apply { writeText("same bytes") }
+            val original = File(root, "real-original.txt")
+            Properties().apply {
+                setProperty("originalPath", original.canonicalPath)
+                setProperty("originalName", original.name)
+                setProperty("sizeBytes", legacyPayload.length().toString())
+                setProperty("lastModified", "0")
+            }.also { p ->
+                File(legacyEntry, "original.properties").outputStream()
+                    .use { out -> p.store(out, "legacy") }
+            }
+
+            val manager = SafeTrashManager.forTests(persistent, root, legacy)
+            val collision = File(persistent, id).apply { mkdirs() }
+            val otherOriginal = File(root, "different-original.txt")
+            val collisionPayload = File(collision, "payload").apply { writeText("same bytes") }
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+                .digest(collisionPayload.readBytes())
+                .joinToString("") { "%02x".format(it) }
+            Properties().apply {
+                setProperty("originalPath", otherOriginal.canonicalPath)
+                setProperty("originalName", otherOriginal.name)
+                setProperty("sizeBytes", collisionPayload.length().toString())
+                setProperty("lastModified", "0")
+                setProperty("sha256", digest)
+            }.also { p ->
+                File(collision, "original.properties").outputStream()
+                    .use { out -> p.store(out, "collision") }
+            }
+
+            manager.migrateLegacyTrashIfNeeded()
+
+            val entries = manager.listEntries()
+            assertEquals(2, entries.size)
+            assertTrue(entries.any { it.id == id && it.originalPath == otherOriginal.canonicalPath })
+            assertTrue(entries.any { it.id != id && it.originalPath == original.canonicalPath })
+            assertTrue(collisionPayload.isFile)
+            assertEquals("same bytes", collisionPayload.readText())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+
+    @Test
+    fun purgeNeverDestroysPayloadModifiedAfterItWasTrashed() {
+        val root = createTempDirectory("omni-purge-hash-").toFile()
+        try {
+            val trash = File(root, "safe-trash")
+            val manager = SafeTrashManager.forTests(trash, root)
+            val source = File(root, "user-data.txt").apply { writeText("original") }
+            assertNotNull(manager.moveToTrash(source))
+            val entry = manager.listEntries().single()
+            val payload = File(File(trash, entry.id), "payload")
+            payload.writeText("modified") // Same length, deliberately different SHA-256.
+
+            assertEquals(SafeTrashPurgeStatus.INVALID_ENTRY, manager.purgeEntry(entry.id).status)
+            assertFalse(manager.purgeAll().completed)
+            assertTrue(payload.isFile)
+            assertEquals("modified", payload.readText())
+            assertTrue(File(File(trash, entry.id), "original.properties").isFile)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+
+    @Test
+    fun frozenBulkPurgeNeverDeletesNewlyArrivedUnreviewedEntries() {
+        val root = createTempDirectory("omni-purge-manifest-").toFile()
+        try {
+            val manager = SafeTrashManager.forTests(root.resolve("trash"), root)
+            assertNotNull(manager.moveToTrash(root.resolve("first.apk").apply { writeText("first") }))
+            val plan = requireNotNull(manager.planPurge(manager.listEntries()))
+            assertNotNull(manager.moveToTrash(root.resolve("later.apk").apply { writeText("later") }))
+            val result = manager.purgeApproved(plan)
+            assertFalse(result.completed)
+            assertEquals(0, result.deletedEntries)
+            assertEquals(2, manager.listEntries().size)
+            assertTrue(manager.listEntries().any { it.originalName == "later.apk" })
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun modifiedApprovedPurgeRecordCannotDeleteNewBytes() {
+        val root = createTempDirectory("omni-purge-stale-").toFile()
+        try {
+            val manager = SafeTrashManager.forTests(root.resolve("trash"), root)
+            assertNotNull(manager.moveToTrash(root.resolve("test.apk").apply { writeText("abc") }))
+            val reviewed = manager.listEntries().single()
+            val plan = requireNotNull(manager.planPurge(listOf(reviewed)))
+            val payload = root.resolve("trash").resolve(reviewed.id).resolve("payload")
+            payload.writeText("xyz")
+            assertFalse(manager.purgeApproved(plan).completed)
+            assertTrue(payload.isFile)
+            assertEquals("xyz", payload.readText())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
 }

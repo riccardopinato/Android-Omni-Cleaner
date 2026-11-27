@@ -64,15 +64,29 @@ data class SafeTrashEmptyResult(
     val completed: Boolean,
 )
 
+/** Only the exact set displayed during review may be permanently purged. */
+data class SafeTrashPurgeManifest internal constructor(
+    val entries: List<SafeTrashEntry>,
+    val fingerprint: String,
+)
+
 class SafeTrashManager private constructor(
     private val trashDirectory: File,
     private val restoreRoot: File,
     private val legacyTrashDirectory: File? = null,
+    private val mutationPermission: () -> Boolean = { true },
 ) {
+    private val destructiveJournal by lazy {
+        SafeOperationsJournal(
+            File(trashDirectory.parentFile ?: restoreRoot, "OperationJournal")
+        )
+    }
+
     constructor(context: Context) : this(
         trashDirectory = StorageAccess.safeTrashRoot(),
         restoreRoot = StorageAccess.primaryRoot(),
         legacyTrashDirectory = File(context.filesDir, "trash"),
+        mutationPermission = { StorageAccess.hasBroadAccess(context) },
     )
 
     init {
@@ -102,7 +116,8 @@ class SafeTrashManager private constructor(
                 bytes += payload.length().coerceAtLeast(0L)
             }
             val entry = if (child.isDirectory && !PathSafety.isSymlink(child) &&
-                ENTRY_ID_PATTERN.matches(child.name)
+                ENTRY_ID_PATTERN.matches(child.name) &&
+                hasOnlyKnownEntryFiles(child)
             ) readEntry(child) else null
             if (entry == null) unrecognized++ else valid += entry
         }
@@ -132,17 +147,61 @@ class SafeTrashManager private constructor(
             expectedHash = null,
         )
 
+    /**
+     * Cache-only exception: confirmed thumbnail files, including JPEG/PNG
+     * extensions, enter the reversible Safe Trash rather than File.delete().
+     * Ordinary media cannot use this bypass. The directory must be a known
+     * .thumbnails root, with an immutable scanned SHA-256 snapshot.
+     */
+    fun moveVerifiedThumbnailToTrash(
+        stamp: ThumbnailFileStamp,
+        scannedDirectory: File,
+    ): File? {
+        val root = runCatching { scannedDirectory.canonicalFile }.getOrNull() ?: return null
+        if (root != scannedDirectory.absoluteFile ||
+            !ThumbnailDirectoryPolicy.isSafeDirectory(root) ||
+            !PathSafety.isWithinRoot(root, restoreRoot) ||
+            !PathSafety.isWithinRoot(stamp.file, root) ||
+            PathSafety.isSymlink(root) ||
+            stamp.sha256.length != 64 ||
+            !stamp.sha256.all { it in '0'..'9' || it in 'a'..'f' }
+        ) return null
+        // CleanupSnapshotValidator intentionally blocks general Android/media.
+        // This narrow cache exception uses the validated directory and its
+        // immutable SHA, never granting access to arbitrary app media files.
+        if (!stamp.file.isFile || PathSafety.isSymlink(stamp.file) ||
+            stamp.file.length() != stamp.bytes ||
+            stamp.file.lastModified() != stamp.modified ||
+            runCatching { sha256(stamp.file) }.getOrNull() != stamp.sha256
+        ) return null
+        return moveToTrashInternal(
+            file = stamp.file,
+            expectedSize = stamp.bytes,
+            expectedModified = stamp.modified,
+            expectedHash = stamp.sha256,
+            cacheMediaException = true,
+        )
+    }
+
     private fun moveToTrashInternal(
         file: File,
         expectedSize: Long?,
         expectedModified: Long?,
         expectedHash: String?,
+        cacheMediaException: Boolean = false,
     ): File? {
-        if (!isPersistentTrashAvailable()) return null
+        if (!mutationPermission() || !isPersistentTrashAvailable()) return null
         if (!file.exists() || !file.isFile) return null
         if (!PathSafety.isWithinRoot(file, restoreRoot)) return null
-        if (PathSafety.isDangerousPath(file) || PathSafety.isSymlink(file)) return null
-        if (MediaStoreHelper.isMediaFile(file)) return null
+        // A cache exception must never apply to app-managed Safe Trash itself.
+        val normalized = file.absolutePath.replace('\\', '/').lowercase()
+        if ((PathSafety.isDangerousPath(file) && !cacheMediaException) ||
+            (cacheMediaException && normalized.contains(
+                "/" + StorageAccess.APP_MANAGED_DIRECTORY.lowercase() + "/",
+            )) ||
+            PathSafety.isSymlink(file)
+        ) return null
+        if (MediaStoreHelper.isMediaFile(file) && !cacheMediaException) return null
 
         val originalSize = file.length().coerceAtLeast(0L)
         val originalModified = file.lastModified().coerceAtLeast(0L)
@@ -159,6 +218,21 @@ class SafeTrashManager private constructor(
         ) {
             return null
         }
+
+        // A crash after the next filesystem mutation must leave durable
+        // evidence; failure to write the journal is a hard stop.
+        val moveHash = MessageDigest.getInstance("SHA-256")
+            .digest(listOf(file.absolutePath, originalSize.toString(),
+                originalModified.toString(), originalHash).joinToString("|")
+                .toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+        var operation = destructiveJournal.begin(
+            "REVERSIBLE_FILE_MOVE", moveHash, file.absolutePath,
+        ) ?: return null
+        operation = destructiveJournal.advance(operation, SafeOperationPhase.USER_APPROVED)
+            ?: return null
+        operation = destructiveJournal.advance(operation, SafeOperationPhase.MUTATING)
+            ?: return null
 
         val entry = File(trashDirectory, UUID.randomUUID().toString())
         val payload = File(entry, PAYLOAD_NAME)
@@ -182,67 +256,44 @@ class SafeTrashManager private constructor(
         }.getOrDefault(false)
 
         if (!metadataWritten) {
-            entry.deleteRecursively()
+            // Never recurse over a newly created but possibly raced entry.
+            if (metadata.isFile && !PathSafety.isSymlink(metadata)) metadata.delete()
+            if (entry.listFiles()?.isEmpty() == true) entry.delete()
             return null
         }
 
+        // Permission must still be held at the last possible pre-move check.
+        if (!mutationPermission()) return null
         if (file.renameTo(payload)) {
             val validPayload =
                 payload.isFile &&
                     payload.length() == originalSize &&
                     runCatching { sha256(payload) }.getOrNull() == originalHash
-            if (validPayload) return payload
+            if (validPayload) {
+                destructiveJournal.advance(operation, SafeOperationPhase.COMMITTED,
+                    "trashId=${entry.name};bytes=$originalSize")
+                return payload
+            }
 
-            // Never delete the relocated payload unless rollback succeeded:
-            // otherwise the only remaining copy could be lost.
-            val rolledBack = runCatching {
-                !file.exists() && payload.isFile && payload.renameTo(file)
-            }.getOrDefault(false)
-            if (rolledBack) entry.deleteRecursively()
-            // Failed rollback: retain payload plus metadata for recovery.
+            // NEVER rename back to the original path after exists(): that
+            // creates a TOCTOU overwrite window if another app creates a file
+            // at the old name. Keep the quarantined payload and metadata for
+            // user-reviewed no-overwrite recovery, even when integrity fails.
             return null
         }
 
-        val requiredFreeSpace = originalSize + COPY_FREE_SPACE_MARGIN_BYTES
-        if (trashDirectory.usableSpace in 0L until requiredFreeSpace) {
-            entry.deleteRecursively()
-            return null
-        }
+        // Cross-volume copy followed by File.delete() is not an atomic
+        // operation on the verified inode. Refuse rather than unlink a path
+        // which may have been replaced by another process.
+        if (metadata.isFile && !PathSafety.isSymlink(metadata)) metadata.delete()
+        if (entry.listFiles()?.isEmpty() == true) entry.delete()
+        return null
 
-        val copied = runCatching {
-            FileInputStream(file).use { input ->
-                FileOutputStream(payload).use { output ->
-                    input.copyTo(output, bufferSize = FILE_IO_BUFFER_BYTES)
-                    output.fd.sync()
-                }
-            }
 
-            if (file.length() != originalSize || file.lastModified() != originalModified) {
-                error("Source changed")
-            }
-            if (payload.length() != originalSize) {
-                error("Incomplete copy")
-            }
-            if (sha256(payload) != originalHash) {
-                error("Payload digest mismatch")
-            }
-            if (!sameContents(file, payload, originalSize)) {
-                error("Incomplete copy")
-            }
-            true
-        }.getOrDefault(false)
-
-        if (!copied || !file.delete()) {
-            payload.delete()
-            entry.deleteRecursively()
-            return null
-        }
-
-        return payload
     }
 
     fun restore(entryId: String): SafeTrashRestoreResult {
-        if (!isPersistentTrashAvailable()) {
+        if (!mutationPermission() || !isPersistentTrashAvailable()) {
             return SafeTrashRestoreResult(SafeTrashRestoreStatus.DESTINATION_UNAVAILABLE)
         }
         if (!ENTRY_ID_PATTERN.matches(entryId)) {
@@ -254,6 +305,9 @@ class SafeTrashManager private constructor(
             ?: return SafeTrashRestoreResult(SafeTrashRestoreStatus.ENTRY_NOT_FOUND)
         val payload = File(directory, PAYLOAD_NAME)
 
+        if (!hasOnlyKnownEntryFiles(directory)) {
+            return SafeTrashRestoreResult(SafeTrashRestoreStatus.PAYLOAD_INVALID)
+        }
         if (
             !payload.isFile ||
             PathSafety.isSymlink(payload) ||
@@ -266,9 +320,14 @@ class SafeTrashManager private constructor(
         val destination = runCatching { File(entry.originalPath).canonicalFile }.getOrNull()
             ?: return SafeTrashRestoreResult(SafeTrashRestoreStatus.DESTINATION_UNAVAILABLE)
 
+        // A verified cache thumbnail may be restored to the exact original
+        // cache subtree. Ordinary Android/media stays protected.
+        val authorizedThumbnailRestore =
+            ThumbnailDirectoryPolicy.isSafeThumbnailFile(destination, restoreRoot)
         if (
             !PathSafety.isWithinRoot(destination, restoreRoot) ||
-            PathSafety.isDangerousPath(destination)
+            (PathSafety.isDangerousPath(destination) && !authorizedThumbnailRestore) ||
+            PathSafety.isSymlink(destination)
         ) {
             return SafeTrashRestoreResult(SafeTrashRestoreStatus.UNSAFE_DESTINATION)
         }
@@ -293,6 +352,15 @@ class SafeTrashManager private constructor(
             return SafeTrashRestoreResult(SafeTrashRestoreStatus.INSUFFICIENT_SPACE)
         }
 
+        val restoreHash = manifestFingerprint(listOf(entry))
+        var operation = destructiveJournal.begin(
+            "RESTORE_FROM_TRASH", restoreHash, entry.id,
+        ) ?: return SafeTrashRestoreResult(SafeTrashRestoreStatus.DESTINATION_UNAVAILABLE)
+        operation = destructiveJournal.advance(operation, SafeOperationPhase.USER_APPROVED)
+            ?: return SafeTrashRestoreResult(SafeTrashRestoreStatus.DESTINATION_UNAVAILABLE)
+        operation = destructiveJournal.advance(operation, SafeOperationPhase.MUTATING)
+            ?: return SafeTrashRestoreResult(SafeTrashRestoreStatus.DESTINATION_UNAVAILABLE)
+
         val temp = File(
             parent,
             ".${destination.name}.omni-restore-${UUID.randomUUID()}.tmp",
@@ -312,22 +380,81 @@ class SafeTrashManager private constructor(
             return SafeTrashRestoreResult(SafeTrashRestoreStatus.COPY_FAILED)
         }
 
-        if (destination.exists() || !temp.renameTo(destination)) {
-            temp.delete()
-            return SafeTrashRestoreResult(
-                if (destination.exists()) {
-                    SafeTrashRestoreStatus.DESTINATION_EXISTS
-                } else {
-                    SafeTrashRestoreStatus.COPY_FAILED
-                },
-            )
+        // renameTo() may replace a file created concurrently after exists().
+        // A hard link is an atomic no-replace publish on supported filesystems.
+        // On Android storage without hard links, reserve with createNewFile()
+        // (O_EXCL equivalent) before copying. Never open an existing target.
+        if (!mutationPermission()) return SafeTrashRestoreResult(
+            SafeTrashRestoreStatus.DESTINATION_UNAVAILABLE,
+        )
+        val linked = runCatching {
+            android.system.Os.link(temp.absolutePath, destination.absolutePath)
+            true
+        }.getOrDefault(false)
+        if (!linked) {
+            // Android 24+ (minSdk): O_CREAT|O_EXCL atomically refuses a target
+            // that another process created. Do not follow symlinks.
+            // Local JVM tests (SDK_INT=0) cannot invoke Android Os and use
+            // java.io's createNewFile() only in that non-device test environment.
+            val exclusiveCopy = if (android.os.Build.VERSION.SDK_INT >= 24) {
+                val fd = runCatching {
+                    android.system.Os.open(
+                        destination.absolutePath,
+                        android.system.OsConstants.O_WRONLY or
+                            android.system.OsConstants.O_CREAT or
+                            android.system.OsConstants.O_EXCL or
+                            android.system.OsConstants.O_NOFOLLOW,
+                        0x180,
+                    )
+                }.getOrNull()
+                if (fd == null) {
+                    temp.delete()
+                    return SafeTrashRestoreResult(
+                        if (destination.exists()) SafeTrashRestoreStatus.DESTINATION_EXISTS
+                        else SafeTrashRestoreStatus.COPY_FAILED,
+                    )
+                }
+                runCatching {
+                    FileInputStream(temp).use { input ->
+                        FileOutputStream(fd).use { output ->
+                            input.copyTo(output, bufferSize = FILE_IO_BUFFER_BYTES)
+                            output.fd.sync()
+                        }
+                    }
+                    destination.length() == entry.sizeBytes &&
+                        sha256(destination) == entry.sha256
+                }.getOrDefault(false)
+            } else {
+                if (!runCatching { destination.createNewFile() }.getOrDefault(false)) {
+                    temp.delete()
+                    return SafeTrashRestoreResult(SafeTrashRestoreStatus.DESTINATION_EXISTS)
+                }
+                runCatching {
+                    FileInputStream(temp).use { input ->
+                        FileOutputStream(destination).use { output ->
+                            input.copyTo(output, bufferSize = FILE_IO_BUFFER_BYTES)
+                            output.fd.sync()
+                        }
+                    }
+                    destination.length() == entry.sizeBytes &&
+                        sha256(destination) == entry.sha256
+                }.getOrDefault(false)
+            }
+            if (!exclusiveCopy) {
+                temp.delete()
+                // Preserve both Safe Trash payload and any partial destination
+                // for explicit recovery: never unlink a possibly raced file.
+                return SafeTrashRestoreResult(SafeTrashRestoreStatus.COPY_FAILED)
+            }
         }
+        temp.delete()
 
         if (
             destination.length() != entry.sizeBytes ||
             runCatching { sha256(destination) }.getOrNull() != entry.sha256
         ) {
-            destination.delete()
+            // The verified payload still exists in Safe Trash. Never delete
+            // a destination that a concurrent process might have modified.
             return SafeTrashRestoreResult(SafeTrashRestoreStatus.COPY_FAILED)
         }
 
@@ -335,7 +462,13 @@ class SafeTrashManager private constructor(
             destination.setLastModified(entry.lastModified)
         }
 
-        directory.deleteRecursively()
+        // The restored original has been byte-verified. A failure to remove
+        // the redundant trash copy leaves two copies, never zero.
+        removeKnownEntryFilesOnly(directory)
+        destructiveJournal.advance(
+            operation, SafeOperationPhase.COMMITTED,
+            "restored=${destination.absolutePath};sha=${entry.sha256}",
+        )
 
         return SafeTrashRestoreResult(
             status = SafeTrashRestoreStatus.RESTORED,
@@ -347,7 +480,14 @@ class SafeTrashManager private constructor(
      * A permanent delete is explicitly scoped to one known Safe Trash entry ID.
      * Unrecognized directories, links and parent paths are never purged.
      */
-    fun purgeEntry(entryId: String): SafeTrashPurgeResult {
+    internal fun purgeEntry(
+        entryId: String,
+        approved: SafeTrashEntry? = null,
+    ): SafeTrashPurgeResult {
+        // No raw ID is authorization. A checked, exact reviewed entry is mandatory.
+        if (approved == null || approved.id != entryId) {
+            return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
+        }
         if (!isPersistentTrashAvailable()) {
             return SafeTrashPurgeResult(SafeTrashPurgeStatus.TRASH_UNAVAILABLE)
         }
@@ -362,7 +502,7 @@ class SafeTrashManager private constructor(
         if (!directory.isDirectory || PathSafety.isSymlink(directory)) {
             return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
         }
-        if (readEntry(directory) == null) {
+        if (readEntry(directory) == null || !hasOnlyKnownEntryFiles(directory)) {
             return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
         }
 
@@ -373,16 +513,24 @@ class SafeTrashManager private constructor(
         if (target.parentFile != root || PathSafety.isSymlink(target)) {
             return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
         }
-        // Physical payload size at deletion time is more truthful than the
-        // metadata's original size if a trash entry has been modified.
+        // Permanent purge must validate identity immediately before mutation.
+        // A replaced/tampered payload must never be treated as the reviewed file.
         val payload = File(target, PAYLOAD_NAME)
         if (!payload.isFile || PathSafety.isSymlink(payload)) {
             return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
         }
-        val bytesBefore = payload.length().coerceAtLeast(0L)
-        val deleted = runCatching {
-            deleteTreeWithoutFollowingSymlinks(target, root)
-        }.getOrDefault(false)
+        val verifiedEntry = readEntry(target)
+            ?: return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
+        if (verifiedEntry != approved ||
+            payload.length() != verifiedEntry.sizeBytes ||
+            runCatching { sha256(payload) }.getOrNull() != verifiedEntry.sha256
+        ) {
+            return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
+        }
+        val bytesBefore = verifiedEntry.sizeBytes
+        // Explicit purge is limited to the two recognized files only.
+        // Never traverse or delete unexpected descendants.
+        val deleted = removeKnownEntryFilesOnly(target)
         if (!deleted || target.exists()) {
             return SafeTrashPurgeResult(SafeTrashPurgeStatus.DELETE_FAILED)
         }
@@ -391,19 +539,83 @@ class SafeTrashManager private constructor(
         return SafeTrashPurgeResult(SafeTrashPurgeStatus.DELETED, bytesBefore)
     }
 
-    fun purgeAll(): SafeTrashEmptyResult {
-        if (!isPersistentTrashAvailable()) {
-            return SafeTrashEmptyResult(0, 0, 0L, completed = false)
+    private fun manifestFingerprint(entries: List<SafeTrashEntry>): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        entries.sortedBy { it.id }.forEach { entry ->
+            val canonical = listOf(
+                entry.id, entry.originalPath, entry.originalName,
+                entry.sizeBytes.toString(), entry.lastModified.toString(), entry.sha256,
+            ).joinToString("\u0000")
+            digest.update(canonical.toByteArray(Charsets.UTF_8))
+            digest.update(0.toByte())
         }
-        // A failed directory listing must never be interpreted as success.
-        val children = trashDirectory.listFiles()
-            ?: return SafeTrashEmptyResult(0, 0, 0L, completed = false)
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
 
+    /**
+     * Freeze exactly the entries inspected by the user; unknown children stop
+     * the bulk plan. Re-evaluating the live directory later never adds items.
+     */
+    fun planPurge(reviewed: List<SafeTrashEntry>): SafeTrashPurgeManifest? {
+        val inventory = inspect()
+        if (!inventory.readable || inventory.unrecognizedEntries != 0 ||
+            reviewed.isEmpty() || reviewed.distinctBy { it.id }.size != reviewed.size ||
+            inventory.entries.toSet() != reviewed.toSet()
+        ) return null
+        return SafeTrashPurgeManifest(reviewed.toList(), manifestFingerprint(reviewed))
+    }
+
+    fun purgeApproved(entry: SafeTrashEntry): SafeTrashPurgeResult {
+        if (!mutationPermission()) return SafeTrashPurgeResult(SafeTrashPurgeStatus.TRASH_UNAVAILABLE)
+        val live = readEntry(File(trashDirectory, entry.id))
+        if (live != entry || !isPersistentTrashAvailable()) {
+            return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
+        }
+        val fingerprint = manifestFingerprint(listOf(entry))
+        var cursor = destructiveJournal.begin(
+            "EXPLICIT_SINGLE_PURGE", fingerprint, entry.id,
+        ) ?: return SafeTrashPurgeResult(SafeTrashPurgeStatus.DELETE_FAILED)
+        cursor = destructiveJournal.advance(cursor, SafeOperationPhase.USER_APPROVED)
+            ?: return SafeTrashPurgeResult(SafeTrashPurgeStatus.DELETE_FAILED)
+        cursor = destructiveJournal.advance(cursor, SafeOperationPhase.MUTATING)
+            ?: return SafeTrashPurgeResult(SafeTrashPurgeStatus.DELETE_FAILED)
+        val result = purgeEntry(entry.id, approved = entry)
+        destructiveJournal.advance(
+            cursor, if (result.deleted) SafeOperationPhase.COMMITTED
+            else SafeOperationPhase.UNKNOWN_NEEDS_REVIEW,
+        )
+        return result
+    }
+
+    /**
+     * Bulk purge is an exact reviewed manifest, not a dynamic directory sweep.
+     * If another file arrives or changes before approval, abort with 0 deletes.
+     * A file arriving after validation is never included in this frozen list.
+     */
+    fun purgeApproved(manifest: SafeTrashPurgeManifest): SafeTrashEmptyResult {
+        if (!mutationPermission()) {
+            return SafeTrashEmptyResult(0, manifest.entries.size, 0L, completed = false)
+        }
+        val inventory = inspect()
+        val approved = manifest.entries
+        if (!inventory.readable || inventory.unrecognizedEntries != 0 ||
+            approved.isEmpty() || approved.distinctBy { it.id }.size != approved.size ||
+            inventory.entries.toSet() != approved.toSet() ||
+            manifestFingerprint(approved) != manifest.fingerprint
+        ) return SafeTrashEmptyResult(0, approved.size, 0L, completed = false)
+        var bulk = destructiveJournal.begin(
+            "EXPLICIT_BULK_PURGE", manifest.fingerprint,
+            approved.joinToString(",") { it.id },
+        ) ?: return SafeTrashEmptyResult(0, approved.size, 0L, completed = false)
+        bulk = destructiveJournal.advance(bulk, SafeOperationPhase.USER_APPROVED)
+            ?: return SafeTrashEmptyResult(0, approved.size, 0L, completed = false)
+        bulk = destructiveJournal.advance(bulk, SafeOperationPhase.MUTATING)
+            ?: return SafeTrashEmptyResult(0, approved.size, 0L, completed = false)
         var deletedCount = 0
         var failedCount = 0
         var reclaimedBytes = 0L
-        for (child in children) {
-            val result = purgeEntry(child.name)
+        for (entry in approved) {
+            val result = purgeApproved(entry)
             if (result.deleted) {
                 deletedCount++
                 reclaimedBytes += result.reclaimedBytes
@@ -411,21 +623,32 @@ class SafeTrashManager private constructor(
                 failedCount++
             }
         }
-        val actuallyEmpty = trashDirectory.listFiles()?.isEmpty() == true
+        val remaining = trashDirectory.listFiles()?.isEmpty() == true
+        destructiveJournal.advance(
+            bulk,
+            if (failedCount == 0 && remaining) SafeOperationPhase.COMMITTED
+            else SafeOperationPhase.UNKNOWN_NEEDS_REVIEW,
+            "deleted=$deletedCount;failed=$failedCount;bytes=$reclaimedBytes",
+        )
         return SafeTrashEmptyResult(
             deletedEntries = deletedCount,
             rejectedEntries = failedCount,
             reclaimedBytes = reclaimedBytes,
-            completed = failedCount == 0 && actuallyEmpty,
+            completed = failedCount == 0 && remaining,
         )
     }
 
-    /** Compatibility path: only immediate children are ever accepted. */
-    fun permanentlyDelete(file: File): Boolean =
-        file.absoluteFile.parentFile == trashDirectory.absoluteFile &&
-            purgeEntry(file.name).deleted
+    /** Unscoped legacy bulk purge is disabled. Call planPurge/purgeApproved. */
+    @Deprecated("Unreviewed dynamic purge is unsafe: use exact manifest")
+    fun purgeAll(): SafeTrashEmptyResult =
+        SafeTrashEmptyResult(0, 0, 0L, completed = false)
 
-    fun emptyTrash(): Boolean = purgeAll().completed
+    /** Compatibility path: only immediate children are ever accepted. */
+    @Deprecated("Use explicit SafeTrashEntry review and purgeApproved")
+    fun permanentlyDelete(file: File): Boolean = false
+
+    @Deprecated("Explicit reviewed manifest required")
+    fun emptyTrash(): Boolean = false
 
     fun sameContents(first: File, second: File, expectedBytes: Long): Boolean {
         if (!first.isFile || !second.isFile) return false
@@ -454,29 +677,6 @@ class SafeTrashManager private constructor(
         }
     }
 
-    private fun deleteTreeWithoutFollowingSymlinks(node: File, root: File): Boolean {
-        val rootPrefix = root.path.trimEnd(File.separatorChar) + File.separator
-        val absolute = node.absoluteFile
-        if (!absolute.path.startsWith(rootPrefix)) return false
-
-        if (PathSafety.isSymlink(node)) {
-            return node.delete()
-        }
-
-        val canonical = runCatching { node.canonicalFile }.getOrNull() ?: return false
-        if (canonical != node.absoluteFile || !canonical.path.startsWith(rootPrefix)) return false
-
-        if (canonical.isDirectory) {
-            var childrenDeleted = true
-            for (child in canonical.listFiles().orEmpty()) {
-                if (!deleteTreeWithoutFollowingSymlinks(child, root)) childrenDeleted = false
-            }
-            if (!childrenDeleted) return false
-        }
-
-        return canonical.delete()
-    }
-
     private fun preparePersistentTrash() {
         val parent = trashDirectory.parentFile ?: return
         if (PathSafety.isSymlink(parent) || PathSafety.isSymlink(trashDirectory)) return
@@ -491,12 +691,117 @@ class SafeTrashManager private constructor(
      * delete the legacy copy only after the migrated entry can be parsed and
      * integrity-checked. A failed migration leaves the original untouched.
      */
+    /**
+     * Read-only inventory of legacy records lacking a hash. Corrupt claimed
+     * hashes are never eligible for automatic or blanket repair.
+     */
+    fun legacyMetadataRepairCandidates(): List<String> =
+        if (!isPersistentTrashAvailable()) emptyList()
+        else trashDirectory.listFiles().orEmpty().filter { directory ->
+            if (!directory.isDirectory || !ENTRY_ID_PATTERN.matches(directory.name) ||
+                !hasOnlyKnownEntryFiles(directory)
+            ) return@filter false
+            val metadata = File(directory, METADATA_NAME)
+            val properties = runCatching {
+                Properties().apply { metadata.inputStream().use { load(it) } }
+            }.getOrNull() ?: return@filter false
+            properties.getProperty(KEY_SHA256) == null &&
+                properties.getProperty(KEY_ORIGINAL_PATH)?.isNotBlank() == true &&
+                properties.getProperty(KEY_SIZE_BYTES)?.toLongOrNull() ==
+                    File(directory, PAYLOAD_NAME).length()
+        }.map { it.name }.sorted()
+
+    /**
+     * Legacy pre-SHA entries are quarantined during pure inspection. An
+     * explicit user repair may establish their first digest, with a staged
+     * metadata write and original backup; an existing wrong SHA is NEVER fixed.
+     */
+    fun repairLegacyEntryApproved(entryId: String): Boolean {
+        if (!mutationPermission() ||
+            !ENTRY_ID_PATTERN.matches(entryId) || !isPersistentTrashAvailable()
+        ) return false
+        val directory = File(trashDirectory, entryId)
+        if (!hasOnlyKnownEntryFiles(directory)) return false
+        val metadata = File(directory, METADATA_NAME)
+        val payload = File(directory, PAYLOAD_NAME)
+        val original = runCatching {
+            Properties().apply { metadata.inputStream().use { load(it) } }
+        }.getOrNull() ?: return false
+        if (original.getProperty(KEY_SHA256) != null) return false
+        val sourcePath = original.getProperty(KEY_ORIGINAL_PATH) ?: return false
+        val sourceName = original.getProperty(KEY_ORIGINAL_NAME) ?: return false
+        val size = original.getProperty(KEY_SIZE_BYTES)?.toLongOrNull() ?: return false
+        val modified = original.getProperty(KEY_LAST_MODIFIED)?.toLongOrNull() ?: return false
+        if (size < 0 || modified < 0 || payload.length() != size ||
+            File(sourcePath).name != sourceName ||
+            !PathSafety.isWithinRoot(File(sourcePath), restoreRoot) ||
+            (PathSafety.isDangerousPath(File(sourcePath)) &&
+                !ThumbnailDirectoryPolicy.isSafeThumbnailFile(File(sourcePath), restoreRoot))
+        ) return false
+        val hash = runCatching { sha256(payload) }.getOrNull() ?: return false
+        var operation = destructiveJournal.begin(
+            "EXPLICIT_LEGACY_METADATA_REPAIR",
+            manifestFingerprint(listOf(SafeTrashEntry(
+                entryId, sourcePath, sourceName, size, modified, hash,
+            ))),
+            entryId,
+        ) ?: return false
+        operation = destructiveJournal.advance(operation, SafeOperationPhase.USER_APPROVED)
+            ?: return false
+        operation = destructiveJournal.advance(operation, SafeOperationPhase.MUTATING)
+            ?: return false
+        val staging = File(directory, "$METADATA_NAME.new")
+        val backup = File(directory, "$METADATA_NAME.bak")
+        if (staging.exists() || backup.exists()) return false
+        val written = runCatching {
+            original.setProperty(KEY_SHA256, hash)
+            FileOutputStream(staging).use { output ->
+                original.store(output, METADATA_COMMENT)
+                output.fd.sync()
+            }
+            true
+        }.getOrDefault(false)
+        if (!written) return false
+        if (!metadata.renameTo(backup)) return false
+        if (!staging.renameTo(metadata)) {
+            if (!metadata.exists()) backup.renameTo(metadata)
+            return false
+        }
+        // Verify bytes and fields without consulting any untrusted claim.
+        val verified = runCatching {
+            val check = Properties().apply { metadata.inputStream().use { load(it) } }
+            check.getProperty(KEY_SHA256) == hash &&
+                check.getProperty(KEY_ORIGINAL_PATH) == sourcePath &&
+                check.getProperty(KEY_SIZE_BYTES)?.toLongOrNull() == size &&
+                sha256(payload) == hash
+        }.getOrDefault(false)
+        if (!verified) return false // Backup remains for explicit recovery.
+        if (!backup.delete()) return false
+        val recovered = readEntry(directory) != null
+        if (recovered) {
+            destructiveJournal.advance(operation, SafeOperationPhase.COMMITTED, "repaired=$entryId")
+        }
+        return recovered
+    }
+
+    /** Read-only: migration is never a side effect of opening the Trash UI. */
+    fun hasLegacyEntries(): Boolean =
+        legacyTrashDirectory?.listFiles()?.any {
+            it.isDirectory && !PathSafety.isSymlink(it) &&
+                ENTRY_ID_PATTERN.matches(it.name)
+        } == true
+
+    /** Must be called only after an explicit user import confirmation. */
     fun migrateLegacyTrashIfNeeded() {
+        if (!mutationPermission()) return
         val legacyRoot = legacyTrashDirectory ?: return
         if (!legacyRoot.isDirectory || !isPersistentTrashAvailable()) return
 
         for (legacyEntry in legacyRoot.listFiles().orEmpty()) {
-            if (!legacyEntry.isDirectory || !ENTRY_ID_PATTERN.matches(legacyEntry.name)) continue
+            if (!legacyEntry.isDirectory || PathSafety.isSymlink(legacyEntry) ||
+                !ENTRY_ID_PATTERN.matches(legacyEntry.name) ||
+                !hasOnlyKnownEntryFiles(legacyEntry)
+            ) continue
 
             val legacyMetadata = File(legacyEntry, METADATA_NAME)
             val legacyPayload = File(legacyEntry, PAYLOAD_NAME)
@@ -508,12 +813,41 @@ class SafeTrashManager private constructor(
                 continue
             }
 
+            val originalProperties = runCatching {
+                Properties().apply {
+                    legacyMetadata.inputStream().use { load(it) }
+                }
+            }.getOrNull() ?: continue
+            val actualHash = runCatching { sha256(legacyPayload) }.getOrNull() ?: continue
+            val claimedHash = originalProperties.getProperty(KEY_SHA256)
+            // Quarantine legacy metadata with an incorrect claimed digest.
+            if (claimedHash != null && claimedHash != actualHash) continue
+            if (originalProperties.getProperty(KEY_SIZE_BYTES)?.toLongOrNull() !=
+                legacyPayload.length()
+            ) continue
+
+            val migrationFingerprint = MessageDigest.getInstance("SHA-256")
+                .digest(listOf(legacyEntry.absolutePath, actualHash,
+                    legacyPayload.length().toString()).joinToString("|")
+                    .toByteArray(Charsets.UTF_8))
+                .joinToString("") { "%02x".format(it) }
+            var operation = destructiveJournal.begin(
+                "EXPLICIT_LEGACY_IMPORT", migrationFingerprint, legacyEntry.name,
+            ) ?: continue
+            operation = destructiveJournal.advance(operation, SafeOperationPhase.USER_APPROVED)
+                ?: continue
+            operation = destructiveJournal.advance(operation, SafeOperationPhase.MUTATING)
+                ?: continue
+
             val preferredTarget = File(trashDirectory, legacyEntry.name)
             if (
                 preferredTarget.exists() &&
                 isVerifiedMigrationCopy(legacyPayload, preferredTarget)
             ) {
-                legacyEntry.deleteRecursively()
+                if (removeKnownEntryFilesOnly(legacyEntry)) {
+                    destructiveJournal.advance(operation, SafeOperationPhase.COMMITTED,
+                        "existing=${preferredTarget.name}")
+                }
                 continue
             }
             // A collision may contain user data: never delete it.
@@ -528,21 +862,35 @@ class SafeTrashManager private constructor(
             val targetMetadata = File(target, METADATA_NAME)
             val targetPayload = File(target, PAYLOAD_NAME)
             val copied = runCatching {
-                copyAndSync(legacyMetadata, targetMetadata)
+                // Source legacy stays untouched until target publication passes.
+                // Write target metadata into a fresh sibling, then rename it:
+                // a torn file never becomes a valid visible entry.
                 copyAndSync(legacyPayload, targetPayload)
+                originalProperties.setProperty(KEY_SHA256, actualHash)
+                val staging = File(target, "$METADATA_NAME.new")
+                FileOutputStream(staging).use { output ->
+                    originalProperties.store(output, METADATA_COMMENT)
+                    output.fd.sync()
+                }
+                check(staging.renameTo(targetMetadata))
                 true
             }.getOrDefault(false)
 
             if (!copied || !isVerifiedMigrationCopy(legacyPayload, target)) {
-                target.deleteRecursively()
+                // Leave an incomplete new copy as an observable unknown entry,
+                // rather than recursively deleting any unexpected file.
+                // The verified legacy source remains untouched for a retry.
                 continue
             }
 
-            legacyEntry.deleteRecursively()
+            if (removeKnownEntryFilesOnly(legacyEntry)) {
+                destructiveJournal.advance(operation, SafeOperationPhase.COMMITTED,
+                    "migrated=${target.name}")
+            }
         }
 
         runCatching {
-            if (legacyRoot.listFiles().isNullOrEmpty()) legacyRoot.delete()
+            if (legacyRoot.listFiles()?.isEmpty() == true) legacyRoot.delete()
         }
     }
 
@@ -550,17 +898,58 @@ class SafeTrashManager private constructor(
         legacyPayload: File,
         target: File,
     ): Boolean {
-        if (!legacyPayload.isFile || PathSafety.isSymlink(legacyPayload)) return false
+        if (!legacyPayload.isFile || PathSafety.isSymlink(legacyPayload) ||
+            !hasOnlyKnownEntryFiles(legacyPayload.parentFile ?: return false) ||
+            !hasOnlyKnownEntryFiles(target)
+        ) return false
 
         val migratedEntry = readEntry(target) ?: return false
+        // Equal payload bytes do not prove that the migration belongs to the
+        // same original file. Never discard legacy metadata on a UUID collision
+        // whose destination path or other identity fields differ.
+        val legacyProperties = runCatching {
+            Properties().apply {
+                File(legacyPayload.parentFile, METADATA_NAME).inputStream().use { input -> load(input) }
+            }
+        }.getOrNull() ?: return false
+        if (legacyProperties.getProperty(KEY_ORIGINAL_PATH) != migratedEntry.originalPath ||
+            legacyProperties.getProperty(KEY_ORIGINAL_NAME) != migratedEntry.originalName ||
+            legacyProperties.getProperty(KEY_SIZE_BYTES)?.toLongOrNull() != migratedEntry.sizeBytes ||
+            legacyProperties.getProperty(KEY_LAST_MODIFIED)?.toLongOrNull() != migratedEntry.lastModified
+        ) return false
         val targetPayload = File(target, PAYLOAD_NAME)
         if (!targetPayload.isFile || PathSafety.isSymlink(targetPayload)) return false
         if (targetPayload.length() != legacyPayload.length()) return false
 
         val sourceHash = runCatching { sha256(legacyPayload) }.getOrNull() ?: return false
+        val legacyClaimedHash = legacyProperties.getProperty(KEY_SHA256)
+        if (legacyClaimedHash != null && legacyClaimedHash != sourceHash) return false
         val targetHash = runCatching { sha256(targetPayload) }.getOrNull() ?: return false
 
         return targetHash == sourceHash && targetHash == migratedEntry.sha256
+    }
+
+    /**
+     * Trash entries are defined by exactly two regular files. Unknown children
+     * could contain valuable user data and must never be removed by migration,
+     * restore cleanup or bulk purge. A failed listing is also a hard stop.
+     */
+    private fun hasOnlyKnownEntryFiles(directory: File): Boolean {
+        if (!directory.isDirectory || PathSafety.isSymlink(directory)) return false
+        val children = directory.listFiles() ?: return false
+        return children.size == 2 &&
+            children.map { it.name }.toSet() == setOf(PAYLOAD_NAME, METADATA_NAME) &&
+            children.all { it.isFile && !PathSafety.isSymlink(it) }
+    }
+
+    /** Delete only verified, explicitly named entry files; never recurse. */
+    private fun removeKnownEntryFilesOnly(directory: File): Boolean {
+        if (!hasOnlyKnownEntryFiles(directory) || !mutationPermission()) return false
+        val payload = File(directory, PAYLOAD_NAME)
+        val metadata = File(directory, METADATA_NAME)
+        if (!payload.delete()) return false
+        if (!metadata.delete()) return false
+        return directory.delete()
     }
 
     private fun copyAndSync(source: File, destination: File) {
@@ -597,26 +986,14 @@ class SafeTrashManager private constructor(
         val lastModified = properties.getProperty(KEY_LAST_MODIFIED)?.toLongOrNull()?.takeIf { it >= 0L }
             ?: return null
         val storedHash = properties.getProperty(KEY_SHA256)
-        val hash = when {
-            storedHash == null -> {
-                // Recovery 0.4 entries predate the stored digest. Establish and
-                // persist a one-time baseline from the app-private payload.
-                val migratedHash = runCatching { sha256(payload) }.getOrNull() ?: return null
-                val persisted = runCatching {
-                    properties.setProperty(KEY_SHA256, migratedHash)
-                    FileOutputStream(metadata).use { output ->
-                        properties.store(output, METADATA_COMMENT)
-                        output.fd.sync()
-                    }
-                    true
-                }.getOrDefault(false)
-                if (!persisted) return null
-                migratedHash
-            }
-            storedHash.length == 64 &&
-                storedHash.all { char -> char in '0'..'9' || char in 'a'..'f' } -> storedHash
-            else -> return null
-        }
+        // Inspection must never mutate metadata. Missing or invalid digests
+        // require an explicit recovery/migration step, not an implicit rewrite.
+        val hash = storedHash?.takeIf {
+            it.length == 64 && it.all { c -> c in '0'..'9' || c in 'a'..'f' }
+        } ?: return null
+        if (payload.length() != sizeBytes ||
+            runCatching { sha256(payload) }.getOrNull() != hash
+        ) return null
 
         return SafeTrashEntry(
             id = candidate.name,
@@ -662,10 +1039,12 @@ class SafeTrashManager private constructor(
             trashDirectory: File,
             restoreRoot: File = trashDirectory.parentFile ?: trashDirectory,
             legacyTrashDirectory: File? = null,
+            mutationPermission: () -> Boolean = { true },
         ): SafeTrashManager = SafeTrashManager(
             trashDirectory = trashDirectory,
             restoreRoot = restoreRoot,
             legacyTrashDirectory = legacyTrashDirectory,
+            mutationPermission = mutationPermission,
         )
     }
 }

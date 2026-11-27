@@ -11,8 +11,8 @@ android {
         applicationId = "com.riccardopinato.omnicleaner"
         minSdk = 24
         targetSdk = 36
-        versionCode = 14
-        versionName = "1.0.0-rc1"
+        versionCode = 15
+        versionName = "1.0.0-rc2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -142,6 +142,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.datastore:datastore-preferences:1.2.1")
+    implementation("androidx.work:work-runtime-ktx:2.12.0")
     implementation("androidx.documentfile:documentfile:1.1.0")
     implementation("androidx.exifinterface:exifinterface:1.4.2")
     implementation("com.android.billingclient:billing:9.1.0")

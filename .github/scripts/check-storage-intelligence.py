@@ -11,12 +11,17 @@ nav = (src / "ui/redesign/RedesignedOmniCleanerApp.kt").read_text(encoding="utf-
 clean = (src / "ui/redesign/CleanerScreens.kt").read_text(encoding="utf-8")
 flow = (root / ".maestro/storage-intelligence.yaml").read_text(encoding="utf-8")
 
-assert "StorageInventoryRepository.snapshot(root)" in screen
+# Accept the legacy indexed read or the explicit manual full refresh.
+# Instant Scan must never require a cold traversal merely to open the page.
+assert ("StorageInventoryRepository.snapshot(root)" in screen or
+        "StorageInventoryRepository.snapshot(root, forceRefresh = true)" in screen)
+assert "StorageInventoryRepository.reusableSnapshotOrNull(root)" in screen
+assert "bg_index_saved_summary" in screen
 assert "StorageIntelligenceAnalyzer().fromInventory(root, inventory)" in screen
 assert "SmartCategoryScanner().classify(" in model
 assert "StorageIntelligenceSection(" in clean
 assert "CleanerToolRoute.INTELLIGENCE" in nav
-assert 'omni_clean_tool_intelligence' in flow
+assert 'omni_bento_v2_intelligence' in flow
 assert 'omni_storage_intelligence_scan' in flow
 assert "extendedWaitUntil" in flow
 assert (root / "app/src/test/java/com/riccardopinato/omnicleaner/cleaner/StorageIntelligenceTest.kt").is_file()

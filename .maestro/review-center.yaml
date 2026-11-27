@@ -1,12 +1,15 @@
 appId: com.riccardopinato.omnicleaner.debug
 ---
-# Non-destructive cross-module review smoke.
+# Non-destructive, direct Home -> cross-module review -> gallery.
 - launchApp:
     clearState: false
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_review"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_clean"
-- tapOn:
-    id: "omni_clean_tool_review"
+    id: "omni_bento_v2_review"
 - assertVisible:
     id: "omni_review_center"
 - scrollUntilVisible:
@@ -17,3 +20,6 @@ appId: com.riccardopinato.omnicleaner.debug
 - tapOn:
     id: "omni_review_open_gallery"
 - assertVisible: "Full-screen review"
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"

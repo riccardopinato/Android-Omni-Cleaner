@@ -3,11 +3,16 @@ appId: com.riccardopinato.omnicleaner.debug
 # Read-only Gallery Pro verification, with no Trash action.
 - launchApp:
     clearState: false
+# Verify the actual label, not just the partially clipped tile bounds.
+# A tile's testTag can enter the accessibility tree while its content is
+# still offscreen; swiping the screen ensures the card is tappable.
+- scrollUntilVisible:
+    element:
+      text: "Gallery Pro"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_gallery"
-- assertVisible: "Gallery cleaner"
-- tapOn:
-    id: "omni_gallery_open_pro"
+    text: "Gallery Pro"
 - assertVisible: "Gallery Pro"
 - assertVisible: "Video analysis"
 - tapOn:

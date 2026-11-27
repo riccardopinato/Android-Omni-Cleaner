@@ -228,6 +228,7 @@ fun ProBatchReview(
                 ).distinct()
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.pro_confirm_body))
+                    Text(stringResource(R.string.cleanup_system_trash_expiry_notice))
                     Text(stringResource(R.string.audit_review_selected_count, reviewItems.size))
                     LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
                         items(reviewItems) { itemPath ->

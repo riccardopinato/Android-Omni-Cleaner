@@ -39,6 +39,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import com.riccardopinato.omnicleaner.ui.theme.OmniSecondaryButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import com.riccardopinato.omnicleaner.ui.theme.OmniTextButton as TextButton
@@ -60,6 +61,8 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -67,6 +70,8 @@ import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.BigFileSizeFilter
 import com.riccardopinato.omnicleaner.cleaner.DeepStorageAccessStatus
 import com.riccardopinato.omnicleaner.cleaner.FolderStatus
+import com.riccardopinato.omnicleaner.cleaner.BackgroundIndexScheduler
+import com.riccardopinato.omnicleaner.cleaner.BackgroundIndexStore
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.ThresholdUnit
 import com.riccardopinato.omnicleaner.exif.ExifCleanerSection
@@ -95,6 +100,7 @@ import com.riccardopinato.omnicleaner.ui.theme.OmniPurple
 import com.riccardopinato.omnicleaner.ui.theme.OmniRose
 import com.riccardopinato.omnicleaner.ui.theme.AppAppearance
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 private enum class OmniDestination(
     val labelRes: Int,
@@ -117,6 +123,7 @@ private enum class OmniDetailRoute(val parent: OmniDestination) {
     CLEAN_FILTERS(OmniDestination.CLEAN),
     CLEAN_TRASH(OmniDestination.CLEAN),
     CLEAN_ADVANCED(OmniDestination.CLEAN),
+    CLEAN_CATEGORIES(OmniDestination.CLEAN),
     GALLERY_REVIEW(OmniDestination.GALLERY),
     GALLERY_INSIGHTS(OmniDestination.GALLERY),
     PRIVACY_SINGLE(OmniDestination.PRIVACY),
@@ -134,6 +141,7 @@ private fun CleanerToolRoute.toDetailRoute(): OmniDetailRoute = when (this) {
     CleanerToolRoute.FILTERS -> OmniDetailRoute.CLEAN_FILTERS
     CleanerToolRoute.TRASH -> OmniDetailRoute.CLEAN_TRASH
     CleanerToolRoute.ADVANCED -> OmniDetailRoute.CLEAN_ADVANCED
+    CleanerToolRoute.CATEGORIES -> OmniDetailRoute.CLEAN_CATEGORIES
 }
 
 private fun OmniDetailRoute.toCleanerTool(): CleanerToolRoute = when (this) {
@@ -146,6 +154,7 @@ private fun OmniDetailRoute.toCleanerTool(): CleanerToolRoute = when (this) {
     OmniDetailRoute.CLEAN_FILTERS -> CleanerToolRoute.FILTERS
     OmniDetailRoute.CLEAN_TRASH -> CleanerToolRoute.TRASH
     OmniDetailRoute.CLEAN_ADVANCED -> CleanerToolRoute.ADVANCED
+    OmniDetailRoute.CLEAN_CATEGORIES -> CleanerToolRoute.CATEGORIES
     else -> error("Not a Clean tool route: $this")
 }
 
@@ -178,7 +187,12 @@ fun RedesignedOmniCleanerApp(
     val cleanSelectionState = remember { CleanupSelectionUiState() }
     val privacyWorkflow = remember { ExifWorkflowState() }
     val workflowScope = rememberCoroutineScope()
-    BackHandler(enabled = activeDetail != null) { detailName = null }
+    // All functional pages are direct children of the single Bento Home.
+    // Hardware Back must never strand the user on a former navigation hub.
+    BackHandler(enabled = destination != OmniDestination.HOME) {
+        detailName = null
+        destinationName = OmniDestination.HOME.name
+    }
     var showDeepAccessDisclosure by remember { mutableStateOf(false) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
 
@@ -226,40 +240,15 @@ fun RedesignedOmniCleanerApp(
         modifier = Modifier.semantics { testTagsAsResourceId = true },
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            if (activeDetail == null) {
-            NavigationBar(
-                containerColor = if (darkTheme) Color(0xFF111B38) else Color(0xFFF7FAFF),
-                tonalElevation = 0.dp,
-            ) {
-                OmniDestination.entries.forEach { item ->
-                    NavigationBarItem(
-                        modifier = Modifier.testTag("omni_nav_${item.name.lowercase(Locale.ROOT)}"),
-                        selected = destination == item,
-                        onClick = {
-                            detailName = null
-                            destinationName = item.name
-                        },
-                        icon = {
-                            OmniNavigationIcon(
-                                symbol = item.icon,
-                                animateOnEnter = destination == item,
-                                tint = if (destination == item) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                            )
-                        },
-                        label = { Text(stringResource(item.labelRes)) },
-                        colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = if (darkTheme) Color(0xFF4D278F) else Color(0xFFD4E4FF),
-                            selectedTextColor = if (darkTheme) Color.White else Color(0xFF174EE5),
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        ),
-                    )
-                }
-            }
-            } // No bottom navigation in dedicated functional screens.
+            // A single anchored banner, shared by Home and all dedicated pages.
+            // The ad view owns no layout space unless consent and the billing
+            // entitlement are resolved and the user is eligible for ads.
+            AdManager.Banner(
+                isPremium = entitlement.isPremium,
+                consentAllowsAds = consentState.canRequestAds,
+                entitlementResolved = entitlement.resolved,
+                modifier = Modifier.testTag("omni_admob_bottom_banner"),
+            )
         },
     ) { innerPadding ->
         Box(
@@ -269,10 +258,18 @@ fun RedesignedOmniCleanerApp(
         ) {
             // Brand waves belong to the rich Home dashboard; functional pages
             // use a quieter surface so sparse states remain intentional.
-            OmniPremiumWaveBackground(
-                dark = darkTheme,
-                showBottomWave = destination == OmniDestination.HOME && activeDetail == null,
-            )
+            if (destination == OmniDestination.HOME && activeDetail == null) {
+                Box(
+                    Modifier.fillMaxSize().background(
+                        if (darkTheme) OmniColorBentoV2Palette.legibleInk else OmniColorBentoV2Palette.cream,
+                    ),
+                )
+            } else {
+                OmniPremiumWaveBackground(
+                    dark = darkTheme,
+                    showBottomWave = false,
+                )
+            }
             OmniDestination.entries.forEach { item ->
                 val active = destination == item
                 // A short layer-only fade responds immediately to taps, avoiding
@@ -310,7 +307,10 @@ fun RedesignedOmniCleanerApp(
                         ),
                 ) {
                     if (active && activeDetail != null) {
-                        OmniDetailFrame(onBack = { detailName = null }) {
+                        OmniDetailFrame(onBack = {
+                            detailName = null
+                            destinationName = OmniDestination.HOME.name
+                        }) {
                             when (activeDetail) {
                                 OmniDetailRoute.CLEAN_OVERVIEW,
                                 OmniDetailRoute.CLEAN_INTELLIGENCE,
@@ -320,7 +320,8 @@ fun RedesignedOmniCleanerApp(
                                 OmniDetailRoute.CLEAN_FOLDERS,
                                 OmniDetailRoute.CLEAN_FILTERS,
                                 OmniDetailRoute.CLEAN_TRASH,
-                                OmniDetailRoute.CLEAN_ADVANCED -> androidx.compose.runtime.key(activeDetail) {
+                                OmniDetailRoute.CLEAN_ADVANCED,
+                                OmniDetailRoute.CLEAN_CATEGORIES -> androidx.compose.runtime.key(activeDetail) {
                                     CleanDetailScreen(
                                         tool = activeDetail.toCleanerTool(),
                                         state = state,
@@ -328,7 +329,10 @@ fun RedesignedOmniCleanerApp(
                                         modifier = Modifier.fillMaxSize(),
                                         selectionState = cleanSelectionState,
                                         onEnableDeepClean = { showDeepAccessDisclosure = true },
-                                        onOpenTool = { detailName = it.toDetailRoute().name },
+                                        onOpenTool = {
+                                controller.hydrateReadOnlyIndexPreview()
+                                detailName = it.toDetailRoute().name
+                            },
                                         galleryController = viewModel.galleryController,
                                         onOpenGalleryReview = {
                                             destinationName = OmniDestination.GALLERY.name
@@ -389,35 +393,74 @@ fun RedesignedOmniCleanerApp(
                                 }
                             }
                         }
-                    } else when (item) {
-                        OmniDestination.HOME -> OmniPremiumHome(
-                            dark = darkTheme,
-                            onOpenSettings = { showSettings = true },
+                    } else {
+                        val mainScreen: @Composable () -> Unit = {
+                            when (item) {
+                        OmniDestination.HOME -> OmniBentoV2Home(
                             state = state,
+                            galleryController = viewModel.galleryController,
                             premium = entitlement.isPremium,
+                            dark = darkTheme,
                             modifier = Modifier.fillMaxSize(),
+                            onOpenSettings = { showSettings = true },
                             onRefresh = controller::refreshAccessAndStorage,
                             onEnableDeepClean = { showDeepAccessDisclosure = true },
-                            onOpenClean = { destinationName = OmniDestination.CLEAN.name },
-                            onOpenGallery = { destinationName = OmniDestination.GALLERY.name },
-                            onOpenPrivacy = { destinationName = OmniDestination.PRIVACY.name },
-                            onOpenPro = { destinationName = OmniDestination.PRO.name },
-                            onAnalyzeStorage = {
-                                destinationName = OmniDestination.CLEAN.name
-                                detailName = OmniDetailRoute.CLEAN_OVERVIEW.name
-                                when {
-                                    state.hasBroadAccess -> controller.scanOverview()
-                                    state.storageCapability.canRequestDeepAccess ->
-                                        showDeepAccessDisclosure = true
+                            onScanTile = { id ->
+                                if (state.hasBroadAccess) {
+                                    com.riccardopinato.omnicleaner.ui.BentoScanRuntime.enqueue(context, id)
+                                } else if (state.storageCapability.canRequestDeepAccess) {
+                                    showDeepAccessDisclosure = true
                                 }
                             },
-                            onFindDuplicates = {
-                                destinationName = OmniDestination.CLEAN.name
-                                detailName = OmniDetailRoute.CLEAN_DUPLICATES.name
-                                when {
-                                    state.hasBroadAccess -> controller.scanDuplicates()
-                                    state.storageCapability.canRequestDeepAccess ->
-                                        showDeepAccessDisclosure = true
+                            onOpenTile = { id ->
+                                when (id) {
+                                    "settings" -> showSettings = true
+                                    "gallery" -> {
+                                        destinationName = OmniDestination.GALLERY.name
+                                        detailName = null
+                                    }
+                                    "galleryPro" -> {
+                                        destinationName = OmniDestination.GALLERY.name
+                                        detailName = OmniDetailRoute.GALLERY_INSIGHTS.name
+                                    }
+                                    "galleryReview" -> {
+                                        destinationName = OmniDestination.GALLERY.name
+                                        detailName = OmniDetailRoute.GALLERY_REVIEW.name
+                                    }
+                                    "privacy" -> {
+                                        destinationName = OmniDestination.PRIVACY.name
+                                        detailName = OmniDetailRoute.PRIVACY_SINGLE.name
+                                    }
+                                    "privacyQuick" -> {
+                                        destinationName = OmniDestination.PRIVACY.name
+                                        detailName = OmniDetailRoute.PRIVACY_SINGLE.name
+                                    }
+                                    "privacyBatch" -> {
+                                        destinationName = OmniDestination.PRIVACY.name
+                                        detailName = OmniDetailRoute.PRIVACY_BATCH.name
+                                    }
+                                    "pro" -> {
+                                        destinationName = OmniDestination.PRO.name
+                                        detailName = OmniDetailRoute.PRO_MANAGE.name
+                                    }
+                                    else -> {
+                                        controller.hydrateReadOnlyIndexPreview()
+                                        destinationName = OmniDestination.CLEAN.name
+                                        val route = when (id) {
+                                            "storage" -> OmniDetailRoute.CLEAN_OVERVIEW
+                                            "duplicates" -> OmniDetailRoute.CLEAN_DUPLICATES
+                                            "large" -> OmniDetailRoute.CLEAN_LARGE
+                                            "folders" -> OmniDetailRoute.CLEAN_FOLDERS
+                                            "review" -> OmniDetailRoute.CLEAN_REVIEW
+                                            "intelligence" -> OmniDetailRoute.CLEAN_INTELLIGENCE
+                                            "trash" -> OmniDetailRoute.CLEAN_TRASH
+                                            "filters" -> OmniDetailRoute.CLEAN_FILTERS
+                                            "advanced" -> OmniDetailRoute.CLEAN_ADVANCED
+                                            "categories" -> OmniDetailRoute.CLEAN_CATEGORIES
+                                            else -> OmniDetailRoute.CLEAN_OVERVIEW
+                                        }
+                                        detailName = route.name
+                                    }
                                 }
                             },
                         )
@@ -426,7 +469,10 @@ fun RedesignedOmniCleanerApp(
                             state = state,
                             controller = controller,
                             modifier = Modifier.fillMaxSize(),
-                            onOpenTool = { detailName = it.toDetailRoute().name },
+                            onOpenTool = {
+                                controller.hydrateReadOnlyIndexPreview()
+                                detailName = it.toDetailRoute().name
+                            },
                             onEnableDeepClean = { showDeepAccessDisclosure = true },
                         )
 
@@ -481,6 +527,16 @@ fun RedesignedOmniCleanerApp(
                                 ),
                                 showWelcome = !entitlement.isPremium,
                             )
+                            }
+                        }
+                        } // End mainScreen composable lambda; keep route selection outside it.
+                        if (item == OmniDestination.HOME) {
+                            mainScreen()
+                        } else {
+                            OmniDetailFrame(onBack = {
+                                detailName = null
+                                destinationName = OmniDestination.HOME.name
+                            }) { mainScreen() }
                         }
                     }
                 }
@@ -529,6 +585,37 @@ fun RedesignedOmniCleanerApp(
                     }
                 }
                 LanguageSelectorSection()
+                val backgroundStore = remember(context) { BackgroundIndexStore(context.applicationContext) }
+                var automaticIndex by remember(showSettings) {
+                    mutableStateOf(backgroundStore.isEnabled())
+                }
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.bg_index_auto_title), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.bg_index_auto_detail), style = MaterialTheme.typography.bodySmall)
+                    }
+                    Switch(
+                        checked = automaticIndex,
+                        onCheckedChange = { enabled ->
+                            automaticIndex = enabled
+                            backgroundStore.setEnabled(enabled)
+                            workflowScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                BackgroundIndexScheduler.sync(context)
+                                if (enabled) BackgroundIndexScheduler.onAppOpened(context)
+                            }
+                        },
+                        modifier = Modifier.testTag("omni_background_index_toggle"),
+                    )
+                }
+                val lastIndex by remember(backgroundStore) { backgroundStore.observe() }.collectAsState(initial = backgroundStore.read())
+                Text(
+                    if (lastIndex.completedAtMillis > 0L) stringResource(R.string.bg_index_saved_summary, lastIndex.fileCount)
+                    else stringResource(R.string.bg_index_never),
+                    style = MaterialTheme.typography.bodySmall,
+                )
                 if (consentState.privacyOptionsRequired && activity != null) {
                     OutlinedButton(
                         onClick = { monetizationRuntime.consent.showPrivacyOptions(activity) },
@@ -600,7 +687,8 @@ private fun OmniDetailFrame(
     Column(modifier = Modifier.fillMaxSize()) {
         Button(
             onClick = onBack,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                .testTag("omni_home_back"),
         ) {
             Text("‹  " + stringResource(R.string.nav_back))
         }

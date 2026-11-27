@@ -58,6 +58,7 @@ data class PhysicalPerformanceBenchmarkResult(
     val thermalEnd: Int?,
     val observedHeapMaxBytes: Long,
     val emulatorSignalsDetected: Boolean,
+    val coldIndexDiagnostics: IndexReconcileDiagnostics? = null,
 ) {
     val warmSpeedup: Double?
         get() = if (warmScanMillis > 0L && coldScanMillis > 0L) {
@@ -76,6 +77,21 @@ data class PhysicalPerformanceBenchmarkResult(
         appendLine("files_total=$filesTotal")
         appendLine("cold_scan_ms=$coldScanMillis")
         appendLine("cold_scanner_only_ms=$coldScannerMillis")
+        // Additive OMNI_PERF_V1 keys: legacy consumers keep parsing old reports.
+        val index = coldIndexDiagnostics
+        appendLine("cold_index_reconcile_ms=${index?.totalMillis ?: "n/a"}")
+        appendLine("cold_index_file_rows_ms=${index?.fileRowsMillis ?: "n/a"}")
+        appendLine("cold_index_directory_rows_ms=${index?.directoryRowsMillis ?: "n/a"}")
+        appendLine("cold_index_finalize_ms=${index?.finalizationMillis ?: "n/a"}")
+        appendLine("cold_index_commit_ms=${index?.commitMillis ?: "n/a"}")
+        appendLine("cold_index_rows_reused=${index?.filesReused ?: "n/a"}")
+        appendLine("cold_index_rows_replaced=${index?.filesReplaced ?: "n/a"}")
+        appendLine("cold_index_directories_written=${index?.directoriesWritten ?: "n/a"}")
+        // Diagnostic residual contains lock/scheduling/validation/setup/rounding,
+        // NOT necessarily just SQL. Never claim unmeasured time is all SQLite.
+        appendLine("cold_other_ms=${index?.let {
+            (coldScanMillis - coldScannerMillis - it.totalMillis).coerceAtLeast(0L)
+        } ?: "n/a"}")
         appendLine("warm_scan_ms=$warmScanMillis")
         appendLine("warm_persistent_hit=$warmPersistentHit")
         appendLine("warm_files_total=$warmFilesTotal")
@@ -131,12 +147,14 @@ class PhysicalPerformanceBenchmark(
         val thermalStart = thermalStatus()
 
         onPhase?.invoke("cold_inventory")
+        var coldIndexDiagnostics: IndexReconcileDiagnostics? = null
         val coldStarted = SystemClock.elapsedRealtimeNanos()
         val cold = StorageInventoryRepository.snapshot(
             root = root,
             forceRefresh = true,
             onProgress = { checked, _ -> onProgress?.invoke(checked) },
             onStage = { stage -> onPhase?.invoke("cold_$stage") },
+            onIndexReconcile = { coldIndexDiagnostics = it },
         )
         val coldMillis = elapsedMillisSince(coldStarted)
         observedHeapMax = max(observedHeapMax, usedHeap(runtime))
@@ -263,6 +281,7 @@ class PhysicalPerformanceBenchmark(
             thermalEnd = thermalEnd,
             observedHeapMaxBytes = observedHeapMax,
             emulatorSignalsDetected = emulatorSignalsDetected(),
+            coldIndexDiagnostics = coldIndexDiagnostics,
         )
     }
 

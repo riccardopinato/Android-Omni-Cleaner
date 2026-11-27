@@ -3,12 +3,13 @@ appId: com.riccardopinato.omnicleaner.debug
 # Synthetic emulator-only read-only scan. No Android Trash approval or deletes.
 - launchApp:
     clearState: false
-- assertVisible: "Smart cleaning"
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_intelligence"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_clean"
-- assertVisible: "Deep Cleaning"
-- tapOn:
-    id: "omni_clean_tool_intelligence"
+    id: "omni_bento_v2_intelligence"
 - assertVisible: "Storage Intelligence"
 - tapOn:
     id: "omni_storage_intelligence_scan"
@@ -32,4 +33,7 @@ appId: com.riccardopinato.omnicleaner.debug
 - tapOn:
     id: "omni_storage_open_categories"
 - assertVisible:
-    id: "omni_clean_detail_advanced"
+    id: "omni_clean_detail_categories"
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"

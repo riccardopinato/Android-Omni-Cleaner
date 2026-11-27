@@ -8,6 +8,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.coroutineContext
 
 data class StorageInventorySnapshot(
@@ -31,16 +32,22 @@ object StorageInventoryRepository {
     const val PERSISTENT_REUSE_TTL_MS: Long = 6L * 60L * 60L * 1000L
 
     private val mutex = Mutex()
+    private val invalidationGuard = Any()
+    private val activeUserScans = AtomicInteger(0)
     private val scanner = FileInventoryScanner()
 
     @Volatile
     private var persistentIndex: PersistentStorageIndex? = null
+
+    @Volatile
+    private var backgroundIndexStore: BackgroundIndexStore? = null
 
     fun initialize(context: Context) {
         if (persistentIndex != null) return
         synchronized(this) {
             if (persistentIndex == null) {
                 persistentIndex = PersistentStorageIndex(context.applicationContext)
+                backgroundIndexStore = BackgroundIndexStore(context.applicationContext)
             }
         }
     }
@@ -55,9 +62,12 @@ object StorageInventoryRepository {
         forceRefresh: Boolean = false,
         onProgress: ((checked: Int, currentPath: String) -> Unit)? = null,
         onStage: ((String) -> Unit)? = null,
+        onIndexReconcile: ((IndexReconcileDiagnostics) -> Unit)? = null,
         nowMillis: () -> Long = System::currentTimeMillis,
+        backgroundRequest: Boolean = false,
     ): StorageInventorySnapshot {
         val operationContext = coroutineContext
+        if (backgroundRequest && hasActiveUserScan()) throw BackgroundIndexYieldException()
         val rootPath = canonical(root)
         val now = nowMillis()
         cached?.takeIf { current ->
@@ -113,7 +123,11 @@ object StorageInventoryRepository {
 
             onStage?.invoke("filesystem_scan")
             val started = nowMillis()
-            val inventory = scanner.collect(root, onProgress)
+            val inventory = scanner.collect(root) { checked, path ->
+                if (backgroundRequest && hasActiveUserScan()) throw BackgroundIndexYieldException()
+                onProgress?.invoke(checked, path)
+            }
+            if (backgroundRequest && hasActiveUserScan()) throw BackgroundIndexYieldException()
             val finished = nowMillis()
             val snapshot = StorageInventorySnapshot(
                 rootPath = rootPath,
@@ -133,21 +147,108 @@ object StorageInventoryRepository {
                             root = root,
                             inventory = inventory,
                             completedAtMillis = finished,
-                            cancellationCheck = { operationContext.ensureActive() },
+                            cancellationCheck = {
+                                operationContext.ensureActive()
+                                if (backgroundRequest && hasActiveUserScan()) {
+                                    throw BackgroundIndexYieldException()
+                                }
+                            },
+                            onMetrics = onIndexReconcile,
                         )
                     }
                 }
-                cached = snapshot
+                synchronized(invalidationGuard) {
+                    if (isInventoryGenerationCurrent(scanGeneration, invalidationGeneration.get())) {
+                        cached = snapshot
+                    } else {
+                        // An app cleanup raced the transaction; keep the old
+                        // persistent generation non-reusable.
+                        index?.markStale()
+                        backgroundIndexStore?.markDirty()
+                    }
+                }
             }
 
             snapshot
         }
     }
 
+    internal fun beginUserScan() {
+        activeUserScans.incrementAndGet()
+    }
+
+    internal fun endUserScan() {
+        activeUserScans.decrementAndGet()
+    }
+
+    internal fun hasActiveUserScan(): Boolean = activeUserScans.get() > 0
+
+    internal fun isInventoryBusy(): Boolean = mutex.isLocked
+
+    internal fun currentInvalidationGeneration(): Long = invalidationGeneration.get()
+
+    /** All writers of a completed summary synchronize with invalidation. */
+    internal fun publishCompletedIndexIfCurrent(
+        root: File,
+        inventory: FileInventory,
+        expectedGeneration: Long,
+        media: MediaRevisionToken?,
+        requireBackgroundEnabled: Boolean = false,
+    ): Boolean = synchronized(invalidationGuard) {
+        val store = backgroundIndexStore ?: return@synchronized false
+        if (expectedGeneration != invalidationGeneration.get() ||
+            (requireBackgroundEnabled && !store.isEnabled())
+        ) {
+            store.markDirty()
+            return@synchronized false
+        }
+        store.recordComplete(root, inventory, System.currentTimeMillis(), media)
+        true
+    }
+
+    /** Read existing RAM/SQLite data, but never start a filesystem scan on cache miss. */
+    suspend fun reusableSnapshotOrNull(root: File): StorageInventorySnapshot? {
+        val operationContext = coroutineContext
+        val rootPath = canonical(root)
+        val now = System.currentTimeMillis()
+        return mutex.withLock {
+            cached?.takeIf { it.rootPath == rootPath && now >= it.createdAtMillis &&
+                now - it.createdAtMillis <= CACHE_TTL_MS
+            }?.let { return@withLock it.copy(cacheHit = true) }
+            val generation = invalidationGeneration.get()
+            val index = persistentIndex ?: return@withLock null
+            val persisted = withContext(Dispatchers.IO) {
+                index.loadReusableSnapshot(root, now, PERSISTENT_REUSE_TTL_MS) {
+                    operationContext.ensureActive()
+                }
+            } ?: return@withLock null
+            synchronized(invalidationGuard) {
+                if (generation != invalidationGeneration.get() ||
+                    backgroundIndexStore?.read()?.dirty == true
+                ) {
+                    null
+                } else {
+                    StorageInventorySnapshot(
+                        rootPath = rootPath,
+                        inventory = persisted.inventory,
+                        createdAtMillis = now,
+                        scanElapsedMillis = 0L,
+                        cacheHit = true,
+                        persistentHit = true,
+                        indexAgeMillis = (now - persisted.createdAtMillis).coerceAtLeast(0L),
+                    ).also { cached = it }
+                }
+            }
+        }
+    }
+
     fun invalidate() {
-        invalidationGeneration.incrementAndGet()
-        cached = null
-        persistentIndex?.markStale()
+        synchronized(invalidationGuard) {
+            invalidationGeneration.incrementAndGet()
+            cached = null
+            persistentIndex?.markStale()
+            backgroundIndexStore?.markDirty()
+        }
     }
 
     internal fun dropMemoryCacheForBenchmark() {
@@ -161,6 +262,9 @@ object StorageInventoryRepository {
     private fun canonical(file: File): String =
         runCatching { file.canonicalPath }.getOrElse { file.absolutePath }
 }
+
+/** Background reconciliation must yield to a user-initiated analysis. */
+internal class BackgroundIndexYieldException : RuntimeException()
 
 internal fun isInventoryGenerationCurrent(
     scanGeneration: Long,
