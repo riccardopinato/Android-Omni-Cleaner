@@ -192,6 +192,8 @@
     <string name="maintenance_confirm_cache_title">Confirmar limpieza de caché</string>
     <string name="maintenance_confirm_cache_body">Solo las miniaturas seleccionadas con tamaño, fecha y SHA-256 idénticos se mueven a la Papelera segura recuperable. Sin eliminación permanente ni espacio liberado.</string>
 
+    <string name="safe_trash_repair_legacy_metadata">Reparar metadatos de la Papelera antigua</string>
+    <string name="safe_trash_repair_legacy_metadata_body">Revisa y repara %1$d entradas antiguas sin suma de verificación. Solo se reparan las entradas verificadas; nunca se reemplazan hashes erróneos.</string>
     <string name="safe_trash_import_legacy">Importar Papelera antigua</string>
     <string name="safe_trash_import_legacy_body">Esta importación opcional copia y verifica las entradas antiguas antes de retirar sus originales. Las entradas dañadas o incompletas permanecen intactas. Nunca se importa automáticamente.</string>
     <string name="cleanup_system_trash_expiry_notice">Android puede borrar automáticamente archivos de su Papelera multimedia tras el plazo del sistema (a menudo unos 30 días). No es una copia de seguridad permanente.</string>
