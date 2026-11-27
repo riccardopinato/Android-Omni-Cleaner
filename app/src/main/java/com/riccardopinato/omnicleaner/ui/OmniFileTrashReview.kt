@@ -77,6 +77,7 @@ internal fun OmniFileTrashReview(
                     val verified = MediaStoreHelper.verifyTrashedUris(
                         context.contentResolver, prepared.mediaUris,
                     )
+                    engine.recordMediaTrashOutcome(prepared, verified)
                     val result = engine.movePreparedSnapshotsToSafeTrash(prepared.safeTrashCandidates)
                     message = String.format(
                         resourceLocale, verifiedTemplate,
@@ -89,7 +90,9 @@ internal fun OmniFileTrashReview(
                         CleanupEventBus.publishCompleted()
                     }
                     // Do not discard the user's outstanding selection after partial confirmation.
-                    if (verified.unverifiedUris.isEmpty()) onFinished()
+                    if (verified.unverifiedUris.isEmpty() && result.rejected == 0 &&
+                        prepared.blockedFiles.isEmpty() && prepared.staleFiles.isEmpty()
+                    ) onFinished()
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (_: Exception) {
@@ -99,6 +102,9 @@ internal fun OmniFileTrashReview(
                 }
             }
         } else {
+            if (prepared != null) {
+                scope.launch { engine.recordMediaTrashOutcome(prepared, null) }
+            }
             message = cancelled
             running = false
         }
