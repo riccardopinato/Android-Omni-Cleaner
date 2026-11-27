@@ -13,6 +13,7 @@ import com.riccardopinato.omnicleaner.gallery.GalleryMediaFilter
 import com.riccardopinato.omnicleaner.gallery.GalleryMediaItem
 import com.riccardopinato.omnicleaner.gallery.GallerySortOrder
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -21,6 +22,12 @@ import java.util.Locale
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
+data class MediaTrashVerification(
+    val confirmedUris: Set<Uri>,
+    val unverifiedUris: Set<Uri>,
+)
+
+/** All return paths fail closed: null/inaccessible never means trashed. */
 object MediaStoreHelper {
     private val imageExtensions = setOf(
         "jpg", "jpeg", "png", "webp", "gif", "heic", "heif", "bmp", "svg",
@@ -297,6 +304,59 @@ object MediaStoreHelper {
             }
         }.getOrNull()
     }
+
+    /**
+     * Verifies Android Trash after the OS consent callback. Provider rows that
+     * cannot be queried are NOT counted as successful. The caller must retain
+     * all unknown/false rows in its user's pending selection.
+     */
+    suspend fun verifyTrashedUris(
+        resolver: ContentResolver,
+        requested: List<Uri>,
+    ): MediaTrashVerification = withContext(Dispatchers.IO) {
+        val unique = requested.toSet()
+        val confirmed = linkedSetOf<Uri>()
+        repeat(3) { attempt ->
+            for (uri in unique) {
+                if (uri !in confirmed && verifiedTrashState(resolver, uri) == true) {
+                    confirmed += uri
+                }
+            }
+            if (confirmed.size < unique.size && attempt < 2) delay(180L)
+        }
+        MediaTrashVerification(confirmed, unique - confirmed)
+    }
+
+    /** Recheck URI identity immediately before showing Android's Trash prompt. */
+    fun isCurrentMediaMatch(
+        resolver: ContentResolver,
+        uri: Uri,
+        expectedSize: Long,
+        expectedName: String,
+    ): Boolean = runCatching {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || expectedSize < 0L) {
+            false
+        } else {
+            val queryArgs = Bundle().apply {
+                putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_INCLUDE)
+            }
+            resolver.query(
+                uri,
+                arrayOf(
+                    MediaStore.MediaColumns.SIZE,
+                    MediaStore.MediaColumns.DISPLAY_NAME,
+                    MediaStore.MediaColumns.IS_TRASHED,
+                ),
+                queryArgs,
+                null,
+            )?.use { cursor ->
+                cursor.moveToFirst() &&
+                    cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)) == expectedSize &&
+                    cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)) == expectedName &&
+                    cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.IS_TRASHED)) == 0
+            } == true
+        }
+    }.getOrDefault(false)
 
     fun trashMediaFiles(
         resolver: ContentResolver,
