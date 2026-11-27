@@ -52,7 +52,7 @@ class SafeTrashStorageInstrumentedTest {
             }
 
             assertNotNull(manager.moveToTrash(file))
-            val result = manager.purgeEntry(manager.listEntries().single().id)
+            val result = manager.purgeApproved(manager.listEntries().single())
             assertEquals(SafeTrashPurgeStatus.DELETED, result.status)
             assertEquals(50L * 1024L * 1024L, result.reclaimedBytes)
             assertFalse(file.exists())
