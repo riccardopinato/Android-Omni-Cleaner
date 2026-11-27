@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,6 +70,7 @@ internal fun StorageIntelligenceSection(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val backgroundStore = remember(context) { BackgroundIndexStore(context.applicationContext) }
+    val savedIndex by remember(backgroundStore) { backgroundStore.observe() }.collectAsState(initial = backgroundStore.read())
     var loading by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     var report by remember { mutableStateOf<StorageIntelligenceReport?>(null) }
@@ -83,8 +85,8 @@ internal fun StorageIntelligenceSection(
 
     // Hydrate only an unchanged SQLite snapshot; never trigger a cold scan here.
     // If metadata cannot be reused, the saved summary stays visibly historical.
-    LaunchedEffect(context) {
-        if (backgroundStore.read().completedAtMillis > 0L) {
+    LaunchedEffect(context, savedIndex.completedAtMillis) {
+        if (savedIndex.completedAtMillis > 0L && !loading) {
             val root = StorageAccess.primaryRoot()
             val existing = StorageInventoryRepository.reusableSnapshotOrNull(root)
             if (existing != null) {
@@ -119,10 +121,9 @@ internal fun StorageIntelligenceSection(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        val saved = backgroundStore.read()
-        if (report == null && saved.completedAtMillis > 0L) {
+        if (report == null && savedIndex.completedAtMillis > 0L) {
             Text(
-                stringResource(R.string.bg_index_saved_summary, saved.fileCount),
+                stringResource(R.string.bg_index_saved_summary, savedIndex.fileCount),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.testTag("omni_index_cached_summary"),
             )

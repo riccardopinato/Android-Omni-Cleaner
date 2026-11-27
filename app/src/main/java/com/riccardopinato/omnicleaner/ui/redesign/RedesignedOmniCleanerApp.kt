@@ -603,7 +603,7 @@ fun RedesignedOmniCleanerApp(
                         modifier = Modifier.testTag("omni_background_index_toggle"),
                     )
                 }
-                val lastIndex = backgroundStore.read()
+                val lastIndex by remember(backgroundStore) { backgroundStore.observe() }.collectAsState(initial = backgroundStore.read())
                 Text(
                     if (lastIndex.completedAtMillis > 0L) stringResource(R.string.bg_index_saved_summary, lastIndex.fileCount)
                     else stringResource(R.string.bg_index_never),

@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -89,7 +90,8 @@ internal fun OmniBentoV2Home(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val savedIndex = remember(context) { BackgroundIndexStore(context.applicationContext).read() }
+    val indexStore = remember(context) { BackgroundIndexStore(context.applicationContext) }
+    val savedIndex by remember(indexStore) { indexStore.observe() }.collectAsState(initial = indexStore.read())
     val colors = OmniColorBento
     val palette = OmniColorBentoV2Palette
     val preferences = remember(context) { BentoV2Preferences(context) }
