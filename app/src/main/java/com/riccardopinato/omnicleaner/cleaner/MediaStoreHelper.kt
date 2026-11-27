@@ -29,6 +29,17 @@ data class MediaTrashVerification(
 
 /** All return paths fail closed: null/inaccessible never means trashed. */
 object MediaStoreHelper {
+    /**
+     * Provider generations are meaningful only within one MediaStore version
+     * and one mounted volume. Null/unmounted version blocks destructive review.
+     */
+    fun mountedVolumeVersion(context: Context, volumeName: String?): String? =
+        runCatching {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || volumeName.isNullOrBlank() ||
+                volumeName !in MediaStore.getExternalVolumeNames(context)
+            ) null else MediaStore.getVersion(context, volumeName)
+        }.getOrNull()?.takeIf { it.isNotBlank() }
+
     private val imageExtensions = setOf(
         "jpg", "jpeg", "png", "webp", "gif", "heic", "heif", "bmp", "svg",
     )
@@ -90,6 +101,9 @@ object MediaStoreHelper {
             add(MediaStore.MediaColumns._ID)
             add(MediaStore.MediaColumns.DISPLAY_NAME)
             add(MediaStore.MediaColumns.SIZE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                add(MediaStore.MediaColumns.VOLUME_NAME)
+            }
             add(MediaStore.Images.ImageColumns.DATE_TAKEN)
             add(MediaStore.MediaColumns.DATE_MODIFIED)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -171,6 +185,10 @@ object MediaStoreHelper {
             val idIndex = it.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
             val nameIndex = it.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
             val sizeIndex = it.getColumnIndex(MediaStore.MediaColumns.SIZE)
+            val volumeIndex = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                it.getColumnIndex(MediaStore.MediaColumns.VOLUME_NAME)
+            } else -1
+            val volumeVersions = hashMapOf<String, String?>()
             val takenIndex = it.getColumnIndex(MediaStore.Images.ImageColumns.DATE_TAKEN)
             val modifiedIndex = it.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED)
             val generationIndex = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -217,6 +235,11 @@ object MediaStoreHelper {
                     .orEmpty()
                     .ifBlank { if (isVideo) "video/mp4" else "image/jpeg" }
                 val album = albumIndex.takeIf { index -> index >= 0 }?.let(it::getString)
+                val volume = volumeIndex.takeIf { index -> index >= 0 }
+                    ?.let(it::getString)
+                val version = volume?.let { name ->
+                    volumeVersions.getOrPut(name) { mountedVolumeVersion(context, name) }
+                }
                 val duration = if (isVideo && durationIndex >= 0) it.getLong(durationIndex) else 0L
                 val width = widthIndex.takeIf { index -> index >= 0 }?.let(it::getInt) ?: 0
                 val height = heightIndex.takeIf { index -> index >= 0 }?.let(it::getInt) ?: 0
@@ -250,6 +273,8 @@ object MediaStoreHelper {
                         ?.let(it::getLong) ?: 0L,
                     generationModified = generationIndex.takeIf { index -> index >= 0 }
                         ?.let(it::getLong) ?: 0L,
+                    volumeName = volume,
+                    mediaStoreVersion = version,
                 )
             }
             return result
