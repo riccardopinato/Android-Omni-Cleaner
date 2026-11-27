@@ -632,4 +632,13 @@
     <string name="bg_index_never">No completed background scan yet.</string>
     <string name="gallery_error_trash_unverified">Android confirmed the request, but %1$d selected media items could not be verified in Trash. They remain in your review queue.</string>
     <string name="bg_index_historical_preview">Previously indexed results · verify current files before cleaning</string>
+    <string name="bg_scan_channel">Storage analysis</string>
+    <string name="bg_scan_preparing">Preparing analysis</string>
+    <string name="bg_scan_notification_title">Omni Cleaner · %1$s</string>
+    <string name="bg_scan_notification_files">%1$d files checked · %2$d waiting</string>
+    <string name="bg_scan_notification_active">Analysis running · %1$d waiting</string>
+    <string name="bg_scan_permission_missing">Storage permission is required for this analysis.</string>
+    <string name="bg_scan_start_blocked">Android blocked the background scan. Try again with the app open.</string>
+    <string name="bg_scan_failed">Analysis %1$s did not finish.</string>
+    <string name="bg_scan_timeout">Android paused scans due to an execution limit.</string>
 </resources>

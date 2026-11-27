@@ -632,4 +632,13 @@
     <string name="bg_index_never">Nessuna analisi in background completata.</string>
     <string name="gallery_error_trash_unverified">Android ha confermato la richiesta, ma non è stato possibile verificare %1$d elementi nel Cestino. Restano nella lista di revisione.</string>
     <string name="bg_index_historical_preview">Risultati dell\'ultima analisi · verifica i file attuali prima di pulire</string>
+    <string name="bg_scan_channel">Analisi memoria</string>
+    <string name="bg_scan_preparing">Preparazione analisi</string>
+    <string name="bg_scan_notification_title">Omni Cleaner · %1$s</string>
+    <string name="bg_scan_notification_files">%1$d file esaminati · %2$d in attesa</string>
+    <string name="bg_scan_notification_active">Analisi attiva · %1$d in attesa</string>
+    <string name="bg_scan_permission_missing">Per questa analisi serve l\'accesso ai file del dispositivo.</string>
+    <string name="bg_scan_start_blocked">Android ha impedito l\'avvio dell\'analisi in background. Riprova con l\'app aperta.</string>
+    <string name="bg_scan_failed">Analisi %1$s non completata.</string>
+    <string name="bg_scan_timeout">Analisi sospese per un limite di esecuzione di Android.</string>
 </resources>

@@ -629,4 +629,13 @@
     <string name="bg_index_never">Ainda não há análises em segundo plano concluídas.</string>
     <string name="gallery_error_trash_unverified">O Android confirmou o pedido, mas não foi possível verificar %1$d ficheiros no Lixo. Permanecem na lista de revisão.</string>
     <string name="bg_index_historical_preview">Resultados da análise anterior · verifique os ficheiros atuais antes da limpeza</string>
+    <string name="bg_scan_channel">Análise de armazenamento</string>
+    <string name="bg_scan_preparing">A preparar análise</string>
+    <string name="bg_scan_notification_title">Omni Cleaner · %1$s</string>
+    <string name="bg_scan_notification_files">%1$d ficheiros analisados · %2$d em espera</string>
+    <string name="bg_scan_notification_active">Análise ativa · %1$d em espera</string>
+    <string name="bg_scan_permission_missing">Esta análise requer acesso aos ficheiros do dispositivo.</string>
+    <string name="bg_scan_start_blocked">O Android bloqueou a análise em segundo plano. Tente novamente com a app aberta.</string>
+    <string name="bg_scan_failed">Análise %1$s não concluída.</string>
+    <string name="bg_scan_timeout">O Android suspendeu as análises devido a um limite de execução.</string>
 </resources>

@@ -16,6 +16,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import com.riccardopinato.omnicleaner.MainActivity
+import com.riccardopinato.omnicleaner.R
+import com.riccardopinato.omnicleaner.localization.AppLanguage
 import com.riccardopinato.omnicleaner.cleaner.StorageInventoryRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -88,7 +90,7 @@ internal object BentoScanRuntime {
         val controller = controller(context)
         controller.refreshAccessAndStorage()
         if (!controller.state.hasBroadAccess) {
-            lastFailure = "Per questa analisi serve l'accesso ai file del dispositivo."
+            lastFailure = AppLanguage.wrap(context).getString(R.string.bg_scan_permission_missing)
             return false
         }
         if (id != activeId && id !in pending) {
@@ -101,7 +103,7 @@ internal object BentoScanRuntime {
                 if (Build.VERSION.SDK_INT >= 26) context.applicationContext.startForegroundService(intent)
                 else context.applicationContext.startService(intent)
             } catch (_: RuntimeException) {
-                lastFailure = "Android ha impedito l'avvio dell'analisi in background. Riprova con l'app aperta."
+                lastFailure = AppLanguage.wrap(context).getString(R.string.bg_scan_start_blocked)
                 return false
             }
         }
@@ -166,7 +168,7 @@ internal object BentoScanRuntime {
                 if (scanner.state.error == null && isComplete(id, scanner.state)) {
                     completedAt = completedAt + (id to System.currentTimeMillis())
                 } else {
-                    lastFailure = "Analisi ${id}: non completata."
+                    lastFailure = AppLanguage.wrap(service).getString(R.string.bg_scan_failed, service.localizedScanName(id))
                 }
                 activeId = null
                 persist(service)
@@ -179,7 +181,7 @@ internal object BentoScanRuntime {
         engine?.cancelScan()
         if (activeId != null) pending = listOfNotNull(activeId) + pending.filterNot { it == activeId }
         activeId = null
-        lastFailure = "Analisi sospese per un limite di esecuzione di Android."
+        lastFailure = AppLanguage.wrap(service).getString(R.string.bg_scan_timeout)
         persist(service)
         service.stopSelf()
     }
@@ -199,7 +201,7 @@ internal class BentoScanService : Service() {
         if (Build.VERSION.SDK_INT >= 26) {
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(
-                NotificationChannel(channel, "Analisi Omni Cleaner", NotificationManager.IMPORTANCE_LOW),
+                NotificationChannel(channel, localizedText(R.string.bg_scan_channel), NotificationManager.IMPORTANCE_LOW),
             )
         }
     }
@@ -209,7 +211,7 @@ internal class BentoScanService : Service() {
             BentoScanRuntime.cancel(this)
             return START_NOT_STICKY
         }
-        val notice = makeNotification("Preparazione analisi", 0, 0)
+        val notice = makeNotification(localizedText(R.string.bg_scan_preparing), 0, 0)
         if (Build.VERSION.SDK_INT >= 29) {
             startForeground(notificationId, notice, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         } else {
@@ -223,16 +225,21 @@ internal class BentoScanService : Service() {
         val now = SystemClock.elapsedRealtime()
         if (now - lastNoticeAt < 900L) return
         lastNoticeAt = now
-        val label = when (id) {
-            "storage" -> "Memoria"
-            "duplicates" -> "Duplicati"
-            "large" -> "File grandi"
-            "folders" -> "Cartelle"
-            else -> "Archiviazione"
-        }
+        val label = localizedScanName(id)
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(notificationId, makeNotification(label, queued, files))
     }
+
+    fun localizedScanName(id: String): String = localizedText(when (id) {
+        "storage" -> R.string.module_storage_overview
+        "duplicates" -> R.string.module_duplicates
+        "large" -> R.string.module_large_files
+        "folders" -> R.string.module_folders
+        else -> R.string.nav_clean
+    })
+
+    private fun localizedText(resource: Int, vararg args: Any): String =
+        AppLanguage.wrap(this).getString(resource, *args)
 
     private fun makeNotification(name: String, queued: Int, files: Int): Notification {
         val pendingActivity = PendingIntent.getActivity(
@@ -248,16 +255,16 @@ internal class BentoScanService : Service() {
             else Notification.Builder(this)
         return builder
             .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle("Omni Cleaner · $name")
+            .setContentTitle(localizedText(R.string.bg_scan_notification_title, name))
             .setContentText(
-                if (files > 0) "$files file esaminati · $queued in attesa"
-                else "Analisi attiva · $queued in attesa",
+                if (files > 0) localizedText(R.string.bg_scan_notification_files, files, queued)
+                else localizedText(R.string.bg_scan_notification_active, queued),
             )
             .setContentIntent(pendingActivity)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setProgress(0, 0, true)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Annulla", cancelPending)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, localizedText(R.string.cancel), cancelPending)
             .build()
     }
 

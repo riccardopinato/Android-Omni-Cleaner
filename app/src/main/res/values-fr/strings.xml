@@ -629,4 +629,13 @@
     <string name="bg_index_never">Aucune analyse en arrière-plan terminée.</string>
     <string name="gallery_error_trash_unverified">Android a confirmé la demande, mais %1$d médias n\'ont pas pu être vérifiés dans la Corbeille. Ils restent dans la liste de vérification.</string>
     <string name="bg_index_historical_preview">Résultats de l\'analyse précédente · vérifiez les fichiers actuels avant le nettoyage</string>
+    <string name="bg_scan_channel">Analyse du stockage</string>
+    <string name="bg_scan_preparing">Préparation de l\'analyse</string>
+    <string name="bg_scan_notification_title">Omni Cleaner · %1$s</string>
+    <string name="bg_scan_notification_files">%1$d fichiers analysés · %2$d en attente</string>
+    <string name="bg_scan_notification_active">Analyse active · %1$d en attente</string>
+    <string name="bg_scan_permission_missing">Cette analyse nécessite un accès aux fichiers du téléphone.</string>
+    <string name="bg_scan_start_blocked">Android a empêché l\'analyse en arrière-plan. Réessayez avec l\'application ouverte.</string>
+    <string name="bg_scan_failed">Analyse %1$s inachevée.</string>
+    <string name="bg_scan_timeout">Android a suspendu les analyses en raison d\'une limite d\'exécution.</string>
 </resources>
