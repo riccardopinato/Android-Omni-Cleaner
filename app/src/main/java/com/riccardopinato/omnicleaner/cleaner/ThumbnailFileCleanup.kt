@@ -11,6 +11,36 @@ import kotlin.coroutines.coroutineContext
 
 /** Only known thumbnail-cache folders can use the media-file exception. */
 internal object ThumbnailDirectoryPolicy {
+    /** A cache file may be restored only under a known .thumbnails root,
+     * not elsewhere in Android/media, and never through a symlink ancestor. */
+    fun isSafeThumbnailFile(file: File, allowedRoot: File): Boolean {
+        val root = runCatching { allowedRoot.canonicalFile }.getOrNull() ?: return false
+        if (!PathSafety.isWithinRoot(file, root) || PathSafety.isSymlink(file)) return false
+        val relative = runCatching {
+            file.absoluteFile.relativeTo(root.absoluteFile)
+                .invariantSeparatorsPath.split('/')
+        }.getOrNull() ?: return false
+        if (relative.size < 3 || relative.any { it.isBlank() || it == "." || it == ".." }) {
+            return false
+        }
+        val lowered = relative.map { it.lowercase(Locale.ROOT) }
+        val cacheIndex = when {
+            lowered[0] == "dcim" && lowered[1] == ".thumbnails" -> 1
+            lowered[0] == "pictures" && lowered[1] == ".thumbnails" -> 1
+            lowered.size >= 5 && lowered[0] == "android" &&
+                lowered[1] == "media" && lowered[2].isNotBlank() &&
+                lowered[3] == ".thumbnails" -> 3
+            else -> return false
+        }
+        if (cacheIndex >= relative.lastIndex) return false
+        var parent = file.absoluteFile.parentFile
+        while (parent != null && parent != root.absoluteFile) {
+            if (PathSafety.isSymlink(parent)) return false
+            parent = parent.parentFile
+        }
+        return parent == root.absoluteFile
+    }
+
     fun isSafeDirectory(directory: File): Boolean {
         val normalized = directory.absolutePath.replace('\\', '/').lowercase(Locale.ROOT)
         return normalized.endsWith("/dcim/.thumbnails") ||
