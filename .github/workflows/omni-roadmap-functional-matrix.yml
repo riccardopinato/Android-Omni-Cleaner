@@ -101,30 +101,7 @@ jobs:
           profile: pixel_7_pro
           disk-size: 4096M
           disable-animations: true
-          script: |
-            set -eu
-            adb install -r -t app/build/outputs/apk/debug/app-debug.apk
-            adb install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-            : > "$RUNNER_TEMP/omni-functional-matrix.txt"
-            for spec in 'com.riccardopinato.omnicleaner.AppContractInstrumentedTest|4' 'com.riccardopinato.omnicleaner.LocalizationInstrumentedTest|1' 'com.riccardopinato.omnicleaner.ManifestHardeningInstrumentedTest|1' 'com.riccardopinato.omnicleaner.cleaner.FactoryPythonFixtureInstrumentedTest|1' 'com.riccardopinato.omnicleaner.cleaner.SafeTrashStorageInstrumentedTest|2' 'com.riccardopinato.omnicleaner.gallery.NativeVideoPlaybackInstrumentedTest|1' 'com.riccardopinato.omnicleaner.monetization.PremiumCacheInstrumentedTest|1' 'com.riccardopinato.omnicleaner.cleaner.BackgroundIndexRuntimeInstrumentedTest|2' 'com.riccardopinato.omnicleaner.gallery.MediaTrashReadbackInstrumentedTest|1'
-            do
-              classname="${spec%|*}"
-              expected="${spec##*|}"
-              echo "RUN_ANDROID_CLASS: $classname expected=$expected"
-              if output="$(adb shell am instrument -w -e class "$classname" com.riccardopinato.omnicleaner.debug.test/androidx.test.runner.AndroidJUnitRunner 2>&1)"; then
-                printf '%s\n' "$output"
-              else
-                printf '%s\n' "$output"
-                echo "FAIL_ANDROID_CLASS: $classname (instrumentation failed)" | tee -a "$RUNNER_TEMP/omni-functional-matrix.txt"
-                exit 1
-              fi
-              if printf '%s\n' "$output" | grep -Fq "OK ($expected test"; then
-                echo "PASS_ANDROID_CLASS: $classname tests=$expected" | tee -a "$RUNNER_TEMP/omni-functional-matrix.txt"
-              else
-                echo "FAIL_ANDROID_CLASS: $classname (zero, missing, failed, or unexpected count)" | tee -a "$RUNNER_TEMP/omni-functional-matrix.txt"
-                exit 1
-              fi
-            done
+          script: bash .github/scripts/run-omni-functional-matrix.sh
 
       - name: Upload Android execution proof
         if: always()
