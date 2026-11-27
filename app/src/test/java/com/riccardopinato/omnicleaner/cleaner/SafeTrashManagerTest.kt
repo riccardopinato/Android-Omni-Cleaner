@@ -661,4 +661,27 @@ class SafeTrashManagerTest {
         }
     }
 
+
+    @Test
+    fun purgeNeverDestroysPayloadModifiedAfterItWasTrashed() {
+        val root = createTempDirectory("omni-purge-hash-").toFile()
+        try {
+            val trash = File(root, "safe-trash")
+            val manager = SafeTrashManager.forTests(trash, root)
+            val source = File(root, "user-data.txt").apply { writeText("original") }
+            assertNotNull(manager.moveToTrash(source))
+            val entry = manager.listEntries().single()
+            val payload = File(File(trash, entry.id), "payload")
+            payload.writeText("modified") // Same length, deliberately different SHA-256.
+
+            assertEquals(SafeTrashPurgeStatus.INVALID_ENTRY, manager.purgeEntry(entry.id).status)
+            assertFalse(manager.purgeAll().completed)
+            assertTrue(payload.isFile)
+            assertEquals("modified", payload.readText())
+            assertTrue(File(File(trash, entry.id), "original.properties").isFile)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
 }
