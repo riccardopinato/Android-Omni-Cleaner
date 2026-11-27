@@ -188,9 +188,9 @@
     <string name="maintenance_residue_candidates">Candidatos de residuos de apps</string>
     <string name="maintenance_residue_warning">Android puede limitar la visibilidad de los paquetes instalados: estos elementos son candidatos para revisar, no una prueba automática de apps desinstaladas.</string>
     <string name="maintenance_access_required">Se necesita acceso al almacenamiento antes de ejecutar este análisis.</string>
-    <string name="maintenance_cleanup_result">%1$d archivos eliminados permanentemente (%2$d bytes) · %3$d rechazados porque cambiaron o no pudieron verificarse.</string>
+    <string name="maintenance_cleanup_result">%1$d miniaturas movidas a la Papelera segura recuperable (%2$d bytes retenidos, no liberados) · %3$d rechazadas tras verificar.</string>
     <string name="maintenance_confirm_cache_title">Confirmar limpieza de caché</string>
-    <string name="maintenance_confirm_cache_body">Solo se eliminarán archivos idénticos al último inventario analizado (tamaño, fecha de modificación y SHA-256). Los archivos modificados serán rechazados.</string>
+    <string name="maintenance_confirm_cache_body">Solo las miniaturas seleccionadas con tamaño, fecha y SHA-256 idénticos se mueven a la Papelera segura recuperable. Sin eliminación permanente ni espacio liberado.</string>
 
     <string name="safe_trash_body">Los archivos aquí siguen ocupando espacio. Puedes restaurarlos sin sobrescribir archivos existentes o eliminarlos permanentemente.</string>
     <string name="safe_trash_summary">%1$d elementos · %2$s</string>
@@ -330,7 +330,7 @@
     <string name="pro_residue_detail">%1$s · %2$s · %3$s</string>
     <string name="pro_resolve_selection">Resolver selección Pro</string>
     <string name="pro_confirm_title">¿Confirmar secuencia Pro?</string>
-    <string name="pro_confirm_body">Las carpetas vacías y las miniaturas se vuelven a comprobar antes de eliminarlas. Los duplicados conservan al menos una copia. Los medios seleccionados pasan por la Papelera de Android con una segunda confirmación del sistema. Los residuos de apps permanecen sin cambios.</string>
+    <string name="pro_confirm_body">Las carpetas vacías se revisan. Las miniaturas seleccionadas pasan a la Papelera segura recuperable; los duplicados conservan una copia. Los medios requieren consentimiento Android. Los residuos de apps permanecen intactos.</string>
     <string name="pro_scan_empty_folders_label">Carpetas vacías y pequeñas</string>
     <string name="pro_scan_empty_folders_description">Revisa carpetas huérfanas o sin contenido</string>
     <string name="pro_scan_duplicates_label">Archivos duplicados</string>
@@ -349,14 +349,15 @@
     <string name="pro_error_access_required">Se necesita acceso al almacenamiento para el análisis Pro.</string>
     <string name="pro_error_select_category">Selecciona al menos una categoría.</string>
     <string name="pro_resolve_empty_folders">%1$d carpetas vacías</string>
-    <string name="pro_resolve_thumbnails">%1$d miniaturas eliminadas permanentemente</string>
+    <string name="pro_resolve_thumbnails">%1$d miniaturas movidas a la Papelera segura (recuperables)</string>
     <string name="pro_resolve_thumbnail_bytes">(%1$d bytes)</string>
     <string name="pro_resolve_safe_trash">%1$d archivos en la Papelera segura (no es espacio ya liberado)</string>
     <string name="pro_resolve_thumbnail_rejected">%1$d miniaturas rechazadas</string>
     <string name="pro_resolve_stale">%1$d archivos cambiaron tras el análisis y permanecieron sin cambios</string>
     <string name="pro_resolve_blocked">%1$d archivos permanecieron sin cambios porque no hay eliminación reversible disponible</string>
     <string name="pro_resolve_residues">%1$d residuos se conservaron para revisión porque la visibilidad de paquetes puede estar limitada</string>
-    <string name="pro_system_trash_confirmed">Papelera de Android confirmada (no se cuenta como espacio ya liberado)</string>
+    <string name="cleanup_media_verified_summary">%1$d medios verificados en la Papelera Android · %2$d sin verificar (selección conservada)</string>
+    <string name="pro_system_trash_confirmed">Consentimiento Android aceptado (estado real sin verificar; espacio no liberado)</string>
     <string name="pro_system_trash_cancelled">Papelera de Android cancelada</string>
 
     <string name="safe_trash_persistent_notice">Safe Trash se guarda en el almacenamiento compartido para que pueda sobrevivir a la desinstalación de la app. Reinstala Omni Cleaner y vuelve a activar Limpieza profunda para restaurar estos archivos.</string>
