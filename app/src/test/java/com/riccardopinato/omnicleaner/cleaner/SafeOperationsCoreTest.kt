@@ -56,6 +56,28 @@ class SafeOperationsCoreTest {
     }
 
     @Test
+    fun illegalJournalTransitionsCannotForgeCommitOrSkipApproval() {
+        val root = createTempDirectory("omni-invalid-transition-").toFile()
+        try {
+            val journal = SafeOperationsJournal(root.resolve("journal"))
+            val prepared = requireNotNull(journal.begin("LOCAL_SAFE_TRASH", sampleSha))
+            assertNull(journal.advance(prepared, SafeOperationPhase.COMMITTED))
+            assertNull(journal.advance(prepared, SafeOperationPhase.MUTATING))
+            val approved = requireNotNull(journal.advance(prepared, SafeOperationPhase.USER_APPROVED))
+            assertNull(journal.advance(approved, SafeOperationPhase.COMMITTED))
+            val pending = requireNotNull(journal.advance(approved, SafeOperationPhase.MUTATING))
+            assertNull(journal.advance(pending, SafeOperationPhase.USER_APPROVED))
+            val unknown = requireNotNull(
+                journal.advance(pending, SafeOperationPhase.UNKNOWN_NEEDS_REVIEW),
+            )
+            assertNull(journal.advance(unknown, SafeOperationPhase.MUTATING))
+            assertNotNull(journal.advance(unknown, SafeOperationPhase.COMMITTED))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun journalRejectsTamperAndDuplicateTransition() {
         val root = createTempDirectory("omni-journal-tamper-").toFile()
         try {
