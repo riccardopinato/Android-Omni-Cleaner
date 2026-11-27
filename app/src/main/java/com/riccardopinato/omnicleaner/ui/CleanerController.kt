@@ -415,6 +415,7 @@ internal class CleanerController(
         scanJob?.cancel()
         val generation = ++scanGeneration
         scanJob = scope.launch {
+            StorageInventoryRepository.beginUserScan()
             state = state.copy(
                 scanning = true,
                 currentOperation = label,
@@ -430,6 +431,7 @@ internal class CleanerController(
             } catch (_: Throwable) {
                 state = state.copy(error = uiContext.getString(R.string.scan_error))
             } finally {
+                StorageInventoryRepository.endUserScan()
                 if (generation == scanGeneration) {
                     state = state.copy(scanning = false, currentOperation = null)
                 }

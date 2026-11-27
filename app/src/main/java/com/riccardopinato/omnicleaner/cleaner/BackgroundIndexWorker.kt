@@ -39,7 +39,10 @@ internal class BackgroundIndexWorker(
         val store = BackgroundIndexStore(app)
         if (!store.isEnabled()) return Result.success()
         if (!StorageAccess.capabilityHealth(app).deepScanAvailable) return Result.success()
-        if (BentoScanRuntime.activeId != null) return Result.retry()
+        if (BentoScanRuntime.activeId != null ||
+            StorageInventoryRepository.hasActiveUserScan() ||
+            StorageInventoryRepository.isInventoryBusy()
+        ) return Result.retry()
 
         val root = StorageAccess.primaryRoot()
         if (!root.isDirectory || !root.canRead()) return Result.retry()
@@ -56,6 +59,7 @@ internal class BackgroundIndexWorker(
             val inventory = StorageInventoryRepository.snapshot(
                 root = root,
                 forceRefresh = true,
+                backgroundRequest = true,
             ).inventory
             coroutineContext.ensureActive()
             val after = BackgroundIndexStore.mediaRevision(app)

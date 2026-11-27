@@ -8,6 +8,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.coroutineContext
 
 data class StorageInventorySnapshot(
@@ -32,6 +33,7 @@ object StorageInventoryRepository {
 
     private val mutex = Mutex()
     private val invalidationGuard = Any()
+    private val activeUserScans = AtomicInteger(0)
     private val scanner = FileInventoryScanner()
 
     @Volatile
@@ -62,8 +64,10 @@ object StorageInventoryRepository {
         onStage: ((String) -> Unit)? = null,
         onIndexReconcile: ((IndexReconcileDiagnostics) -> Unit)? = null,
         nowMillis: () -> Long = System::currentTimeMillis,
+        backgroundRequest: Boolean = false,
     ): StorageInventorySnapshot {
         val operationContext = coroutineContext
+        if (backgroundRequest && hasActiveUserScan()) throw BackgroundIndexYieldException()
         val rootPath = canonical(root)
         val now = nowMillis()
         cached?.takeIf { current ->
@@ -119,7 +123,11 @@ object StorageInventoryRepository {
 
             onStage?.invoke("filesystem_scan")
             val started = nowMillis()
-            val inventory = scanner.collect(root, onProgress)
+            val inventory = scanner.collect(root) { checked, path ->
+                if (backgroundRequest && hasActiveUserScan()) throw BackgroundIndexYieldException()
+                onProgress?.invoke(checked, path)
+            }
+            if (backgroundRequest && hasActiveUserScan()) throw BackgroundIndexYieldException()
             val finished = nowMillis()
             val snapshot = StorageInventorySnapshot(
                 rootPath = rootPath,
@@ -139,7 +147,12 @@ object StorageInventoryRepository {
                             root = root,
                             inventory = inventory,
                             completedAtMillis = finished,
-                            cancellationCheck = { operationContext.ensureActive() },
+                            cancellationCheck = {
+                                operationContext.ensureActive()
+                                if (backgroundRequest && hasActiveUserScan()) {
+                                    throw BackgroundIndexYieldException()
+                                }
+                            },
                             onMetrics = onIndexReconcile,
                         )
                     }
@@ -159,6 +172,18 @@ object StorageInventoryRepository {
             snapshot
         }
     }
+
+    internal fun beginUserScan() {
+        activeUserScans.incrementAndGet()
+    }
+
+    internal fun endUserScan() {
+        activeUserScans.decrementAndGet()
+    }
+
+    internal fun hasActiveUserScan(): Boolean = activeUserScans.get() > 0
+
+    internal fun isInventoryBusy(): Boolean = mutex.isLocked
 
     internal fun currentInvalidationGeneration(): Long = invalidationGeneration.get()
 
@@ -237,6 +262,9 @@ object StorageInventoryRepository {
     private fun canonical(file: File): String =
         runCatching { file.canonicalPath }.getOrElse { file.absolutePath }
 }
+
+/** Background reconciliation must yield to a user-initiated analysis. */
+internal class BackgroundIndexYieldException : RuntimeException()
 
 internal fun isInventoryGenerationCurrent(
     scanGeneration: Long,

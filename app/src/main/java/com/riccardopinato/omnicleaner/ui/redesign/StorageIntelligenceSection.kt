@@ -138,6 +138,7 @@ internal fun StorageIntelligenceSection(
                     loading = true
                     failed = false
                     scope.launch {
+                        StorageInventoryRepository.beginUserScan()
                         try {
                             val root = StorageAccess.primaryRoot()
                             val previousGeneration = StorageInventoryRepository.currentInvalidationGeneration()
@@ -165,6 +166,7 @@ internal fun StorageIntelligenceSection(
                         } catch (_: Exception) {
                             failed = true
                         } finally {
+                            StorageInventoryRepository.endUserScan()
                             loading = false
                         }
                     }
