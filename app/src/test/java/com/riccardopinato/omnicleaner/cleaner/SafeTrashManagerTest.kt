@@ -47,7 +47,7 @@ class SafeTrashManagerTest {
             assertNotNull(manager.moveToTrash(source))
             val entry = manager.listEntries().single()
 
-            val result = manager.purgeEntry(entry.id)
+            val result = manager.purgeApproved(entry)
             assertEquals(SafeTrashPurgeStatus.DELETED, result.status)
             assertEquals(50L * 1024L * 1024L, result.reclaimedBytes)
             assertTrue(manager.listEntries().isEmpty())
@@ -71,7 +71,8 @@ class SafeTrashManagerTest {
             assertEquals(0L, manager.getTrashSize())
             assertEquals(1, manager.listEntries().size)
 
-            val result = manager.purgeAll()
+            val approved = requireNotNull(manager.planPurge(manager.listEntries()))
+            val result = manager.purgeApproved(approved)
             assertTrue(result.completed)
             assertEquals(1, result.deletedEntries)
             assertEquals(0, result.rejectedEntries)
@@ -94,13 +95,15 @@ class SafeTrashManagerTest {
             assertFalse(manager.permanentlyDelete(untouched))
             assertEquals(SafeTrashPurgeStatus.INVALID_ENTRY, manager.purgeEntry("../keep-me.apk").status)
 
+            // An unrecognized file blocks the ENTIRE bulk purge: nothing
+            // under the user's shared storage may be deleted by omission.
             val result = manager.purgeAll()
             assertFalse(result.completed)
-            assertEquals(1, result.deletedEntries)
-            assertEquals(1, result.rejectedEntries)
+            assertEquals(0, result.deletedEntries)
+            assertTrue(manager.planPurge(manager.listEntries()) == null)
             assertTrue(foreign.exists())
             assertTrue(untouched.exists())
-            assertTrue(manager.listEntries().isEmpty())
+            assertEquals(1, manager.listEntries().size)
         } finally {
             root.deleteRecursively()
         }
@@ -189,7 +192,9 @@ class SafeTrashManagerTest {
             assertTrue(properties.getProperty("originalPath").endsWith("notes.txt"))
             assertEquals(64, properties.getProperty("sha256").length)
             assertEquals(payload.length(), manager.getTrashSize())
-            assertTrue(manager.emptyTrash())
+            assertTrue(manager.purgeApproved(
+                requireNotNull(manager.planPurge(manager.listEntries())),
+            ).completed)
             assertFalse(payload.exists())
         } finally {
             root.deleteRecursively()
@@ -547,7 +552,7 @@ class SafeTrashManagerTest {
             assertEquals(34, manager.listEntries().size)
 
             val first = manager.listEntries().single { it.originalName == "sample-1.txt" }
-            assertTrue(manager.permanentlyDelete(File(trash, first.id)))
+            assertTrue(manager.purgeApproved(first).deleted)
             assertEquals(33, manager.listEntries().size)
             assertFalse(File(root, "sample-1.txt").exists())
             // Only synthetic files in this temporary test root were touched.
@@ -679,6 +684,43 @@ class SafeTrashManagerTest {
             assertTrue(payload.isFile)
             assertEquals("modified", payload.readText())
             assertTrue(File(File(trash, entry.id), "original.properties").isFile)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+
+    @Test
+    fun frozenBulkPurgeNeverDeletesNewlyArrivedUnreviewedEntries() {
+        val root = createTempDirectory("omni-purge-manifest-").toFile()
+        try {
+            val manager = SafeTrashManager.forTests(root.resolve("trash"), root)
+            assertNotNull(manager.moveToTrash(root.resolve("first.apk").apply { writeText("first") }))
+            val plan = requireNotNull(manager.planPurge(manager.listEntries()))
+            assertNotNull(manager.moveToTrash(root.resolve("later.apk").apply { writeText("later") }))
+            val result = manager.purgeApproved(plan)
+            assertFalse(result.completed)
+            assertEquals(0, result.deletedEntries)
+            assertEquals(2, manager.listEntries().size)
+            assertTrue(manager.listEntries().any { it.originalName == "later.apk" })
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun modifiedApprovedPurgeRecordCannotDeleteNewBytes() {
+        val root = createTempDirectory("omni-purge-stale-").toFile()
+        try {
+            val manager = SafeTrashManager.forTests(root.resolve("trash"), root)
+            assertNotNull(manager.moveToTrash(root.resolve("test.apk").apply { writeText("abc") }))
+            val reviewed = manager.listEntries().single()
+            val plan = requireNotNull(manager.planPurge(listOf(reviewed)))
+            val payload = root.resolve("trash").resolve(reviewed.id).resolve("payload")
+            payload.writeText("xyz")
+            assertFalse(manager.purgeApproved(plan).completed)
+            assertTrue(payload.isFile)
+            assertEquals("xyz", payload.readText())
         } finally {
             root.deleteRecursively()
         }
