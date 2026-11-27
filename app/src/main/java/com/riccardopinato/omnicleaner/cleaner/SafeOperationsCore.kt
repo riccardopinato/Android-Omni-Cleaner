@@ -176,6 +176,45 @@ class DeletionCoordinator(
             .joinToString("") { "%02x".format(it) }
     }
 
+    /**
+     * Directory removal can only issue rmdir on a freshly rechecked, EMPTY
+     * folder. An arriving file makes rmdir fail; no recursive unlink exists.
+     */
+    fun removeEmptyFoldersApproved(
+        folders: List<File>,
+        allowedRoot: File,
+    ): EmptyFolderCleanupResult = synchronized(coordinatorMutex) {
+        val frozen = folders.distinctBy { it.absolutePath }
+        if (frozen.isEmpty()) return@synchronized EmptyFolderCleanupResult(0, 0)
+        if (frozen.any { !PathSafety.isSafeFolderToDelete(it, allowedRoot) ||
+                it.listFiles()?.isEmpty() != true
+        }) return@synchronized EmptyFolderCleanupResult(0, frozen.size)
+        val hash = MessageDigest.getInstance("SHA-256")
+            .digest(frozen.map { it.absolutePath }.sorted().joinToString("\n")
+                .toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+        var record = journal.begin("EMPTY_DIRECTORY_RMDIR", hash,
+            frozen.joinToString("\n") { it.absolutePath },
+        ) ?: return@synchronized EmptyFolderCleanupResult(0, frozen.size)
+        record = journal.advance(record, SafeOperationPhase.USER_APPROVED)
+            ?: return@synchronized EmptyFolderCleanupResult(0, frozen.size)
+        record = journal.advance(record, SafeOperationPhase.MUTATING)
+            ?: return@synchronized EmptyFolderCleanupResult(0, frozen.size)
+        var removed = 0
+        var rejected = 0
+        frozen.forEach { directory ->
+            if (PathSafety.isSafeFolderToDelete(directory, allowedRoot) &&
+                directory.listFiles()?.isEmpty() == true && directory.delete()
+            ) removed++ else rejected++
+        }
+        journal.advance(record,
+            if (rejected == 0) SafeOperationPhase.COMMITTED
+            else SafeOperationPhase.UNKNOWN_NEEDS_REVIEW,
+            "removed=$removed;rejected=$rejected",
+        )
+        EmptyFolderCleanupResult(removed, rejected)
+    }
+
     fun moveApproved(snapshots: List<CleanupFileSnapshot>): SafeTrashExecutionResult =
         synchronized(coordinatorMutex) {
             val unique = strongestCleanupSnapshots(snapshots)
