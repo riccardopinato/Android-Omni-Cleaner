@@ -57,6 +57,8 @@ fun SafeTrashSection() {
     var confirmEmpty by remember { mutableStateOf(false) }
     var confirmEmptySecond by remember { mutableStateOf(false) }
     var confirmLegacyImport by remember { mutableStateOf(false) }
+    var confirmMetadataRepair by remember { mutableStateOf(false) }
+    var repairCandidates by remember { mutableStateOf<List<String>>(emptyList()) }
     var legacyAvailable by remember { mutableStateOf(false) }
     var approvedPurgePlan by remember { mutableStateOf<SafeTrashPurgeManifest?>(null) }
     var pendingIndividualDelete by remember { mutableStateOf<SafeTrashEntry?>(null) }
@@ -66,6 +68,9 @@ fun SafeTrashSection() {
     suspend fun reload() {
         val snapshot = withContext(Dispatchers.IO) { manager.inspect() }
         legacyAvailable = withContext(Dispatchers.IO) { manager.hasLegacyEntries() }
+        repairCandidates = withContext(Dispatchers.IO) {
+            manager.legacyMetadataRepairCandidates()
+        }
         entries = snapshot.entries
         trashBytes = snapshot.totalPayloadBytes
         unrecognizedEntries = snapshot.unrecognizedEntries
@@ -235,6 +240,15 @@ fun SafeTrashSection() {
                         ) {
                             Text(stringResource(R.string.refresh))
                         }
+                        if (repairCandidates.isNotEmpty()) {
+                            OutlinedButton(
+                                enabled = !loading && persistentAvailable,
+                                onClick = { confirmMetadataRepair = true },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(R.string.safe_trash_repair_legacy_metadata))
+                            }
+                        }
                         if (legacyAvailable) {
                             OutlinedButton(
                                 enabled = !loading && persistentAvailable,
@@ -363,6 +377,33 @@ fun SafeTrashSection() {
                     confirmEmpty = false
                     approvedPurgePlan = null
                 }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (confirmMetadataRepair) {
+        val frozenCandidates = repairCandidates.toList()
+        AlertDialog(
+            onDismissRequest = { confirmMetadataRepair = false },
+            title = { Text(stringResource(R.string.safe_trash_repair_legacy_metadata)) },
+            text = { Text(stringResource(R.string.safe_trash_repair_legacy_metadata_body,
+                frozenCandidates.size)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmMetadataRepair = false
+                    loading = true
+                    scope.launch {
+                        withContext(Dispatchers.IO) {
+                            frozenCandidates.forEach(manager::repairLegacyEntryApproved)
+                        }
+                        reload()
+                    }
+                }) { Text(stringResource(R.string.safe_trash_repair_legacy_metadata)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmMetadataRepair = false }) {
                     Text(stringResource(R.string.cancel))
                 }
             },
