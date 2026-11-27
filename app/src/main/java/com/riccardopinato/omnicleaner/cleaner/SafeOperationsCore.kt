@@ -181,6 +181,18 @@ class DeletionCoordinator(
             if (frozen.size != unique.size || frozen.any {
                 !CleanupSnapshotValidator.validate(it).valid
             }) return@synchronized SafeTrashExecutionResult(0, unique.size, 0L)
+            // A duplicate keeper cannot simultaneously be a mutation target,
+            // even if another module selected it as a large file.
+            val mutationPaths = frozen.map {
+                runCatching { it.file.canonicalPath }.getOrElse { it.file.absolutePath }
+            }.toSet()
+            if (frozen.any { item ->
+                item.requiredDuplicatePeer?.let { peer ->
+                    val keeperPath = runCatching { peer.file.canonicalPath }
+                        .getOrElse { peer.file.absolutePath }
+                    keeperPath in mutationPaths
+                } == true
+            }) return@synchronized SafeTrashExecutionResult(0, unique.size, 0L)
             val fingerprint = digestManifest(frozen)
             var cursor = journal.begin(
                 "LOCAL_SAFE_TRASH", fingerprint,
