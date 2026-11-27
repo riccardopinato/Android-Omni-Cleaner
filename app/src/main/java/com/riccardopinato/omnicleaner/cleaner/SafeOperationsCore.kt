@@ -104,7 +104,7 @@ class SafeOperationsJournal(private val directory: File) {
 
     fun begin(type: String, fingerprint: String, detail: String = ""): SafeOperationRecord? =
         synchronized(crossInstanceLock) {
-            if (type.isBlank() || fingerprint.length != 64 || detail.length > 5000) return@synchronized null
+            if (type.isBlank() || fingerprint.length != 64 || detail.length > 350000) return@synchronized null
             val record = SafeOperationRecord(
                 UUID.randomUUID().toString(), type, fingerprint,
                 SafeOperationPhase.PREPARED, 0, System.currentTimeMillis(), detail,
@@ -119,8 +119,12 @@ class SafeOperationsJournal(private val directory: File) {
     ): SafeOperationRecord? = synchronized(crossInstanceLock) {
         if (previous.phase in setOf(
             SafeOperationPhase.COMMITTED, SafeOperationPhase.REJECTED,
-            SafeOperationPhase.UNKNOWN_NEEDS_REVIEW,
         )) return@synchronized null
+        // Unknown transactions may become verified after a later read-only
+        // provider reconciliation; no replay of the original request.
+        if (previous.phase == SafeOperationPhase.UNKNOWN_NEEDS_REVIEW &&
+            phase != SafeOperationPhase.COMMITTED
+        ) return@synchronized null
         if (latest(previous.id) != previous || detail.length > 5000) return@synchronized null
         val next = previous.copy(
             phase = phase, sequence = previous.sequence + 1, detail = detail,
