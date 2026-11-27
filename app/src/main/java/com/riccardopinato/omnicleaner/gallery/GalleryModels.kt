@@ -36,6 +36,8 @@ data class GalleryMediaItem(
     val durationMs: Long = 0L,
     val width: Int = 0,
     val height: Int = 0,
+    val dateModifiedSeconds: Long = 0L,
+    val generationModified: Long = 0L,
     val isSelectedForTrash: Boolean = false,
 ) {
     val isVideo: Boolean get() = mimeType.startsWith("video/", ignoreCase = true)
