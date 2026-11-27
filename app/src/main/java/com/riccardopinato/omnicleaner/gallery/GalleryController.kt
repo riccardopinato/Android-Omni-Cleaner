@@ -491,8 +491,17 @@ class GalleryController(
             operationJournal.advance(approved, SafeOperationPhase.REJECTED)
             update(state.copy(error = uiContext.getString(R.string.gallery_error_trash_android11)))
         } else {
+            val mutating = operationJournal.advance(
+                approved, SafeOperationPhase.MUTATING,
+            )
+            if (mutating == null) {
+                update(state.copy(error = uiContext.getString(
+                    R.string.gallery_error_trash_android11,
+                )))
+                return null
+            }
             inFlightTrashIds = selectedBatch.mapTo(HashSet()) { it.id }
-            inFlightOperationId = approved.id
+            inFlightOperationId = mutating.id
         }
         return pendingIntent
     }
