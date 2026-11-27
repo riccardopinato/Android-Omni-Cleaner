@@ -64,6 +64,12 @@ data class SafeTrashEmptyResult(
     val completed: Boolean,
 )
 
+/** Only the exact set displayed during review may be permanently purged. */
+data class SafeTrashPurgeManifest internal constructor(
+    val entries: List<SafeTrashEntry>,
+    val fingerprint: String,
+)
+
 class SafeTrashManager private constructor(
     private val trashDirectory: File,
     private val restoreRoot: File,
@@ -484,19 +490,58 @@ class SafeTrashManager private constructor(
         return SafeTrashPurgeResult(SafeTrashPurgeStatus.DELETED, bytesBefore)
     }
 
-    fun purgeAll(): SafeTrashEmptyResult {
-        if (!isPersistentTrashAvailable()) {
-            return SafeTrashEmptyResult(0, 0, 0L, completed = false)
+    private fun manifestFingerprint(entries: List<SafeTrashEntry>): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        entries.sortedBy { it.id }.forEach { entry ->
+            val canonical = listOf(
+                entry.id, entry.originalPath, entry.originalName,
+                entry.sizeBytes.toString(), entry.lastModified.toString(), entry.sha256,
+            ).joinToString("\u0000")
+            digest.update(canonical.toByteArray(Charsets.UTF_8))
+            digest.update(0)
         }
-        // A failed directory listing must never be interpreted as success.
-        val children = trashDirectory.listFiles()
-            ?: return SafeTrashEmptyResult(0, 0, 0L, completed = false)
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
 
+    /**
+     * Freeze exactly the entries inspected by the user; unknown children stop
+     * the bulk plan. Re-evaluating the live directory later never adds items.
+     */
+    fun planPurge(reviewed: List<SafeTrashEntry>): SafeTrashPurgeManifest? {
+        val inventory = inspect()
+        if (!inventory.readable || inventory.unrecognizedEntries != 0 ||
+            reviewed.isEmpty() || reviewed.distinctBy { it.id }.size != reviewed.size ||
+            inventory.entries.toSet() != reviewed.toSet()
+        ) return null
+        return SafeTrashPurgeManifest(reviewed.toList(), manifestFingerprint(reviewed))
+    }
+
+    fun purgeApproved(entry: SafeTrashEntry): SafeTrashPurgeResult {
+        val live = readEntry(File(trashDirectory, entry.id))
+        if (live != entry || !isPersistentTrashAvailable()) {
+            return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
+        }
+        return purgeEntry(entry.id)
+    }
+
+    /**
+     * Bulk purge is an exact reviewed manifest, not a dynamic directory sweep.
+     * If another file arrives or changes before approval, abort with 0 deletes.
+     * A file arriving after validation is never included in this frozen list.
+     */
+    fun purgeApproved(manifest: SafeTrashPurgeManifest): SafeTrashEmptyResult {
+        val inventory = inspect()
+        val approved = manifest.entries
+        if (!inventory.readable || inventory.unrecognizedEntries != 0 ||
+            approved.isEmpty() || approved.distinctBy { it.id }.size != approved.size ||
+            inventory.entries.toSet() != approved.toSet() ||
+            manifestFingerprint(approved) != manifest.fingerprint
+        ) return SafeTrashEmptyResult(0, approved.size, 0L, completed = false)
         var deletedCount = 0
         var failedCount = 0
         var reclaimedBytes = 0L
-        for (child in children) {
-            val result = purgeEntry(child.name)
+        for (entry in approved) {
+            val result = purgeApproved(entry)
             if (result.deleted) {
                 deletedCount++
                 reclaimedBytes += result.reclaimedBytes
@@ -504,21 +549,27 @@ class SafeTrashManager private constructor(
                 failedCount++
             }
         }
-        val actuallyEmpty = trashDirectory.listFiles()?.isEmpty() == true
+        val remaining = trashDirectory.listFiles()?.isEmpty() == true
         return SafeTrashEmptyResult(
             deletedEntries = deletedCount,
             rejectedEntries = failedCount,
             reclaimedBytes = reclaimedBytes,
-            completed = failedCount == 0 && actuallyEmpty,
+            completed = failedCount == 0 && remaining,
         )
     }
+
+    /** Unscoped legacy bulk purge is disabled. Call planPurge/purgeApproved. */
+    @Deprecated("Unreviewed dynamic purge is unsafe: use exact manifest")
+    fun purgeAll(): SafeTrashEmptyResult =
+        SafeTrashEmptyResult(0, 0, 0L, completed = false)
 
     /** Compatibility path: only immediate children are ever accepted. */
     fun permanentlyDelete(file: File): Boolean =
         file.absoluteFile.parentFile == trashDirectory.absoluteFile &&
             purgeEntry(file.name).deleted
 
-    fun emptyTrash(): Boolean = purgeAll().completed
+    @Deprecated("Explicit reviewed manifest required")
+    fun emptyTrash(): Boolean = false
 
     fun sameContents(first: File, second: File, expectedBytes: Long): Boolean {
         if (!first.isFile || !second.isFile) return false
