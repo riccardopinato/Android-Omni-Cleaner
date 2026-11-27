@@ -36,11 +36,15 @@ object StorageInventoryRepository {
     @Volatile
     private var persistentIndex: PersistentStorageIndex? = null
 
+    @Volatile
+    private var backgroundIndexStore: BackgroundIndexStore? = null
+
     fun initialize(context: Context) {
         if (persistentIndex != null) return
         synchronized(this) {
             if (persistentIndex == null) {
                 persistentIndex = PersistentStorageIndex(context.applicationContext)
+                backgroundIndexStore = BackgroundIndexStore(context.applicationContext)
             }
         }
     }
@@ -146,8 +150,38 @@ object StorageInventoryRepository {
         }
     }
 
+    internal fun currentInvalidationGeneration(): Long = invalidationGeneration.get()
+
+    /** Read existing RAM/SQLite data, but never start a filesystem scan on cache miss. */
+    suspend fun reusableSnapshotOrNull(root: File): StorageInventorySnapshot? {
+        val operationContext = coroutineContext
+        val rootPath = canonical(root)
+        val now = System.currentTimeMillis()
+        return mutex.withLock {
+            cached?.takeIf { it.rootPath == rootPath && now >= it.createdAtMillis &&
+                now - it.createdAtMillis <= CACHE_TTL_MS
+            }?.let { return@withLock it.copy(cacheHit = true) }
+            val index = persistentIndex ?: return@withLock null
+            val persisted = withContext(Dispatchers.IO) {
+                index.loadReusableSnapshot(root, now, PERSISTENT_REUSE_TTL_MS) {
+                    operationContext.ensureActive()
+                }
+            } ?: return@withLock null
+            StorageInventorySnapshot(
+                rootPath = rootPath,
+                inventory = persisted.inventory,
+                createdAtMillis = now,
+                scanElapsedMillis = 0L,
+                cacheHit = true,
+                persistentHit = true,
+                indexAgeMillis = (now - persisted.createdAtMillis).coerceAtLeast(0L),
+            ).also { cached = it }
+        }
+    }
+
     fun invalidate() {
         invalidationGeneration.incrementAndGet()
+        backgroundIndexStore?.markDirty()
         cached = null
         persistentIndex?.markStale()
     }
