@@ -192,6 +192,8 @@
     <string name="maintenance_confirm_cache_title">Confirmar limpeza da cache</string>
     <string name="maintenance_confirm_cache_body">Apenas as miniaturas selecionadas com tamanho, data e SHA-256 idênticos são movidas para a Lixeira segura recuperável. Sem eliminação definitiva nem espaço libertado.</string>
 
+    <string name="safe_trash_repair_legacy_metadata">Reparar metadados antigos da Lixeira</string>
+    <string name="safe_trash_repair_legacy_metadata_body">Verifique e repare %1$d entradas antigas sem soma de verificação. Apenas entradas validadas são reparadas; hashes incorretos nunca são substituídos.</string>
     <string name="safe_trash_import_legacy">Importar Lixeira antiga</string>
     <string name="safe_trash_import_legacy_body">Esta importação opcional copia e verifica entradas antigas antes de remover as originais. Entradas danificadas ou incompletas permanecem intactas. Nunca há importação automática.</string>
     <string name="cleanup_system_trash_expiry_notice">O Android pode apagar automaticamente ficheiros da Lixeira multimédia após o prazo do sistema (frequentemente cerca de 30 dias). Não é uma cópia de segurança permanente.</string>
