@@ -44,6 +44,7 @@ import com.riccardopinato.omnicleaner.cleaner.FolderItem
 import com.riccardopinato.omnicleaner.cleaner.FolderStatus
 import com.riccardopinato.omnicleaner.cleaner.ManualMaintenance
 import com.riccardopinato.omnicleaner.cleaner.StorageCleanupEngine
+import com.riccardopinato.omnicleaner.cleaner.MediaStoreHelper
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
 import kotlinx.coroutines.launch
 import java.io.File
@@ -91,6 +92,7 @@ fun StorageCleanupSection(
     val noSelection = stringResource(R.string.cleanup_no_selection)
     val systemTrashUnavailable = stringResource(R.string.cleanup_system_trash_unavailable)
     val androidTrashConfirmed = stringResource(R.string.cleanup_android_trash_confirmed)
+    val verifiedTemplate = stringResource(R.string.cleanup_media_verified_summary)
     val movedTemplate = stringResource(R.string.cleanup_safe_trash_moved)
     val rejectedTemplate = stringResource(R.string.cleanup_rejected)
     val changedTemplate = stringResource(R.string.cleanup_changed)
@@ -142,18 +144,27 @@ fun StorageCleanupSection(
         }
 
         scope.launch {
+            val verification = MediaStoreHelper.verifyTrashedUris(
+                context.contentResolver, preparation.mediaUris,
+            )
             val safeResult = engine.movePreparedSnapshotsToSafeTrash(preparation.safeTrashCandidates)
             message = cleanupMessage(
                 preparation = preparation,
                 moved = safeResult.moved,
                 rejected = safeResult.rejected,
-                androidConfirmed = true,
+                androidConfirmed = false,
+            ) + " · " + localized(
+                verifiedTemplate, verification.confirmedUris.size,
+                verification.unverifiedUris.size,
             )
-            selectedBigFiles = emptySet()
-            selectedDuplicates = emptySet()
-            // Android consent does not establish that the media is trashed.
-            if (safeResult.moved > 0) CleanupEventBus.publishCompleted()
-            onCleanupFinished()
+            if (safeResult.moved > 0 || verification.confirmedUris.isNotEmpty()) {
+                CleanupEventBus.publishCompleted()
+            }
+            if (verification.unverifiedUris.isEmpty()) {
+                selectedBigFiles = emptySet()
+                selectedDuplicates = emptySet()
+                onCleanupFinished()
+            }
         }
     }
 
@@ -169,7 +180,7 @@ fun StorageCleanupSection(
         scope.launch {
             val preparation = engine.prepareSnapshots(requested)
             if (preparation.mediaUris.isNotEmpty()) {
-                val request = engine.createSystemTrashRequest(preparation.mediaUris)
+                val request = engine.createSystemTrashRequest(preparation)
                 if (request == null) {
                     message = systemTrashUnavailable
                     return@launch
