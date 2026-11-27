@@ -1,0 +1,82 @@
+name: Omni Cleaner — fail-closed synthetic Android API matrix
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/src/main/**'
+      - 'app/src/androidTest/**'
+      - '.github/scripts/run-omni-safe-ops-api-matrix.sh'
+      - '.github/workflows/omni-safe-ops-api-matrix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: omni-safe-ops-matrix-${{ github.event.pull_request.head.ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  OMNI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  synthetic-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        api: [24, 29, 30, 33, 35, 36]
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.OMNI_SOURCE_SHA }}
+          persist-credentials: false
+
+      - name: JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
+        with:
+          cache-provider: basic
+
+      - name: Structural fail-closed source gate
+        run: python3 .github/scripts/check-omni-destructive-policies.py
+
+      - name: Build exact-head synthetic fixture APKs
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --stacktrace
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Verify Android API ${{ matrix.api }} without user files
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          disk-size: 4096M
+          disable-animations: true
+          script: bash .github/scripts/run-omni-safe-ops-api-matrix.sh
+
+      - name: Record exact-source API evidence
+        if: always()
+        run: |
+          {
+            echo '## Omni fail-closed synthetic API matrix'
+            echo 'Source SHA: ${{ env.OMNI_SOURCE_SHA }}'
+            echo 'API: ${{ matrix.api }}'
+            echo 'All data: temporary synthetic QA fixtures'
+            echo 'Physical OEM SAF and APK signing: explicitly excluded'
+          } >> "$GITHUB_STEP_SUMMARY"
