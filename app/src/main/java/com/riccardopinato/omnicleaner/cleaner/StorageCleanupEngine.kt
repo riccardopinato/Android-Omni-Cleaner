@@ -20,6 +20,7 @@ data class FileCleanupPreparation(
     val safeTrashCandidates: List<CleanupFileSnapshot>,
     val blockedFiles: List<File>,
     val staleFiles: List<File>,
+    val mediaBindings: List<Pair<Uri, CleanupFileSnapshot>> = emptyList(),
 ) {
     val safeTrashFiles: List<File>
         get() = safeTrashCandidates.map { it.file }
@@ -150,6 +151,7 @@ class StorageCleanupEngine(
         snapshots: List<CleanupFileSnapshot>,
     ): FileCleanupPreparation = withContext(Dispatchers.IO) {
         val media = ArrayList<Uri>()
+        val mediaBindings = ArrayList<Pair<Uri, CleanupFileSnapshot>>()
         val seenMedia = HashSet<Uri>()
         val safeTrash = ArrayList<CleanupFileSnapshot>()
         val blocked = ArrayList<File>()
@@ -183,6 +185,7 @@ class StorageCleanupEngine(
                     } else {
                         seenMedia += uri
                         media += uri
+                        mediaBindings += uri to snapshot
                     }
                 } else {
                     blocked += file
@@ -215,6 +218,7 @@ class StorageCleanupEngine(
             safeTrashCandidates = safeTrash,
             blockedFiles = blocked.distinctBy(::canonicalKey),
             staleFiles = stale.distinctBy(::canonicalKey),
+            mediaBindings = mediaBindings,
         )
     }
 
@@ -259,8 +263,31 @@ class StorageCleanupEngine(
         SafeTrashExecutionResult(moved, rejected, movedBytes)
     }
 
-    fun createSystemTrashRequest(mediaUris: List<Uri>): PendingIntent? =
-        MediaStoreHelper.trashMediaFiles(context.contentResolver, mediaUris)
+    /**
+     * Media snapshots are revalidated immediately before the system intent is
+     * created. An inaccessible or changed source blocks the entire batch.
+     */
+    fun createSystemTrashRequest(preparation: FileCleanupPreparation): PendingIntent? {
+        val bindings = preparation.mediaBindings
+        if (bindings.size != preparation.mediaUris.size ||
+            bindings.map { it.first } != preparation.mediaUris ||
+            bindings.any { (uri, snapshot) ->
+                !CleanupSnapshotValidator.validate(snapshot).valid ||
+                    runCatching { MediaStoreHelper.getMediaUri(context, snapshot.file) }.getOrNull() != uri ||
+                    !MediaStoreHelper.isCurrentMediaMatch(
+                        context.contentResolver,
+                        uri,
+                        snapshot.expectedBytes,
+                        snapshot.file.name,
+                    )
+            }
+        ) return null
+        return MediaStoreHelper.trashMediaFiles(context.contentResolver, preparation.mediaUris)
+    }
+
+    /** Legacy/raw URI requests are intentionally unavailable for cleanup UI. */
+    @Deprecated("Use snapshot-bound FileCleanupPreparation")
+    fun createSystemTrashRequest(mediaUris: List<Uri>): PendingIntent? = null
 
     fun selectDuplicatesExceptOldest(groups: List<DuplicateGroup>): Set<String> =
         selectDuplicatesExcept(groups, keepNewest = false)
