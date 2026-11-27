@@ -43,6 +43,7 @@ import com.riccardopinato.omnicleaner.cleaner.SmartCategoryScan
 import com.riccardopinato.omnicleaner.cleaner.SmartCategoryScanner
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.StorageCleanupEngine
+import com.riccardopinato.omnicleaner.cleaner.MediaStoreHelper
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
 import java.io.File
 import java.util.Locale
@@ -76,6 +77,7 @@ fun SmartCategoriesSection(
         stringResource(R.string.smart_categories_scan_failed)
 
     val androidTrashConfirmedMessage = stringResource(R.string.cleanup_android_trash_confirmed)
+    val verifiedTemplate = stringResource(R.string.cleanup_media_verified_summary)
     val movedTemplate = stringResource(R.string.cleanup_safe_trash_moved)
     val rejectedTemplate = stringResource(R.string.cleanup_rejected)
     val changedTemplate = stringResource(R.string.cleanup_changed)
@@ -99,18 +101,23 @@ fun SmartCategoriesSection(
         }
     }
 
-    fun finishPreparedCleanup(preparation: FileCleanupPreparation) {
+    fun finishPreparedCleanup(
+        preparation: FileCleanupPreparation,
+        verifyMedia: Boolean = false,
+    ) {
         scope.launch {
+            val verification = if (verifyMedia) {
+                MediaStoreHelper.verifyTrashedUris(context.contentResolver, preparation.mediaUris)
+            } else null
             val safeResult = engine.movePreparedSnapshotsToSafeTrash(
                 preparation.safeTrashCandidates,
             )
-            selectedPaths = emptySet()
             message = buildCleanupMessage(
                 movedToSafeTrash = safeResult.moved,
                 rejected = safeResult.rejected,
                 stale = preparation.staleFiles.size,
                 blocked = preparation.blockedFiles.size,
-                androidTrashWasConfirmed = preparation.mediaUris.isNotEmpty(),
+                androidTrashWasConfirmed = false,
                 androidTrashConfirmedMessage = androidTrashConfirmedMessage,
                 movedTemplate = movedTemplate,
                 rejectedTemplate = rejectedTemplate,
@@ -118,15 +125,23 @@ fun SmartCategoriesSection(
                 blockedTemplate = blockedTemplate,
                 safeTrashNotReclaimed = safeTrashNotReclaimed,
             )
-            // RESULT_OK is consent, not a read-after-write verification of MediaStore trash.
-            if (safeResult.moved > 0) {
+            if (verification != null) {
+                message += " · " + String.format(
+                    Locale.getDefault(), verifiedTemplate,
+                    verification.confirmedUris.size, verification.unverifiedUris.size,
+                )
+            }
+            if (safeResult.moved > 0 || verification?.confirmedUris?.isNotEmpty() == true) {
                 CleanupEventBus.publishCompleted()
             }
-            onCleanupFinished()
-            runCatching {
-                scanner.scan(StorageAccess.primaryRoot())
-            }.onSuccess { refreshed ->
-                result = refreshed
+            if (verification?.unverifiedUris?.isNotEmpty() != true) {
+                selectedPaths = emptySet()
+                onCleanupFinished()
+                runCatching {
+                    scanner.scan(StorageAccess.primaryRoot())
+                }.onSuccess { refreshed ->
+                    result = refreshed
+                }
             }
         }
     }
@@ -139,7 +154,7 @@ fun SmartCategoriesSection(
         if (activityResult.resultCode != Activity.RESULT_OK || preparation == null) {
             message = androidTrashCancelledMessage
         } else {
-            finishPreparedCleanup(preparation)
+            finishPreparedCleanup(preparation, verifyMedia = true)
         }
     }
 
@@ -165,7 +180,7 @@ fun SmartCategoriesSection(
         scope.launch {
             val preparation = engine.prepareSnapshots(snapshots)
             if (preparation.mediaUris.isNotEmpty()) {
-                val request = engine.createSystemTrashRequest(preparation.mediaUris)
+                val request = engine.createSystemTrashRequest(preparation)
                 if (request == null) {
                     message = trashUnavailableMessage
                     return@launch
