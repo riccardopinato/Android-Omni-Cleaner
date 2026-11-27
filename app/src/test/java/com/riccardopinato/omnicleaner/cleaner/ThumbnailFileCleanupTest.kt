@@ -73,4 +73,35 @@ class ThumbnailFileCleanupTest {
             root.deleteRecursively()
         }
     }
+
+    @Test
+    fun onlyVerifiedAndroidMediaThumbnailMayEnterReversibleTrash() = runBlocking {
+        val root = createTempDirectory("omni-media-cache-").toFile()
+        try {
+            val cache = root.resolve("Android/media/com.example.camera/.thumbnails")
+                .apply { mkdirs() }
+            val thumb = cache.resolve("thumb.jpg").apply { writeText("verified cache") }
+            val ordinary = root.resolve("Android/media/com.example.camera/personal.jpg").apply {
+                writeText("not a thumbnail")
+            }
+            val trash = SafeTrashManager.forTests(root.resolve(".OmniCleaner/SafeTrash"), root)
+            assertTrue(trash.moveToTrash(ordinary) == null)
+            assertTrue(ordinary.isFile)
+            val cleaner = ThumbnailFileCleanup(trash)
+            val result = cleaner.clean(cleaner.inventory(cache))
+            assertEquals(1, result.removed)
+            assertFalse(thumb.exists())
+            assertEquals("verified cache", root.resolve(".OmniCleaner/SafeTrash")
+                .resolve(trash.listEntries().single().id).resolve("payload").readText())
+            assertEquals(
+                SafeTrashRestoreStatus.RESTORED,
+                trash.restore(trash.listEntries().single().id).status,
+            )
+            assertEquals("verified cache", thumb.readText())
+            assertEquals("not a thumbnail", ordinary.readText())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
 }
