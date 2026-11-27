@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.FileScanner
+import com.riccardopinato.omnicleaner.cleaner.FileCleanupPreparation
 import com.riccardopinato.omnicleaner.cleaner.FolderStatus
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.StorageCleanupEngine
@@ -39,6 +40,8 @@ class ProBatchController(
     private var job: Job? = null
     private var cleanupChangedAnything: Boolean = false
     private var pendingMediaUris: List<Uri> = emptyList()
+    private var pendingMediaPreparation: FileCleanupPreparation? = null
+    private var pendingLocalReview: ProBatchState? = null
 
     fun scan(selectedTypes: Set<ProScanType>) {
         if (state.resolving || state.awaitingSystemTrash) return
@@ -171,131 +174,113 @@ class ProBatchController(
         )
     }
 
+    /**
+     * A mixed Pro batch must not change ANY local file before the Android
+     * media prompt has been approved and independently verified.
+     */
     fun resolve() {
         if (state.resolving || state.awaitingSystemTrash) return
-        // Batch resolution is never invoked for merely discovered candidates:
-        // every selected file or folder must have an explicit user choice.
-        if (state.selectedFolderPaths.isEmpty() &&
-            state.selectedDuplicatePaths.isEmpty() &&
-            state.selectedLargeFilePaths.isEmpty() &&
-            state.selectedThumbnailPaths.isEmpty()
+        val reviewed = state
+        if (reviewed.selectedFolderPaths.isEmpty() &&
+            reviewed.selectedDuplicatePaths.isEmpty() &&
+            reviewed.selectedLargeFilePaths.isEmpty() &&
+            reviewed.selectedThumbnailPaths.isEmpty()
         ) return
 
         job?.cancel()
         job = scope.launch {
             state = state.copy(resolving = true, message = null, error = null)
             cleanupChangedAnything = false
-
             try {
-                val folders = state.emptyFolders
-                    .filter { it.path in state.selectedFolderPaths }
-                    .map { it.file }
-                val folderResult = cleanupEngine.deleteEmptyFolders(folders)
-                if (folderResult.removed > 0) cleanupChangedAnything = true
-
-                var thumbnailRemoved = 0
-                var thumbnailRemovedBytes = 0L
-                var thumbnailRejected = 0
-                for (item in state.thumbnails.filter { it.path in state.selectedThumbnailPaths }) {
-                    val result = thumbnailCleanup.clean(item.inventory)
-                    thumbnailRemoved += result.removed
-                    thumbnailRemovedBytes += result.removedBytes
-                    thumbnailRejected += result.rejected
-                }
-                if (thumbnailRemoved > 0) {
-                    cleanupChangedAnything = true
-                    StorageInventoryRepository.invalidate()
-                }
-
                 val duplicateFiles = cleanupEngine.protectedDuplicateSnapshots(
-                    state.duplicateGroups,
-                    state.selectedDuplicatePaths,
+                    reviewed.duplicateGroups, reviewed.selectedDuplicatePaths,
                 )
                 val largeFiles = cleanupEngine.snapshotsForBigFiles(
-                    state.largeFiles,
-                    state.selectedLargeFilePaths,
+                    reviewed.largeFiles, reviewed.selectedLargeFilePaths,
                 )
-
                 val preparation = cleanupEngine.prepareSnapshots(duplicateFiles + largeFiles)
-                val safeTrash = cleanupEngine.movePreparedSnapshotsToSafeTrash(preparation.safeTrashCandidates)
-                if (safeTrash.moved > 0) cleanupChangedAnything = true
-
-                val mediaRequest = cleanupEngine.createSystemTrashRequest(preparation)
-                pendingMediaUris = if (mediaRequest != null) preparation.mediaUris else emptyList()
-                val summaryParts = mutableListOf<String>()
-                summaryParts += uiContext.getString(
-                    R.string.pro_resolve_empty_folders,
-                    folderResult.removed,
-                )
-                summaryParts += buildString {
-                    append(
-                        uiContext.getString(
-                            R.string.pro_resolve_thumbnails,
-                            thumbnailRemoved,
-                        ),
-                    )
-                    if (thumbnailRemovedBytes > 0L) {
-                        append(" ")
-                        append(
-                            uiContext.getString(
-                                R.string.pro_resolve_thumbnail_bytes,
-                                thumbnailRemovedBytes,
-                            ),
-                        )
+                if (preparation.mediaUris.isNotEmpty()) {
+                    val request = cleanupEngine.createSystemTrashRequest(preparation)
+                    if (request == null) {
+                        state = state.copy(resolving = false,
+                            error = uiContext.getString(R.string.cleanup_system_trash_unavailable))
+                        return@launch
                     }
-                }
-                summaryParts += uiContext.getString(
-                    R.string.pro_resolve_safe_trash,
-                    safeTrash.moved,
-                )
-                if (thumbnailRejected > 0) {
-                    summaryParts += uiContext.getString(
-                        R.string.pro_resolve_thumbnail_rejected,
-                        thumbnailRejected,
+                    pendingMediaUris = preparation.mediaUris
+                    pendingMediaPreparation = preparation
+                    pendingLocalReview = reviewed
+                    state = state.copy(
+                        resolving = false,
+                        awaitingSystemTrash = true,
+                        pendingSystemTrashRequest = request,
+                        message = uiContext.getString(R.string.pro_confirm_body),
                     )
-                }
-                if (preparation.staleFiles.isNotEmpty()) {
-                    summaryParts += uiContext.getString(
-                        R.string.pro_resolve_stale,
-                        preparation.staleFiles.size,
-                    )
-                }
-                if (preparation.blockedFiles.isNotEmpty()) {
-                    summaryParts += uiContext.getString(
-                        R.string.pro_resolve_blocked,
-                        preparation.blockedFiles.size,
-                    )
-                }
-                if (state.residues.isNotEmpty()) {
-                    summaryParts += uiContext.getString(
-                        R.string.pro_resolve_residues,
-                        state.residues.size,
-                    )
-                }
-
-                state = state.copy(
-                    resolving = false,
-                    awaitingSystemTrash = mediaRequest != null,
-                    pendingSystemTrashRequest = mediaRequest,
-                    message = summaryParts.joinToString(" · "),
-                    error = if (mediaRequest == null && preparation.mediaUris.isNotEmpty()) {
-                        uiContext.getString(R.string.cleanup_system_trash_unavailable)
-                    } else null,
-                )
-
-                if (mediaRequest == null) {
+                    // Absolutely no local mutation occurred before OS consent.
+                } else {
+                    val message = applyLocalReviewedPlan(reviewed, preparation)
+                    state = state.copy(resolving = false, message = message)
                     finishResolve()
                 }
-            } catch (error: CancellationException) {
+            } catch (cancelled: CancellationException) {
                 state = state.copy(resolving = false)
+                throw cancelled
             } catch (_: Throwable) {
-                state = state.copy(
-                    resolving = false,
-                    awaitingSystemTrash = false,
-                    error = uiContext.getString(R.string.pro_scan_failed),
-                )
+                state = state.copy(resolving = false,
+                    error = uiContext.getString(R.string.pro_scan_failed))
             }
         }
+    }
+
+    private suspend fun applyLocalReviewedPlan(
+        reviewed: ProBatchState,
+        preparation: FileCleanupPreparation,
+    ): String {
+        val folders = reviewed.emptyFolders.filter {
+            it.path in reviewed.selectedFolderPaths
+        }.map { it.file }
+        val folderResult = cleanupEngine.deleteEmptyFolders(folders)
+        if (folderResult.removed > 0) cleanupChangedAnything = true
+
+        var thumbMoved = 0
+        var thumbRejected = 0
+        var thumbBytes = 0L
+        for (item in reviewed.thumbnails.filter { it.path in reviewed.selectedThumbnailPaths }) {
+            val result = thumbnailCleanup.clean(item.inventory)
+            thumbMoved += result.removed
+            thumbRejected += result.rejected
+            thumbBytes += result.removedBytes
+        }
+        if (thumbMoved > 0) {
+            cleanupChangedAnything = true
+            StorageInventoryRepository.invalidate()
+        }
+        val moved = cleanupEngine.movePreparedSnapshotsToSafeTrash(
+            preparation.safeTrashCandidates,
+        )
+        if (moved.moved > 0) cleanupChangedAnything = true
+        val lines = mutableListOf<String>()
+        lines += uiContext.getString(R.string.pro_resolve_empty_folders, folderResult.removed)
+        lines += uiContext.getString(R.string.pro_resolve_thumbnails, thumbMoved)
+        if (thumbBytes > 0L) {
+            lines += uiContext.getString(R.string.pro_resolve_thumbnail_bytes, thumbBytes)
+        }
+        lines += uiContext.getString(R.string.pro_resolve_safe_trash, moved.moved)
+        if (thumbRejected > 0) {
+            lines += uiContext.getString(R.string.pro_resolve_thumbnail_rejected, thumbRejected)
+        }
+        if (moved.rejected > 0) {
+            lines += uiContext.getString(R.string.pro_resolve_blocked, moved.rejected)
+        }
+        if (preparation.staleFiles.isNotEmpty()) {
+            lines += uiContext.getString(R.string.pro_resolve_stale, preparation.staleFiles.size)
+        }
+        if (preparation.blockedFiles.isNotEmpty()) {
+            lines += uiContext.getString(R.string.pro_resolve_blocked, preparation.blockedFiles.size)
+        }
+        if (reviewed.residues.isNotEmpty()) {
+            lines += uiContext.getString(R.string.pro_resolve_residues, reviewed.residues.size)
+        }
+        return lines.joinToString(" · ")
     }
 
     fun markSystemTrashLaunched() {
@@ -306,44 +291,50 @@ class ProBatchController(
     fun onSystemTrashResult(success: Boolean) {
         if (!state.awaitingSystemTrash) return
         val attempted = pendingMediaUris
+        val preparation = pendingMediaPreparation
+        val reviewed = pendingLocalReview
         pendingMediaUris = emptyList()
-        if (!success || attempted.isEmpty()) {
+        pendingMediaPreparation = null
+        pendingLocalReview = null
+        if (!success || attempted.isEmpty() || preparation == null || reviewed == null) {
             state = state.copy(
-                awaitingSystemTrash = false,
-                pendingSystemTrashRequest = null,
-                message = state.message.orEmpty() + " · " +
-                    uiContext.getString(R.string.pro_system_trash_cancelled),
+                awaitingSystemTrash = false, pendingSystemTrashRequest = null,
+                message = uiContext.getString(R.string.pro_system_trash_cancelled),
             )
-            finishResolve()
-            return
+            if (preparation != null) {
+                scope.launch { cleanupEngine.recordMediaTrashOutcome(preparation, null) }
+            }
+            return // No local file has been changed.
         }
-        // Consent is NOT proof. Only independently observed IS_TRASHED rows
-        // are counted as completed cleanup; all others stay selected.
         scope.launch {
             try {
                 val verified = MediaStoreHelper.verifyTrashedUris(
                     context.contentResolver, attempted,
                 )
+                cleanupEngine.recordMediaTrashOutcome(preparation, verified)
+                val successSummary = uiContext.getString(
+                    R.string.cleanup_media_verified_summary,
+                    verified.confirmedUris.size, verified.unverifiedUris.size,
+                )
                 if (verified.confirmedUris.isNotEmpty()) cleanupChangedAnything = true
+                // If Android applied only a subset, retain the reviewed local
+                // selection and require a fresh user decision. Never pretend
+                // that the mixed operation was atomic.
+                val localSummary = if (verified.unverifiedUris.isEmpty()) {
+                    applyLocalReviewedPlan(reviewed, preparation)
+                } else uiContext.getString(R.string.cleanup_system_trash_unavailable)
                 state = state.copy(
-                    awaitingSystemTrash = false,
-                    pendingSystemTrashRequest = null,
-                    message = state.message.orEmpty() + " · " + uiContext.getString(
-                        R.string.cleanup_media_verified_summary,
-                        verified.confirmedUris.size,
-                        verified.unverifiedUris.size,
-                    ),
+                    awaitingSystemTrash = false, pendingSystemTrashRequest = null,
+                    message = successSummary + " · " + localSummary,
                 )
                 finishResolve()
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
                 state = state.copy(
-                    awaitingSystemTrash = false,
-                    pendingSystemTrashRequest = null,
+                    awaitingSystemTrash = false, pendingSystemTrashRequest = null,
                     error = uiContext.getString(R.string.cleanup_system_trash_unavailable),
                 )
-                finishResolve()
             }
         }
     }
@@ -356,6 +347,8 @@ class ProBatchController(
         job?.cancel()
         job = null
         pendingMediaUris = emptyList()
+        pendingMediaPreparation = null
+        pendingLocalReview = null
         state = state.copy(
             running = false,
             resolving = false,
