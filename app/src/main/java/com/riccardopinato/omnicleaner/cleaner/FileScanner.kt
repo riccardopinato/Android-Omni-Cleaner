@@ -137,8 +137,11 @@ class FileScanner(
         val rootPath = canonicalPath(root).trimEnd(File.separatorChar)
         val rootPrefix = rootPath + File.separator
 
+        // A persisted inventory is a read-only projection: canonicalizing all
+        // N files here defeats warm-index performance for large libraries.
+        // Cleanup actions validate the live canonical path independently.
         val indexedByTopLevel = inventory.files.groupBy { item ->
-            val path = canonicalPath(item.file)
+            val path = item.file.absolutePath
             path.removePrefix(rootPrefix).substringBefore(File.separatorChar)
         }
 
