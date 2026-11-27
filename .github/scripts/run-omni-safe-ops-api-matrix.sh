@@ -29,7 +29,7 @@ run_method() {
   output="$(adb shell am instrument -w -e class "$CLS#$method" \
       com.riccardopinato.omnicleaner.debug.test/androidx.test.runner.AndroidJUnitRunner 2>&1)"
   printf '%s\n' "$output"
-  if ! printf '%s\n' "$output" | grep -Eq 'OK \\(1 test\\)'; then
+  if ! printf '%s\n' "$output" | grep -Eq 'OK \(1 test\)'; then
     echo "FAIL_PROCESS_DEATH_METHOD api=$API method=$method"
     exit 1
   fi
