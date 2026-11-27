@@ -226,12 +226,8 @@ class FileScanner(
         matches.sortedByDescending { it.sizeBytes }
     }
 
-    fun isSafeThumbnailDirectory(directory: File): Boolean {
-        val normalized = directory.absolutePath.replace('\\', '/').lowercase(Locale.ROOT)
-        return normalized.endsWith("/dcim/.thumbnails") ||
-            normalized.endsWith("/pictures/.thumbnails") ||
-            (normalized.contains("/android/media/") && normalized.endsWith("/.thumbnails"))
-    }
+    fun isSafeThumbnailDirectory(directory: File): Boolean =
+        ThumbnailDirectoryPolicy.isSafeDirectory(directory)
 
     private fun canonicalPath(file: File): String =
         runCatching { file.canonicalPath }.getOrElse { file.absolutePath }
