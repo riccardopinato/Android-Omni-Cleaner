@@ -273,16 +273,10 @@ class SafeTrashManager private constructor(
                 return payload
             }
 
-            // Never delete the relocated payload unless rollback succeeded:
-            // otherwise the only remaining copy could be lost.
-            val rolledBack = runCatching {
-                !file.exists() && payload.isFile && payload.renameTo(file)
-            }.getOrDefault(false)
-            if (rolledBack) {
-                if (metadata.isFile && !PathSafety.isSymlink(metadata)) metadata.delete()
-                if (entry.listFiles()?.isEmpty() == true) entry.delete()
-            }
-            // Failed rollback: retain payload plus metadata for recovery.
+            // NEVER rename back to the original path after exists(): that
+            // creates a TOCTOU overwrite window if another app creates a file
+            // at the old name. Keep the quarantined payload and metadata for
+            // user-reviewed no-overwrite recovery, even when integrity fails.
             return null
         }
 
