@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.SafeTrashEntry
+import com.riccardopinato.omnicleaner.cleaner.SafeTrashPurgeManifest
 import com.riccardopinato.omnicleaner.cleaner.SafeTrashManager
 import com.riccardopinato.omnicleaner.cleaner.SafeTrashPurgeStatus
 import com.riccardopinato.omnicleaner.cleaner.SafeTrashRestoreStatus
@@ -54,6 +55,8 @@ fun SafeTrashSection() {
     var persistentAvailable by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<SafeTrashMessage?>(null) }
     var confirmEmpty by remember { mutableStateOf(false) }
+    var confirmEmptySecond by remember { mutableStateOf(false) }
+    var approvedPurgePlan by remember { mutableStateOf<SafeTrashPurgeManifest?>(null) }
     var pendingIndividualDelete by remember { mutableStateOf<SafeTrashEntry?>(null) }
     val canRestore = StorageAccess.hasBroadAccess(context)
     val persistentTrashAvailable = manager.isPersistentTrashAvailable()
@@ -232,7 +235,22 @@ fun SafeTrashSection() {
                         }
                         Button(
                             enabled = !loading && persistentAvailable && entries.isNotEmpty(),
-                            onClick = { confirmEmpty = true },
+                            onClick = {
+                                loading = true
+                                scope.launch {
+                                    val plan = withContext(Dispatchers.IO) {
+                                        manager.planPurge(entries)
+                                    }
+                                    approvedPurgePlan = plan
+                                    confirmEmpty = plan != null
+                                    loading = false
+                                    if (plan == null) {
+                                        message = SafeTrashMessage(R.string.safe_trash_partial_empty,
+                                            listOf(formatSafeTrashBytes(0L)))
+                                        reload()
+                                    }
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(stringResource(R.string.safe_trash_empty_permanently))
@@ -270,7 +288,7 @@ fun SafeTrashSection() {
                         loading = true
                         scope.launch {
                             val result = withContext(Dispatchers.IO) {
-                                runCatching { manager.purgeEntry(entry.id) }.getOrNull()
+                                runCatching { manager.purgeApproved(entry) }.getOrNull()
                             }
                             val success = result?.status == SafeTrashPurgeStatus.DELETED
                             message = SafeTrashMessage(
@@ -301,7 +319,7 @@ fun SafeTrashSection() {
 
     if (confirmEmpty) {
         AlertDialog(
-            onDismissRequest = { confirmEmpty = false },
+            onDismissRequest = { confirmEmpty = false; approvedPurgePlan = null },
             title = { Text(stringResource(R.string.safe_trash_empty_confirm_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -309,8 +327,10 @@ fun SafeTrashSection() {
                     Text(
                         stringResource(
                             R.string.safe_trash_purge_count_bytes,
-                            entries.size,
-                            formatSafeTrashBytes(trashBytes),
+                            approvedPurgePlan?.entries?.size ?: 0,
+                            formatSafeTrashBytes(
+                                approvedPurgePlan?.entries?.sumOf { it.sizeBytes } ?: 0L
+                            ),
                         ),
                         style = MaterialTheme.typography.bodyMedium,
                     )
@@ -319,39 +339,61 @@ fun SafeTrashSection() {
             confirmButton = {
                 TextButton(
                     onClick = {
+                        // Require a second, separate confirmation on the frozen manifest.
                         confirmEmpty = false
-                        loading = true
-                        scope.launch {
-                            val result = withContext(Dispatchers.IO) {
-                                runCatching { manager.purgeAll() }.getOrNull()
-                            }
-                            message = if (result?.completed == true) {
-                                SafeTrashMessage(
-                                    R.string.safe_trash_emptied,
-                                    listOf(formatSafeTrashBytes(result.reclaimedBytes)),
-                                )
-                            } else {
-                                SafeTrashMessage(
-                                    R.string.safe_trash_partial_empty,
-                                    listOf(
-                                        formatSafeTrashBytes(result?.reclaimedBytes ?: 0L),
-                                    ),
-                                )
-                            }
-                            reload()
-                            if ((result?.deletedEntries ?: 0) > 0) {
-                                CleanupEventBus.publishCompleted()
-                            }
-                        }
+                        confirmEmptySecond = approvedPurgePlan != null
                     },
                 ) {
                     Text(stringResource(R.string.safe_trash_delete_permanently))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmEmpty = false }) {
+                TextButton(onClick = {
+                    confirmEmpty = false
+                    approvedPurgePlan = null
+                }) {
                     Text(stringResource(R.string.cancel))
                 }
+            },
+        )
+    }
+
+    if (confirmEmptySecond) {
+        AlertDialog(
+            onDismissRequest = {
+                confirmEmptySecond = false
+                approvedPurgePlan = null
+            },
+            title = { Text(stringResource(R.string.safe_trash_empty_confirm_title)) },
+            text = { Text(stringResource(R.string.safe_trash_empty_confirm_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val approved = approvedPurgePlan
+                    confirmEmptySecond = false
+                    approvedPurgePlan = null
+                    if (approved == null) return@TextButton
+                    loading = true
+                    scope.launch {
+                        val result = withContext(Dispatchers.IO) {
+                            runCatching { manager.purgeApproved(approved) }.getOrNull()
+                        }
+                        message = if (result?.completed == true) {
+                            SafeTrashMessage(R.string.safe_trash_emptied,
+                                listOf(formatSafeTrashBytes(result.reclaimedBytes)))
+                        } else {
+                            SafeTrashMessage(R.string.safe_trash_partial_empty,
+                                listOf(formatSafeTrashBytes(result?.reclaimedBytes ?: 0L)))
+                        }
+                        reload()
+                        if ((result?.deletedEntries ?: 0) > 0) CleanupEventBus.publishCompleted()
+                    }
+                }) { Text(stringResource(R.string.safe_trash_delete_permanently)) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    confirmEmptySecond = false
+                    approvedPurgePlan = null
+                }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
