@@ -36,6 +36,14 @@ class StorageCleanupEngine(
     private val context: Context,
     private val safeTrashManager: SafeTrashManager = SafeTrashManager(context),
 ) {
+    private val journal by lazy {
+        SafeOperationsJournal(File(context.filesDir, "omni_safe_operations"))
+    }
+    private val coordinator by lazy { DeletionCoordinator(safeTrashManager, journal) }
+
+    /** Read-only crash recovery. The caller must never replay a pending move. */
+    fun incompleteOperations(): List<SafeOperationRecord> = journal.needsReview()
+
     suspend fun deleteEmptyFolders(
         folders: List<File>,
         allowedRoot: File = StorageAccess.primaryRoot(),
@@ -175,6 +183,11 @@ class StorageCleanupEngine(
 
             val file = snapshot.file
             if (MediaStoreHelper.isMediaFile(file)) {
+                val digestBound = CleanupSnapshotValidator.withCurrentDigest(snapshot)
+                if (digestBound == null) {
+                    stale += file
+                    continue
+                }
                 val uri = runCatching { MediaStoreHelper.getMediaUri(context, file) }.getOrNull()
                 if (uri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     if (uri in seenMedia) continue
@@ -185,7 +198,7 @@ class StorageCleanupEngine(
                     } else {
                         seenMedia += uri
                         media += uri
-                        mediaBindings += uri to snapshot
+                        mediaBindings += uri to digestBound
                     }
                 } else {
                     blocked += file
@@ -239,28 +252,10 @@ class StorageCleanupEngine(
     suspend fun movePreparedSnapshotsToSafeTrash(
         snapshots: List<CleanupFileSnapshot>,
     ): SafeTrashExecutionResult = withContext(Dispatchers.IO) {
-        var moved = 0
-        var rejected = 0
-        var movedBytes = 0L
-
-        for (snapshot in strongestCleanupSnapshots(snapshots)) {
-            coroutineContext.ensureActive()
-
-            // moveToTrash(snapshot) performs the full snapshot + keeper
-            // validation immediately before mutation. Do not duplicate the
-            // same full-file SHA pass here.
-            if (safeTrashManager.moveToTrash(snapshot) != null) {
-                moved++
-                movedBytes += snapshot.expectedBytes.coerceAtLeast(0L)
-            } else {
-                rejected++
-            }
-        }
-
-        if (moved > 0) {
-            StorageInventoryRepository.invalidate()
-        }
-        SafeTrashExecutionResult(moved, rejected, movedBytes)
+        coroutineContext.ensureActive()
+        val result = coordinator.moveApproved(snapshots)
+        if (result.moved > 0) StorageInventoryRepository.invalidate()
+        result
     }
 
     /**
