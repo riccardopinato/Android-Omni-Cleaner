@@ -22,7 +22,7 @@ CASES=(
   'com.riccardopinato.omnicleaner.gallery.GalleryTexturePlaybackInstrumentedTest|1'
   'com.riccardopinato.omnicleaner.monetization.PremiumCacheInstrumentedTest|1'
   'com.riccardopinato.omnicleaner.cleaner.BackgroundIndexRuntimeInstrumentedTest|2'
-  'com.riccardopinato.omnicleaner.gallery.MediaTrashReadbackInstrumentedTest|1'
+  'com.riccardopinato.omnicleaner.gallery.MediaTrashReadbackInstrumentedTest|2'
 )
 
 for spec in "${CASES[@]}"; do
