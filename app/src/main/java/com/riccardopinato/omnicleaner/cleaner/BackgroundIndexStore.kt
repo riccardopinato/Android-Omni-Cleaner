@@ -5,6 +5,10 @@ import android.content.SharedPreferences
 import android.os.Build
 import android.provider.MediaStore
 import java.io.File
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 
 /**
  * Last completed read-only inventory. Counts here never authorize deletion:
@@ -52,6 +56,7 @@ internal class BackgroundIndexStore(context: Context) {
 
     fun setEnabled(enabled: Boolean) {
         prefs.edit().putBoolean("enabled", enabled).apply()
+        signalChange()
     }
 
     fun read(): SavedIndexSummary = SavedIndexSummary(
@@ -67,10 +72,12 @@ internal class BackgroundIndexStore(context: Context) {
 
     fun markDirty() {
         prefs.edit().putBoolean("dirty", true).apply()
+        signalChange()
     }
 
     fun recordChecked(nowMillis: Long) {
         prefs.edit().putLong("checked", nowMillis).apply()
+        signalChange()
     }
 
     fun recordComplete(
@@ -93,6 +100,7 @@ internal class BackgroundIndexStore(context: Context) {
             }
             .putBoolean("dirty", false)
             .apply()
+        signalChange()
     }
 
     fun shouldEnqueueCheck(nowMillis: Long): Boolean =
@@ -103,6 +111,8 @@ internal class BackgroundIndexStore(context: Context) {
     }
 
     companion object {
+        private val revision = MutableStateFlow(0L)
+
         fun mediaRevision(context: Context): MediaRevisionToken? {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
             return runCatching {
@@ -114,4 +124,12 @@ internal class BackgroundIndexStore(context: Context) {
             }.getOrNull()
         }
     }
+
+    /** Emits persisted summaries from all repository, worker and UI instances. */
+    fun observe(): Flow<SavedIndexSummary> = revision.map { read() }
+
+    private fun signalChange() {
+        revision.update { it + 1L }
+    }
+
 }
