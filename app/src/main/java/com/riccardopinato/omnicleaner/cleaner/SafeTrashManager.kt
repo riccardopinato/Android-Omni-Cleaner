@@ -687,6 +687,26 @@ class SafeTrashManager private constructor(
      * integrity-checked. A failed migration leaves the original untouched.
      */
     /**
+     * Read-only inventory of legacy records lacking a hash. Corrupt claimed
+     * hashes are never eligible for automatic or blanket repair.
+     */
+    fun legacyMetadataRepairCandidates(): List<String> =
+        if (!isPersistentTrashAvailable()) emptyList()
+        else trashDirectory.listFiles().orEmpty().filter { directory ->
+            if (!directory.isDirectory || !ENTRY_ID_PATTERN.matches(directory.name) ||
+                !hasOnlyKnownEntryFiles(directory)
+            ) return@filter false
+            val metadata = File(directory, METADATA_NAME)
+            val properties = runCatching {
+                Properties().apply { metadata.inputStream().use { load(it) } }
+            }.getOrNull() ?: return@filter false
+            properties.getProperty(KEY_SHA256) == null &&
+                properties.getProperty(KEY_ORIGINAL_PATH)?.isNotBlank() == true &&
+                properties.getProperty(KEY_SIZE_BYTES)?.toLongOrNull() ==
+                    File(directory, PAYLOAD_NAME).length()
+        }.map { it.name }.sorted()
+
+    /**
      * Legacy pre-SHA entries are quarantined during pure inspection. An
      * explicit user repair may establish their first digest, with a staged
      * metadata write and original backup; an existing wrong SHA is NEVER fixed.
