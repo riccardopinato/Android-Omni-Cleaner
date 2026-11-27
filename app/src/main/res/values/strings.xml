@@ -189,9 +189,9 @@
     <string name="maintenance_residue_candidates">App residue candidates</string>
     <string name="maintenance_residue_warning">Android may limit installed-package visibility: these are review candidates, not automatic proof of uninstalled apps.</string>
     <string name="maintenance_access_required">Storage access is required before running this analysis.</string>
-    <string name="maintenance_cleanup_result">%1$d files permanently removed (%2$d bytes) · %3$d rejected because they changed or could not be verified.</string>
+    <string name="maintenance_cleanup_result">%1$d thumbnail files moved to recoverable Safe Trash (%2$d bytes held, not freed) · %3$d skipped after verification.</string>
     <string name="maintenance_confirm_cache_title">Confirm cache cleanup</string>
-    <string name="maintenance_confirm_cache_body">Only files identical to the latest scan inventory (size, modified time and SHA-256) will be removed. Changed files will be rejected.</string>
+    <string name="maintenance_confirm_cache_body">Only selected thumbnails with matching size, time and SHA-256 are moved into recoverable Safe Trash. No permanent deletion or reclaimed-space claim.</string>
 
     <string name="safe_trash_body">Files here still occupy storage. You can restore them without overwriting existing files, or delete them permanently.</string>
     <string name="safe_trash_summary">%1$d items · %2$s</string>
@@ -331,7 +331,7 @@
     <string name="pro_residue_detail">%1$s · %2$s · %3$s</string>
     <string name="pro_resolve_selection">Resolve Pro selection</string>
     <string name="pro_confirm_title">Confirm Pro sequence?</string>
-    <string name="pro_confirm_body">Empty folders and thumbnails are rechecked before removal. Duplicates keep at least one copy. Selected media goes through Android Trash with a second system confirmation. App residues remain unchanged.</string>
+    <string name="pro_confirm_body">Empty folders are rechecked. Selected thumbnails move to recoverable Safe Trash; duplicates keep a copy. Selected media requires Android system consent. App residues are left unchanged.</string>
     <string name="pro_scan_empty_folders_label">Empty and small folders</string>
     <string name="pro_scan_empty_folders_description">Review orphaned or content-free folders</string>
     <string name="pro_scan_duplicates_label">Duplicate files</string>
@@ -351,14 +351,15 @@
     <string name="pro_error_access_required">Storage access is required for the Pro scan.</string>
     <string name="pro_error_select_category">Select at least one category.</string>
     <string name="pro_resolve_empty_folders">%1$d empty folders</string>
-    <string name="pro_resolve_thumbnails">%1$d thumbnails permanently deleted</string>
+    <string name="pro_resolve_thumbnails">%1$d thumbnails moved to Safe Trash (recoverable)</string>
     <string name="pro_resolve_thumbnail_bytes">(%1$d bytes)</string>
     <string name="pro_resolve_safe_trash">%1$d files in Safe Trash (not space already reclaimed)</string>
     <string name="pro_resolve_thumbnail_rejected">%1$d thumbnails rejected</string>
     <string name="pro_resolve_stale">%1$d files changed after the scan and left unchanged</string>
     <string name="pro_resolve_blocked">%1$d files left unchanged because reversible deletion is unavailable</string>
     <string name="pro_resolve_residues">%1$d residues kept for review because package visibility may be restricted</string>
-    <string name="pro_system_trash_confirmed">Android Trash confirmed (not counted as space already reclaimed)</string>
+    <string name="cleanup_media_verified_summary">%1$d media verified in Android Trash · %2$d not verified (keep selection)</string>
+    <string name="pro_system_trash_confirmed">Android consent accepted (actual media Trash state not verified; no space reclaimed)</string>
     <string name="pro_system_trash_cancelled">Android Trash cancelled</string>
 
 
