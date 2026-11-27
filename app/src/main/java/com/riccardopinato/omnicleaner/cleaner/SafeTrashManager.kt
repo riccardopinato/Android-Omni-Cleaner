@@ -114,7 +114,8 @@ class SafeTrashManager private constructor(
                 bytes += payload.length().coerceAtLeast(0L)
             }
             val entry = if (child.isDirectory && !PathSafety.isSymlink(child) &&
-                ENTRY_ID_PATTERN.matches(child.name)
+                ENTRY_ID_PATTERN.matches(child.name) &&
+                hasOnlyKnownEntryFiles(child)
             ) readEntry(child) else null
             if (entry == null) unrecognized++ else valid += entry
         }
@@ -685,6 +686,77 @@ class SafeTrashManager private constructor(
      * delete the legacy copy only after the migrated entry can be parsed and
      * integrity-checked. A failed migration leaves the original untouched.
      */
+    /**
+     * Legacy pre-SHA entries are quarantined during pure inspection. An
+     * explicit user repair may establish their first digest, with a staged
+     * metadata write and original backup; an existing wrong SHA is NEVER fixed.
+     */
+    fun repairLegacyEntryApproved(entryId: String): Boolean {
+        if (!ENTRY_ID_PATTERN.matches(entryId) || !isPersistentTrashAvailable()) return false
+        val directory = File(trashDirectory, entryId)
+        if (!hasOnlyKnownEntryFiles(directory)) return false
+        val metadata = File(directory, METADATA_NAME)
+        val payload = File(directory, PAYLOAD_NAME)
+        val original = runCatching {
+            Properties().apply { metadata.inputStream().use { load(it) } }
+        }.getOrNull() ?: return false
+        if (original.getProperty(KEY_SHA256) != null) return false
+        val sourcePath = original.getProperty(KEY_ORIGINAL_PATH) ?: return false
+        val sourceName = original.getProperty(KEY_ORIGINAL_NAME) ?: return false
+        val size = original.getProperty(KEY_SIZE_BYTES)?.toLongOrNull() ?: return false
+        val modified = original.getProperty(KEY_LAST_MODIFIED)?.toLongOrNull() ?: return false
+        if (size < 0 || modified < 0 || payload.length() != size ||
+            File(sourcePath).name != sourceName ||
+            !PathSafety.isWithinRoot(File(sourcePath), restoreRoot) ||
+            (PathSafety.isDangerousPath(File(sourcePath)) &&
+                !ThumbnailDirectoryPolicy.isSafeThumbnailFile(File(sourcePath), restoreRoot))
+        ) return false
+        val hash = runCatching { sha256(payload) }.getOrNull() ?: return false
+        var operation = destructiveJournal.begin(
+            "EXPLICIT_LEGACY_METADATA_REPAIR",
+            manifestFingerprint(listOf(SafeTrashEntry(
+                entryId, sourcePath, sourceName, size, modified, hash,
+            ))),
+            entryId,
+        ) ?: return false
+        operation = destructiveJournal.advance(operation, SafeOperationPhase.USER_APPROVED)
+            ?: return false
+        operation = destructiveJournal.advance(operation, SafeOperationPhase.MUTATING)
+            ?: return false
+        val staging = File(directory, "$METADATA_NAME.new")
+        val backup = File(directory, "$METADATA_NAME.bak")
+        if (staging.exists() || backup.exists()) return false
+        val written = runCatching {
+            original.setProperty(KEY_SHA256, hash)
+            FileOutputStream(staging).use { output ->
+                original.store(output, METADATA_COMMENT)
+                output.fd.sync()
+            }
+            true
+        }.getOrDefault(false)
+        if (!written) return false
+        if (!metadata.renameTo(backup)) return false
+        if (!staging.renameTo(metadata)) {
+            if (!metadata.exists()) backup.renameTo(metadata)
+            return false
+        }
+        // Verify bytes and fields without consulting any untrusted claim.
+        val verified = runCatching {
+            val check = Properties().apply { metadata.inputStream().use { load(it) } }
+            check.getProperty(KEY_SHA256) == hash &&
+                check.getProperty(KEY_ORIGINAL_PATH) == sourcePath &&
+                check.getProperty(KEY_SIZE_BYTES)?.toLongOrNull() == size &&
+                sha256(payload) == hash
+        }.getOrDefault(false)
+        if (!verified) return false // Backup remains for explicit recovery.
+        if (!backup.delete()) return false
+        val recovered = readEntry(directory) != null
+        if (recovered) {
+            destructiveJournal.advance(operation, SafeOperationPhase.COMMITTED, "repaired=$entryId")
+        }
+        return recovered
+    }
+
     /** Read-only: migration is never a side effect of opening the Trash UI. */
     fun hasLegacyEntries(): Boolean =
         legacyTrashDirectory?.listFiles()?.any {
