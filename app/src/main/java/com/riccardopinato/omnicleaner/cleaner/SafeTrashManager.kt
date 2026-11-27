@@ -216,6 +216,21 @@ class SafeTrashManager private constructor(
             return null
         }
 
+        // A crash after the next filesystem mutation must leave durable
+        // evidence; failure to write the journal is a hard stop.
+        val moveHash = MessageDigest.getInstance("SHA-256")
+            .digest(listOf(file.absolutePath, originalSize.toString(),
+                originalModified.toString(), originalHash).joinToString("|")
+                .toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+        var operation = destructiveJournal.begin(
+            "REVERSIBLE_FILE_MOVE", moveHash, file.absolutePath,
+        ) ?: return null
+        operation = destructiveJournal.advance(operation, SafeOperationPhase.USER_APPROVED)
+            ?: return null
+        operation = destructiveJournal.advance(operation, SafeOperationPhase.MUTATING)
+            ?: return null
+
         val entry = File(trashDirectory, UUID.randomUUID().toString())
         val payload = File(entry, PAYLOAD_NAME)
         val metadata = File(entry, METADATA_NAME)
@@ -249,7 +264,11 @@ class SafeTrashManager private constructor(
                 payload.isFile &&
                     payload.length() == originalSize &&
                     runCatching { sha256(payload) }.getOrNull() == originalHash
-            if (validPayload) return payload
+            if (validPayload) {
+                destructiveJournal.advance(operation, SafeOperationPhase.COMMITTED,
+                    "trashId=${entry.name};bytes=$originalSize")
+                return payload
+            }
 
             // Never delete the relocated payload unless rollback succeeded:
             // otherwise the only remaining copy could be lost.
