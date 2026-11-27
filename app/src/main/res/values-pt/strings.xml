@@ -192,6 +192,9 @@
     <string name="maintenance_confirm_cache_title">Confirmar limpeza da cache</string>
     <string name="maintenance_confirm_cache_body">Apenas as miniaturas selecionadas com tamanho, data e SHA-256 idênticos são movidas para a Lixeira segura recuperável. Sem eliminação definitiva nem espaço libertado.</string>
 
+    <string name="safe_trash_import_legacy">Importar Lixeira antiga</string>
+    <string name="safe_trash_import_legacy_body">Esta importação opcional copia e verifica entradas antigas antes de remover as originais. Entradas danificadas ou incompletas permanecem intactas. Nunca há importação automática.</string>
+    <string name="cleanup_system_trash_expiry_notice">O Android pode apagar automaticamente ficheiros da Lixeira multimédia após o prazo do sistema (frequentemente cerca de 30 dias). Não é uma cópia de segurança permanente.</string>
     <string name="safe_trash_body">Os ficheiros aqui continuam a ocupar espaço. Pode restaurá-los sem substituir ficheiros existentes ou eliminá-los permanentemente.</string>
     <string name="safe_trash_summary">%1$d itens · %2$s</string>
     <string name="safe_trash_unrecognized">%1$d itens desconhecidos ou incompletos foram preservados por segurança. Não serão eliminados automaticamente.</string>
@@ -360,7 +363,7 @@
     <string name="pro_system_trash_confirmed">Consentimento Android aceite (estado real não verificado; espaço não libertado)</string>
     <string name="pro_system_trash_cancelled">Lixeira do Android cancelada</string>
 
-    <string name="safe_trash_persistent_notice">O Safe Trash é guardado no armazenamento partilhado para poder sobreviver à desinstalação da aplicação. Reinstale o Omni Cleaner e reative a Limpeza profunda para restaurar estes ficheiros.</string>
+    <string name="safe_trash_persistent_notice">A Lixeira segura fica no armazenamento partilhado e pode sobreviver à desinstalação, mas outros limpadores ou um restauro podem eliminá-la. Guarde cópias independentes de ficheiros importantes.</string>
     <string name="safe_trash_unavailable">O armazenamento do Safe Trash não está disponível. Os ficheiros permanecerão inalterados.</string>
     <string name="gallery_error_load_failed">Não foi possível carregar os itens da Galeria. Tente novamente.</string>
     <string name="smart_categories_scan_failed">Não foi possível concluir a análise das Categorias inteligentes.</string>
