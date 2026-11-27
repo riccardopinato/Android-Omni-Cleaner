@@ -151,12 +151,6 @@ class SafeTrashManager private constructor(
             stamp.sha256.length != 64 ||
             !stamp.sha256.all { it in '0'..'9' || it in 'a'..'f' }
         ) return null
-        val snapshot = CleanupFileSnapshot(
-            file = stamp.file,
-            expectedBytes = stamp.bytes,
-            expectedModified = stamp.modified,
-            expectedSha256 = stamp.sha256,
-        )
         // CleanupSnapshotValidator intentionally blocks general Android/media.
         // This narrow cache exception uses the validated directory and its
         // immutable SHA, never granting access to arbitrary app media files.
@@ -184,7 +178,12 @@ class SafeTrashManager private constructor(
         if (!isPersistentTrashAvailable()) return null
         if (!file.exists() || !file.isFile) return null
         if (!PathSafety.isWithinRoot(file, restoreRoot)) return null
+        // A cache exception must never apply to app-managed Safe Trash itself.
+        val normalized = file.absolutePath.replace('\\\\', '/').lowercase()
         if ((PathSafety.isDangerousPath(file) && !cacheMediaException) ||
+            (cacheMediaException && normalized.contains(
+                "/" + StorageAccess.APP_MANAGED_DIRECTORY.lowercase() + "/",
+            )) ||
             PathSafety.isSymlink(file)
         ) return null
         if (MediaStoreHelper.isMediaFile(file) && !cacheMediaException) return null
@@ -227,7 +226,9 @@ class SafeTrashManager private constructor(
         }.getOrDefault(false)
 
         if (!metadataWritten) {
-            entry.deleteRecursively()
+            // Never recurse over a newly created but possibly raced entry.
+            if (metadata.isFile && !PathSafety.isSymlink(metadata)) metadata.delete()
+            if (entry.listFiles()?.isEmpty() == true) entry.delete()
             return null
         }
 
@@ -243,14 +244,18 @@ class SafeTrashManager private constructor(
             val rolledBack = runCatching {
                 !file.exists() && payload.isFile && payload.renameTo(file)
             }.getOrDefault(false)
-            if (rolledBack) entry.deleteRecursively()
+            if (rolledBack) {
+                if (metadata.isFile && !PathSafety.isSymlink(metadata)) metadata.delete()
+                if (entry.listFiles()?.isEmpty() == true) entry.delete()
+            }
             // Failed rollback: retain payload plus metadata for recovery.
             return null
         }
 
         val requiredFreeSpace = originalSize + COPY_FREE_SPACE_MARGIN_BYTES
         if (trashDirectory.usableSpace in 0L until requiredFreeSpace) {
-            entry.deleteRecursively()
+            if (metadata.isFile && !PathSafety.isSymlink(metadata)) metadata.delete()
+            if (entry.listFiles()?.isEmpty() == true) entry.delete()
             return null
         }
 
@@ -277,11 +282,19 @@ class SafeTrashManager private constructor(
             true
         }.getOrDefault(false)
 
-        if (!copied || !file.delete()) {
-            payload.delete()
-            entry.deleteRecursively()
-            return null
-        }
+        // Never dispose of the only possible recovery copy after a failed
+        // copy, changed source or failed unlink. Unknown partial entries remain
+        // visible in inventory for explicit recovery and are not bulk purged.
+        if (!copied) return null
+        val sourceStillMatches = runCatching {
+            file.isFile &&
+                file.length() == originalSize &&
+                file.lastModified() == originalModified &&
+                sha256(file) == originalHash &&
+                sameContents(file, payload, originalSize)
+        }.getOrDefault(false)
+        if (!sourceStillMatches) return null
+        if (!file.delete()) return null
 
         return payload
     }
