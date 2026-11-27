@@ -132,14 +132,22 @@ class SafeOperationsJournal(private val directory: File) {
         phase: SafeOperationPhase,
         detail: String = previous.detail,
     ): SafeOperationRecord? = synchronized(crossInstanceLock) {
-        if (previous.phase in setOf(
-            SafeOperationPhase.COMMITTED, SafeOperationPhase.REJECTED,
-        )) return@synchronized null
-        // Unknown transactions may become verified after a later read-only
-        // provider reconciliation; no replay of the original request.
-        if (previous.phase == SafeOperationPhase.UNKNOWN_NEEDS_REVIEW &&
-            phase != SafeOperationPhase.COMMITTED
-        ) return@synchronized null
+        // Only these transitions are legal. A PREPARED record must never
+        // jump straight to success, even if a caller is incorrectly wired.
+        val nextAllowed = when (previous.phase) {
+            SafeOperationPhase.PREPARED ->
+                setOf(SafeOperationPhase.USER_APPROVED, SafeOperationPhase.REJECTED)
+            SafeOperationPhase.USER_APPROVED ->
+                setOf(SafeOperationPhase.MUTATING, SafeOperationPhase.REJECTED)
+            SafeOperationPhase.MUTATING ->
+                setOf(SafeOperationPhase.COMMITTED, SafeOperationPhase.UNKNOWN_NEEDS_REVIEW)
+            // Read-only provider reconciliation may close a previously unknown
+            // operation only after independent external state verification.
+            SafeOperationPhase.UNKNOWN_NEEDS_REVIEW ->
+                setOf(SafeOperationPhase.COMMITTED)
+            SafeOperationPhase.COMMITTED, SafeOperationPhase.REJECTED -> emptySet()
+        }
+        if (phase !in nextAllowed) return@synchronized null
         if (!integrityHealthy() || latest(previous.id) != previous ||
             detail.length > 350000
         ) return@synchronized null
