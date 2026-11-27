@@ -192,6 +192,9 @@
     <string name="maintenance_confirm_cache_title">Confirmer le nettoyage du cache</string>
     <string name="maintenance_confirm_cache_body">Seules les miniatures sélectionnées dont la taille, la date et le SHA-256 correspondent sont déplacées vers la corbeille sûre récupérable. Aucune suppression définitive ni espace annoncé libéré.</string>
 
+    <string name="safe_trash_import_legacy">Importer l’ancienne corbeille</string>
+    <string name="safe_trash_import_legacy_body">Cette importation facultative copie et vérifie les anciennes entrées avant de retirer les originaux. Les entrées corrompues ou incomplètes restent intactes. Aucune importation automatique.</string>
+    <string name="cleanup_system_trash_expiry_notice">Android peut supprimer automatiquement les médias de sa corbeille à l’expiration du délai système (souvent environ 30 jours). Ce n’est pas une sauvegarde permanente.</string>
     <string name="safe_trash_body">Les fichiers ici occupent encore de l’espace. Vous pouvez les restaurer sans écraser de fichiers existants ou les supprimer définitivement.</string>
     <string name="safe_trash_summary">%1$d éléments · %2$s</string>
     <string name="safe_trash_unrecognized">%1$d éléments inconnus ou incomplets ont été conservés par sécurité. Ils ne seront pas supprimés automatiquement.</string>
@@ -360,7 +363,7 @@
     <string name="pro_system_trash_confirmed">Accord Android accepté (état réel non vérifié ; aucun espace libéré)</string>
     <string name="pro_system_trash_cancelled">Corbeille Android annulée</string>
 
-    <string name="safe_trash_persistent_notice">Safe Trash est stocké dans l’espace partagé afin de pouvoir survivre à la désinstallation de l’application. Réinstallez Omni Cleaner et réactivez le Nettoyage approfondi pour restaurer ces fichiers.</string>
+    <string name="safe_trash_persistent_notice">La corbeille sûre réside sur le stockage partagé et peut survivre à la désinstallation, mais d’autres nettoyeurs ou une réinitialisation peuvent la supprimer. Conservez des sauvegardes indépendantes des fichiers importants.</string>
     <string name="safe_trash_unavailable">Le stockage Safe Trash est indisponible. Les fichiers resteront inchangés.</string>
     <string name="gallery_error_load_failed">Impossible de charger les éléments de la Galerie. Réessayez.</string>
     <string name="smart_categories_scan_failed">Impossible de terminer l’analyse des Catégories intelligentes.</string>
