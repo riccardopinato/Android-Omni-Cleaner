@@ -254,6 +254,9 @@ class SafeTrashManager private constructor(
             ?: return SafeTrashRestoreResult(SafeTrashRestoreStatus.ENTRY_NOT_FOUND)
         val payload = File(directory, PAYLOAD_NAME)
 
+        if (!hasOnlyKnownEntryFiles(directory)) {
+            return SafeTrashRestoreResult(SafeTrashRestoreStatus.PAYLOAD_INVALID)
+        }
         if (
             !payload.isFile ||
             PathSafety.isSymlink(payload) ||
@@ -335,7 +338,8 @@ class SafeTrashManager private constructor(
             destination.setLastModified(entry.lastModified)
         }
 
-        directory.deleteRecursively()
+        // Never delete an unknown child that may have appeared after validation.
+        removeKnownEntryFilesOnly(directory)
 
         return SafeTrashRestoreResult(
             status = SafeTrashRestoreStatus.RESTORED,
@@ -362,7 +366,7 @@ class SafeTrashManager private constructor(
         if (!directory.isDirectory || PathSafety.isSymlink(directory)) {
             return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
         }
-        if (readEntry(directory) == null) {
+        if (readEntry(directory) == null || !hasOnlyKnownEntryFiles(directory)) {
             return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
         }
 
@@ -496,7 +500,10 @@ class SafeTrashManager private constructor(
         if (!legacyRoot.isDirectory || !isPersistentTrashAvailable()) return
 
         for (legacyEntry in legacyRoot.listFiles().orEmpty()) {
-            if (!legacyEntry.isDirectory || !ENTRY_ID_PATTERN.matches(legacyEntry.name)) continue
+            if (!legacyEntry.isDirectory || PathSafety.isSymlink(legacyEntry) ||
+                !ENTRY_ID_PATTERN.matches(legacyEntry.name) ||
+                !hasOnlyKnownEntryFiles(legacyEntry)
+            ) continue
 
             val legacyMetadata = File(legacyEntry, METADATA_NAME)
             val legacyPayload = File(legacyEntry, PAYLOAD_NAME)
@@ -513,7 +520,7 @@ class SafeTrashManager private constructor(
                 preferredTarget.exists() &&
                 isVerifiedMigrationCopy(legacyPayload, preferredTarget)
             ) {
-                legacyEntry.deleteRecursively()
+                removeKnownEntryFilesOnly(legacyEntry)
                 continue
             }
             // A collision may contain user data: never delete it.
@@ -538,11 +545,11 @@ class SafeTrashManager private constructor(
                 continue
             }
 
-            legacyEntry.deleteRecursively()
+            removeKnownEntryFilesOnly(legacyEntry)
         }
 
         runCatching {
-            if (legacyRoot.listFiles().isNullOrEmpty()) legacyRoot.delete()
+            if (legacyRoot.listFiles()?.isEmpty() == true) legacyRoot.delete()
         }
     }
 
@@ -550,9 +557,25 @@ class SafeTrashManager private constructor(
         legacyPayload: File,
         target: File,
     ): Boolean {
-        if (!legacyPayload.isFile || PathSafety.isSymlink(legacyPayload)) return false
+        if (!legacyPayload.isFile || PathSafety.isSymlink(legacyPayload) ||
+            !hasOnlyKnownEntryFiles(legacyPayload.parentFile ?: return false) ||
+            !hasOnlyKnownEntryFiles(target)
+        ) return false
 
         val migratedEntry = readEntry(target) ?: return false
+        // Equal payload bytes do not prove that the migration belongs to the
+        // same original file. Never discard legacy metadata on a UUID collision
+        // whose destination path or other identity fields differ.
+        val legacyProperties = runCatching {
+            Properties().apply {
+                File(legacyPayload.parentFile, METADATA_NAME).inputStream().use(::load)
+            }
+        }.getOrNull() ?: return false
+        if (legacyProperties.getProperty(KEY_ORIGINAL_PATH) != migratedEntry.originalPath ||
+            legacyProperties.getProperty(KEY_ORIGINAL_NAME) != migratedEntry.originalName ||
+            legacyProperties.getProperty(KEY_SIZE_BYTES)?.toLongOrNull() != migratedEntry.sizeBytes ||
+            legacyProperties.getProperty(KEY_LAST_MODIFIED)?.toLongOrNull() != migratedEntry.lastModified
+        ) return false
         val targetPayload = File(target, PAYLOAD_NAME)
         if (!targetPayload.isFile || PathSafety.isSymlink(targetPayload)) return false
         if (targetPayload.length() != legacyPayload.length()) return false
@@ -561,6 +584,29 @@ class SafeTrashManager private constructor(
         val targetHash = runCatching { sha256(targetPayload) }.getOrNull() ?: return false
 
         return targetHash == sourceHash && targetHash == migratedEntry.sha256
+    }
+
+    /**
+     * Trash entries are defined by exactly two regular files. Unknown children
+     * could contain valuable user data and must never be removed by migration,
+     * restore cleanup or bulk purge. A failed listing is also a hard stop.
+     */
+    private fun hasOnlyKnownEntryFiles(directory: File): Boolean {
+        if (!directory.isDirectory || PathSafety.isSymlink(directory)) return false
+        val children = directory.listFiles() ?: return false
+        return children.size == 2 &&
+            children.map { it.name }.toSet() == setOf(PAYLOAD_NAME, METADATA_NAME) &&
+            children.all { it.isFile && !PathSafety.isSymlink(it) }
+    }
+
+    /** Delete only verified, explicitly named entry files; never recurse. */
+    private fun removeKnownEntryFilesOnly(directory: File): Boolean {
+        if (!hasOnlyKnownEntryFiles(directory)) return false
+        val payload = File(directory, PAYLOAD_NAME)
+        val metadata = File(directory, METADATA_NAME)
+        if (!payload.delete()) return false
+        if (!metadata.delete()) return false
+        return directory.delete()
     }
 
     private fun copyAndSync(source: File, destination: File) {
