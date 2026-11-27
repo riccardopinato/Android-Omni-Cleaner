@@ -126,6 +126,7 @@ internal fun OmniFileTrashReview(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.file_trash_confirm_body))
+                    Text(stringResource(R.string.cleanup_system_trash_expiry_notice))
                     LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
                         items(selected, key = { it.file.absolutePath }) { candidate ->
                             Text(candidate.file.name + " · " + candidate.file.parent.orEmpty())
