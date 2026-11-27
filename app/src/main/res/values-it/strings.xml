@@ -193,6 +193,8 @@
     <string name="maintenance_confirm_cache_title">Conferma pulizia cache</string>
     <string name="maintenance_confirm_cache_body">Solo le miniature selezionate con dimensione, data e SHA-256 invariati vengono spostate nel Cestino sicuro recuperabile. Nessuna eliminazione definitiva o spazio dichiarato liberato.</string>
 
+    <string name="safe_trash_repair_legacy_metadata">Ripara i vecchi metadati del Cestino</string>
+    <string name="safe_trash_repair_legacy_metadata_body">Verifica e ripara %1$d vecchie voci del Cestino senza checksum. Solo le voci integre vengono riparate; gli hash già presenti ma errati non sono mai sovrascritti.</string>
     <string name="safe_trash_import_legacy">Importa il vecchio Cestino</string>
     <string name="safe_trash_import_legacy_body">Questa importazione facoltativa copia e verifica le vecchie voci del Cestino prima di rimuovere le copie originali. Le voci incomplete o corrotte restano intatte. Nessuna importazione automatica.</string>
     <string name="cleanup_system_trash_expiry_notice">Android può eliminare automaticamente i file dal Cestino multimediale alla scadenza prevista dal sistema (spesso circa 30 giorni). Il Cestino di sistema non è un backup permanente.</string>
