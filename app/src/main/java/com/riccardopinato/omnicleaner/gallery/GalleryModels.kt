@@ -48,13 +48,7 @@ data class GalleryMediaItem(
         }
 
     val formattedDuration: String
-        get() {
-            if (durationMs <= 0L) return ""
-            val totalSeconds = durationMs / 1000L
-            val minutes = totalSeconds / 60L
-            val seconds = totalSeconds % 60L
-            return String.format(Locale.ROOT, "%02d:%02d", minutes, seconds)
-        }
+        get() = if (durationMs <= 0L) "" else videoTimelineTimestamp(durationMs)
 
     val formattedSize: String
         get() = formatMediaSize(sizeBytes)
@@ -71,6 +65,23 @@ data class GalleryPage(
     val total: Int,
     val hasMore: Boolean,
 )
+
+/** Consistent HH:MM:SS for hour-long media, without narrowing Long duration. */
+internal fun videoTimelineTimestamp(milliseconds: Long): String {
+    val totalSeconds = milliseconds.coerceAtLeast(0L) / 1000L
+    val hours = totalSeconds / 3600L
+    val minutes = (totalSeconds / 60L) % 60L
+    val seconds = totalSeconds % 60L
+    return if (hours > 0L) {
+        String.format(Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format(Locale.ROOT, "%02d:%02d", minutes, seconds)
+    }
+}
+
+/** Preserve existing Int call sites in the native video scrubber. */
+internal fun videoTimelineTimestamp(milliseconds: Int): String =
+    videoTimelineTimestamp(milliseconds.toLong())
 
 internal fun formatMediaSize(bytes: Long): String {
     if (bytes < 1024L) return "$bytes B"
