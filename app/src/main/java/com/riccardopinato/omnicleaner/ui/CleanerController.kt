@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.riccardopinato.omnicleaner.BuildConfig
 import com.riccardopinato.omnicleaner.R
+import com.riccardopinato.omnicleaner.cleaner.BackgroundIndexStore
 import com.riccardopinato.omnicleaner.cleaner.BigFileItem
 import com.riccardopinato.omnicleaner.cleaner.BigFileSizeFilter
 import com.riccardopinato.omnicleaner.cleaner.DuplicateGroup
@@ -47,6 +48,7 @@ internal data class CleanerUiState(
     ),
     val storageInfo: StorageInfo? = null,
     val scanning: Boolean = false,
+    val historicalIndexPreview: Boolean = false,
     val currentOperation: String? = null,
     val overview: SpaceOverview? = null,
     val folders: List<FolderItem> = emptyList(),
@@ -148,6 +150,8 @@ internal class CleanerController(
         private set
 
     private var scanJob: Job? = null
+    private var cachedHydrationJob: Job? = null
+    private var lastHydratedIndexAt: Long = -1L
     private var scanGeneration = 0L
     private val duplicateRecovery = DuplicateScanRecoveryStore(context)
 
@@ -174,6 +178,60 @@ internal class CleanerController(
             duplicatesScanned = if (deepScanAvailable) state.duplicatesScanned else false,
             error = null,
         )
+    }
+
+    /**
+     * On-demand cache-only restoration for overview, large files and folders.
+     * Duplicate decisions are never restored from an old index.
+     */
+    fun hydrateReadOnlyIndexPreview() {
+        if (!state.hasBroadAccess || state.scanning || cachedHydrationJob?.isActive == true) return
+        val indexStore = BackgroundIndexStore(context)
+        val saved = indexStore.read()
+        if (saved.completedAtMillis <= 0L || saved.dirty ||
+            saved.completedAtMillis == lastHydratedIndexAt
+        ) return
+        val root = StorageAccess.primaryRoot()
+        val generation = StorageInventoryRepository.currentInvalidationGeneration()
+        val scanEpoch = scanGeneration
+        cachedHydrationJob = scope.launch {
+            try {
+                val snapshot = StorageInventoryRepository.reusableSnapshotOrNull(root) ?: return@launch
+                val inventory = snapshot.inventory
+                val overview = withContext(Dispatchers.Default) {
+                    overviewScanner.fromInventory(root, inventory)
+                }
+                val large = withContext(Dispatchers.Default) {
+                    fileScanner.findBigFiles(
+                        inventory = inventory,
+                        minimumBytes = state.bigFileSizeFilter.minimumBytes,
+                    )
+                }
+                val folders = fileScanner.scanFoldersFromInventory(
+                    root = root, inventory = inventory,
+                    smallFolderThresholdBytes = state.folderThresholdBytes,
+                )
+                if (state.hasBroadAccess && !state.scanning && scanEpoch == scanGeneration &&
+                    generation == StorageInventoryRepository.currentInvalidationGeneration() &&
+                    saved.completedAtMillis == indexStore.read().completedAtMillis &&
+                    !indexStore.read().dirty
+                ) {
+                    state = state.copy(
+                        overview = state.overview ?: overview,
+                        bigFiles = if (state.bigFilesScanned) state.bigFiles else large,
+                        folders = if (state.foldersScanned) state.folders else folders,
+                        bigFilesScanned = true,
+                        foldersScanned = true,
+                        historicalIndexPreview = true,
+                    )
+                    lastHydratedIndexAt = saved.completedAtMillis
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                // A stale or inaccessible index must never fabricate a scan.
+            }
+        }
     }
 
     fun scanOverview() = runScan(uiContext.getString(R.string.module_storage_overview)) {

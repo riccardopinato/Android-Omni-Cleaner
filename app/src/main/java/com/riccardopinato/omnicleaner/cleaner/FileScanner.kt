@@ -124,8 +124,16 @@ class FileScanner(
     suspend fun scanFolders(
         root: File,
         smallFolderThresholdBytes: Long = 10L * 1024L * 1024L,
+    ): List<FolderItem> = scanFoldersFromInventory(
+        root, StorageInventoryRepository.snapshot(root).inventory, smallFolderThresholdBytes,
+    )
+
+    /** Historical, read-only folder view. No new inventory scan. */
+    suspend fun scanFoldersFromInventory(
+        root: File,
+        inventory: FileInventory,
+        smallFolderThresholdBytes: Long = 10L * 1024L * 1024L,
     ): List<FolderItem> = withContext(Dispatchers.Default) {
-        val inventory = StorageInventoryRepository.snapshot(root).inventory
         val rootPath = canonicalPath(root).trimEnd(File.separatorChar)
         val rootPrefix = rootPath + File.separator
 
