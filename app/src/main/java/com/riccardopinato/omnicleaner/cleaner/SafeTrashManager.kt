@@ -445,7 +445,14 @@ class SafeTrashManager private constructor(
      * A permanent delete is explicitly scoped to one known Safe Trash entry ID.
      * Unrecognized directories, links and parent paths are never purged.
      */
-    internal fun purgeEntry(entryId: String): SafeTrashPurgeResult {
+    internal fun purgeEntry(
+        entryId: String,
+        approved: SafeTrashEntry? = null,
+    ): SafeTrashPurgeResult {
+        // No raw ID is authorization. A checked, exact reviewed entry is mandatory.
+        if (approved == null || approved.id != entryId) {
+            return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
+        }
         if (!isPersistentTrashAvailable()) {
             return SafeTrashPurgeResult(SafeTrashPurgeStatus.TRASH_UNAVAILABLE)
         }
@@ -479,7 +486,8 @@ class SafeTrashManager private constructor(
         }
         val verifiedEntry = readEntry(target)
             ?: return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
-        if (payload.length() != verifiedEntry.sizeBytes ||
+        if (verifiedEntry != approved ||
+            payload.length() != verifiedEntry.sizeBytes ||
             runCatching { sha256(payload) }.getOrNull() != verifiedEntry.sha256
         ) {
             return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
@@ -535,7 +543,7 @@ class SafeTrashManager private constructor(
             ?: return SafeTrashPurgeResult(SafeTrashPurgeStatus.DELETE_FAILED)
         cursor = destructiveJournal.advance(cursor, SafeOperationPhase.MUTATING)
             ?: return SafeTrashPurgeResult(SafeTrashPurgeStatus.DELETE_FAILED)
-        val result = purgeEntry(entry.id)
+        val result = purgeEntry(entry.id, approved = entry)
         destructiveJournal.advance(
             cursor, if (result.deleted) SafeOperationPhase.COMMITTED
             else SafeOperationPhase.UNKNOWN_NEEDS_REVIEW,
