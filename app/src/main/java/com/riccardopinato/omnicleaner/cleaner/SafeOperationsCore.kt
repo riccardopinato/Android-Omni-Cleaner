@@ -102,9 +102,24 @@ class SafeOperationsJournal(private val directory: File) {
         record
     }.getOrNull()
 
+    /**
+     * A torn, undecodable or unexpected journal file blocks EVERY new
+     * mutation. A missing directory is a fresh journal, not corruption.
+     */
+    fun integrityHealthy(): Boolean {
+        if (!directory.exists()) return true
+        if (!directory.isDirectory || directory.canonicalFile != directory.absoluteFile) return false
+        val files = directory.listFiles() ?: return false
+        return files.all { file ->
+            file.isFile && file.name.endsWith(".record") && decode(file) != null
+        }
+    }
+
     fun begin(type: String, fingerprint: String, detail: String = ""): SafeOperationRecord? =
         synchronized(crossInstanceLock) {
-            if (type.isBlank() || fingerprint.length != 64 || detail.length > 350000) return@synchronized null
+            if (type.isBlank() || fingerprint.length != 64 ||
+                detail.length > 350000 || !integrityHealthy()
+            ) return@synchronized null
             val record = SafeOperationRecord(
                 UUID.randomUUID().toString(), type, fingerprint,
                 SafeOperationPhase.PREPARED, 0, System.currentTimeMillis(), detail,
@@ -125,7 +140,9 @@ class SafeOperationsJournal(private val directory: File) {
         if (previous.phase == SafeOperationPhase.UNKNOWN_NEEDS_REVIEW &&
             phase != SafeOperationPhase.COMMITTED
         ) return@synchronized null
-        if (latest(previous.id) != previous || detail.length > 5000) return@synchronized null
+        if (!integrityHealthy() || latest(previous.id) != previous ||
+            detail.length > 350000
+        ) return@synchronized null
         val next = previous.copy(
             phase = phase, sequence = previous.sequence + 1, detail = detail,
         )
