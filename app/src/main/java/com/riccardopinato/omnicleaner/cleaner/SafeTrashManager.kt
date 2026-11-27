@@ -632,6 +632,19 @@ class SafeTrashManager private constructor(
                 continue
             }
 
+            val originalProperties = runCatching {
+                Properties().apply {
+                    legacyMetadata.inputStream().use { load(it) }
+                }
+            }.getOrNull() ?: continue
+            val actualHash = runCatching { sha256(legacyPayload) }.getOrNull() ?: continue
+            val claimedHash = originalProperties.getProperty(KEY_SHA256)
+            // Quarantine legacy metadata with an incorrect claimed digest.
+            if (claimedHash != null && claimedHash != actualHash) continue
+            if (originalProperties.getProperty(KEY_SIZE_BYTES)?.toLongOrNull() !=
+                legacyPayload.length()
+            ) continue
+
             val preferredTarget = File(trashDirectory, legacyEntry.name)
             if (
                 preferredTarget.exists() &&
@@ -652,8 +665,17 @@ class SafeTrashManager private constructor(
             val targetMetadata = File(target, METADATA_NAME)
             val targetPayload = File(target, PAYLOAD_NAME)
             val copied = runCatching {
-                copyAndSync(legacyMetadata, targetMetadata)
+                // Source legacy stays untouched until target publication passes.
+                // Write target metadata into a fresh sibling, then rename it:
+                // a torn file never becomes a valid visible entry.
                 copyAndSync(legacyPayload, targetPayload)
+                originalProperties.setProperty(KEY_SHA256, actualHash)
+                val staging = File(target, "$METADATA_NAME.new")
+                FileOutputStream(staging).use { output ->
+                    originalProperties.store(output, METADATA_COMMENT)
+                    output.fd.sync()
+                }
+                check(staging.renameTo(targetMetadata))
                 true
             }.getOrDefault(false)
 
