@@ -29,12 +29,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
+import com.riccardopinato.omnicleaner.cleaner.BackgroundIndexStore
 import com.riccardopinato.omnicleaner.cleaner.CleanupFileSnapshot
 import com.riccardopinato.omnicleaner.ui.OmniCoverageSection
 import com.riccardopinato.omnicleaner.ui.OmniFileTrashReview
@@ -65,6 +67,8 @@ internal fun StorageIntelligenceSection(
     onOpenLargeFiles: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val backgroundStore = remember(context) { BackgroundIndexStore(context.applicationContext) }
     var loading by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     var report by remember { mutableStateOf<StorageIntelligenceReport?>(null) }
@@ -76,6 +80,20 @@ internal fun StorageIntelligenceSection(
     var selectedFiles by remember { mutableStateOf<Map<String, CleanupFileSnapshot>>(emptyMap()) }
     var previewFile by remember { mutableStateOf<File?>(null) }
     LaunchedEffect(report) { selectedFiles = emptyMap() }
+
+    // Hydrate only an unchanged SQLite snapshot; never trigger a cold scan here.
+    // If metadata cannot be reused, the saved summary stays visibly historical.
+    LaunchedEffect(context) {
+        if (backgroundStore.read().completedAtMillis > 0L) {
+            val root = StorageAccess.primaryRoot()
+            val existing = StorageInventoryRepository.reusableSnapshotOrNull(root)
+            if (existing != null) {
+                report = withContext(Dispatchers.Default) {
+                    StorageIntelligenceAnalyzer().fromInventory(root, existing.inventory)
+                }
+            }
+        }
+    }
 
     LaunchedEffect(report, query, folder, minimumBytes, visibleLimit) {
         val snapshot = report
@@ -101,6 +119,18 @@ internal fun StorageIntelligenceSection(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        val saved = backgroundStore.read()
+        if (report == null && saved.completedAtMillis > 0L) {
+            Text(
+                stringResource(R.string.bg_index_saved_summary, saved.fileCount),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.testTag("omni_index_cached_summary"),
+            )
+            Text(
+                stringResource(R.string.bg_index_saved_disclaimer),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
         OmniActionButton(
             onClick = {
                 if (!loading) {
@@ -109,7 +139,16 @@ internal fun StorageIntelligenceSection(
                     scope.launch {
                         try {
                             val root = StorageAccess.primaryRoot()
-                            val inventory = StorageInventoryRepository.snapshot(root).inventory
+                            val previousGeneration = StorageInventoryRepository.currentInvalidationGeneration()
+                            val mediaBefore = BackgroundIndexStore.mediaRevision(context.applicationContext)
+                            val inventory = StorageInventoryRepository.snapshot(root, forceRefresh = true).inventory
+                            val mediaAfter = BackgroundIndexStore.mediaRevision(context.applicationContext)
+                            if (previousGeneration == StorageInventoryRepository.currentInvalidationGeneration() &&
+                                (mediaBefore == null || mediaAfter == null || mediaBefore == mediaAfter)) {
+                                backgroundStore.recordComplete(root, inventory, System.currentTimeMillis(), mediaAfter)
+                            } else {
+                                backgroundStore.markDirty()
+                            }
                             val next = withContext(Dispatchers.Default) {
                                 StorageIntelligenceAnalyzer().fromInventory(root, inventory)
                             }

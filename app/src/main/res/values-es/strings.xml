@@ -621,4 +621,10 @@
     <string name="file_trash_request_unavailable">Confirmación de la Papelera Android no disponible. No se movieron archivos.</string>
     <string name="file_trash_moved_summary">Movidos: %1$d · No aptos: %2$d · Modificados: %3$d · Rechazados: %4$d</string>
     <string name="file_trash_prepare_error">No se pudo preparar la limpieza. No se movieron más archivos.</string>
+
+    <string name="bg_index_auto_title">Indexación automática en segundo plano</string>
+    <string name="bg_index_auto_detail">Comprueba cambios multimedia al abrir la aplicación. Actualiza periódicamente el índice completo si la batería y el almacenamiento lo permiten. No elimina archivos automáticamente.</string>
+    <string name="bg_index_saved_summary">Último análisis guardado · %1$d archivos indexados</string>
+    <string name="bg_index_saved_disclaimer">Los resultados anteriores se muestran al instante, pero pueden estar desactualizados. Pulsa Analizar para actualizar. Los archivos no multimedia se revisan en el análisis completo periódico.</string>
+    <string name="bg_index_never">Aún no se ha completado un análisis en segundo plano.</string>
 </resources>

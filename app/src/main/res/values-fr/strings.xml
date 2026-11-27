@@ -621,4 +621,10 @@
     <string name="file_trash_request_unavailable">Confirmation de la corbeille Android indisponible. Aucun fichier déplacé.</string>
     <string name="file_trash_moved_summary">Déplacés : %1$d · Non éligibles : %2$d · Modifiés : %3$d · Refusés : %4$d</string>
     <string name="file_trash_prepare_error">Préparation du nettoyage impossible. Aucun autre fichier déplacé.</string>
+
+    <string name="bg_index_auto_title">Indexation automatique en arrière-plan</string>
+    <string name="bg_index_auto_detail">Vérifie les modifications des médias à l\'ouverture. Actualise périodiquement l\'index complet si la batterie et le stockage le permettent. Aucune suppression automatique.</string>
+    <string name="bg_index_saved_summary">Dernière analyse enregistrée · %1$d fichiers indexés</string>
+    <string name="bg_index_saved_disclaimer">Les anciens résultats s\'affichent immédiatement mais peuvent être obsolètes. Touchez Analyser pour actualiser. Les fichiers non multimédias sont vérifiés lors de l\'analyse complète périodique.</string>
+    <string name="bg_index_never">Aucune analyse en arrière-plan terminée.</string>
 </resources>

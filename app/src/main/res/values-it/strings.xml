@@ -624,4 +624,10 @@
     <string name="file_trash_request_unavailable">Conferma del Cestino Android non disponibile. Nessun file spostato.</string>
     <string name="file_trash_moved_summary">Spostati: %1$d · Non idonei: %2$d · Modificati: %3$d · Rifiutati: %4$d</string>
     <string name="file_trash_prepare_error">Preparazione della pulizia non riuscita. Nessun altro file spostato.</string>
+
+    <string name="bg_index_auto_title">Analisi automatica in background</string>
+    <string name="bg_index_auto_detail">Controlla i cambiamenti dei media all\'apertura. Aggiorna periodicamente l\'indice completo quando batteria e memoria lo consentono. Nessuna eliminazione automatica.</string>
+    <string name="bg_index_saved_summary">Ultima analisi salvata · %1$d file indicizzati</string>
+    <string name="bg_index_saved_disclaimer">I risultati precedenti sono visibili subito ma potrebbero essere obsoleti. Tocca Analizza per aggiornarli manualmente. I file non multimediali sono ricontrollati nell\'analisi completa periodica.</string>
+    <string name="bg_index_never">Nessuna analisi in background completata.</string>
 </resources>

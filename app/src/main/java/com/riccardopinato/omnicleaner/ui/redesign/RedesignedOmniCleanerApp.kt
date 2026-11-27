@@ -39,6 +39,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import com.riccardopinato.omnicleaner.ui.theme.OmniSecondaryButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import com.riccardopinato.omnicleaner.ui.theme.OmniTextButton as TextButton
@@ -69,6 +70,8 @@ import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.BigFileSizeFilter
 import com.riccardopinato.omnicleaner.cleaner.DeepStorageAccessStatus
 import com.riccardopinato.omnicleaner.cleaner.FolderStatus
+import com.riccardopinato.omnicleaner.cleaner.BackgroundIndexScheduler
+import com.riccardopinato.omnicleaner.cleaner.BackgroundIndexStore
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.ThresholdUnit
 import com.riccardopinato.omnicleaner.exif.ExifCleanerSection
@@ -574,6 +577,33 @@ fun RedesignedOmniCleanerApp(
                     }
                 }
                 LanguageSelectorSection()
+                val backgroundStore = remember(context) { BackgroundIndexStore(context.applicationContext) }
+                var automaticIndex by remember(showSettings) {
+                    mutableStateOf(backgroundStore.isEnabled())
+                }
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.bg_index_auto_title), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.bg_index_auto_detail), style = MaterialTheme.typography.bodySmall)
+                    }
+                    Switch(
+                        checked = automaticIndex,
+                        onCheckedChange = { enabled ->
+                            automaticIndex = enabled
+                            BackgroundIndexScheduler.setEnabled(context, enabled)
+                        },
+                        modifier = Modifier.testTag("omni_background_index_toggle"),
+                    )
+                }
+                val lastIndex = backgroundStore.read()
+                Text(
+                    if (lastIndex.completedAtMillis > 0L) stringResource(R.string.bg_index_saved_summary, lastIndex.fileCount)
+                    else stringResource(R.string.bg_index_never),
+                    style = MaterialTheme.typography.bodySmall,
+                )
                 if (consentState.privacyOptionsRequired && activity != null) {
                     OutlinedButton(
                         onClick = { monetizationRuntime.consent.showPrivacyOptions(activity) },

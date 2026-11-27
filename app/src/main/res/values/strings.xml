@@ -624,4 +624,10 @@
     <string name="file_trash_request_unavailable">Android Trash confirmation unavailable. No files moved.</string>
     <string name="file_trash_moved_summary">Moved: %1$d · Ineligible: %2$d · Changed: %3$d · Rejected: %4$d</string>
     <string name="file_trash_prepare_error">Could not prepare cleanup. No additional files were moved.</string>
+
+    <string name="bg_index_auto_title">Automatic background indexing</string>
+    <string name="bg_index_auto_detail">Check for media changes when opening the app. Refresh the full file inventory periodically when battery and storage allow. No automatic deletion.</string>
+    <string name="bg_index_saved_summary">Saved analysis · %1$d files indexed</string>
+    <string name="bg_index_saved_disclaimer">Previous results are shown immediately; they may be out of date. Tap Analyze to refresh manually. Changes to non-media files are checked in the periodic full audit.</string>
+    <string name="bg_index_never">No completed background scan yet.</string>
 </resources>

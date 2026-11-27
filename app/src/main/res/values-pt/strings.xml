@@ -621,4 +621,10 @@
     <string name="file_trash_request_unavailable">Confirmação da Lixeira Android indisponível. Nenhum ficheiro movido.</string>
     <string name="file_trash_moved_summary">Movidos: %1$d · Não elegíveis: %2$d · Alterados: %3$d · Rejeitados: %4$d</string>
     <string name="file_trash_prepare_error">Não foi possível preparar a limpeza. Não foram movidos outros ficheiros.</string>
+
+    <string name="bg_index_auto_title">Indexação automática em segundo plano</string>
+    <string name="bg_index_auto_detail">Verifica alterações nos ficheiros multimédia ao abrir. Atualiza periodicamente o índice completo quando a bateria e o armazenamento permitirem. Não elimina ficheiros automaticamente.</string>
+    <string name="bg_index_saved_summary">Última análise guardada · %1$d ficheiros indexados</string>
+    <string name="bg_index_saved_disclaimer">Os resultados anteriores aparecem imediatamente, mas podem estar desatualizados. Toque em Analisar para atualizar. Os ficheiros não multimédia são verificados na análise completa periódica.</string>
+    <string name="bg_index_never">Ainda não há análises em segundo plano concluídas.</string>
 </resources>

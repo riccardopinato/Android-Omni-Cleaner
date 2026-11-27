@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.riccardopinato.omnicleaner.R
+import com.riccardopinato.omnicleaner.cleaner.BackgroundIndexStore
 import com.riccardopinato.omnicleaner.gallery.GalleryController
 import com.riccardopinato.omnicleaner.ui.CleanerUiState
 import com.riccardopinato.omnicleaner.ui.BentoScanRuntime
@@ -88,6 +89,7 @@ internal fun OmniBentoV2Home(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val savedIndex = remember(context) { BackgroundIndexStore(context.applicationContext).read() }
     val colors = OmniColorBento
     val palette = OmniColorBentoV2Palette
     val preferences = remember(context) { BentoV2Preferences(context) }
@@ -169,7 +171,12 @@ internal fun OmniBentoV2Home(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Column(Modifier.weight(1f)) {
                         Text("Omni Cleaner", color = fg, fontFamily = colors.display, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-                        Text(if (editing) stringResource(R.string.bento_v2_subtitle) else stringResource(R.string.bento_v2_subtitle), color = fg.copy(alpha = .7f), fontFamily = colors.body, fontSize = 12.sp)
+                        Text(stringResource(R.string.bento_v2_subtitle), color = fg.copy(alpha = .7f), fontFamily = colors.body, fontSize = 12.sp)
+                        if (savedIndex.completedAtMillis > 0L && !editing) {
+                            Text(stringResource(R.string.bg_index_saved_summary, savedIndex.fileCount),
+                                color = fg.copy(alpha = .65f), fontSize = 11.sp,
+                                modifier = Modifier.testTag("omni_home_saved_index"))
+                        }
                     }
                     BentoV2Action(if (editing) stringResource(R.string.bento_v2_done) else stringResource(R.string.bento_v2_edit), palette.yellow, palette.legibleInk, tag = "omni_bento_v2_editor_toggle") {
                         editing = !editing
