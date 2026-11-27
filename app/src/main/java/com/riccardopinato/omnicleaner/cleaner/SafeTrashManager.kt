@@ -144,7 +144,7 @@ class SafeTrashManager private constructor(
     ): File? {
         val root = runCatching { scannedDirectory.canonicalFile }.getOrNull() ?: return null
         if (root != scannedDirectory.absoluteFile ||
-            !FileScanner().isSafeThumbnailDirectory(root) ||
+            !ThumbnailDirectoryPolicy.isSafeDirectory(root) ||
             !PathSafety.isWithinRoot(root, restoreRoot) ||
             !PathSafety.isWithinRoot(stamp.file, root) ||
             PathSafety.isSymlink(root) ||
