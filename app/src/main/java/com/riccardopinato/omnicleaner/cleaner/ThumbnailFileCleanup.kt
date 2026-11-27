@@ -12,7 +12,7 @@ import kotlin.coroutines.coroutineContext
 /** Only known thumbnail-cache folders can use the media-file exception. */
 internal object ThumbnailDirectoryPolicy {
     fun isSafeDirectory(directory: File): Boolean {
-        val normalized = directory.absolutePath.replace('\\\\', '/').lowercase(Locale.ROOT)
+        val normalized = directory.absolutePath.replace('\\', '/').lowercase(Locale.ROOT)
         return normalized.endsWith("/dcim/.thumbnails") ||
             normalized.endsWith("/pictures/.thumbnails") ||
             (normalized.contains("/android/media/") && normalized.endsWith("/.thumbnails"))
