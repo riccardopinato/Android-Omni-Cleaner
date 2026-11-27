@@ -56,6 +56,8 @@ fun SafeTrashSection() {
     var message by remember { mutableStateOf<SafeTrashMessage?>(null) }
     var confirmEmpty by remember { mutableStateOf(false) }
     var confirmEmptySecond by remember { mutableStateOf(false) }
+    var confirmLegacyImport by remember { mutableStateOf(false) }
+    var legacyAvailable by remember { mutableStateOf(false) }
     var approvedPurgePlan by remember { mutableStateOf<SafeTrashPurgeManifest?>(null) }
     var pendingIndividualDelete by remember { mutableStateOf<SafeTrashEntry?>(null) }
     val canRestore = StorageAccess.hasBroadAccess(context)
@@ -63,6 +65,7 @@ fun SafeTrashSection() {
 
     suspend fun reload() {
         val snapshot = withContext(Dispatchers.IO) { manager.inspect() }
+        legacyAvailable = withContext(Dispatchers.IO) { manager.hasLegacyEntries() }
         entries = snapshot.entries
         trashBytes = snapshot.totalPayloadBytes
         unrecognizedEntries = snapshot.unrecognizedEntries
@@ -72,9 +75,8 @@ fun SafeTrashSection() {
     }
 
     LaunchedEffect(manager) {
-        withContext(Dispatchers.IO) {
-            manager.migrateLegacyTrashIfNeeded()
-        }
+        // Opening the Trash screen is read-only. Legacy import now
+        // requires a separate explicit confirmation from the owner.
         reload()
         CleanupEventBus.events.collectLatest {
             reload()
@@ -233,6 +235,15 @@ fun SafeTrashSection() {
                         ) {
                             Text(stringResource(R.string.refresh))
                         }
+                        if (legacyAvailable) {
+                            OutlinedButton(
+                                enabled = !loading && persistentAvailable,
+                                onClick = { confirmLegacyImport = true },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(R.string.safe_trash_import_legacy))
+                            }
+                        }
                         Button(
                             enabled = !loading && persistentAvailable && entries.isNotEmpty(),
                             onClick = {
@@ -352,6 +363,31 @@ fun SafeTrashSection() {
                     confirmEmpty = false
                     approvedPurgePlan = null
                 }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (confirmLegacyImport) {
+        AlertDialog(
+            onDismissRequest = { confirmLegacyImport = false },
+            title = { Text(stringResource(R.string.safe_trash_import_legacy)) },
+            text = { Text(stringResource(R.string.safe_trash_import_legacy_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmLegacyImport = false
+                    loading = true
+                    scope.launch {
+                        withContext(Dispatchers.IO) {
+                            manager.migrateLegacyTrashIfNeeded()
+                        }
+                        reload()
+                    }
+                }) { Text(stringResource(R.string.safe_trash_import_legacy)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmLegacyImport = false }) {
                     Text(stringResource(R.string.cancel))
                 }
             },
