@@ -109,6 +109,7 @@ fun SmartCategoriesSection(
             val verification = if (verifyMedia) {
                 MediaStoreHelper.verifyTrashedUris(context.contentResolver, preparation.mediaUris)
             } else null
+            if (verifyMedia) engine.recordMediaTrashOutcome(preparation, verification)
             val safeResult = engine.movePreparedSnapshotsToSafeTrash(
                 preparation.safeTrashCandidates,
             )
@@ -134,7 +135,10 @@ fun SmartCategoriesSection(
             if (safeResult.moved > 0 || verification?.confirmedUris?.isNotEmpty() == true) {
                 CleanupEventBus.publishCompleted()
             }
-            if (verification?.unverifiedUris?.isNotEmpty() != true) {
+            if (verification?.unverifiedUris?.isNotEmpty() != true &&
+                safeResult.rejected == 0 && preparation.blockedFiles.isEmpty() &&
+                preparation.staleFiles.isEmpty()
+            ) {
                 selectedPaths = emptySet()
                 onCleanupFinished()
                 runCatching {
@@ -152,6 +156,9 @@ fun SmartCategoriesSection(
         val preparation = pendingPreparation
         pendingPreparation = null
         if (activityResult.resultCode != Activity.RESULT_OK || preparation == null) {
+            if (preparation != null) {
+                scope.launch { engine.recordMediaTrashOutcome(preparation, null) }
+            }
             message = androidTrashCancelledMessage
         } else {
             finishPreparedCleanup(preparation, verifyMedia = true)
