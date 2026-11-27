@@ -31,6 +31,7 @@ class SafeOperationsJournal(private val directory: File) {
     companion object {
         private val crossInstanceLock = Any()
         private const val VERSION = "1"
+        private val UUID_PATTERN = Regex("[0-9a-fA-F-]{36}")
     }
 
     private fun digest(value: String): String =
@@ -82,7 +83,7 @@ class SafeOperationsJournal(private val directory: File) {
             !file.name.endsWith(".record")
         ) return@runCatching null
         val p = Properties().also { prop ->
-            FileInputStream(file).use(prop::load)
+            FileInputStream(file).use { input -> prop.load(input) }
         }
         if (p.getProperty("version") != VERSION) return@runCatching null
         val record = SafeOperationRecord(
@@ -142,9 +143,6 @@ class SafeOperationsJournal(private val directory: File) {
             .filter { it.phase !in setOf(SafeOperationPhase.COMMITTED, SafeOperationPhase.REJECTED) }
             .sortedBy { it.createdAtMs }
 
-    private companion object {
-        val UUID_PATTERN = Regex("[0-9a-fA-F-]{36}")
-    }
 }
 
 /**
@@ -158,7 +156,7 @@ class DeletionCoordinator(
     private val trash: SafeTrashManager,
     private val journal: SafeOperationsJournal,
 ) {
-    private val mutex = Any()
+    private companion object { val coordinatorMutex = Any() }
 
     private fun digestManifest(items: List<CleanupFileSnapshot>): String {
         val manifest = items.sortedBy { it.file.absolutePath }
@@ -175,7 +173,7 @@ class DeletionCoordinator(
     }
 
     fun moveApproved(snapshots: List<CleanupFileSnapshot>): SafeTrashExecutionResult =
-        synchronized(mutex) {
+        synchronized(coordinatorMutex) {
             val unique = strongestCleanupSnapshots(snapshots)
             if (unique.isEmpty()) return@synchronized SafeTrashExecutionResult(0, 0, 0L)
             // Freeze every file and every duplicate survivor before the first move.
