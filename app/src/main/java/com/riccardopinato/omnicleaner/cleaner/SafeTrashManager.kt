@@ -353,6 +353,15 @@ class SafeTrashManager private constructor(
             return SafeTrashRestoreResult(SafeTrashRestoreStatus.INSUFFICIENT_SPACE)
         }
 
+        val restoreHash = manifestFingerprint(listOf(entry))
+        var operation = destructiveJournal.begin(
+            "RESTORE_FROM_TRASH", restoreHash, entry.id,
+        ) ?: return SafeTrashRestoreResult(SafeTrashRestoreStatus.DESTINATION_UNAVAILABLE)
+        operation = destructiveJournal.advance(operation, SafeOperationPhase.USER_APPROVED)
+            ?: return SafeTrashRestoreResult(SafeTrashRestoreStatus.DESTINATION_UNAVAILABLE)
+        operation = destructiveJournal.advance(operation, SafeOperationPhase.MUTATING)
+            ?: return SafeTrashRestoreResult(SafeTrashRestoreStatus.DESTINATION_UNAVAILABLE)
+
         val temp = File(
             parent,
             ".${destination.name}.omni-restore-${UUID.randomUUID()}.tmp",
@@ -451,8 +460,13 @@ class SafeTrashManager private constructor(
             destination.setLastModified(entry.lastModified)
         }
 
-        // Never delete an unknown child that may have appeared after validation.
+        // The restored original has been byte-verified. A failure to remove
+        // the redundant trash copy leaves two copies, never zero.
         removeKnownEntryFilesOnly(directory)
+        destructiveJournal.advance(
+            operation, SafeOperationPhase.COMMITTED,
+            "restored=${destination.absolutePath};sha=${entry.sha256}",
+        )
 
         return SafeTrashRestoreResult(
             status = SafeTrashRestoreStatus.RESTORED,
