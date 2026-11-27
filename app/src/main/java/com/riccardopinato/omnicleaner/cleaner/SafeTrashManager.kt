@@ -74,6 +74,7 @@ class SafeTrashManager private constructor(
     private val trashDirectory: File,
     private val restoreRoot: File,
     private val legacyTrashDirectory: File? = null,
+    private val mutationPermission: () -> Boolean = { true },
 ) {
     private val destructiveJournal by lazy {
         SafeOperationsJournal(
@@ -85,6 +86,7 @@ class SafeTrashManager private constructor(
         trashDirectory = StorageAccess.safeTrashRoot(),
         restoreRoot = StorageAccess.primaryRoot(),
         legacyTrashDirectory = File(context.filesDir, "trash"),
+        mutationPermission = { StorageAccess.hasBroadAccess(context) },
     )
 
     init {
@@ -188,7 +190,7 @@ class SafeTrashManager private constructor(
         expectedHash: String?,
         cacheMediaException: Boolean = false,
     ): File? {
-        if (!isPersistentTrashAvailable()) return null
+        if (!mutationPermission() || !isPersistentTrashAvailable()) return null
         if (!file.exists() || !file.isFile) return null
         if (!PathSafety.isWithinRoot(file, restoreRoot)) return null
         // A cache exception must never apply to app-managed Safe Trash itself.
@@ -295,7 +297,7 @@ class SafeTrashManager private constructor(
     }
 
     fun restore(entryId: String): SafeTrashRestoreResult {
-        if (!isPersistentTrashAvailable()) {
+        if (!mutationPermission() || !isPersistentTrashAvailable()) {
             return SafeTrashRestoreResult(SafeTrashRestoreStatus.DESTINATION_UNAVAILABLE)
         }
         if (!ENTRY_ID_PATTERN.matches(entryId)) {
@@ -565,6 +567,7 @@ class SafeTrashManager private constructor(
     }
 
     fun purgeApproved(entry: SafeTrashEntry): SafeTrashPurgeResult {
+        if (!mutationPermission()) return SafeTrashPurgeResult(SafeTrashPurgeStatus.TRASH_UNAVAILABLE)
         val live = readEntry(File(trashDirectory, entry.id))
         if (live != entry || !isPersistentTrashAvailable()) {
             return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
@@ -591,6 +594,9 @@ class SafeTrashManager private constructor(
      * A file arriving after validation is never included in this frozen list.
      */
     fun purgeApproved(manifest: SafeTrashPurgeManifest): SafeTrashEmptyResult {
+        if (!mutationPermission()) {
+            return SafeTrashEmptyResult(0, manifest.entries.size, 0L, completed = false)
+        }
         val inventory = inspect()
         val approved = manifest.entries
         if (!inventory.readable || inventory.unrecognizedEntries != 0 ||
@@ -712,7 +718,9 @@ class SafeTrashManager private constructor(
      * metadata write and original backup; an existing wrong SHA is NEVER fixed.
      */
     fun repairLegacyEntryApproved(entryId: String): Boolean {
-        if (!ENTRY_ID_PATTERN.matches(entryId) || !isPersistentTrashAvailable()) return false
+        if (!mutationPermission() ||
+            !ENTRY_ID_PATTERN.matches(entryId) || !isPersistentTrashAvailable()
+        ) return false
         val directory = File(trashDirectory, entryId)
         if (!hasOnlyKnownEntryFiles(directory)) return false
         val metadata = File(directory, METADATA_NAME)
@@ -786,6 +794,7 @@ class SafeTrashManager private constructor(
 
     /** Must be called only after an explicit user import confirmation. */
     fun migrateLegacyTrashIfNeeded() {
+        if (!mutationPermission()) return
         val legacyRoot = legacyTrashDirectory ?: return
         if (!legacyRoot.isDirectory || !isPersistentTrashAvailable()) return
 
@@ -936,7 +945,7 @@ class SafeTrashManager private constructor(
 
     /** Delete only verified, explicitly named entry files; never recurse. */
     private fun removeKnownEntryFilesOnly(directory: File): Boolean {
-        if (!hasOnlyKnownEntryFiles(directory)) return false
+        if (!hasOnlyKnownEntryFiles(directory) || !mutationPermission()) return false
         val payload = File(directory, PAYLOAD_NAME)
         val metadata = File(directory, METADATA_NAME)
         if (!payload.delete()) return false
