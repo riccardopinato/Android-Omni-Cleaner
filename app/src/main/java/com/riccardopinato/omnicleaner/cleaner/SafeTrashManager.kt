@@ -377,13 +377,20 @@ class SafeTrashManager private constructor(
         if (target.parentFile != root || PathSafety.isSymlink(target)) {
             return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
         }
-        // Physical payload size at deletion time is more truthful than the
-        // metadata's original size if a trash entry has been modified.
+        // Permanent purge must validate identity immediately before mutation.
+        // A replaced/tampered payload must never be treated as the reviewed file.
         val payload = File(target, PAYLOAD_NAME)
         if (!payload.isFile || PathSafety.isSymlink(payload)) {
             return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
         }
-        val bytesBefore = payload.length().coerceAtLeast(0L)
+        val verifiedEntry = readEntry(target)
+            ?: return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
+        if (payload.length() != verifiedEntry.sizeBytes ||
+            runCatching { sha256(payload) }.getOrNull() != verifiedEntry.sha256
+        ) {
+            return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
+        }
+        val bytesBefore = verifiedEntry.sizeBytes
         // Explicit purge is limited to the two recognized files only.
         // Never traverse or delete unexpected descendants.
         val deleted = removeKnownEntryFilesOnly(target)
@@ -560,6 +567,8 @@ class SafeTrashManager private constructor(
         if (targetPayload.length() != legacyPayload.length()) return false
 
         val sourceHash = runCatching { sha256(legacyPayload) }.getOrNull() ?: return false
+        val legacyClaimedHash = legacyProperties.getProperty(KEY_SHA256)
+        if (legacyClaimedHash != null && legacyClaimedHash != sourceHash) return false
         val targetHash = runCatching { sha256(targetPayload) }.getOrNull() ?: return false
 
         return targetHash == sourceHash && targetHash == migratedEntry.sha256
