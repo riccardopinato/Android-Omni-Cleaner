@@ -282,7 +282,7 @@ if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
 fi
 ffmpeg -hide_banner -loglevel error -nostdin \
     -f lavfi -i 'testsrc2=size=640x360:rate=15' \
-    -t 24 -an -c:v libx264 -preset ultrafast -pix_fmt yuv420p \
+    -t 90 -an -c:v libx264 -preset ultrafast -crf 29 -pix_fmt yuv420p \
     -movflags +faststart -y "$OUTPUT/video-fixture.mp4"
 video_codec="$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 "$OUTPUT/video-fixture.mp4")"
 video_frames="$(ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of default=noprint_wrappers=1:nokey=1 "$OUTPUT/video-fixture.mp4")"
@@ -314,12 +314,20 @@ if ! adb shell content query --uri content://media/external/video/media \
   echo "::error::VIDEO_NOT_INDEXED: synthetic MP4 missing from Android MediaStore"
   exit 1
 fi
-cat > "$OUTPUT/video-capture.yaml" <<'VIDEO_FLOW'
+# The host-side Maestro video stream can be static on headless runners.
+# Keep Maestro navigation and controls, but verify pixels from raw Android
+# framebuffer screenshots. Original Maestro PNGs are kept for diagnostics.
+capture_adb_video_frame() {
+  local name="$1"
+  adb exec-out screencap -p > "$OUTPUT/$name.png"
+  test -s "$OUTPUT/$name.png"
+  file "$OUTPUT/$name.png" | grep -q 'PNG image data'
+}
+cat > "$OUTPUT/video-inline.yaml" <<'INLINE_FLOW'
 appId: com.riccardopinato.omnicleaner.debug
 ---
 - launchApp:
     clearState: false
-# Dismiss only the external Pixel Launcher ANR modal, if present.
 - tapOn:
     text: "Close app"
     optional: true
@@ -339,18 +347,43 @@ appId: com.riccardopinato.omnicleaner.debug
     id: "omni_gallery_media_full"
 - tapOn:
     id: "omni_gallery_video_play"
-# Play is an asynchronous MediaStore/VideoView operation. Do not snapshot a
-# loading/black surface and mistake the click for actual video readiness.
 - extendedWaitUntil:
     visible:
       id: "omni_video_scrub_controls"
     timeout: 60000
-- waitForAnimationToEnd:
-    timeout: 1000
-- takeScreenshot: 11-video-playing
-- waitForAnimationToEnd:
-    timeout: 1500
-- takeScreenshot: 11-video-playing-later
+- takeScreenshot: 11-video-playing-maestro
+- takeScreenshot: 11-video-playing-later-maestro
+INLINE_FLOW
+mkdir -p "$OUTPUT/maestro-video-inline"
+maestro test --test-output-dir "$OUTPUT/maestro-video-inline" "$OUTPUT/video-inline.yaml"
+for name in 11-video-playing-maestro 11-video-playing-later-maestro; do
+  found="$(find "$OUTPUT/maestro-video-inline" -type f -name "$name.png" -print -quit)"
+  test -n "$found" && test -s "$found"
+  cp "$found" "$OUTPUT/$name.png"
+done
+capture_adb_video_frame 11-video-playing
+sleep 2
+capture_adb_video_frame 11-video-playing-later
+
+cat > "$OUTPUT/video-immersive.yaml" <<'IMMERSIVE_FLOW'
+appId: com.riccardopinato.omnicleaner.debug
+---
+- launchApp:
+    clearState: false
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_gallery"
+    direction: DOWN
+    timeout: 30000
+    centerElement: true
+- tapOn:
+    id: "omni_bento_v2_gallery"
+- tapOn: "Videos only"
+- tapOn: "Load gallery"
+- tapOn:
+    id: "omni_gallery_open_review"
+- assertVisible:
+    id: "omni_gallery_media_full"
 - tapOn:
     id: "omni_gallery_immersive_open"
 - assertVisible: "Close"
@@ -362,34 +395,37 @@ appId: com.riccardopinato.omnicleaner.debug
     visible:
       id: "omni_video_scrub_controls"
     timeout: 60000
-- waitForAnimationToEnd:
-    timeout: 1000
-- takeScreenshot: 15-video-immersive
-- waitForAnimationToEnd:
-    timeout: 1500
-- takeScreenshot: 15-video-immersive-later
+- takeScreenshot: 15-video-immersive-maestro
+- takeScreenshot: 15-video-immersive-later-maestro
+IMMERSIVE_FLOW
+mkdir -p "$OUTPUT/maestro-video-immersive"
+maestro test --test-output-dir "$OUTPUT/maestro-video-immersive" "$OUTPUT/video-immersive.yaml"
+for name in 15-video-immersive-maestro 15-video-immersive-later-maestro; do
+  found="$(find "$OUTPUT/maestro-video-immersive" -type f -name "$name.png" -print -quit)"
+  test -n "$found" && test -s "$found"
+  cp "$found" "$OUTPUT/$name.png"
+done
+capture_adb_video_frame 15-video-immersive
+sleep 2
+capture_adb_video_frame 15-video-immersive-later
+
+# Fail closed: real inline and fullscreen moving chromatic media pixels.
+python3 "$GITHUB_WORKSPACE/target/.github/scripts/check-gallery-video-motion.py" \
+  "$OUTPUT/11-video-playing.png" "$OUTPUT/11-video-playing-later.png" \
+  "$OUTPUT/15-video-immersive.png" "$OUTPUT/15-video-immersive-later.png"
+
+cat > "$OUTPUT/video-close.yaml" <<'CLOSE_FLOW'
+appId: com.riccardopinato.omnicleaner.debug
+---
+- assertVisible:
+    id: "omni_gallery_immersive_content"
 - tapOn:
     id: "omni_gallery_immersive_close"
 - assertVisible:
     id: "omni_gallery_media_full"
-VIDEO_FLOW
-mkdir -p "$OUTPUT/maestro-video"
-if ! maestro test --test-output-dir "$OUTPUT/maestro-video" "$OUTPUT/video-capture.yaml"; then
-  echo "::error::VIDEO_IMMERSIVE_QA_FAILED: native player or fullscreen review flow"
-  exit 1
-fi
-for name in 11-video-playing 11-video-playing-later 15-video-immersive 15-video-immersive-later; do
-  found="$(find "$OUTPUT/maestro-video" -type f -name "$name.png" -print -quit)"
-  if [[ -z "$found" ]]; then
-    echo "::error::Missing required video screenshot: $name"
-    exit 1
-  fi
-  cp "$found" "$OUTPUT/$name.png"
-done
-python3 "$GITHUB_WORKSPACE/target/.github/scripts/check-gallery-video-motion.py" \
-  "$OUTPUT/11-video-playing.png" "$OUTPUT/11-video-playing-later.png" \
-  "$OUTPUT/15-video-immersive.png" "$OUTPUT/15-video-immersive-later.png"
-echo "VIDEO_IMMERSIVE_MOTION_PASS: native MediaStore MP4, moving pixels, fullscreen, Close"
+CLOSE_FLOW
+maestro test --test-output-dir "$OUTPUT/maestro-video-close" "$OUTPUT/video-close.yaml"
+echo "VIDEO_IMMERSIVE_MOTION_PASS: raw Android adb pixels + Maestro controls + fullscreen Close"
 
 # Visual regression coverage for the intended light/dark, large-font responsive
 # shell. This is an independent emulator flow, not Play/physical certification.
