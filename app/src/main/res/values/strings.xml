@@ -193,6 +193,8 @@
     <string name="maintenance_confirm_cache_title">Confirm cache cleanup</string>
     <string name="maintenance_confirm_cache_body">Only selected thumbnails with matching size, time and SHA-256 are moved into recoverable Safe Trash. No permanent deletion or reclaimed-space claim.</string>
 
+    <string name="safe_trash_repair_legacy_metadata">Repair older Trash metadata</string>
+    <string name="safe_trash_repair_legacy_metadata_body">Review and repair %1$d older Trash entries that lack a checksum. Only verified entries are repaired; already-corrupt hashes are never overwritten.</string>
     <string name="safe_trash_import_legacy">Import older Trash entries</string>
     <string name="safe_trash_import_legacy_body">This optional import copies verified older Trash entries before retiring their originals. Corrupt or incomplete entries remain untouched. Import is never automatic.</string>
     <string name="cleanup_system_trash_expiry_notice">Android can automatically erase items from its media Trash after the system retention period (often about 30 days). The system Trash is not a permanent backup.</string>
