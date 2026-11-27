@@ -20,7 +20,9 @@ class ProBatchController(
     private val scope: CoroutineScope,
     private val scanner: FileScanner = FileScanner(),
     private val cleanupEngine: StorageCleanupEngine = StorageCleanupEngine(context),
-    private val thumbnailCleanup: ThumbnailFileCleanup = ThumbnailFileCleanup(),
+    private val thumbnailCleanup: ThumbnailFileCleanup = ThumbnailFileCleanup(
+        com.riccardopinato.omnicleaner.cleaner.SafeTrashManager(context),
+    ),
 ) {
     private var uiContext: Context = context
 
