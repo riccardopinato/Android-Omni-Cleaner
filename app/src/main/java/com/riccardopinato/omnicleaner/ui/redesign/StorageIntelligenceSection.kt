@@ -1,5 +1,7 @@
 package com.riccardopinato.omnicleaner.ui.redesign
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -25,12 +28,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
+import com.riccardopinato.omnicleaner.cleaner.CleanupFileSnapshot
+import com.riccardopinato.omnicleaner.ui.OmniCoverageSection
+import com.riccardopinato.omnicleaner.ui.OmniFileTrashReview
+import com.riccardopinato.omnicleaner.ui.OmniMediaQuickLook
+import com.riccardopinato.omnicleaner.ui.omniQuickLookForFile
 import com.riccardopinato.omnicleaner.cleaner.SmartCategory
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.StorageFileSearchPage
@@ -42,12 +51,14 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.Locale
 
 /**
  * Read-only Storage Intelligence; the parent Clean route already enforces
  * Deep Cleaning access before this composable can run.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun StorageIntelligenceSection(
     onOpenAdvanced: () -> Unit,
@@ -62,6 +73,9 @@ internal fun StorageIntelligenceSection(
     var minimumBytes by rememberSaveable { mutableStateOf(0L) }
     var visibleLimit by rememberSaveable { mutableStateOf(20) }
     var searchPage by remember { mutableStateOf<StorageFileSearchPage?>(null) }
+    var selectedFiles by remember { mutableStateOf<Map<String, CleanupFileSnapshot>>(emptyMap()) }
+    var previewFile by remember { mutableStateOf<File?>(null) }
+    LaunchedEffect(report) { selectedFiles = emptyMap() }
 
     LaunchedEffect(report, query, folder, minimumBytes, visibleLimit) {
         val snapshot = report
@@ -279,31 +293,57 @@ internal fun StorageIntelligenceSection(
                             Text(stringResource(R.string.si_no_matches))
                         }
                         page.files.forEach { entry ->
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                ) {
-                                    Text(
-                                        entry.name,
-                                        modifier = Modifier.weight(1f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
+                            val path = entry.relativePath
+                            val file = File(StorageAccess.primaryRoot(), path)
+                            val checked = path in selectedFiles
+                            val snapshot = CleanupFileSnapshot(
+                                file = file,
+                                expectedBytes = entry.bytes,
+                                expectedModified = entry.lastModified,
+                            )
+                            fun select(value: Boolean) {
+                                selectedFiles = if (value) selectedFiles + (path to snapshot)
+                                    else selectedFiles - path
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .combinedClickable(
+                                        role = Role.Checkbox,
+                                        onClick = { select(!checked) },
+                                        onLongClick = { previewFile = file },
                                     )
+                                    .padding(vertical = 3.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Checkbox(
+                                    checked = checked,
+                                    onCheckedChange = ::select,
+                                    modifier = Modifier.testTag("omni_intelligence_select"),
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                    ) {
+                                        Text(
+                                            entry.name,
+                                            modifier = Modifier.weight(1f),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        Text(
+                                            formatIntelligenceBytes(entry.bytes),
+                                            style = MaterialTheme.typography.bodySmall,
+                                        )
+                                    }
                                     Text(
-                                        formatIntelligenceBytes(entry.bytes),
+                                        entry.relativePath,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
                                         style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
-                                Text(
-                                    entry.relativePath,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
                             }
                         }
                         if (page.matchCount > page.files.size && visibleLimit < 200) {
@@ -312,6 +352,16 @@ internal fun StorageIntelligenceSection(
                                 modifier = Modifier.fillMaxWidth(),
                             ) { Text(stringResource(R.string.si_show_more)) }
                         }
+                    }
+                    if (selectedFiles.isNotEmpty()) {
+                        OmniFileTrashReview(
+                            selected = selectedFiles.values.toList(),
+                            onFinished = {
+                                selectedFiles = emptyMap()
+                                StorageInventoryRepository.invalidate()
+                                report = null
+                            },
+                        )
                     }
                     OmniActionButton(
                         onClick = onOpenLargeFiles,
@@ -342,6 +392,8 @@ internal fun StorageIntelligenceSection(
                             SmartCategory.INSTALLERS -> R.string.si_installers
                             SmartCategory.ARCHIVES -> R.string.si_archives
                             SmartCategory.SCREENSHOTS -> R.string.si_screenshots
+                            SmartCategory.TEMPORARY_FILES -> R.string.smart_category_temporary
+                            SmartCategory.OLD_LOGS -> R.string.smart_category_logs
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(stringResource(title), fontWeight = FontWeight.SemiBold)
@@ -365,7 +417,30 @@ internal fun StorageIntelligenceSection(
                 }
             }
         }
+        OmniCoverageSection()
         Spacer(Modifier.height(12.dp))
+    }
+    val preview = previewFile
+    val target = preview?.let(::omniQuickLookForFile)
+    if (target != null) {
+        val key = preview.absolutePath.removePrefix(StorageAccess.primaryRoot().absolutePath).trimStart('/')
+        OmniMediaQuickLook(
+            target = target,
+            onDismiss = { previewFile = null },
+            selected = key in selectedFiles,
+            onSelectedChange = { checked ->
+                val hit = searchPage?.files?.firstOrNull { it.relativePath == key }
+                if (hit != null) {
+                    val snapshot = CleanupFileSnapshot(
+                        file = preview,
+                        expectedBytes = hit.bytes,
+                        expectedModified = hit.lastModified,
+                    )
+                    selectedFiles = if (checked) selectedFiles + (key to snapshot)
+                        else selectedFiles - key
+                }
+            },
+        )
     }
 }
 

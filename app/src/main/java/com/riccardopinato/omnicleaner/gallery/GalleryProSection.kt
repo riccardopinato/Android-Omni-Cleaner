@@ -1,11 +1,14 @@
 package com.riccardopinato.omnicleaner.gallery
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
@@ -20,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -27,6 +31,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
+import com.riccardopinato.omnicleaner.ui.OmniMediaQuickLook
+import com.riccardopinato.omnicleaner.ui.OmniQuickLookTarget
+import com.riccardopinato.omnicleaner.ui.OmniQuickLookKind
 import com.riccardopinato.omnicleaner.ui.redesign.OmniAccordionLoader
 import com.riccardopinato.omnicleaner.ui.theme.OmniActionButton
 import com.riccardopinato.omnicleaner.ui.theme.OmniSecondaryButton
@@ -34,6 +41,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 /** Gallery Pro is exclusively an advisory viewer of the already loaded MediaStore page. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun GalleryProSection(
     controller: GalleryController,
@@ -48,6 +56,7 @@ internal fun GalleryProSection(
     var photoSummary by remember { mutableStateOf<GalleryPhotoScanSummary?>(null) }
     var photoError by remember { mutableStateOf(false) }
     var comparedIds by remember { mutableStateOf<List<Long>>(emptyList()) }
+    var quickLook by remember { mutableStateOf<GalleryMediaItem?>(null) }
 
     DisposableEffect(controller) {
         val dispose = controller.observe { state = it }
@@ -174,20 +183,43 @@ internal fun GalleryProSection(
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                videoMatches.results.take(20).forEach { item ->
-                    Column(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-                        Text(item.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(
-                            stringResource(
-                                R.string.gp_video_details,
-                                formatMediaSize(item.bytes),
-                                item.width,
-                                item.height,
-                                item.durationMs / 1000L,
-                            ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodySmall,
+                videoMatches.results.take(20).forEach { candidate ->
+                    val media = state.items.firstOrNull { it.id == candidate.id }
+                    val checked = media?.isSelectedForTrash == true ||
+                        state.selectedForTrash.any { it.id == candidate.id }
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .combinedClickable(
+                                role = Role.Checkbox,
+                                onClick = {
+                                    if (media != null) controller.setTrashSelection(media.id, !checked)
+                                },
+                                onLongClick = { quickLook = media },
+                            )
+                            .padding(vertical = 3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Checkbox(
+                            checked = checked,
+                            enabled = media != null,
+                            onCheckedChange = { select ->
+                                if (media != null) controller.setTrashSelection(media.id, select)
+                            },
                         )
+                        Column(Modifier.weight(1f)) {
+                            Text(candidate.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                stringResource(
+                                    R.string.gp_video_details,
+                                    formatMediaSize(candidate.bytes),
+                                    candidate.width,
+                                    candidate.height,
+                                    candidate.durationMs / 1000L,
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                     }
                 }
                 if (videoMatches.totalMatching > 20) {
@@ -272,10 +304,32 @@ internal fun GalleryProSection(
                                 fontWeight = FontWeight.SemiBold,
                             )
                             group.photoIds.take(6).forEach { id ->
-                                Text(
-                                    byId[id]?.name ?: stringResource(R.string.gp_unavailable_photo),
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
+                                val media = byId[id]
+                                val checked = state.selectedForTrash.any { it.id == id }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth()
+                                        .combinedClickable(
+                                            role = Role.Checkbox,
+                                            onClick = {
+                                                if (media != null) controller.setTrashSelection(id, !checked)
+                                            },
+                                            onLongClick = { quickLook = media },
+                                        ),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Checkbox(
+                                        checked = checked,
+                                        enabled = media != null,
+                                        onCheckedChange = { select ->
+                                            if (media != null) controller.setTrashSelection(id, select)
+                                        },
+                                    )
+                                    Text(
+                                        media?.name ?: stringResource(R.string.gp_unavailable_photo),
+                                        modifier = Modifier.weight(1f),
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
                             }
                             OmniActionButton(
                                 onClick = { comparedIds = group.photoIds },
@@ -308,5 +362,17 @@ internal fun GalleryProSection(
                 )
             }
         }
+    }
+    quickLook?.let { media ->
+        OmniMediaQuickLook(
+            target = OmniQuickLookTarget(
+                uri = media.uri,
+                name = media.name,
+                kind = if (media.isVideo) OmniQuickLookKind.VIDEO else OmniQuickLookKind.PHOTO,
+            ),
+            onDismiss = { quickLook = null },
+            selected = state.selectedForTrash.any { it.id == media.id },
+            onSelectedChange = { selected -> controller.setTrashSelection(media.id, selected) },
+        )
     }
 }

@@ -8,6 +8,8 @@ enum class SmartCategory {
     INSTALLERS,
     ARCHIVES,
     SCREENSHOTS,
+    TEMPORARY_FILES,
+    OLD_LOGS,
 }
 
 data class SmartCategoryItem(
@@ -80,6 +82,9 @@ class SmartCategoryScanner {
             val lowerSegments = segments.map { it.lowercase(Locale.ROOT) }
             val lowerName = indexed.file.name.lowercase(Locale.ROOT)
             val extension = indexed.file.extension.lowercase(Locale.ROOT)
+            // Aged downloads are review candidates, NOT verified junk.
+            // Never propose obvious backups, credentials or app vault files.
+            if (PROTECTED_FILENAME_FRAGMENTS.any { lowerName.contains(it) }) return@mapNotNull null
             val categories = linkedSetOf<SmartCategory>()
 
             val isDownload = topLevel in DOWNLOAD_DIRECTORIES
@@ -104,6 +109,26 @@ class SmartCategoryScanner {
                 SCREENSHOT_NAME_PREFIXES.any { lowerName.startsWith(it) }
             ) {
                 categories += SmartCategory.SCREENSHOTS
+            }
+
+            // New independently-authored, conservative clutter candidates.
+            // Restrict to user-managed Downloads/Documents; never inspect
+            // WhatsApp backups, keys, databases or OS/app-private directories.
+            val userFolder = topLevel in USER_MANAGED_DIRECTORIES
+            val oldEnoughForTemp = indexed.modified > 0L &&
+                indexed.modified <= (nowMillis - TEMP_MIN_AGE_MILLIS).coerceAtLeast(0L)
+            val oldEnoughForLogs = indexed.modified > 0L &&
+                indexed.modified <= (nowMillis - LOG_MIN_AGE_MILLIS).coerceAtLeast(0L)
+            val protectedName = PROTECTED_FILENAME_FRAGMENTS.any { lowerName.contains(it) }
+            if (userFolder && !protectedName) {
+                if (oldEnoughForTemp &&
+                    (extension in TEMPORARY_EXTENSIONS ||
+                        (lowerSegments.drop(1).any { it in TEMP_DIRECTORIES } &&
+                            extension !in PROTECTED_EXTENSIONS))
+                ) categories += SmartCategory.TEMPORARY_FILES
+                if (oldEnoughForLogs && extension in LOG_EXTENSIONS) {
+                    categories += SmartCategory.OLD_LOGS
+                }
             }
 
             if (categories.isEmpty()) return@mapNotNull null
@@ -146,6 +171,20 @@ class SmartCategoryScanner {
             "zip", "rar", "7z", "tar", "gz", "tgz", "bz2", "xz",
         )
         private val SCREENSHOT_DIRECTORIES = setOf("screenshot", "screenshots")
+        const val TEMP_MIN_AGE_MILLIS: Long = 14L * 24L * 60L * 60L * 1000L
+        const val LOG_MIN_AGE_MILLIS: Long = 30L * 24L * 60L * 60L * 1000L
+        private val USER_MANAGED_DIRECTORIES = DOWNLOAD_DIRECTORIES + setOf("documents", "documenti")
+        private val TEMP_DIRECTORIES = setOf("temp", "tmp", "temporary")
+        private val TEMPORARY_EXTENSIONS = setOf("tmp", "temp")
+        private val LOG_EXTENSIONS = setOf("log", "trace")
+        private val PROTECTED_EXTENSIONS = setOf(
+            "db", "sqlite", "sqlite3", "key", "pem", "p12", "pfx",
+            "jpg", "jpeg", "png", "mp4", "mkv", "mp3", "flac",
+            "zip", "7z", "rar", "crypt14", "crypt15",
+        )
+        private val PROTECTED_FILENAME_FRAGMENTS = setOf(
+            "backup", "whatsapp", "password", "secret", "private", "wallet", "keystore",
+        )
         private val SCREENSHOT_NAME_PREFIXES = listOf(
             "screenshot", "screen_shot", "screen-shot",
         )

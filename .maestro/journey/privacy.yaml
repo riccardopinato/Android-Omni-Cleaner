@@ -2,6 +2,14 @@ appId: com.riccardopinato.omnicleaner.debug
 ---
 - launchApp:
     clearState: false
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_privacy"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_privacy"
-- assertVisible: "EXIF Privacy"
+    id: "omni_bento_v2_privacy"
+- assertVisible: "Choose one JPEG photo"
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
