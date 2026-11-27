@@ -34,6 +34,28 @@ class SafeOperationsCoreTest {
     }
 
     @Test
+    fun corruptedOrInterruptedJournalBlocksAnyNewMutation() {
+        val root = createTempDirectory("omni-corrupt-journal-").toFile()
+        try {
+            val ledger = root.resolve("journal").apply { mkdirs() }
+            val source = root.resolve("valuable.apk").apply { writeText("unchanged") }
+            ledger.resolve("interrupted-stage.tmp").writeText("partial data")
+            val journal = SafeOperationsJournal(ledger)
+            assertFalse(journal.integrityHealthy())
+            assertNull(journal.begin("LOCAL_SAFE_TRASH", sampleSha))
+            val coordinator = DeletionCoordinator(
+                SafeTrashManager.forTests(root.resolve("trash"), root), journal,
+            )
+            val move = CleanupFileSnapshot(source, source.length(), source.lastModified())
+            assertEquals(0, coordinator.moveApproved(listOf(move)).moved)
+            assertTrue(source.isFile)
+            assertEquals("unchanged", source.readText())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun journalRejectsTamperAndDuplicateTransition() {
         val root = createTempDirectory("omni-journal-tamper-").toFile()
         try {
