@@ -275,7 +275,7 @@ class ProBatchController(
                 )
 
                 if (mediaRequest == null) {
-                    finishResolve(systemTrashConfirmed = false)
+                    finishResolve()
                 }
             } catch (error: CancellationException) {
                 state = state.copy(resolving = false)
@@ -296,7 +296,8 @@ class ProBatchController(
 
     fun onSystemTrashResult(success: Boolean) {
         if (!state.awaitingSystemTrash) return
-        if (success) cleanupChangedAnything = true
+        // Android RESULT_OK grants consent but is not evidence that media moved.
+        // Do not count this as an actual cleanup or ad-eligible completion.
         state = state.copy(
             awaitingSystemTrash = false,
             pendingSystemTrashRequest = null,
@@ -311,7 +312,7 @@ class ProBatchController(
                 )
             },
         )
-        finishResolve(systemTrashConfirmed = success)
+        finishResolve()
     }
 
     fun clearMessage() {
@@ -329,10 +330,9 @@ class ProBatchController(
         )
     }
 
-    private fun finishResolve(systemTrashConfirmed: Boolean) {
-        if (cleanupChangedAnything || systemTrashConfirmed) {
-            CleanupEventBus.publishCompleted()
-        }
+    private fun finishResolve() {
+        // Only independently observed local file/folder mutations count.
+        if (cleanupChangedAnything) CleanupEventBus.publishCompleted()
     }
 
     private fun Set<String>.toggle(path: String, checked: Boolean): Set<String> =
