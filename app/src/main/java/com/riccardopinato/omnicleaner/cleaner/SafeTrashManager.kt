@@ -262,6 +262,8 @@ class SafeTrashManager private constructor(
             return null
         }
 
+        // Permission must still be held at the last possible pre-move check.
+        if (!mutationPermission()) return null
         if (file.renameTo(payload)) {
             val validPayload =
                 payload.isFile &&
@@ -382,6 +384,9 @@ class SafeTrashManager private constructor(
         // A hard link is an atomic no-replace publish on supported filesystems.
         // On Android storage without hard links, reserve with createNewFile()
         // (O_EXCL equivalent) before copying. Never open an existing target.
+        if (!mutationPermission()) return SafeTrashRestoreResult(
+            SafeTrashRestoreStatus.DESTINATION_UNAVAILABLE,
+        )
         val linked = runCatching {
             android.system.Os.link(temp.absolutePath, destination.absolutePath)
             true
@@ -1034,10 +1039,12 @@ class SafeTrashManager private constructor(
             trashDirectory: File,
             restoreRoot: File = trashDirectory.parentFile ?: trashDirectory,
             legacyTrashDirectory: File? = null,
+            mutationPermission: () -> Boolean = { true },
         ): SafeTrashManager = SafeTrashManager(
             trashDirectory = trashDirectory,
             restoreRoot = restoreRoot,
             legacyTrashDirectory = legacyTrashDirectory,
+            mutationPermission = mutationPermission,
         )
     }
 }
