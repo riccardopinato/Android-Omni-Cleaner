@@ -243,8 +243,9 @@ class DeletionCoordinator(
             }) return@synchronized SafeTrashExecutionResult(0, unique.size, 0L)
             // A duplicate keeper cannot simultaneously be a mutation target,
             // even if another module selected it as a large file.
-            val mutationPaths = frozen.map {
-                runCatching { it.file.canonicalPath }.getOrElse { it.file.absolutePath }
+            val mutationPaths = frozen.map { candidate ->
+                runCatching { candidate.file.canonicalPath }
+                    .getOrElse { candidate.file.absolutePath }
             }.toSet()
             if (frozen.any { item ->
                 item.requiredDuplicatePeer?.let { peer ->
