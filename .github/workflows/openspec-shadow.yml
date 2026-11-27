@@ -1,10 +1,16 @@
-# Opt-in source/PR review only. This does not replace AppLab or modify branch protection.
+# Opt-in source/PR review only. No AppLab, merge, or branch-protection authority.
 name: OpenSpec Shadow PR Review
 
 on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      deep_pairs:
+        description: "Optional 1–4 open PR pairs for pinned SHA/file review (e.g. 75:77)"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -13,7 +19,8 @@ permissions:
 jobs:
   openspec-shadow:
     name: OpenSpec Shadow (review hints; no merge/QA approval)
-    uses: riccardopinato/App-Factory-Core/.github/workflows/openspec-shadow.yml@e45600bb4a12db63b3107581587e33e590d2f21b
+    uses: riccardopinato/App-Factory-Core/.github/workflows/openspec-shadow.yml@8a5034483a4b0574907012903894fa39ebeb1f51
     with:
       target_repository: riccardopinato/Android-Omni-Cleaner
       target_pr: ${{ github.event.pull_request.number || 0 }}
+      deep_pairs: ${{ inputs.deep_pairs || '' }}
