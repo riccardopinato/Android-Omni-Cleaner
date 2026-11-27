@@ -9,7 +9,6 @@ import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
@@ -443,6 +442,19 @@ class GalleryController(
             update(state.copy(error = uiContext.getString(R.string.gallery_error_no_selection)))
             return null
         }
+        // A persisted Gallery queue can outlive a file replacement or a
+        // revoked MediaStore permission: verify its identity before prompting.
+        val changed = selectedBatch.filterNot { media ->
+            MediaStoreHelper.isCurrentMediaMatch(
+                context.contentResolver, media.uri, media.sizeBytes, media.name,
+            )
+        }
+        if (changed.isNotEmpty()) {
+            update(state.copy(error = uiContext.getString(
+                R.string.gallery_error_trash_unverified, changed.size,
+            )))
+            return null
+        }
         val pendingIntent = MediaStoreHelper.trashMediaFiles(
             context.contentResolver, selectedBatch.map { it.uri },
         )
@@ -467,21 +479,11 @@ class GalleryController(
         verifyingTrash = true
         scope.launch {
             try {
-                val flags = withContext(Dispatchers.IO) {
-                    val observed = linkedMapOf<Long, Boolean?>()
-                    repeat(3) { attempt ->
-                        for (media in selected) {
-                            if (observed[media.id] != true) {
-                                observed[media.id] = MediaStoreHelper.verifiedTrashState(
-                                    context.contentResolver, media.uri,
-                                )
-                            }
-                        }
-                        if (observed.values.any { it != true } && attempt < 2) {
-                            delay(180L)
-                        }
-                    }
-                    observed
+                val verified = MediaStoreHelper.verifyTrashedUris(
+                    context.contentResolver, selected.map { it.uri },
+                )
+                val flags = selected.associate { media ->
+                    media.id to if (media.uri in verified.confirmedUris) true else null
                 }
                 val evidence = evaluateGalleryTrashEvidence(requested, flags)
                 if (evidence.confirmedIds.isNotEmpty()) {
