@@ -390,7 +390,10 @@ fun GalleryCleanerSection(
             onDismissRequest = { showTrashConfirmation = false },
             title = { Text(stringResource(R.string.gallery_trash_confirm_title)) },
             text = {
-                Text(stringResource(R.string.gallery_trash_confirm_body))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.gallery_trash_confirm_body))
+                    Text(stringResource(R.string.cleanup_system_trash_expiry_notice))
+                }
             },
             confirmButton = {
                 TextButton(
