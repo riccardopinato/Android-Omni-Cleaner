@@ -113,6 +113,38 @@ class SafeOperationsCoreTest {
     }
 
     @Test
+    fun hardLinkedDuplicateKeeperCannotBeLostThroughDifferentPath() {
+        val root = createTempDirectory("omni-hardlink-keeper-").toFile()
+        try {
+            val keeper = root.resolve("keeper.apk").apply { writeText("same bytes") }
+            val hardLink = root.resolve("keeper-alias.apk")
+            java.nio.file.Files.createLink(hardLink.toPath(), keeper.toPath())
+            val removable = root.resolve("removable.apk").apply { writeText("same bytes") }
+            val hash = MessageDigest.getInstance("SHA-256")
+                .digest(keeper.readBytes()).joinToString("") { "%02x".format(it) }
+            val peer = CleanupPeerSnapshot(keeper, keeper.length(),
+                keeper.lastModified(), hash)
+            val candidate = CleanupFileSnapshot(removable, removable.length(),
+                removable.lastModified(), hash, CleanupCandidateKind.DUPLICATE, peer)
+            val aliasSelection = CleanupFileSnapshot(
+                hardLink, hardLink.length(), hardLink.lastModified(),
+                kind = CleanupCandidateKind.LARGE_FILE,
+            )
+            val trash = SafeTrashManager.forTests(root.resolve("trash"), root)
+            val result = DeletionCoordinator(
+                trash, SafeOperationsJournal(root.resolve("journal")),
+            ).moveApproved(listOf(candidate, aliasSelection))
+            assertEquals(0, result.moved)
+            assertTrue(keeper.isFile)
+            assertTrue(hardLink.isFile)
+            assertTrue(removable.isFile)
+            assertTrue(trash.listEntries().isEmpty())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun coordinatorMovesOnlyVerifiedSelectionAndRecordsFinalStatus() {
         val root = createTempDirectory("omni-coordinator-success-").toFile()
         try {
