@@ -193,6 +193,9 @@
     <string name="maintenance_confirm_cache_title">Confirm cache cleanup</string>
     <string name="maintenance_confirm_cache_body">Only selected thumbnails with matching size, time and SHA-256 are moved into recoverable Safe Trash. No permanent deletion or reclaimed-space claim.</string>
 
+    <string name="safe_trash_import_legacy">Import older Trash entries</string>
+    <string name="safe_trash_import_legacy_body">This optional import copies verified older Trash entries before retiring their originals. Corrupt or incomplete entries remain untouched. Import is never automatic.</string>
+    <string name="cleanup_system_trash_expiry_notice">Android can automatically erase items from its media Trash after the system retention period (often about 30 days). The system Trash is not a permanent backup.</string>
     <string name="safe_trash_body">Files here still occupy storage. You can restore them without overwriting existing files, or delete them permanently.</string>
     <string name="safe_trash_summary">%1$d items · %2$s</string>
     <string name="safe_trash_unrecognized">%1$d unrecognized or incomplete Trash items were retained for safety. They cannot be deleted automatically.</string>
@@ -363,7 +366,7 @@
     <string name="pro_system_trash_cancelled">Android Trash cancelled</string>
 
 
-    <string name="safe_trash_persistent_notice">Safe Trash is stored in shared storage so it can survive app uninstall. Reinstall Omni Cleaner and re-enable Deep Cleaning to restore these files.</string>
+    <string name="safe_trash_persistent_notice">Safe Trash is stored in shared storage and may survive app uninstall, but external cleaners, storage resets or other apps may still remove it. Keep independent backups of important files.</string>
     <string name="safe_trash_unavailable">Safe Trash storage is unavailable. Files will remain unchanged.</string>
     <string name="gallery_error_load_failed">Gallery media could not be loaded. Try again.</string>
     <string name="smart_categories_scan_failed">Smart Categories scan could not be completed.</string>
