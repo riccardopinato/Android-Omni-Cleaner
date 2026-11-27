@@ -8,7 +8,9 @@ import java.io.FileInputStream
 import java.security.MessageDigest
 import kotlin.coroutines.coroutineContext
 
-class ThumbnailFileCleanup {
+class ThumbnailFileCleanup(
+    private val safeTrashManager: SafeTrashManager? = null,
+) {
     suspend fun inventory(
         directory: File,
         onProgress: (Int, File) -> Unit = { _, _ -> },
@@ -62,6 +64,13 @@ class ThumbnailFileCleanup {
     ): ThumbnailCleanupResult = withContext(Dispatchers.IO) {
         val root = runCatching { snapshot.directory.canonicalFile }.getOrNull()
             ?: return@withContext ThumbnailCleanupResult(0, snapshot.files.size, 0L)
+        // No cache path may use an irreversible File.delete() operation.
+        // Missing Safe Trash or a non-canonical cache root means nothing moves.
+        if (safeTrashManager == null || root != snapshot.directory.absoluteFile ||
+            !FileScanner().isSafeThumbnailDirectory(root)
+        ) {
+            return@withContext ThumbnailCleanupResult(0, approvedPaths.size, 0L)
+        }
         val rootPrefix = root.path.trimEnd(File.separatorChar) + File.separator
         var removed = 0
         var rejected = 0
@@ -98,21 +107,17 @@ class ThumbnailFileCleanup {
                 continue
             }
 
-            if (current.delete()) {
+            // A SHA-bound media thumbnail is moved to persistent Safe Trash,
+            // not unlinked from the filesystem. Failures leave it in place.
+            if (safeTrashManager.moveVerifiedThumbnailToTrash(expected, root) != null) {
                 removed++
                 removedBytes += expected.bytes.coerceAtLeast(0L)
             } else {
                 rejected++
             }
         }
-
-        for (dir in root.walkBottomUp()) {
-            coroutineContext.ensureActive()
-            if (dir == root || !dir.isDirectory || PathSafety.isSymlink(dir)) continue
-            runCatching {
-                if (dir.listFiles()?.isEmpty() == true) dir.delete()
-            }
-        }
+        // Never sweep directories after a cache cleanup; unknown files and
+        // new files arriving concurrently must remain untouched.
 
         ThumbnailCleanupResult(removed, rejected, removedBytes)
     }
