@@ -94,3 +94,10 @@ In `SafeTrashManagerTest.kt` quattro regressioni:
 - Quando disponibili i risultati del nuovo exact-head: registrare singolarmente Android CI, R1, synthetic safety, Android functional acceptance, video/visual QA. Un PASS precedente sullo SHA vecchio non basta.
 
 **Riferimento Android ufficiale:** MediaStore createTrashRequest imposta `IS_TRASHED` quando approvato; `QUERY_ARG_MATCH_TRASHED` rende leggibili anche le righe nel Cestino. `android.system.Os.link/open` supportano le operazioni native; l'uso rimane sempre condizionato ai vincoli del filesystem reale.
+
+
+### Ulteriore P0: fallimenti di copia e unlink nel Safe Trash
+- Il percorso di fallback ora non elimina la copia di sicurezza quando `copyTo`, digest o `file.delete()` falliscono o producono un esito incerto: mantiene la voce per recupero manuale e non dichiara riuscita.
+- Prima della rimozione dell'originale vengono ricontrollati byte, mtime, SHA-256 e contenuto rispetto alla copia già verificata. Nessun `deleteRecursively()` permane nel `SafeTrashManager` di questo ramo.
+- Anche l'eccezione ristretta per miniature `Android/media/<app>/.thumbnails` mantiene `Android/media` ordinario protetto, e non può attraversare la cartella gestita dell'app.
+- Questo è hardening del percorso di errore, non prova dell'impossibilità di una race con scritture esterne: eventuali collisioni a livello filesystem e il recupero su OEM restano parte del gate fisico.
