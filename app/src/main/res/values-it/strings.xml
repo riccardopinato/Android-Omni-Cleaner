@@ -189,9 +189,9 @@
     <string name="maintenance_residue_candidates">Candidati residui app</string>
     <string name="maintenance_residue_warning">Android può limitare la visibilità dei pacchetti installati: questi elementi sono candidati da revisionare, non prove automatiche di app disinstallate.</string>
     <string name="maintenance_access_required">Serve l’accesso alla memoria prima di eseguire questa analisi.</string>
-    <string name="maintenance_cleanup_result">%1$d file rimossi definitivamente (%2$d byte) · %3$d rifiutati perché cambiati o non verificabili.</string>
+    <string name="maintenance_cleanup_result">%1$d miniature spostate nel Cestino sicuro recuperabile (%2$d byte conservati, non liberati) · %3$d rifiutati dopo la verifica.</string>
     <string name="maintenance_confirm_cache_title">Conferma pulizia cache</string>
-    <string name="maintenance_confirm_cache_body">Verranno rimossi solo i file identici all’inventario appena scansionato (dimensione, data modifica e SHA-256). I file cambiati verranno rifiutati.</string>
+    <string name="maintenance_confirm_cache_body">Solo le miniature selezionate con dimensione, data e SHA-256 invariati vengono spostate nel Cestino sicuro recuperabile. Nessuna eliminazione definitiva o spazio dichiarato liberato.</string>
 
     <string name="safe_trash_body">I file qui dentro occupano ancora spazio. Puoi ripristinarli senza sovrascrivere file esistenti oppure eliminarli definitivamente.</string>
     <string name="safe_trash_summary">%1$d elementi · %2$s</string>
@@ -331,7 +331,7 @@
     <string name="pro_residue_detail">%1$s · %2$s · %3$s</string>
     <string name="pro_resolve_selection">Risolvi selezione Pro</string>
     <string name="pro_confirm_title">Confermare la sequenza Pro?</string>
-    <string name="pro_confirm_body">Cartelle vuote e thumbnail verranno ricontrollate prima della rimozione. I duplicati manterranno almeno una copia. I media selezionati passeranno dal Cestino Android con una seconda conferma di sistema. I residui app resteranno invariati.</string>
+    <string name="pro_confirm_body">Le cartelle vuote vengono ricontrollate. Le miniature selezionate vanno nel Cestino sicuro recuperabile; i duplicati mantengono una copia. I media richiedono il consenso Android. I residui app restano intatti.</string>
     <string name="pro_scan_empty_folders_label">Cartelle vuote e piccole</string>
     <string name="pro_scan_empty_folders_description">Revisiona cartelle orfane o prive di contenuti</string>
     <string name="pro_scan_duplicates_label">File duplicati</string>
@@ -351,14 +351,15 @@
     <string name="pro_error_access_required">Serve l’accesso alla memoria per la scansione Pro.</string>
     <string name="pro_error_select_category">Seleziona almeno una categoria.</string>
     <string name="pro_resolve_empty_folders">%1$d cartelle vuote</string>
-    <string name="pro_resolve_thumbnails">%1$d thumbnail eliminate definitivamente</string>
+    <string name="pro_resolve_thumbnails">%1$d miniature spostate nel Cestino sicuro (recuperabili)</string>
     <string name="pro_resolve_thumbnail_bytes">(%1$d byte)</string>
     <string name="pro_resolve_safe_trash">%1$d file nel Safe Trash (non spazio già liberato)</string>
     <string name="pro_resolve_thumbnail_rejected">%1$d thumbnail rifiutate</string>
     <string name="pro_resolve_stale">%1$d file cambiati dopo la scansione e lasciati invariati</string>
     <string name="pro_resolve_blocked">%1$d file lasciati invariati perché non eliminabili in modo reversibile</string>
     <string name="pro_resolve_residues">%1$d residui lasciati in revisione perché la visibilità dei pacchetti può essere limitata</string>
-    <string name="pro_system_trash_confirmed">Cestino Android confermato (non conteggiato come spazio già liberato)</string>
+    <string name="cleanup_media_verified_summary">%1$d media verificati nel Cestino Android · %2$d non verificati (selezione conservata)</string>
+    <string name="pro_system_trash_confirmed">Consenso Android accettato (spostamento effettivo non verificato; spazio non liberato)</string>
     <string name="pro_system_trash_cancelled">Cestino Android annullato</string>
 
 
