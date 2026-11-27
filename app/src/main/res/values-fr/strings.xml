@@ -188,9 +188,9 @@
     <string name="maintenance_residue_candidates">Candidats de résidus d’apps</string>
     <string name="maintenance_residue_warning">Android peut limiter la visibilité des paquets installés : ces éléments sont des candidats à vérifier, pas une preuve automatique d’apps désinstallées.</string>
     <string name="maintenance_access_required">L’accès au stockage est requis avant cette analyse.</string>
-    <string name="maintenance_cleanup_result">%1$d fichiers supprimés définitivement (%2$d octets) · %3$d refusés car modifiés ou non vérifiables.</string>
+    <string name="maintenance_cleanup_result">%1$d miniatures déplacées vers la corbeille sûre récupérable (%2$d octets conservés, non libérés) · %3$d refusées après contrôle.</string>
     <string name="maintenance_confirm_cache_title">Confirmer le nettoyage du cache</string>
-    <string name="maintenance_confirm_cache_body">Seuls les fichiers identiques au dernier inventaire analysé (taille, date de modification et SHA-256) seront supprimés. Les fichiers modifiés seront refusés.</string>
+    <string name="maintenance_confirm_cache_body">Seules les miniatures sélectionnées dont la taille, la date et le SHA-256 correspondent sont déplacées vers la corbeille sûre récupérable. Aucune suppression définitive ni espace annoncé libéré.</string>
 
     <string name="safe_trash_body">Les fichiers ici occupent encore de l’espace. Vous pouvez les restaurer sans écraser de fichiers existants ou les supprimer définitivement.</string>
     <string name="safe_trash_summary">%1$d éléments · %2$s</string>
@@ -330,7 +330,7 @@
     <string name="pro_residue_detail">%1$s · %2$s · %3$s</string>
     <string name="pro_resolve_selection">Traiter la sélection Pro</string>
     <string name="pro_confirm_title">Confirmer la séquence Pro ?</string>
-    <string name="pro_confirm_body">Les dossiers vides et les miniatures sont revérifiés avant suppression. Les doublons conservent au moins une copie. Les médias sélectionnés passent par la Corbeille Android avec une seconde confirmation système. Les résidus d’apps restent inchangés.</string>
+    <string name="pro_confirm_body">Les dossiers vides sont revérifiés. Les miniatures sélectionnées vont vers la corbeille sûre récupérable ; les doublons conservent une copie. Les médias exigent un accord Android. Les résidus restent intacts.</string>
     <string name="pro_scan_empty_folders_label">Dossiers vides et petits</string>
     <string name="pro_scan_empty_folders_description">Vérifier les dossiers orphelins ou sans contenu</string>
     <string name="pro_scan_duplicates_label">Fichiers en double</string>
@@ -349,14 +349,15 @@
     <string name="pro_error_access_required">L’accès au stockage est requis pour l’analyse Pro.</string>
     <string name="pro_error_select_category">Sélectionnez au moins une catégorie.</string>
     <string name="pro_resolve_empty_folders">%1$d dossiers vides</string>
-    <string name="pro_resolve_thumbnails">%1$d miniatures supprimées définitivement</string>
+    <string name="pro_resolve_thumbnails">%1$d miniatures déplacées vers la corbeille sûre (récupérables)</string>
     <string name="pro_resolve_thumbnail_bytes">(%1$d octets)</string>
     <string name="pro_resolve_safe_trash">%1$d fichiers dans la Corbeille sécurisée (pas de l’espace déjà libéré)</string>
     <string name="pro_resolve_thumbnail_rejected">%1$d miniatures refusées</string>
     <string name="pro_resolve_stale">%1$d fichiers modifiés après l’analyse et laissés inchangés</string>
     <string name="pro_resolve_blocked">%1$d fichiers laissés inchangés car aucune suppression réversible n’est disponible</string>
     <string name="pro_resolve_residues">%1$d résidus conservés pour vérification car la visibilité des paquets peut être limitée</string>
-    <string name="pro_system_trash_confirmed">Corbeille Android confirmée (non comptée comme espace déjà libéré)</string>
+    <string name="cleanup_media_verified_summary">%1$d médias vérifiés dans la corbeille Android · %2$d non vérifiés (sélection conservée)</string>
+    <string name="pro_system_trash_confirmed">Accord Android accepté (état réel non vérifié ; aucun espace libéré)</string>
     <string name="pro_system_trash_cancelled">Corbeille Android annulée</string>
 
     <string name="safe_trash_persistent_notice">Safe Trash est stocké dans l’espace partagé afin de pouvoir survivre à la désinstallation de l’application. Réinstallez Omni Cleaner et réactivez le Nettoyage approfondi pour restaurer ces fichiers.</string>
