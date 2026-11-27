@@ -92,7 +92,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Execute previously unrun Android suites and new safety regressions
+      - name: Execute and prove every Android instrumented class explicitly
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
           api-level: 35
@@ -102,44 +102,38 @@ jobs:
           disk-size: 4096M
           disable-animations: true
           script: |
-            ./gradlew connectedDebugAndroidTest --stacktrace -Pandroid.testInstrumentationRunnerArguments.class=com.riccardopinato.omnicleaner.AppContractInstrumentedTest,com.riccardopinato.omnicleaner.LocalizationInstrumentedTest,com.riccardopinato.omnicleaner.ManifestHardeningInstrumentedTest,com.riccardopinato.omnicleaner.cleaner.FactoryPythonFixtureInstrumentedTest,com.riccardopinato.omnicleaner.cleaner.SafeTrashStorageInstrumentedTest,com.riccardopinato.omnicleaner.gallery.NativeVideoPlaybackInstrumentedTest,com.riccardopinato.omnicleaner.monetization.PremiumCacheInstrumentedTest,com.riccardopinato.omnicleaner.cleaner.BackgroundIndexRuntimeInstrumentedTest,com.riccardopinato.omnicleaner.gallery.MediaTrashReadbackInstrumentedTest
+            set -eu
+            adb install -r -t app/build/outputs/apk/debug/app-debug.apk
+            adb install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            : > "$RUNNER_TEMP/omni-functional-matrix.txt"
+            for spec in 'com.riccardopinato.omnicleaner.AppContractInstrumentedTest|4' 'com.riccardopinato.omnicleaner.LocalizationInstrumentedTest|1' 'com.riccardopinato.omnicleaner.ManifestHardeningInstrumentedTest|1' 'com.riccardopinato.omnicleaner.cleaner.FactoryPythonFixtureInstrumentedTest|1' 'com.riccardopinato.omnicleaner.cleaner.SafeTrashStorageInstrumentedTest|2' 'com.riccardopinato.omnicleaner.gallery.NativeVideoPlaybackInstrumentedTest|1' 'com.riccardopinato.omnicleaner.monetization.PremiumCacheInstrumentedTest|1' 'com.riccardopinato.omnicleaner.cleaner.BackgroundIndexRuntimeInstrumentedTest|2' 'com.riccardopinato.omnicleaner.gallery.MediaTrashReadbackInstrumentedTest|1'
+            do
+              classname="${spec%|*}"
+              expected="${spec##*|}"
+              echo "RUN_ANDROID_CLASS: $classname expected=$expected"
+              if output="$(adb shell am instrument -w -e class "$classname" com.riccardopinato.omnicleaner.debug.test/androidx.test.runner.AndroidJUnitRunner 2>&1)"; then
+                printf '%s\n' "$output"
+              else
+                printf '%s\n' "$output"
+                echo "FAIL_ANDROID_CLASS: $classname (instrumentation failed)" | tee -a "$RUNNER_TEMP/omni-functional-matrix.txt"
+                exit 1
+              fi
+              if printf '%s\n' "$output" | grep -Fq "OK ($expected test"; then
+                echo "PASS_ANDROID_CLASS: $classname tests=$expected" | tee -a "$RUNNER_TEMP/omni-functional-matrix.txt"
+              else
+                echo "FAIL_ANDROID_CLASS: $classname (zero, missing, failed, or unexpected count)" | tee -a "$RUNNER_TEMP/omni-functional-matrix.txt"
+                exit 1
+              fi
+            done
 
-      - name: Fail closed if any class did not execute
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import xml.etree.ElementTree as ET
-          expected = {
-            "AppContractInstrumentedTest": 4,
-            "LocalizationInstrumentedTest": 1,
-            "ManifestHardeningInstrumentedTest": 1,
-            "FactoryPythonFixtureInstrumentedTest": 1,
-            "SafeTrashStorageInstrumentedTest": 2,
-            "NativeVideoPlaybackInstrumentedTest": 1,
-            "PremiumCacheInstrumentedTest": 1,
-            "BackgroundIndexRuntimeInstrumentedTest": 2,
-            "MediaTrashReadbackInstrumentedTest": 1,
-          }
-          found = {key: [] for key in expected}
-          for path in Path("app/build/outputs/androidTest-results/connected").rglob("*.xml"):
-              try:
-                  tree = ET.parse(path)
-              except ET.ParseError:
-                  continue
-              for case in tree.iter("testcase"):
-                  for key in expected:
-                      if key in case.get("classname", ""):
-                          found[key].append(case)
-          for key, minimum in expected.items():
-              cases = found[key]
-              if len(cases) != minimum:
-                  raise SystemExit(f"FAIL {key}: {len(cases)} executed, expected {minimum}")
-              for case in cases:
-                  if any(case.find(tag) is not None for tag in ("failure", "error", "skipped")):
-                      raise SystemExit(f"FAIL {key}: {case.attrib}")
-              print(f"PASS {key}: {len(cases)} Android instrumented tests")
-          PY
+      - name: Upload Android execution proof
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: omni-functional-matrix-${{ env.OMNI_SOURCE_SHA }}
+          path: ${{ runner.temp }}/omni-functional-matrix.txt
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Scope of evidence
         if: always()
