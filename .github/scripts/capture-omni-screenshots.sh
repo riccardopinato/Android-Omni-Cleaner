@@ -339,7 +339,8 @@ appId: com.riccardopinato.omnicleaner.debug
     centerElement: true
 - tapOn:
     id: "omni_bento_v2_gallery"
-- tapOn: "Videos only"
+- tapOn:
+    id: "omni_gallery_filter_videos"
 - tapOn: "Load gallery"
 - tapOn:
     id: "omni_gallery_open_review"
@@ -378,7 +379,8 @@ appId: com.riccardopinato.omnicleaner.debug
     centerElement: true
 - tapOn:
     id: "omni_bento_v2_gallery"
-- tapOn: "Videos only"
+- tapOn:
+    id: "omni_gallery_filter_videos"
 - tapOn: "Load gallery"
 - tapOn:
     id: "omni_gallery_open_review"
