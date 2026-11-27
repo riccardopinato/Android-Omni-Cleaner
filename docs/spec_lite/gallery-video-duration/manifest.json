@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "spec_id": "FSL-20261127-OMNI-DURATION",
+  "mode": "STANDARD",
+  "factory": {
+    "repository": "riccardopinato/App-Factory-Core",
+    "sha": "f8b9f550c544735237f19cdd723bd2df667ceee6",
+    "resolver": "CURRENT.yaml"
+  },
+  "target": {
+    "repository": "riccardopinato/Android-Omni-Cleaner",
+    "source_sha": "e2959f4680e1c3c6c40720d72d1c1262287c1925"
+  },
+  "canonical_refs": {
+    "factory_current": {
+      "repository": "riccardopinato/App-Factory-Core",
+      "sha": "f8b9f550c544735237f19cdd723bd2df667ceee6",
+      "path": "CURRENT.yaml"
+    },
+    "product_bible": {
+      "repository": "riccardopinato/Android-Omni-Cleaner",
+      "sha": "e2959f4680e1c3c6c40720d72d1c1262287c1925",
+      "path": "PRODUCT_BIBLE.md"
+    },
+    "roadmap": {
+      "repository": "riccardopinato/Android-Omni-Cleaner",
+      "sha": "e2959f4680e1c3c6c40720d72d1c1262287c1925",
+      "path": "ROADMAP.md"
+    },
+    "agents": {
+      "repository": "riccardopinato/Android-Omni-Cleaner",
+      "sha": "e2959f4680e1c3c6c40720d72d1c1262287c1925",
+      "path": "AGENTS.md"
+    },
+    "goldens": []
+  },
+  "scope": {
+    "includes": [
+      "Fix Gallery video duration labels for videos one hour or longer",
+      "Preserve existing native video scrub and no-data-write behavior"
+    ],
+    "excludes": [
+      "Change trash operations",
+      "New video player, new codec or permission",
+      "Release candidate 1.0 signature or publishing",
+      "Home visual redesign"
+    ],
+    "allowed_paths": [
+      "app/src/main/java/com/riccardopinato/omnicleaner/gallery/GalleryModels.kt",
+      "app/src/main/java/com/riccardopinato/omnicleaner/gallery/OmniVideoScrubControls.kt",
+      "app/src/test/java/com/riccardopinato/omnicleaner/gallery/GalleryDurationContractTest.kt",
+      "docs/spec_lite/gallery-video-duration/**"
+    ],
+    "forbidden_paths": [
+      "app/src/main/AndroidManifest.xml",
+      "app/src/main/java/com/riccardopinato/omnicleaner/cleaner/**",
+      "app/build.gradle.kts"
+    ]
+  },
+  "risk": {
+    "data_loss": false,
+    "security": false,
+    "billing": false,
+    "native_lifecycle": false,
+    "migration": false,
+    "sensitive_data": false,
+    "release": false
+  },
+  "requirements": [
+    {
+      "id": "FR-001",
+      "text": "A media duration beyond one hour must be rendered with hours rather than counting total minutes, with one shared formatter for Gallery and the native scrubber.",
+      "status": "PROPOSED",
+      "conflicts_with": [],
+      "acceptance": [
+        {
+          "id": "AC-001",
+          "criterion": "A 3723000 millisecond video displays 01:02:03 rather than the original 62:03 label.",
+          "evidence_type": "UNIT_TEST"
+        },
+        {
+          "id": "AC-002",
+          "criterion": "Subhour videos retain MM:SS with the same labels already used in gallery previews.",
+          "evidence_type": "UNIT_TEST"
+        },
+        {
+          "id": "AC-003",
+          "criterion": "Long durations beyond the maximum signed Int milliseconds remain correctly represented without overflow.",
+          "evidence_type": "UNIT_TEST"
+        },
+        {
+          "id": "AC-004",
+          "criterion": "Existing Int-based scrubber time labels remain source and regression compatible.",
+          "evidence_type": "UNIT_TEST"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "required_checks": [
+      "UNIT_TEST",
+      "SOURCE_TEST"
+    ],
+    "manual_gate": false,
+    "rollback_plan": null
+  },
+  "approval": {
+    "status": "PROPOSED",
+    "decision_ref": null
+  },
+  "verification": {
+    "status": "NOT_VERIFIED",
+    "evidence_links": []
+  }
+}
