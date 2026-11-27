@@ -2,6 +2,14 @@ appId: com.riccardopinato.omnicleaner.debug
 ---
 - launchApp:
     clearState: false
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_pro"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_pro"
-- assertVisible: "Omni Cleaner Pro"
+    id: "omni_bento_v2_pro"
+- assertVisible: "Restore purchase"
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"

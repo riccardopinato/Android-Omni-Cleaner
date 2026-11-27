@@ -2,7 +2,15 @@ appId: com.riccardopinato.omnicleaner.debug
 ---
 - launchApp:
     clearState: false
+- scrollUntilVisible:
+    element:
+      id: "omni_bento_v2_review"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
-    id: "omni_nav_clean"
-- assertVisible: "Deep Cleaning"
-- assertVisible: "Analyze storage"
+    id: "omni_bento_v2_review"
+- assertVisible:
+    id: "omni_clean_detail_review"
+- pressKey: Back
+- assertVisible:
+    id: "omni_bento_v2_editor_toggle"
