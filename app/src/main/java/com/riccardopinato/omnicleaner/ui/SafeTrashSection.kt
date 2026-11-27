@@ -396,7 +396,7 @@ fun SafeTrashSection() {
                     loading = true
                     scope.launch {
                         withContext(Dispatchers.IO) {
-                            frozenCandidates.forEach(manager::repairLegacyEntryApproved)
+                            frozenCandidates.forEach { manager.repairLegacyEntryApproved(it) }
                         }
                         reload()
                     }
