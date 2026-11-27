@@ -79,7 +79,9 @@ private class MaintenanceController(
     private val context: Context,
     private val scope: CoroutineScope,
     private val scanner: FileScanner = FileScanner(),
-    private val thumbnailCleanup: ThumbnailFileCleanup = ThumbnailFileCleanup(),
+    private val thumbnailCleanup: ThumbnailFileCleanup = ThumbnailFileCleanup(
+        com.riccardopinato.omnicleaner.cleaner.SafeTrashManager(context),
+    ),
 ) {
     var state by mutableStateOf(MaintenanceState())
         private set
