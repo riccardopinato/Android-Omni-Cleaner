@@ -157,7 +157,14 @@ class SafeTrashManager private constructor(
             expectedModified = stamp.modified,
             expectedSha256 = stamp.sha256,
         )
-        if (!CleanupSnapshotValidator.validate(snapshot).valid) return null
+        // CleanupSnapshotValidator intentionally blocks general Android/media.
+        // This narrow cache exception uses the validated directory and its
+        // immutable SHA, never granting access to arbitrary app media files.
+        if (!stamp.file.isFile || PathSafety.isSymlink(stamp.file) ||
+            stamp.file.length() != stamp.bytes ||
+            stamp.file.lastModified() != stamp.modified ||
+            runCatching { sha256(stamp.file) }.getOrNull() != stamp.sha256
+        ) return null
         return moveToTrashInternal(
             file = stamp.file,
             expectedSize = stamp.bytes,
@@ -177,7 +184,9 @@ class SafeTrashManager private constructor(
         if (!isPersistentTrashAvailable()) return null
         if (!file.exists() || !file.isFile) return null
         if (!PathSafety.isWithinRoot(file, restoreRoot)) return null
-        if (PathSafety.isDangerousPath(file) || PathSafety.isSymlink(file)) return null
+        if ((PathSafety.isDangerousPath(file) && !cacheMediaException) ||
+            PathSafety.isSymlink(file)
+        ) return null
         if (MediaStoreHelper.isMediaFile(file) && !cacheMediaException) return null
 
         val originalSize = file.length().coerceAtLeast(0L)
