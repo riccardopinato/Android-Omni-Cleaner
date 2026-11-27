@@ -179,7 +179,7 @@ class SafeTrashManager private constructor(
         if (!file.exists() || !file.isFile) return null
         if (!PathSafety.isWithinRoot(file, restoreRoot)) return null
         // A cache exception must never apply to app-managed Safe Trash itself.
-        val normalized = file.absolutePath.replace('\\\\', '/').lowercase()
+        val normalized = file.absolutePath.replace('\\', '/').lowercase()
         if ((PathSafety.isDangerousPath(file) && !cacheMediaException) ||
             (cacheMediaException && normalized.contains(
                 "/" + StorageAccess.APP_MANAGED_DIRECTORY.lowercase() + "/",
