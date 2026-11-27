@@ -1,6 +1,7 @@
 package com.riccardopinato.omnicleaner.monetization
 
 import android.content.Context
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import com.riccardopinato.omnicleaner.R
@@ -8,6 +9,7 @@ import com.riccardopinato.omnicleaner.cleaner.FileScanner
 import com.riccardopinato.omnicleaner.cleaner.FolderStatus
 import com.riccardopinato.omnicleaner.cleaner.StorageAccess
 import com.riccardopinato.omnicleaner.cleaner.StorageCleanupEngine
+import com.riccardopinato.omnicleaner.cleaner.MediaStoreHelper
 import com.riccardopinato.omnicleaner.cleaner.StorageInventoryRepository
 import com.riccardopinato.omnicleaner.cleaner.ThumbnailFileCleanup
 import kotlinx.coroutines.CancellationException
@@ -36,6 +38,7 @@ class ProBatchController(
 
     private var job: Job? = null
     private var cleanupChangedAnything: Boolean = false
+    private var pendingMediaUris: List<Uri> = emptyList()
 
     fun scan(selectedTypes: Set<ProScanType>) {
         if (state.resolving || state.awaitingSystemTrash) return
@@ -217,7 +220,8 @@ class ProBatchController(
                 val safeTrash = cleanupEngine.movePreparedSnapshotsToSafeTrash(preparation.safeTrashCandidates)
                 if (safeTrash.moved > 0) cleanupChangedAnything = true
 
-                val mediaRequest = cleanupEngine.createSystemTrashRequest(preparation.mediaUris)
+                val mediaRequest = cleanupEngine.createSystemTrashRequest(preparation)
+                pendingMediaUris = if (mediaRequest != null) preparation.mediaUris else emptyList()
                 val summaryParts = mutableListOf<String>()
                 summaryParts += uiContext.getString(
                     R.string.pro_resolve_empty_folders,
@@ -274,6 +278,9 @@ class ProBatchController(
                     awaitingSystemTrash = mediaRequest != null,
                     pendingSystemTrashRequest = mediaRequest,
                     message = summaryParts.joinToString(" · "),
+                    error = if (mediaRequest == null && preparation.mediaUris.isNotEmpty()) {
+                        uiContext.getString(R.string.cleanup_system_trash_unavailable)
+                    } else null,
                 )
 
                 if (mediaRequest == null) {
@@ -298,23 +305,47 @@ class ProBatchController(
 
     fun onSystemTrashResult(success: Boolean) {
         if (!state.awaitingSystemTrash) return
-        // Android RESULT_OK grants consent but is not evidence that media moved.
-        // Do not count this as an actual cleanup or ad-eligible completion.
-        state = state.copy(
-            awaitingSystemTrash = false,
-            pendingSystemTrashRequest = null,
-            message = buildString {
-                append(state.message.orEmpty())
-                if (isNotEmpty()) append(" · ")
-                append(
-                    uiContext.getString(
-                        if (success) R.string.pro_system_trash_confirmed
-                        else R.string.pro_system_trash_cancelled,
+        val attempted = pendingMediaUris
+        pendingMediaUris = emptyList()
+        if (!success || attempted.isEmpty()) {
+            state = state.copy(
+                awaitingSystemTrash = false,
+                pendingSystemTrashRequest = null,
+                message = state.message.orEmpty() + " · " +
+                    uiContext.getString(R.string.pro_system_trash_cancelled),
+            )
+            finishResolve()
+            return
+        }
+        // Consent is NOT proof. Only independently observed IS_TRASHED rows
+        // are counted as completed cleanup; all others stay selected.
+        scope.launch {
+            try {
+                val verified = MediaStoreHelper.verifyTrashedUris(
+                    context.contentResolver, attempted,
+                )
+                if (verified.confirmedUris.isNotEmpty()) cleanupChangedAnything = true
+                state = state.copy(
+                    awaitingSystemTrash = false,
+                    pendingSystemTrashRequest = null,
+                    message = state.message.orEmpty() + " · " + uiContext.getString(
+                        R.string.cleanup_media_verified_summary,
+                        verified.confirmedUris.size,
+                        verified.unverifiedUris.size,
                     ),
                 )
-            },
-        )
-        finishResolve()
+                finishResolve()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                state = state.copy(
+                    awaitingSystemTrash = false,
+                    pendingSystemTrashRequest = null,
+                    error = uiContext.getString(R.string.cleanup_system_trash_unavailable),
+                )
+                finishResolve()
+            }
+        }
     }
 
     fun clearMessage() {
@@ -324,6 +355,7 @@ class ProBatchController(
     fun cancel() {
         job?.cancel()
         job = null
+        pendingMediaUris = emptyList()
         state = state.copy(
             running = false,
             resolving = false,
