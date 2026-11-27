@@ -384,9 +384,9 @@ class SafeTrashManager private constructor(
             return SafeTrashPurgeResult(SafeTrashPurgeStatus.INVALID_ENTRY)
         }
         val bytesBefore = payload.length().coerceAtLeast(0L)
-        val deleted = runCatching {
-            deleteTreeWithoutFollowingSymlinks(target, root)
-        }.getOrDefault(false)
+        // Explicit purge is limited to the two recognized files only.
+        // Never traverse or delete unexpected descendants.
+        val deleted = removeKnownEntryFilesOnly(target)
         if (!deleted || target.exists()) {
             return SafeTrashPurgeResult(SafeTrashPurgeStatus.DELETE_FAILED)
         }
@@ -458,29 +458,6 @@ class SafeTrashManager private constructor(
         }
     }
 
-    private fun deleteTreeWithoutFollowingSymlinks(node: File, root: File): Boolean {
-        val rootPrefix = root.path.trimEnd(File.separatorChar) + File.separator
-        val absolute = node.absoluteFile
-        if (!absolute.path.startsWith(rootPrefix)) return false
-
-        if (PathSafety.isSymlink(node)) {
-            return node.delete()
-        }
-
-        val canonical = runCatching { node.canonicalFile }.getOrNull() ?: return false
-        if (canonical != node.absoluteFile || !canonical.path.startsWith(rootPrefix)) return false
-
-        if (canonical.isDirectory) {
-            var childrenDeleted = true
-            for (child in canonical.listFiles().orEmpty()) {
-                if (!deleteTreeWithoutFollowingSymlinks(child, root)) childrenDeleted = false
-            }
-            if (!childrenDeleted) return false
-        }
-
-        return canonical.delete()
-    }
-
     private fun preparePersistentTrash() {
         val parent = trashDirectory.parentFile ?: return
         if (PathSafety.isSymlink(parent) || PathSafety.isSymlink(trashDirectory)) return
@@ -541,7 +518,9 @@ class SafeTrashManager private constructor(
             }.getOrDefault(false)
 
             if (!copied || !isVerifiedMigrationCopy(legacyPayload, target)) {
-                target.deleteRecursively()
+                // Leave an incomplete new copy as an observable unknown entry,
+                // rather than recursively deleting any unexpected file.
+                // The verified legacy source remains untouched for a retry.
                 continue
             }
 
@@ -568,7 +547,7 @@ class SafeTrashManager private constructor(
         // whose destination path or other identity fields differ.
         val legacyProperties = runCatching {
             Properties().apply {
-                File(legacyPayload.parentFile, METADATA_NAME).inputStream().use(::load)
+                File(legacyPayload.parentFile, METADATA_NAME).inputStream().use { input -> load(input) }
             }
         }.getOrNull() ?: return false
         if (legacyProperties.getProperty(KEY_ORIGINAL_PATH) != migratedEntry.originalPath ||
