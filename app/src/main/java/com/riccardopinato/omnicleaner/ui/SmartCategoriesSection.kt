@@ -126,7 +126,7 @@ fun SmartCategoriesSection(
                 safeTrashNotReclaimed = safeTrashNotReclaimed,
             )
             if (verification != null) {
-                message += " · " + String.format(
+                message = message.orEmpty() + " · " + String.format(
                     Locale.getDefault(), verifiedTemplate,
                     verification.confirmedUris.size, verification.unverifiedUris.size,
                 )
