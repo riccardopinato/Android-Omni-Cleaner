@@ -139,6 +139,9 @@ fun StorageCleanupSection(
         pendingPreparation = null
 
         if (result.resultCode != Activity.RESULT_OK || preparation == null) {
+            if (preparation != null) {
+                scope.launch { engine.recordMediaTrashOutcome(preparation, null) }
+            }
             message = androidTrashCancelled
             return@rememberLauncherForActivityResult
         }
@@ -147,6 +150,7 @@ fun StorageCleanupSection(
             val verification = MediaStoreHelper.verifyTrashedUris(
                 context.contentResolver, preparation.mediaUris,
             )
+            engine.recordMediaTrashOutcome(preparation, verification)
             val safeResult = engine.movePreparedSnapshotsToSafeTrash(preparation.safeTrashCandidates)
             message = cleanupMessage(
                 preparation = preparation,
@@ -160,7 +164,9 @@ fun StorageCleanupSection(
             if (safeResult.moved > 0 || verification.confirmedUris.isNotEmpty()) {
                 CleanupEventBus.publishCompleted()
             }
-            if (verification.unverifiedUris.isEmpty()) {
+            if (verification.unverifiedUris.isEmpty() && safeResult.rejected == 0 &&
+                preparation.blockedFiles.isEmpty() && preparation.staleFiles.isEmpty()
+            ) {
                 selectedBigFiles = emptySet()
                 selectedDuplicates = emptySet()
                 onCleanupFinished()
@@ -197,10 +203,14 @@ fun StorageCleanupSection(
                 rejected = safeResult.rejected,
                 androidConfirmed = false,
             )
-            selectedBigFiles = emptySet()
-            selectedDuplicates = emptySet()
             if (safeResult.moved > 0) CleanupEventBus.publishCompleted()
-            onCleanupFinished()
+            if (safeResult.rejected == 0 && preparation.blockedFiles.isEmpty() &&
+                preparation.staleFiles.isEmpty()
+            ) {
+                selectedBigFiles = emptySet()
+                selectedDuplicates = emptySet()
+                onCleanupFinished()
+            }
         }
     }
 
