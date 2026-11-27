@@ -555,4 +555,110 @@ class SafeTrashManagerTest {
             root.deleteRecursively()
         }
     }
+
+    @Test
+    fun purgeAndRestoreFailClosedWhenEntryContainsUnexpectedUserData() {
+        val root = createTempDirectory("omni-unknown-entry-").toFile()
+        try {
+            val trash = File(root, "safe-trash")
+            val manager = SafeTrashManager.forTests(trash, root)
+            val original = File(root, "retain-me.txt").apply { writeText("valuable data") }
+            assertNotNull(manager.moveToTrash(original))
+            val entry = manager.listEntries().single()
+            val entryDirectory = File(trash, entry.id)
+            val foreign = File(entryDirectory, "user-extra.txt").apply { writeText("untouched") }
+
+            assertEquals(SafeTrashPurgeStatus.INVALID_ENTRY, manager.purgeEntry(entry.id).status)
+            assertEquals(SafeTrashRestoreStatus.PAYLOAD_INVALID, manager.restore(entry.id).status)
+            assertTrue(foreign.isFile)
+            assertEquals("untouched", foreign.readText())
+            assertTrue(File(entryDirectory, "payload").isFile)
+            assertTrue(File(entryDirectory, "original.properties").isFile)
+            assertFalse(original.exists())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun automaticLegacyMigrationNeverRemovesUnknownChildren() {
+        val root = createTempDirectory("omni-migration-unknown-").toFile()
+        try {
+            val legacy = File(root, "legacy")
+            val persistent = File(root, "persistent")
+            val entry = File(legacy, UUID.randomUUID().toString()).apply { mkdirs() }
+            val payload = File(entry, "payload").apply { writeText("protect this") }
+            val metadata = File(entry, "original.properties")
+            Properties().apply {
+                setProperty("originalPath", File(root, "restore.txt").canonicalPath)
+                setProperty("originalName", "restore.txt")
+                setProperty("sizeBytes", payload.length().toString())
+                setProperty("lastModified", "0")
+            }.also { p -> metadata.outputStream().use { out -> p.store(out, "legacy") } }
+            val foreign = File(entry, "personal-note.txt").apply { writeText("not owned by cleaner") }
+
+            val manager = SafeTrashManager.forTests(persistent, root, legacy)
+            manager.migrateLegacyTrashIfNeeded()
+
+            assertEquals("protect this", payload.readText())
+            assertTrue(metadata.isFile)
+            assertEquals("not owned by cleaner", foreign.readText())
+            assertTrue(entry.isDirectory)
+            assertTrue(manager.listEntries().isEmpty())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun existingMatchingBytesWithDifferentOriginalPathCannotConsumeLegacyEntry() {
+        val root = createTempDirectory("omni-migration-collision-").toFile()
+        try {
+            val legacy = File(root, "legacy")
+            val persistent = File(root, "persistent")
+            val id = UUID.randomUUID().toString()
+            val legacyEntry = File(legacy, id).apply { mkdirs() }
+            val legacyPayload = File(legacyEntry, "payload").apply { writeText("same bytes") }
+            val original = File(root, "real-original.txt")
+            Properties().apply {
+                setProperty("originalPath", original.canonicalPath)
+                setProperty("originalName", original.name)
+                setProperty("sizeBytes", legacyPayload.length().toString())
+                setProperty("lastModified", "0")
+            }.also { p ->
+                File(legacyEntry, "original.properties").outputStream()
+                    .use { out -> p.store(out, "legacy") }
+            }
+
+            val manager = SafeTrashManager.forTests(persistent, root, legacy)
+            val collision = File(persistent, id).apply { mkdirs() }
+            val otherOriginal = File(root, "different-original.txt")
+            val collisionPayload = File(collision, "payload").apply { writeText("same bytes") }
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+                .digest(collisionPayload.readBytes())
+                .joinToString("") { "%02x".format(it) }
+            Properties().apply {
+                setProperty("originalPath", otherOriginal.canonicalPath)
+                setProperty("originalName", otherOriginal.name)
+                setProperty("sizeBytes", collisionPayload.length().toString())
+                setProperty("lastModified", "0")
+                setProperty("sha256", digest)
+            }.also { p ->
+                File(collision, "original.properties").outputStream()
+                    .use { out -> p.store(out, "collision") }
+            }
+
+            manager.migrateLegacyTrashIfNeeded()
+
+            val entries = manager.listEntries()
+            assertEquals(2, entries.size)
+            assertTrue(entries.any { it.id == id && it.originalPath == otherOriginal.canonicalPath })
+            assertTrue(entries.any { it.id != id && it.originalPath == original.canonicalPath })
+            assertTrue(collisionPayload.isFile)
+            assertEquals("same bytes", collisionPayload.readText())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
 }
