@@ -250,7 +250,19 @@ class DeletionCoordinator(
                 item.requiredDuplicatePeer?.let { peer ->
                     val keeperPath = runCatching { peer.file.canonicalPath }
                         .getOrElse { peer.file.absolutePath }
-                    keeperPath in mutationPaths
+                    // Path strings cannot detect two hard links to the
+                    // same inode. Android API26+ supports isSameFile. On 24/25
+                    // there is no trustworthy portable inode check, so do not
+                    // perform automatic duplicate cleanup.
+                    keeperPath in mutationPaths ||
+                        (android.os.Build.VERSION.SDK_INT in 1..25) ||
+                        frozen.any { target ->
+                            runCatching {
+                                java.nio.file.Files.isSameFile(
+                                    peer.file.toPath(), target.file.toPath(),
+                                )
+                            }.getOrElse { true }
+                        }
                 } == true
             }) return@synchronized SafeTrashExecutionResult(0, unique.size, 0L)
             val fingerprint = digestManifest(frozen)
