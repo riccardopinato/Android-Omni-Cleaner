@@ -188,9 +188,9 @@
     <string name="maintenance_residue_candidates">Candidatos a resíduos de apps</string>
     <string name="maintenance_residue_warning">O Android pode limitar a visibilidade dos pacotes instalados: estes itens são candidatos para revisão, não prova automática de apps desinstaladas.</string>
     <string name="maintenance_access_required">É necessário acesso ao armazenamento antes de executar esta análise.</string>
-    <string name="maintenance_cleanup_result">%1$d ficheiros eliminados permanentemente (%2$d bytes) · %3$d rejeitados por terem mudado ou não poderem ser verificados.</string>
+    <string name="maintenance_cleanup_result">%1$d miniaturas movidas para a Lixeira segura recuperável (%2$d bytes mantidos, não libertados) · %3$d rejeitadas após verificação.</string>
     <string name="maintenance_confirm_cache_title">Confirmar limpeza da cache</string>
-    <string name="maintenance_confirm_cache_body">Só serão removidos ficheiros idênticos ao último inventário analisado (tamanho, data de modificação e SHA-256). Ficheiros alterados serão rejeitados.</string>
+    <string name="maintenance_confirm_cache_body">Apenas as miniaturas selecionadas com tamanho, data e SHA-256 idênticos são movidas para a Lixeira segura recuperável. Sem eliminação definitiva nem espaço libertado.</string>
 
     <string name="safe_trash_body">Os ficheiros aqui continuam a ocupar espaço. Pode restaurá-los sem substituir ficheiros existentes ou eliminá-los permanentemente.</string>
     <string name="safe_trash_summary">%1$d itens · %2$s</string>
@@ -330,7 +330,7 @@
     <string name="pro_residue_detail">%1$s · %2$s · %3$s</string>
     <string name="pro_resolve_selection">Resolver seleção Pro</string>
     <string name="pro_confirm_title">Confirmar sequência Pro?</string>
-    <string name="pro_confirm_body">As pastas vazias e miniaturas são verificadas novamente antes da remoção. Os duplicados mantêm pelo menos uma cópia. Os conteúdos multimédia selecionados passam pela Lixeira do Android com uma segunda confirmação do sistema. Os resíduos de apps permanecem inalterados.</string>
+    <string name="pro_confirm_body">As pastas vazias são verificadas. As miniaturas selecionadas vão para a Lixeira segura recuperável; os duplicados mantêm uma cópia. Os conteúdos multimédia exigem consentimento Android. Os resíduos ficam intactos.</string>
     <string name="pro_scan_empty_folders_label">Pastas vazias e pequenas</string>
     <string name="pro_scan_empty_folders_description">Rever pastas órfãs ou sem conteúdo</string>
     <string name="pro_scan_duplicates_label">Ficheiros duplicados</string>
@@ -349,14 +349,15 @@
     <string name="pro_error_access_required">É necessário acesso ao armazenamento para a análise Pro.</string>
     <string name="pro_error_select_category">Selecione pelo menos uma categoria.</string>
     <string name="pro_resolve_empty_folders">%1$d pastas vazias</string>
-    <string name="pro_resolve_thumbnails">%1$d miniaturas eliminadas permanentemente</string>
+    <string name="pro_resolve_thumbnails">%1$d miniaturas movidas para a Lixeira segura (recuperáveis)</string>
     <string name="pro_resolve_thumbnail_bytes">(%1$d bytes)</string>
     <string name="pro_resolve_safe_trash">%1$d ficheiros na Lixeira segura (não é espaço já libertado)</string>
     <string name="pro_resolve_thumbnail_rejected">%1$d miniaturas rejeitadas</string>
     <string name="pro_resolve_stale">%1$d ficheiros alterados após a análise e deixados inalterados</string>
     <string name="pro_resolve_blocked">%1$d ficheiros deixados inalterados porque não existe eliminação reversível disponível</string>
     <string name="pro_resolve_residues">%1$d resíduos mantidos para revisão porque a visibilidade dos pacotes pode estar limitada</string>
-    <string name="pro_system_trash_confirmed">Lixeira do Android confirmada (não contada como espaço já libertado)</string>
+    <string name="cleanup_media_verified_summary">%1$d conteúdos verificados na Lixeira Android · %2$d não verificados (seleção preservada)</string>
+    <string name="pro_system_trash_confirmed">Consentimento Android aceite (estado real não verificado; espaço não libertado)</string>
     <string name="pro_system_trash_cancelled">Lixeira do Android cancelada</string>
 
     <string name="safe_trash_persistent_notice">O Safe Trash é guardado no armazenamento partilhado para poder sobreviver à desinstalação da aplicação. Reinstale o Omni Cleaner e reative a Limpeza profunda para restaurar estes ficheiros.</string>
