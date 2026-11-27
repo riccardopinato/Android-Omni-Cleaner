@@ -283,7 +283,10 @@ class StorageCleanupEngine(
             journal.advance(approved, SafeOperationPhase.REJECTED)
             return null
         }
-        preparation.mediaTransactionId = approved.id
+        // External Android consent is now in-flight, not completed.
+        val mutating = journal.advance(approved, SafeOperationPhase.MUTATING)
+            ?: return null
+        preparation.mediaTransactionId = mutating.id
         return request
     }
 
