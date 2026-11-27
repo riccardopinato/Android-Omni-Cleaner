@@ -29,7 +29,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.riccardopinato.omnicleaner.R
-import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
@@ -148,16 +147,6 @@ internal fun OmniVideoScrubControls(
             }
         }
     }
-}
-
-/** One-hour+ videos retain hours; negative/unavailable timestamps render 00:00. */
-internal fun videoTimelineTimestamp(milliseconds: Int): String {
-    val seconds = milliseconds.coerceAtLeast(0).toLong() / 1000L
-    val h = seconds / 3600L
-    val m = (seconds / 60L) % 60L
-    val s = seconds % 60L
-    return if (h > 0L) String.format(Locale.ROOT, "%02d:%02d:%02d", h, m, s)
-    else String.format(Locale.ROOT, "%02d:%02d", m, s)
 }
 
 internal fun boundedVideoSeekPosition(requestedMs: Int, durationMs: Int): Int =
