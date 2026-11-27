@@ -120,6 +120,38 @@ class SafeOperationsFuzzTest {
     }
 
     @Test
+    fun revokedPermissionPreventsMoveRestoreAndPurgeWithoutDataLoss() {
+        val root = createTempDirectory("omni-revoked-permission-").toFile()
+        try {
+            var authorized = false
+            val trash = SafeTrashManager.forTests(
+                root.resolve("trash"), root,
+                mutationPermission = { authorized },
+            )
+            val source = root.resolve("valuable.apk").apply { writeText("keep this") }
+            assertTrue(trash.moveToTrash(source) == null)
+            assertEquals("keep this", source.readText())
+
+            authorized = true
+            assertTrue(trash.moveToTrash(source) != null)
+            val reviewed = trash.listEntries().single()
+            authorized = false
+            assertEquals(SafeTrashRestoreStatus.DESTINATION_UNAVAILABLE,
+                trash.restore(reviewed.id).status)
+            assertEquals(SafeTrashPurgeStatus.TRASH_UNAVAILABLE,
+                trash.purgeApproved(reviewed).status)
+            assertTrue(trash.listEntries().single().id == reviewed.id)
+
+            authorized = true
+            assertEquals(SafeTrashRestoreStatus.RESTORED,
+                trash.restore(reviewed.id).status)
+            assertEquals("keep this", source.readText())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun unknownLedgerStatePreventsMutationEvenIfSelectionLooksValid() {
         val root = createTempDirectory("omni-unknown-ledger-").toFile()
         try {
