@@ -23,6 +23,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -51,6 +52,14 @@ internal fun OmniFileTrashReview(
         StorageCleanupEngine(context.applicationContext)
     }
     val scope = rememberCoroutineScope()
+    // Compose-aware resources update when app locale or Configuration changes.
+    val resourceLocale = LocalConfiguration.current.locales[0]
+    val acceptedTemplate = stringResource(R.string.file_trash_android_request_accepted)
+    val movedTemplate = stringResource(R.string.file_trash_moved_summary)
+    val movementIncomplete = stringResource(R.string.file_trash_movement_incomplete)
+    val cancelled = stringResource(R.string.file_trash_cancelled)
+    val requestUnavailable = stringResource(R.string.file_trash_request_unavailable)
+    val prepareError = stringResource(R.string.file_trash_prepare_error)
     var confirm by remember { mutableStateOf(false) }
     var pending by remember { mutableStateOf<FileCleanupPreparation?>(null) }
     var running by remember { mutableStateOf(false) }
@@ -65,7 +74,7 @@ internal fun OmniFileTrashReview(
             scope.launch {
                 try {
                     val result = engine.movePreparedSnapshotsToSafeTrash(prepared.safeTrashCandidates)
-                    message = context.getString(R.string.file_trash_android_request_accepted, prepared.mediaUris.size, result.moved, result.rejected)
+                    message = String.format(resourceLocale, acceptedTemplate, prepared.mediaUris.size, result.moved, result.rejected)
                     if (result.moved > 0) CleanupEventBus.publishCompleted()
                     // Android RESULT_OK grants consent, not proof that all media are trashed.
                     // Refresh selection without reporting media cleanup as completed.
@@ -73,13 +82,13 @@ internal fun OmniFileTrashReview(
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (_: Exception) {
-                    message = context.getString(R.string.file_trash_movement_incomplete)
+                    message = movementIncomplete
                 } finally {
                     running = false
                 }
             }
         } else {
-            message = context.getString(R.string.file_trash_cancelled)
+            message = cancelled
             running = false
         }
     }
@@ -124,11 +133,11 @@ internal fun OmniFileTrashReview(
                                         )
                                     } else {
                                         running = false
-                                        message = context.getString(R.string.file_trash_request_unavailable)
+                                        message = requestUnavailable
                                     }
                                 } else {
                                     val moved = engine.movePreparedSnapshotsToSafeTrash(prepared.safeTrashCandidates)
-                                    message = context.getString(R.string.file_trash_moved_summary, moved.moved, prepared.blockedFiles.size, prepared.staleFiles.size, moved.rejected)
+                                    message = String.format(resourceLocale, movedTemplate, moved.moved, prepared.blockedFiles.size, prepared.staleFiles.size, moved.rejected)
                                     if (moved.moved > 0) {
                                         CleanupEventBus.publishCompleted()
                                         onFinished()
@@ -139,7 +148,7 @@ internal fun OmniFileTrashReview(
                                 throw cancelled
                             } catch (_: Exception) {
                                 running = false
-                                message = context.getString(R.string.file_trash_prepare_error)
+                                message = prepareError
                             }
                         }
                     },
