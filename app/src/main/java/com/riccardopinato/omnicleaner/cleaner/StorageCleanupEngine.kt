@@ -50,28 +50,12 @@ class StorageCleanupEngine(
         folders: List<File>,
         allowedRoot: File = StorageAccess.primaryRoot(),
     ): EmptyFolderCleanupResult = withContext(Dispatchers.IO) {
-        var removed = 0
-        var rejected = 0
-
-        for (folder in CleanupSelection.uniqueEntries(folders)) {
-            coroutineContext.ensureActive()
-            val safe = PathSafety.isSafeFolderToDelete(folder, allowedRoot)
-            val stillEmpty = runCatching {
-                folder.isDirectory && folder.listFiles()?.isEmpty() == true
-            }.getOrDefault(false)
-
-            if (!safe || !stillEmpty) {
-                rejected++
-                continue
-            }
-
-            if (folder.delete()) removed++ else rejected++
-        }
-
-        if (removed > 0) {
-            StorageInventoryRepository.invalidate()
-        }
-        EmptyFolderCleanupResult(removed, rejected)
+        coroutineContext.ensureActive()
+        val result = coordinator.removeEmptyFoldersApproved(
+            CleanupSelection.uniqueEntries(folders), allowedRoot,
+        )
+        if (result.removed > 0) StorageInventoryRepository.invalidate()
+        result
     }
 
     fun snapshotsForBigFiles(
