@@ -6,7 +6,18 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.security.MessageDigest
+import java.util.Locale
 import kotlin.coroutines.coroutineContext
+
+/** Only known thumbnail-cache folders can use the media-file exception. */
+internal object ThumbnailDirectoryPolicy {
+    fun isSafeDirectory(directory: File): Boolean {
+        val normalized = directory.absolutePath.replace('\\\\', '/').lowercase(Locale.ROOT)
+        return normalized.endsWith("/dcim/.thumbnails") ||
+            normalized.endsWith("/pictures/.thumbnails") ||
+            (normalized.contains("/android/media/") && normalized.endsWith("/.thumbnails"))
+    }
+}
 
 class ThumbnailFileCleanup(
     private val safeTrashManager: SafeTrashManager? = null,
@@ -67,7 +78,7 @@ class ThumbnailFileCleanup(
         // No cache path may use an irreversible File.delete() operation.
         // Missing Safe Trash or a non-canonical cache root means nothing moves.
         if (safeTrashManager == null || root != snapshot.directory.absoluteFile ||
-            !FileScanner().isSafeThumbnailDirectory(root)
+            !ThumbnailDirectoryPolicy.isSafeDirectory(root)
         ) {
             return@withContext ThumbnailCleanupResult(0, approvedPaths.size, 0L)
         }
