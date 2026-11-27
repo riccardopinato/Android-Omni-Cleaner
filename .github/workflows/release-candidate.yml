@@ -1,6 +1,9 @@
 name: Android Release Candidate
 
 on:
+  push:
+    branches:
+      - release/omni-apk-evaluation-20261120
   workflow_dispatch:
     inputs:
       require_production_monetization:
