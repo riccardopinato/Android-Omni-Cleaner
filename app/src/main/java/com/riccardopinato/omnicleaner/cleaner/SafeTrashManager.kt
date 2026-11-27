@@ -360,24 +360,58 @@ class SafeTrashManager private constructor(
             true
         }.getOrDefault(false)
         if (!linked) {
-            if (!destination.createNewFile()) {
-                temp.delete()
-                return SafeTrashRestoreResult(SafeTrashRestoreStatus.DESTINATION_EXISTS)
-            }
-            val exclusiveCopy = runCatching {
-                FileInputStream(temp).use { input ->
-                    FileOutputStream(destination).use { output ->
-                        input.copyTo(output, bufferSize = FILE_IO_BUFFER_BYTES)
-                        output.fd.sync()
-                    }
+            // Android 24+ (minSdk): O_CREAT|O_EXCL atomically refuses a target
+            // that another process created. Do not follow symlinks.
+            // Local JVM tests (SDK_INT=0) cannot invoke Android Os and use
+            // java.io's createNewFile() only in that non-device test environment.
+            val exclusiveCopy = if (android.os.Build.VERSION.SDK_INT >= 24) {
+                val fd = runCatching {
+                    android.system.Os.open(
+                        destination.absolutePath,
+                        android.system.OsConstants.O_WRONLY or
+                            android.system.OsConstants.O_CREAT or
+                            android.system.OsConstants.O_EXCL or
+                            android.system.OsConstants.O_NOFOLLOW,
+                        0x180,
+                    )
+                }.getOrNull()
+                if (fd == null) {
+                    temp.delete()
+                    return SafeTrashRestoreResult(
+                        if (destination.exists()) SafeTrashRestoreStatus.DESTINATION_EXISTS
+                        else SafeTrashRestoreStatus.COPY_FAILED,
+                    )
                 }
-                destination.length() == entry.sizeBytes &&
-                    sha256(destination) == entry.sha256
-            }.getOrDefault(false)
+                runCatching {
+                    FileInputStream(temp).use { input ->
+                        FileOutputStream(fd).use { output ->
+                            input.copyTo(output, bufferSize = FILE_IO_BUFFER_BYTES)
+                            output.fd.sync()
+                        }
+                    }
+                    destination.length() == entry.sizeBytes &&
+                        sha256(destination) == entry.sha256
+                }.getOrDefault(false)
+            } else {
+                if (!runCatching { destination.createNewFile() }.getOrDefault(false)) {
+                    temp.delete()
+                    return SafeTrashRestoreResult(SafeTrashRestoreStatus.DESTINATION_EXISTS)
+                }
+                runCatching {
+                    FileInputStream(temp).use { input ->
+                        FileOutputStream(destination).use { output ->
+                            input.copyTo(output, bufferSize = FILE_IO_BUFFER_BYTES)
+                            output.fd.sync()
+                        }
+                    }
+                    destination.length() == entry.sizeBytes &&
+                        sha256(destination) == entry.sha256
+                }.getOrDefault(false)
+            }
             if (!exclusiveCopy) {
                 temp.delete()
-                // Keep the original in Safe Trash; leave an incomplete target
-                // for explicit review rather than deleting an unowned race.
+                // Preserve both Safe Trash payload and any partial destination
+                // for explicit recovery: never unlink a possibly raced file.
                 return SafeTrashRestoreResult(SafeTrashRestoreStatus.COPY_FAILED)
             }
         }
