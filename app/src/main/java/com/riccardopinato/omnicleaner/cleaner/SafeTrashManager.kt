@@ -132,17 +132,53 @@ class SafeTrashManager private constructor(
             expectedHash = null,
         )
 
+    /**
+     * Cache-only exception: confirmed thumbnail files, including JPEG/PNG
+     * extensions, enter the reversible Safe Trash rather than File.delete().
+     * Ordinary media cannot use this bypass. The directory must be a known
+     * .thumbnails root, with an immutable scanned SHA-256 snapshot.
+     */
+    fun moveVerifiedThumbnailToTrash(
+        stamp: ThumbnailFileStamp,
+        scannedDirectory: File,
+    ): File? {
+        val root = runCatching { scannedDirectory.canonicalFile }.getOrNull() ?: return null
+        if (root != scannedDirectory.absoluteFile ||
+            !FileScanner().isSafeThumbnailDirectory(root) ||
+            !PathSafety.isWithinRoot(root, restoreRoot) ||
+            !PathSafety.isWithinRoot(stamp.file, root) ||
+            PathSafety.isSymlink(root) ||
+            stamp.sha256.length != 64 ||
+            !stamp.sha256.all { it in '0'..'9' || it in 'a'..'f' }
+        ) return null
+        val snapshot = CleanupFileSnapshot(
+            file = stamp.file,
+            expectedBytes = stamp.bytes,
+            expectedModified = stamp.modified,
+            expectedSha256 = stamp.sha256,
+        )
+        if (!CleanupSnapshotValidator.validate(snapshot).valid) return null
+        return moveToTrashInternal(
+            file = stamp.file,
+            expectedSize = stamp.bytes,
+            expectedModified = stamp.modified,
+            expectedHash = stamp.sha256,
+            cacheMediaException = true,
+        )
+    }
+
     private fun moveToTrashInternal(
         file: File,
         expectedSize: Long?,
         expectedModified: Long?,
         expectedHash: String?,
+        cacheMediaException: Boolean = false,
     ): File? {
         if (!isPersistentTrashAvailable()) return null
         if (!file.exists() || !file.isFile) return null
         if (!PathSafety.isWithinRoot(file, restoreRoot)) return null
         if (PathSafety.isDangerousPath(file) || PathSafety.isSymlink(file)) return null
-        if (MediaStoreHelper.isMediaFile(file)) return null
+        if (MediaStoreHelper.isMediaFile(file) && !cacheMediaException) return null
 
         val originalSize = file.length().coerceAtLeast(0L)
         val originalModified = file.lastModified().coerceAtLeast(0L)
@@ -315,22 +351,44 @@ class SafeTrashManager private constructor(
             return SafeTrashRestoreResult(SafeTrashRestoreStatus.COPY_FAILED)
         }
 
-        if (destination.exists() || !temp.renameTo(destination)) {
-            temp.delete()
-            return SafeTrashRestoreResult(
-                if (destination.exists()) {
-                    SafeTrashRestoreStatus.DESTINATION_EXISTS
-                } else {
-                    SafeTrashRestoreStatus.COPY_FAILED
-                },
-            )
+        // renameTo() may replace a file created concurrently after exists().
+        // A hard link is an atomic no-replace publish on supported filesystems.
+        // On Android storage without hard links, reserve with createNewFile()
+        // (O_EXCL equivalent) before copying. Never open an existing target.
+        val linked = runCatching {
+            android.system.Os.link(temp.absolutePath, destination.absolutePath)
+            true
+        }.getOrDefault(false)
+        if (!linked) {
+            if (!destination.createNewFile()) {
+                temp.delete()
+                return SafeTrashRestoreResult(SafeTrashRestoreStatus.DESTINATION_EXISTS)
+            }
+            val exclusiveCopy = runCatching {
+                FileInputStream(temp).use { input ->
+                    FileOutputStream(destination).use { output ->
+                        input.copyTo(output, bufferSize = FILE_IO_BUFFER_BYTES)
+                        output.fd.sync()
+                    }
+                }
+                destination.length() == entry.sizeBytes &&
+                    sha256(destination) == entry.sha256
+            }.getOrDefault(false)
+            if (!exclusiveCopy) {
+                temp.delete()
+                // Keep the original in Safe Trash; leave an incomplete target
+                // for explicit review rather than deleting an unowned race.
+                return SafeTrashRestoreResult(SafeTrashRestoreStatus.COPY_FAILED)
+            }
         }
+        temp.delete()
 
         if (
             destination.length() != entry.sizeBytes ||
             runCatching { sha256(destination) }.getOrNull() != entry.sha256
         ) {
-            destination.delete()
+            // The verified payload still exists in Safe Trash. Never delete
+            // a destination that a concurrent process might have modified.
             return SafeTrashRestoreResult(SafeTrashRestoreStatus.COPY_FAILED)
         }
 
