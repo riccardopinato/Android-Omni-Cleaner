@@ -19,7 +19,7 @@ permissions:
 jobs:
   openspec-shadow:
     name: OpenSpec Shadow (review hints; no merge/QA approval)
-    uses: riccardopinato/App-Factory-Core/.github/workflows/openspec-shadow.yml@8a5034483a4b0574907012903894fa39ebeb1f51
+    uses: riccardopinato/App-Factory-Core/.github/workflows/openspec-shadow.yml@3e3056ffb7444a5d37f1279a2a25783366a0d98c
     with:
       target_repository: riccardopinato/Android-Omni-Cleaner
       target_pr: ${{ github.event.pull_request.number || 0 }}
