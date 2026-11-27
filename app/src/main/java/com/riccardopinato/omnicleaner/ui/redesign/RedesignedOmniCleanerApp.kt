@@ -329,7 +329,10 @@ fun RedesignedOmniCleanerApp(
                                         modifier = Modifier.fillMaxSize(),
                                         selectionState = cleanSelectionState,
                                         onEnableDeepClean = { showDeepAccessDisclosure = true },
-                                        onOpenTool = { detailName = it.toDetailRoute().name },
+                                        onOpenTool = {
+                                controller.hydrateReadOnlyIndexPreview()
+                                detailName = it.toDetailRoute().name
+                            },
                                         galleryController = viewModel.galleryController,
                                         onOpenGalleryReview = {
                                             destinationName = OmniDestination.GALLERY.name
@@ -441,6 +444,7 @@ fun RedesignedOmniCleanerApp(
                                         detailName = OmniDetailRoute.PRO_MANAGE.name
                                     }
                                     else -> {
+                                        controller.hydrateReadOnlyIndexPreview()
                                         destinationName = OmniDestination.CLEAN.name
                                         val route = when (id) {
                                             "storage" -> OmniDetailRoute.CLEAN_OVERVIEW
@@ -465,7 +469,10 @@ fun RedesignedOmniCleanerApp(
                             state = state,
                             controller = controller,
                             modifier = Modifier.fillMaxSize(),
-                            onOpenTool = { detailName = it.toDetailRoute().name },
+                            onOpenTool = {
+                                controller.hydrateReadOnlyIndexPreview()
+                                detailName = it.toDetailRoute().name
+                            },
                             onEnableDeepClean = { showDeepAccessDisclosure = true },
                         )
 

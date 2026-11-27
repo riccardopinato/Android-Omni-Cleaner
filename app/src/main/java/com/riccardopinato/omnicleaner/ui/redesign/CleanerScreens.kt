@@ -131,6 +131,16 @@ internal fun CleanHubScreen(
                 modifier = Modifier.padding(top = 18.dp),
             )
         }
+        if (state.historicalIndexPreview) {
+            item {
+                Text(
+                    stringResource(R.string.bg_index_historical_preview),
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
         if (!state.hasBroadAccess) {
             item {
                 Card(
@@ -349,6 +359,16 @@ internal fun CleanDetailScreen(
                 subtitle = stringResource(R.string.redesign_clean_subtitle),
                 modifier = Modifier.padding(top = 8.dp),
             )
+        }
+        if (state.historicalIndexPreview) {
+            item {
+                Text(
+                    stringResource(R.string.bg_index_historical_preview),
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
         if (tool !in listOf(CleanerToolRoute.TRASH, CleanerToolRoute.REVIEW) && !state.hasBroadAccess) {
             item {
