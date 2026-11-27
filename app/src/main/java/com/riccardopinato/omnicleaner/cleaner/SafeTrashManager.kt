@@ -685,6 +685,14 @@ class SafeTrashManager private constructor(
      * delete the legacy copy only after the migrated entry can be parsed and
      * integrity-checked. A failed migration leaves the original untouched.
      */
+    /** Read-only: migration is never a side effect of opening the Trash UI. */
+    fun hasLegacyEntries(): Boolean =
+        legacyTrashDirectory?.listFiles()?.any {
+            it.isDirectory && !PathSafety.isSymlink(it) &&
+                ENTRY_ID_PATTERN.matches(it.name)
+        } == true
+
+    /** Must be called only after an explicit user import confirmation. */
     fun migrateLegacyTrashIfNeeded() {
         val legacyRoot = legacyTrashDirectory ?: return
         if (!legacyRoot.isDirectory || !isPersistentTrashAvailable()) return
@@ -718,12 +726,28 @@ class SafeTrashManager private constructor(
                 legacyPayload.length()
             ) continue
 
+            val migrationFingerprint = MessageDigest.getInstance("SHA-256")
+                .digest(listOf(legacyEntry.absolutePath, actualHash,
+                    legacyPayload.length().toString()).joinToString("|")
+                    .toByteArray(Charsets.UTF_8))
+                .joinToString("") { "%02x".format(it) }
+            var operation = destructiveJournal.begin(
+                "EXPLICIT_LEGACY_IMPORT", migrationFingerprint, legacyEntry.name,
+            ) ?: continue
+            operation = destructiveJournal.advance(operation, SafeOperationPhase.USER_APPROVED)
+                ?: continue
+            operation = destructiveJournal.advance(operation, SafeOperationPhase.MUTATING)
+                ?: continue
+
             val preferredTarget = File(trashDirectory, legacyEntry.name)
             if (
                 preferredTarget.exists() &&
                 isVerifiedMigrationCopy(legacyPayload, preferredTarget)
             ) {
-                removeKnownEntryFilesOnly(legacyEntry)
+                if (removeKnownEntryFilesOnly(legacyEntry)) {
+                    destructiveJournal.advance(operation, SafeOperationPhase.COMMITTED,
+                        "existing=${preferredTarget.name}")
+                }
                 continue
             }
             // A collision may contain user data: never delete it.
@@ -759,7 +783,10 @@ class SafeTrashManager private constructor(
                 continue
             }
 
-            removeKnownEntryFilesOnly(legacyEntry)
+            if (removeKnownEntryFilesOnly(legacyEntry)) {
+                destructiveJournal.advance(operation, SafeOperationPhase.COMMITTED,
+                    "migrated=${target.name}")
+            }
         }
 
         runCatching {
