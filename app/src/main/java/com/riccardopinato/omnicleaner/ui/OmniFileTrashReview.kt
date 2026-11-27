@@ -31,6 +31,7 @@ import com.riccardopinato.omnicleaner.R
 import com.riccardopinato.omnicleaner.cleaner.CleanupFileSnapshot
 import com.riccardopinato.omnicleaner.cleaner.FileCleanupPreparation
 import com.riccardopinato.omnicleaner.cleaner.StorageCleanupEngine
+import com.riccardopinato.omnicleaner.cleaner.MediaStoreHelper
 import com.riccardopinato.omnicleaner.monetization.CleanupEventBus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -54,7 +55,7 @@ internal fun OmniFileTrashReview(
     val scope = rememberCoroutineScope()
     // Compose-aware resources update when app locale or Configuration changes.
     val resourceLocale = LocalConfiguration.current.locales[0]
-    val acceptedTemplate = stringResource(R.string.file_trash_android_request_accepted)
+    val verifiedTemplate = stringResource(R.string.cleanup_media_verified_summary)
     val movedTemplate = stringResource(R.string.file_trash_moved_summary)
     val movementIncomplete = stringResource(R.string.file_trash_movement_incomplete)
     val cancelled = stringResource(R.string.file_trash_cancelled)
@@ -73,12 +74,22 @@ internal fun OmniFileTrashReview(
         if (response.resultCode == Activity.RESULT_OK && prepared != null) {
             scope.launch {
                 try {
+                    val verified = MediaStoreHelper.verifyTrashedUris(
+                        context.contentResolver, prepared.mediaUris,
+                    )
                     val result = engine.movePreparedSnapshotsToSafeTrash(prepared.safeTrashCandidates)
-                    message = String.format(resourceLocale, acceptedTemplate, prepared.mediaUris.size, result.moved, result.rejected)
-                    if (result.moved > 0) CleanupEventBus.publishCompleted()
-                    // Android RESULT_OK grants consent, not proof that all media are trashed.
-                    // Refresh selection without reporting media cleanup as completed.
-                    onFinished()
+                    message = String.format(
+                        resourceLocale, verifiedTemplate,
+                        verified.confirmedUris.size, verified.unverifiedUris.size,
+                    ) + " · " + String.format(
+                        resourceLocale, movedTemplate, result.moved,
+                        prepared.blockedFiles.size, prepared.staleFiles.size, result.rejected,
+                    )
+                    if (result.moved > 0 || verified.confirmedUris.isNotEmpty()) {
+                        CleanupEventBus.publishCompleted()
+                    }
+                    // Do not discard the user's outstanding selection after partial confirmation.
+                    if (verified.unverifiedUris.isEmpty()) onFinished()
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (_: Exception) {
@@ -125,7 +136,7 @@ internal fun OmniFileTrashReview(
                             try {
                                 val prepared = engine.prepareSnapshots(selected)
                                 if (prepared.mediaUris.isNotEmpty()) {
-                                    val request = engine.createSystemTrashRequest(prepared.mediaUris)
+                                    val request = engine.createSystemTrashRequest(prepared)
                                     if (request != null) {
                                         pending = prepared
                                         launcher.launch(
