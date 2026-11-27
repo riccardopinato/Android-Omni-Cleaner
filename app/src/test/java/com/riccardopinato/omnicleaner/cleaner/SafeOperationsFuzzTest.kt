@@ -31,7 +31,7 @@ class SafeOperationsFuzzTest {
             val coordinator = DeletionCoordinator(trash, journal)
             val random = Random(87241)
             repeat(48) { index ->
-                val expected = ByteArray(random.nextInt(1, 1500)).also(random::nextBytes)
+                val expected = ByteArray(random.nextInt(1, 1500)).also { random.nextBytes(it) }
                 val target = root.resolve("sample-$index.apk").apply { writeBytes(expected) }
                 val time = target.lastModified()
                 val snapshot = CleanupFileSnapshot(
