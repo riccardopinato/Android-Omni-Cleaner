@@ -252,51 +252,14 @@ class SafeTrashManager private constructor(
             return null
         }
 
-        val requiredFreeSpace = originalSize + COPY_FREE_SPACE_MARGIN_BYTES
-        if (trashDirectory.usableSpace in 0L until requiredFreeSpace) {
-            if (metadata.isFile && !PathSafety.isSymlink(metadata)) metadata.delete()
-            if (entry.listFiles()?.isEmpty() == true) entry.delete()
-            return null
-        }
+        // Cross-volume copy followed by File.delete() is not an atomic
+        // operation on the verified inode. Refuse rather than unlink a path
+        // which may have been replaced by another process.
+        if (metadata.isFile && !PathSafety.isSymlink(metadata)) metadata.delete()
+        if (entry.listFiles()?.isEmpty() == true) entry.delete()
+        return null
 
-        val copied = runCatching {
-            FileInputStream(file).use { input ->
-                FileOutputStream(payload).use { output ->
-                    input.copyTo(output, bufferSize = FILE_IO_BUFFER_BYTES)
-                    output.fd.sync()
-                }
-            }
 
-            if (file.length() != originalSize || file.lastModified() != originalModified) {
-                error("Source changed")
-            }
-            if (payload.length() != originalSize) {
-                error("Incomplete copy")
-            }
-            if (sha256(payload) != originalHash) {
-                error("Payload digest mismatch")
-            }
-            if (!sameContents(file, payload, originalSize)) {
-                error("Incomplete copy")
-            }
-            true
-        }.getOrDefault(false)
-
-        // Never dispose of the only possible recovery copy after a failed
-        // copy, changed source or failed unlink. Unknown partial entries remain
-        // visible in inventory for explicit recovery and are not bulk purged.
-        if (!copied) return null
-        val sourceStillMatches = runCatching {
-            file.isFile &&
-                file.length() == originalSize &&
-                file.lastModified() == originalModified &&
-                sha256(file) == originalHash &&
-                sameContents(file, payload, originalSize)
-        }.getOrDefault(false)
-        if (!sourceStillMatches) return null
-        if (!file.delete()) return null
-
-        return payload
     }
 
     fun restore(entryId: String): SafeTrashRestoreResult {
@@ -327,9 +290,14 @@ class SafeTrashManager private constructor(
         val destination = runCatching { File(entry.originalPath).canonicalFile }.getOrNull()
             ?: return SafeTrashRestoreResult(SafeTrashRestoreStatus.DESTINATION_UNAVAILABLE)
 
+        // A verified cache thumbnail may be restored to the exact original
+        // cache subtree. Ordinary Android/media stays protected.
+        val authorizedThumbnailRestore =
+            ThumbnailDirectoryPolicy.isSafeThumbnailFile(destination, restoreRoot)
         if (
             !PathSafety.isWithinRoot(destination, restoreRoot) ||
-            PathSafety.isDangerousPath(destination)
+            (PathSafety.isDangerousPath(destination) && !authorizedThumbnailRestore) ||
+            PathSafety.isSymlink(destination)
         ) {
             return SafeTrashRestoreResult(SafeTrashRestoreStatus.UNSAFE_DESTINATION)
         }
@@ -745,26 +713,14 @@ class SafeTrashManager private constructor(
         val lastModified = properties.getProperty(KEY_LAST_MODIFIED)?.toLongOrNull()?.takeIf { it >= 0L }
             ?: return null
         val storedHash = properties.getProperty(KEY_SHA256)
-        val hash = when {
-            storedHash == null -> {
-                // Recovery 0.4 entries predate the stored digest. Establish and
-                // persist a one-time baseline from the app-private payload.
-                val migratedHash = runCatching { sha256(payload) }.getOrNull() ?: return null
-                val persisted = runCatching {
-                    properties.setProperty(KEY_SHA256, migratedHash)
-                    FileOutputStream(metadata).use { output ->
-                        properties.store(output, METADATA_COMMENT)
-                        output.fd.sync()
-                    }
-                    true
-                }.getOrDefault(false)
-                if (!persisted) return null
-                migratedHash
-            }
-            storedHash.length == 64 &&
-                storedHash.all { char -> char in '0'..'9' || char in 'a'..'f' } -> storedHash
-            else -> return null
-        }
+        // Inspection must never mutate metadata. Missing or invalid digests
+        // require an explicit recovery/migration step, not an implicit rewrite.
+        val hash = storedHash?.takeIf {
+            it.length == 64 && it.all { c -> c in '0'..'9' || c in 'a'..'f' }
+        } ?: return null
+        if (payload.length() != sizeBytes ||
+            runCatching { sha256(payload) }.getOrNull() != hash
+        ) return null
 
         return SafeTrashEntry(
             id = candidate.name,
