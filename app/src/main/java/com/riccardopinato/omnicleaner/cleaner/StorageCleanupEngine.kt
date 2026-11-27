@@ -285,9 +285,6 @@ class StorageCleanupEngine(
         return MediaStoreHelper.trashMediaFiles(context.contentResolver, preparation.mediaUris)
     }
 
-    /** Legacy/raw URI requests are intentionally unavailable for cleanup UI. */
-    @Deprecated("Use snapshot-bound FileCleanupPreparation")
-    fun createSystemTrashRequest(mediaUris: List<Uri>): PendingIntent? = null
 
     fun selectDuplicatesExceptOldest(groups: List<DuplicateGroup>): Set<String> =
         selectDuplicatesExcept(groups, keepNewest = false)
